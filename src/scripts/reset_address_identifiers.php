@@ -7,11 +7,11 @@ $app->safe_merge_argv_to_request($argv, $allowed_params);
 if ($app->running_as_admin()) {
 	$blockchain_id = (int) $_REQUEST['blockchain_id'];
 
-	$reset_addresses = $app->run_query("SELECT * FROM addresses WHERE primary_blockchain_id=:blockchain_id;", ['blockchain_id' => $blockchain_id]);
-	echo "Resetting ".$reset_addresses->rowCount()." addresses.<br/>\n";
+	$reset_addresses = $app->run_query("SELECT * FROM addresses WHERE primary_blockchain_id=:blockchain_id;", ['blockchain_id' => $blockchain_id])->fetchAll();
+	echo "Resetting ".count($reset_addresses)." addresses.<br/>\n";
 	$reset_count = 0;
 	
-	while ($db_address = $reset_addresses->fetch()) {
+	foreach ($reset_addresses as $db_address) {
 		$vote_identifier = $app->addr_text_to_vote_identifier($db_address['address']);
 		$option_index = $app->vote_identifier_to_option_index($vote_identifier);
 		

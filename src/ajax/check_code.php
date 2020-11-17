@@ -25,10 +25,10 @@ if ($card) {
 	else $remote_peer = false;
 	
 	if (AppSettings::getParam('pageview_tracking_enabled')) {
-		$num_bruteforce = $app->run_query("SELECT * FROM card_failedchecks WHERE ip_address=:ip_address AND check_time > :check_time;", [
+		$num_bruteforce = count($app->run_query("SELECT * FROM card_failedchecks WHERE ip_address=:ip_address AND check_time > :check_time;", [
 			'ip_address' => $_SERVER['REMOTE_ADDR'],
 			'check_time' => (time()-3600*24*4)
-		])->rowCount();
+		])->fetchAll());
 	}
 	else $num_bruteforce = 0;
 	
@@ -78,7 +78,7 @@ if ($card) {
 			else $app->output_message(4, "Correct!", false);
 		}
 		else {
-			$app->run_query("INSERT INTO card_failedchecks SET card_id=:card_id, ip_address=:ip_address, check_time=:check_time, attempted_code=:attempted_code;", [
+			$app->run_insert_query("card_failedchecks", [
 				'card_id' => $card['card_id']
 				'ip_address' => AppSettings::getParam('pageview_tracking_enabled') ? $_SERVER['REMOTE_ADDR'] : null,
 				'check_time' => time(),
@@ -100,7 +100,7 @@ if ($card) {
 						$session_key = $_COOKIE['my_session'];
 						$expire_time = time()+3600*24;
 						
-						$app->run_query("INSERT INTO card_sessions SET card_user_id=:card_user_id, session_key=:session_key, login_time=:login_time, expire_time=:expire_time, ip_address=:ip_address, synchronizer_token=:synchronizer_token;", [
+						$app->run_insert_query("card_sessions", [
 							'card_user_id' => $card_user['card_user_id'],
 							'session_key' => $session_key,
 							'login_time' => time(),

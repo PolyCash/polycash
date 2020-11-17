@@ -46,11 +46,11 @@ if ($app->running_as_admin()) {
 				$check_blocks_q .= " AND ((num_ios_in IS NULL AND block_id >= :first_required_block) OR sum_coins_in<0 OR sum_coins_out<0 OR transactions_html IS NULL)";
 			}
 			$check_blocks_q .= " AND block_id>= :first_required_block ORDER BY block_id ASC;";
-			$check_blocks = $app->run_query($check_blocks_q, $check_blocks_params);
+			$check_blocks = $app->run_query($check_blocks_q, $check_blocks_params)->fetchAll();
 			
-			$app->print_debug($db_blockchain['blockchain_name'].": checking ".$check_blocks->rowCount()." blocks");
+			$app->print_debug($db_blockchain['blockchain_name'].": checking ".count($check_blocks)." blocks");
 			
-			while ($check_block = $check_blocks->fetch()) {
+			foreach ($check_blocks as $check_block) {
 				$num_trans = $blockchain->set_block_stats($check_block);
 				
 				if ($check_block['locally_saved'] == 1) $blockchain->render_transactions_in_block($check_block, false);
@@ -72,12 +72,12 @@ if ($app->running_as_admin()) {
 			];
 			$check_blocks_q = "SELECT internal_block_id, block_id, num_ios_in, num_ios_out FROM blocks WHERE blockchain_id=:blockchain_id AND block_id >= :from_block AND block_id <= :to_block ORDER BY block_id ASC;";
 			
-			$check_blocks = $app->run_query($check_blocks_q, $check_blocks_params);
+			$check_blocks = $app->run_query($check_blocks_q, $check_blocks_params)->fetchAll();
 			
-			$app->print_debug($blockchain->db_blockchain['blockchain_name'].": checking ".$check_blocks->rowCount()." blocks");
+			$app->print_debug($blockchain->db_blockchain['blockchain_name'].": checking ".count($check_blocks)." blocks");
 			
 			echo "<pre>\n";
-			while ($check_block = $check_blocks->fetch()) {
+			foreach ($check_blocks as $check_block) {
 				echo $check_block['block_id'].": ";
 				
 				$num_trans = $blockchain->set_block_stats($check_block);

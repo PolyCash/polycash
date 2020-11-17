@@ -13,7 +13,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 		if (!$user_strategy || $user_strategy['user_id'] != $thisuser->db_user['user_id']) die("Invalid strategy ID");
 	}
 	else {
-		$app->run_query("INSERT INTO user_strategies SET user_id=:user_id, game_id=:game_id;", [
+		$app->run_insert_query("user_strategies", [
 			'user_id' => $thisuser->db_user['user_id'],
 			'game_id' => $game->db_game['game_id']
 		]);

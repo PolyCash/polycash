@@ -20,11 +20,11 @@ if ($app->running_as_admin()) {
 		$ref_user = false;
 		$blockchains = [];
 		
-		$buyin_invoices = $app->run_query("SELECT *, ug.user_id AS user_id, ug.account_id AS user_game_account_id FROM user_games ug JOIN currency_invoices i ON ug.user_game_id=i.user_game_id JOIN addresses a ON i.address_id=a.address_id JOIN games g ON ug.game_id=g.game_id WHERE i.status IN ('unpaid','unconfirmed','confirmed') AND (i.status='unconfirmed' OR i.expire_time >= :current_time) AND i.invoice_type != 'sellout' GROUP BY a.address_id;", ['current_time'=>time()]);
+		$buyin_invoices = $app->run_query("SELECT *, ug.user_id AS user_id, ug.account_id AS user_game_account_id FROM user_games ug JOIN currency_invoices i ON ug.user_game_id=i.user_game_id JOIN addresses a ON i.address_id=a.address_id JOIN games g ON ug.game_id=g.game_id WHERE i.status IN ('unpaid','unconfirmed','confirmed') AND (i.status='unconfirmed' OR i.expire_time >= :current_time) AND i.invoice_type != 'sellout' GROUP BY a.address_id;", ['current_time'=>time()])->fetchAll();
 		
-		if ($print_debug) echo "Checking ".$buyin_invoices->rowCount()." buyin addresses.\n";
+		if ($print_debug) echo "Checking ".count($buyin_invoices)." buyin addresses.\n";
 		
-		while ($invoice_address = $buyin_invoices->fetch()) {
+		foreach ($buyin_invoices as $invoice_address) {
 			$transaction_id = false;
 			
 			if (empty($blockchains[$invoice_address['blockchain_id']])) $blockchains[$invoice_address['blockchain_id']] = new Blockchain($app, $invoice_address['blockchain_id']);
@@ -212,7 +212,7 @@ if ($app->running_as_admin()) {
 							else echo json_encode([$error_message, $sell_order], JSON_PRETTY_PRINT)."\n";
 						}
 						
-						$app->run_query("INSERT INTO currency_invoice_ios SET invoice_id=:invoice_id, tx_hash=:tx_hash, out_index=:out_index, game_out_index=:game_out_index, extra_info=:extra_info, time_created=:time_created;", [
+						$app->run_insert_query("currency_invoice_ios", [
 							'invoice_id' => $invoice_address['invoice_id'],
 							'tx_hash' => $pay_tx_hash,
 							'out_index' => $pay_out_index,
@@ -337,11 +337,13 @@ if ($app->running_as_admin()) {
 									else echo json_encode([$buy_order, $error_message], JSON_PRETTY_PRINT)."\n";
 								}
 								
-								$app->run_query("INSERT INTO currency_invoice_ios SET invoice_id=:invoice_id, tx_hash=:tx_hash, out_index=0, game_out_index=NULL, extra_info=:extra_info, time_created=:time_created;", [
+								$app->run_insert_query("currency_invoice_ios", [
 									'invoice_id' => $invoice_address['invoice_id'],
 									'tx_hash' => $transaction['tx_hash'],
 									'extra_info' => json_encode($invoice_io_extra_info, JSON_PRETTY_PRINT),
-									'time_created' => time()
+									'time_created' => time(),
+									'out_index' => 0,
+									'game_out_index' => null
 								]);
 							}
 							

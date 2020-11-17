@@ -11,7 +11,7 @@ if ($existing_subscriber) {
 	echo $app->output_message(2, "That email address has already been subscribed.", false);
 }
 else {
-	$app->run_query("INSERT INTO newsletter_subscribers SET email_address=:email_address, time_created=:time_created", [
+	$app->run_insert_query("newsletter_subscribers", [
 		'email_address' => $email,
 		'time_created' => time()
 	]);

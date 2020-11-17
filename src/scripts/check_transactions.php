@@ -27,11 +27,11 @@ if ($app->running_as_admin()) {
 		
 		$check_unconfirmed_transactions = $app->run_query("SELECT * FROM transactions WHERE blockchain_id=:blockchain_id AND transaction_desc='transaction' AND block_id IS NULL;", [
 			'blockchain_id' => $blockchain->db_blockchain['blockchain_id']
-		]);
+		])->fetchAll();
 		
-		echo "Checking ".$check_unconfirmed_transactions->rowCount()." unconfirmed transactions in ".$blockchain->db_blockchain['blockchain_name']."<br/>\n";
+		echo "Checking ".count($check_unconfirmed_transactions)." unconfirmed transactions in ".$blockchain->db_blockchain['blockchain_name']."<br/>\n";
 		
-		while ($transaction = $check_unconfirmed_transactions->fetch()) {
+		foreach ($check_unconfirmed_transactions as $transaction) {
 			$coins_in = $app->transaction_coins_in($transaction['transaction_id']);
 			$coins_out = $app->transaction_coins_out($transaction['transaction_id']);
 			
@@ -49,12 +49,12 @@ if ($app->running_as_admin()) {
 		$check_game_transactions = $app->run_query("SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.spend_transaction_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id=:game_id AND t.transaction_desc='transaction' AND io.spend_block_id<=:ref_block_id GROUP BY t.transaction_id ORDER BY t.block_id ASC;", [
 			'game_id' => $game->db_game['game_id'],
 			'ref_block_id' => $game->last_block_id()
-		]);
+		])->fetchAll();
 		
-		echo "Checking ".$check_game_transactions->rowCount()." transactions for ".$game->db_game['name']."<br/>\n";
+		echo "Checking ".count($check_game_transactions)." transactions for ".$game->db_game['name']."<br/>\n";
 		$severe_threshold = 50;
 		
-		while ($transaction = $check_game_transactions->fetch()) {
+		foreach ($check_game_transactions as $transaction) {
 			$coins_in = $game->transaction_coins_in($transaction['transaction_id']);
 			$coins_out = $game->transaction_coins_out($transaction['transaction_id'], true);
 			

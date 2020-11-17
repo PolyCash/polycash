@@ -104,9 +104,9 @@ class User {
 		$existing_user_games = $this->app->run_query("SELECT *, ug.user_id AS user_id, ug.game_id AS game_id FROM user_games ug JOIN games g ON ug.game_id=g.game_id LEFT JOIN user_strategies us ON us.strategy_id=ug.strategy_id LEFT JOIN featured_strategies fs ON us.featured_strategy_id=fs.featured_strategy_id WHERE ug.user_id=:user_id AND ug.game_id=:game_id ORDER BY ug.selected DESC;", [
 			'user_id' => $this->db_user['user_id'],
 			'game_id' => $game->db_game['game_id']
-		]);
+		])->fetchAll();
 		
-		if ($force_new || $existing_user_games->rowCount() == 0) {
+		if ($force_new || count($existing_user_games) == 0) {
 			$new_user_game_params = [
 				'user_id' => $this->db_user['user_id'],
 				'game_id' => $game->db_game['game_id'],
@@ -114,17 +114,18 @@ class User {
 				'display_currency_id' => $game->db_game['default_display_currency_id'],
 				'buyin_currency_id' => $game->db_game['default_buyin_currency_id'],
 				'created_at' => time(),
-				'show_intro_message' => $game->fetch_featured_strategies()->rowCount() > 0 ? 1 : 0,
-				'prompt_notification_preference' => empty($this->db_user['notification_email']) ? 1 : 0
+				'show_intro_message' => count($game->fetch_featured_strategies()->fetchAll()) > 0 ? 1 : 0,
+				'prompt_notification_preference' => empty($this->db_user['notification_email']) ? 1 : 0,
+				'notification_preference' => 'email',
+				'betting_mode' => 'principal'
 			];
-			$new_user_game_q = "INSERT INTO user_games SET user_id=:user_id, game_id=:game_id, api_access_code=:api_access_code, show_intro_message=:show_intro_message, notification_preference='email', prompt_notification_preference=:prompt_notification_preference, betting_mode='principal', display_currency_id=:display_currency_id, buyin_currency_id=:buyin_currency_id, created_at=:created_at";
 			if (!empty($this->db_user['payout_address_id'])) {
-				$new_user_game_q .= ", payout_address_id=:payout_address_id";
 				$new_user_game_params['payout_address_id'] = $this->db_user['payout_address_id'];
 			}
-			if ($game->db_game['giveaway_status'] == "public_pay" || $game->db_game['giveaway_status'] == "invite_pay") $new_user_game_q .= ", payment_required=1";
-			$new_user_game_q .= ";";
-			$this->app->run_query($new_user_game_q, $new_user_game_params);
+			if ($game->db_game['giveaway_status'] == "public_pay" || $game->db_game['giveaway_status'] == "invite_pay") {
+				$new_user_game_params['payment_required'] = 1;
+			}
+			$this->app->run_insert_query("user_games", $new_user_game_params);
 			$user_game_id = $this->app->last_insert_id();
 			
 			$currency_id = $game->blockchain->currency_id();
@@ -159,17 +160,18 @@ class User {
 		else {
 			$tx_fee=$game->db_game['default_transaction_fee'];
 			
-			$this->app->run_query("INSERT INTO user_strategies SET voting_strategy='manual', game_id=:game_id, user_id=:user_id, transaction_fee=:tx_fee;", [
+			$this->app->run_insert_query("user_strategies", [
 				'game_id' => $game->db_game['game_id'],
 				'user_id' => $user_game['user_id'],
-				'tx_fee' => $tx_fee
+				'voting_strategy' => 'manual',
+				'transaction_fee' => $tx_fee
 			]);
 			$strategy_id = $this->app->last_insert_id();
 			
 			$strategy = $this->app->fetch_strategy_by_id($strategy_id);
 			
 			for ($block=1; $block<=$game->db_game['round_length']; $block++) {
-				$this->app->run_query("INSERT INTO user_strategy_blocks SET strategy_id=:strategy_id, block_within_round=:block_within_round;", [
+				$this->app->run_insert_query("user_strategy_blocks", [
 					'strategy_id' => $strategy_id,
 					'block_within_round' => $block
 				]);
@@ -201,9 +203,10 @@ class User {
 			])->fetch();
 			
 			if (!$viewer_connection) {
-				$this->app->run_query("INSERT INTO viewer_connections SET type='viewer2user', from_id=:viewer_id, to_id=:user_id;", [
-					'viewer_id' => $viewer_id,
-					'user_id' => $this->db_user['user_id']
+				$this->app->run_insert_query("viewer_connections", [
+					'from_id' => $viewer_id,
+					'to_id' => $this->db_user['user_id'],
+					'type' => 'viewer2user'
 				]);
 			}
 		}
@@ -217,15 +220,14 @@ class User {
 				'user_id' => $this->db_user['user_id'],
 				'session_key' => $session_key,
 				'login_time' => time(),
+				'logout_time' => 0,
 				'expire_time' => $expire_time,
 				'synchronizer_token' => $this->app->random_string(32)
 			];
-			$new_session_q = "INSERT INTO user_sessions SET user_id=:user_id, session_key=:session_key, login_time=:login_time, expire_time=:expire_time, synchronizer_token=:synchronizer_token";
 			if (AppSettings::getParam('pageview_tracking_enabled')) {
-				$new_session_q .= ", ip_address=:ip_address";
 				$new_session_params['ip_address'] = $_SERVER['REMOTE_ADDR'];
 			}
-			$this->app->run_query($new_session_q, $new_session_params);
+			$this->app->run_insert_query("user_sessions", $new_session_params);
 			
 			$login_user_params = [
 				'user_id' => $this->db_user['user_id']
@@ -267,9 +269,9 @@ class User {
 	}
 	
 	public function count_user_games_created() {
-		return (int)($this->app->run_query("SELECT * FROM games WHERE creator_id=:user_id;", [
+		return count($this->app->run_query("SELECT * FROM games WHERE creator_id=:user_id;", [
 			'user_id' => $this->db_user['user_id']
-		])->rowCount());
+		])->fetchAll());
 	}
 	
 	public function new_game_permission() {
@@ -364,7 +366,7 @@ class User {
 				$points = (int)$_REQUEST['poi_'.$op['option_id']];
 				
 				if ($points > 0) {
-					$this->app->run_query("INSERT INTO strategy_round_allocations SET strategy_id=:strategy_id, round_id=:round_id, option_id=:option_id, points=:points;", [
+					$this->app->run_insert_query("strategy_round_allocations", [
 						'strategy_id' => $user_strategy['strategy_id'],
 						'round_id' => $round_id,
 						'option_id' => $op['option_id'],

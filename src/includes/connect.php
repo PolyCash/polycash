@@ -29,7 +29,7 @@ else if (!AppSettings::runningFromCommandline()) {
 		if (isset($_SERVER['HTTPS'])) $requested_base_url = "https";
 		else $requested_base_url = "http";
 		$requested_base_url .= "://".$_SERVER['HTTP_HOST'];
-		
+
 		if ($requested_base_url != AppSettings::getParam('base_url')) {
 			header("Location: ".AppSettings::getParam('base_url').$_SERVER['REQUEST_URI']);
 			die();

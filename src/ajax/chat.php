@@ -18,7 +18,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 					$message = $app->strong_strip_tags($_REQUEST['message']);
 					
 					if (!empty($message)) {
-						$app->run_query("INSERT INTO user_messages SET game_id=:game_id, from_user_id=:from_user_id, to_user_id=:to_user_id, message=:message, send_time=:send_time;", [
+						$app->run_insert_query("user_messages", [
 							'game_id' => $game->db_game['game_id'],
 							'from_user_id' => $thisuser->db_user['user_id'],
 							'to_user_id' => $to_user->db_user['user_id'],

@@ -189,11 +189,12 @@ class Blockchain {
 		}
 		
 		if (!$db_block) {
-			$this->app->run_query("INSERT INTO blocks SET blockchain_id=:blockchain_id, block_hash=:block_hash, block_id=:block_id, time_created=:time_created, locally_saved=0;", [
+			$this->app->run_insert_query("blocks", [
 				'blockchain_id' => $this->db_blockchain['blockchain_id'],
 				'block_hash' => $block_hash,
 				'block_id' => $block_height,
-				'time_created' => time()
+				'time_created' => time(),
+				'locally_saved' => 0
 			]);
 			$internal_block_id = $this->app->last_insert_id();
 			$db_block = $this->fetch_block_by_internal_id($internal_block_id);
@@ -847,8 +848,7 @@ class Blockchain {
 					'num_outputs' => count($outputs),
 					'time_created' => time()
 				];
-				$new_tx_q = "INSERT INTO transactions SET blockchain_id=:blockchain_id, transaction_desc=:transaction_desc, tx_hash=:tx_hash, num_inputs=:num_inputs, num_outputs=:num_outputs, time_created=:time_created;";
-				$this->app->run_query($new_tx_q, $new_tx_params);
+				$this->app->run_query("transactions", $new_tx_params);
 				$db_transaction_id = $this->app->last_insert_id();
 			}
 			
@@ -1007,36 +1007,28 @@ class Blockchain {
 						'is_separator' => $output_address['is_separator_address'],
 						'is_passthrough' => $output_address['is_passthrough_address']
 					];
-					$new_io_q = "INSERT INTO transaction_ios SET spend_status=:spend_status, blockchain_id=:blockchain_id, script_type=:script_type, out_index=:out_index, address_id=:address_id";
 					if ($output_address['user_id'] > 0) {
-						$new_io_q .= ", user_id=:user_id";
 						$new_io_params['user_id'] = $output_address['user_id'];
 					}
 					if ($output_address['option_index'] != "") {
-						$new_io_q .= ", option_index=:option_index";
 						$new_io_params['option_index'] = $output_address['option_index'];
 						$output_io_indices[$out_index] = $output_address['option_index'];
 					}
 					else $output_io_indices[$out_index] = false;
 					
 					if ($spend_transaction_id) {
-						$new_io_q .= ", spend_transaction_id=:spend_transaction_id, in_index=:in_index";
 						$new_io_params['spend_transaction_id'] = $spend_transaction_id;
 						$new_io_params['in_index'] = $spend_in_index;
 						
 						if ($spend_block_id !== false) {
-							$new_io_q .= ", coin_blocks_created=:coin_blocks_created";
 							$this_io_cbc = ($spend_block_id-$block_height)*$new_io_amount;
 							$new_io_params['coin_blocks_created'] = $this_io_cbc;
 						}
 					}
 					
-					$new_io_q .= ", create_transaction_id=:create_transaction_id, amount=:amount";
 					if ((string)$block_height !== "") {
-						$new_io_q .= ", create_block_id=:create_block_id";
 						$new_io_params['create_block_id'] = $block_height;
 					}
-					$new_io_q .= ", is_destroy=:is_destroy, is_separator=:is_separator, is_passthrough=:is_passthrough";
 					
 					$output_io_address_ids[$out_index] = $output_address['address_id'];
 					$output_is_destroy[$out_index] = $output_address['is_destroy_address'];
@@ -1047,9 +1039,8 @@ class Blockchain {
 					if ($first_passthrough_index !== false && $output_is_destroy[$out_index] == 0 && $output_is_separator[$out_index] == 0 && $output_is_passthrough[$out_index] == 0) $output_is_receiver[$out_index] = 1;
 					
 					$new_io_params['is_receiver'] = $output_is_receiver[$out_index];
-					$new_io_q .= ", is_receiver=:is_receiver";
 					
-					$this->app->run_query($new_io_q, $new_io_params);
+					$this->app->run_insert_query("transaction_ios", $new_io_params);
 					$io_id = $this->app->last_insert_id();
 					
 					$output_io_ids[$out_index] = $io_id;
@@ -1490,10 +1481,11 @@ class Blockchain {
 				'blockchain_id' => $this->db_blockchain['blockchain_id'],
 				'from_block_id' => $load_from_block,
 				'to_block_id' => $load_to_block
-			]);
-			$this_loop_blocks_to_load = $load_blocks->rowCount();
+			])->fetchAll();
+			$this_loop_blocks_to_load = count($load_blocks);
+			$load_block_pos = 0;
 			
-			while ($keep_looping && $unknown_block = $load_blocks->fetch()) {
+			while ($keep_looping && $unknown_block = $load_blocks[$load_block_pos]) {
 				if ($this->db_blockchain['p2p_mode'] == "rpc") {
 					$fetchblockhash_error = false;
 					
@@ -1537,6 +1529,8 @@ class Blockchain {
 				$loop_i++;
 				
 				if (microtime(true)-$start_time >= $max_execution_time) $keep_looping = false;
+				
+				$load_block_pos++;
 			}
 			
 			if ($print_debug) $this->app->print_debug("Loaded ".number_format($blocks_loaded)." (to block ".$this->db_blockchain['last_complete_block'].") in ".round(microtime(true)-$ref_time, 6)." sec");
@@ -2123,7 +2117,7 @@ class Blockchain {
 			
 			list($is_destroy_address, $is_separator_address, $is_passthrough_address) = $this->app->option_index_to_special_address_types($option_index);
 			
-			$this->app->run_query("INSERT INTO addresses SET primary_blockchain_id=:primary_blockchain_id, address=:address, time_created=:time_created, is_mine=:is_mine, vote_identifier=:vote_identifier, option_index=:option_index, is_destroy_address=:is_destroy_address, is_separator_address=:is_separator_address, is_passthrough_address=:is_passthrough_address;", [
+			$this->app->run_insert_query("addresses", [
 				'primary_blockchain_id' => $this->db_blockchain['blockchain_id'],
 				'address' => $address,
 				'time_created' => time(),
@@ -2237,15 +2231,15 @@ class Blockchain {
 				'tx_hash' => $tx_hash,
 				'transaction_desc' => $type,
 				'amount' => $amount,
-				'time_created' => time()
+				'time_created' => time(),
+				'has_all_inputs' => 1,
+				'has_all_outputs' => 1
 			];
-			$new_tx_q = "INSERT INTO transactions SET blockchain_id=:blockchain_id, fee_amount=:fee_amount, has_all_inputs=1, has_all_outputs=1, num_inputs=:num_inputs, num_outputs=:num_outputs, tx_hash=:tx_hash, transaction_desc=:transaction_desc, amount=:amount";
+			
 			if ($block_id !== false) {
-				$new_tx_q .= ", block_id=:block_id";
 				$new_tx_params['block_id'] = $block_id;
 			}
-			$new_tx_q .= ", time_created=:time_created;";
-			$this->app->run_query($new_tx_q, $new_tx_params);
+			$this->app->run_insert_query("transactions", $new_tx_params);
 			$transaction_id = $this->app->last_insert_id();
 		}
 		
@@ -2331,14 +2325,12 @@ class Blockchain {
 							'address_id' => $address_id,
 							'option_index' => $address['option_index'],
 							'create_transaction_id' => $transaction_id,
-							'amount' => $amounts[$out_index]
+							'amount' => $amounts[$out_index],
+							'script_type' => 'pubkeyhash'
 						];
-						$new_output_q = "INSERT INTO transaction_ios SET blockchain_id=:blockchain_id, spend_status=:spend_status, out_index=:out_index, script_type='pubkeyhash', ";
 						if (!empty($address['user_id'])) {
-							$new_output_q .= "user_id=:user_id, ";
 							$new_output_params['user_id'] = $address['user_id'];
 						}
-						$new_output_q .= "is_destroy=:is_destroy, is_separator=:is_separator, is_passthrough=:is_passthrough, is_receiver=:is_receiver, address_id=:address_id, option_index=:option_index, ";
 						
 						if ($block_id !== false) {
 							if ($input_sum == 0) $output_cbd = 0;
@@ -2347,16 +2339,13 @@ class Blockchain {
 							if ($input_sum == 0) $output_crd = 0;
 							else $output_crd = floor($coin_rounds_destroyed*($amounts[$out_index]/$input_sum));
 							
-							$new_output_q .= "coin_blocks_destroyed=:output_cbd, ";
-							$new_output_params['output_cbd'] = $output_cbd;
+							$new_output_params['coin_blocks_destroyed'] = $output_cbd;
 						}
 						if ($block_id !== false) {
-							$new_output_q .= "create_block_id=:block_id, ";
-							$new_output_params['block_id'] = $block_id;
+							$new_output_params['create_block_id'] = $block_id;
 						}
-						$new_output_q .= "create_transaction_id=:create_transaction_id, amount=:amount;";
 						
-						$this->app->run_query($new_output_q, $new_output_params);
+						$this->app->run_insert_query("transaction_ios", $new_output_params);
 						$created_input_ids[count($created_input_ids)] = $this->app->last_insert_id();
 					}
 					else if ($this->db_blockchain['p2p_mode'] == "rpc") {
@@ -2445,12 +2434,15 @@ class Blockchain {
 		$last_block_id = (int) $this->last_block_id();
 		$prev_block = $this->fetch_block_by_id($last_block_id);
 		
-		$this->app->run_query("INSERT INTO blocks SET blockchain_id=:blockchain_id, block_id=:block_id, block_hash=:block_hash, time_created=:current_time, time_loaded=:current_time, time_mined=:current_time, sec_since_prev_block=:sec_since_prev_block, locally_saved=0;", [
+		$this->app->run_insert_query("blocks", [
 			'blockchain_id' => $this->db_blockchain['blockchain_id'],
 			'block_id' => $last_block_id+1,
 			'block_hash' => $this->app->random_hex_string(64),
-			'current_time' => time(),
-			'sec_since_prev_block' => $prev_block['time_mined'] ? time()-$prev_block['time_mined'] : null
+			'time_created' => time(),
+			'time_loaded' => time(),
+			'time_mined' => time(),
+			'sec_since_prev_block' => $prev_block['time_mined'] ? time()-$prev_block['time_mined'] : null,
+			'locally_saved' => 0
 		]);
 		$internal_block_id = $this->app->last_insert_id();
 		
@@ -2614,14 +2606,11 @@ class Blockchain {
 			'num_inputs' => (int)$tx['num_inputs'],
 			'num_outputs' => (int)$tx['num_outputs']
 		];
-		$new_tx_q = "INSERT INTO transactions SET time_created=:time_created, blockchain_id=:blockchain_id";
 		if ((string)$block_height !== "") {
-			$new_tx_q .= ", block_id=:block_id, position_in_block=:position_in_block";
 			$new_tx_params['block_id'] = $block_height;
 			$new_tx_params['position_in_block'] = (int)$tx['position_in_block'];
 		}
-		$new_tx_q .= ", transaction_desc=:transaction_desc, tx_hash=:tx_hash, amount=:amount, fee_amount=:fee_amount, num_inputs=:num_inputs, num_outputs=:num_outputs;";
-		$this->app->run_query($new_tx_q, $new_tx_params);
+		$this->app->run_insert_query("transactions", $new_tx_params);
 		$transaction_id = $this->app->last_insert_id();
 		
 		for ($in_index=0; $in_index<count($tx['inputs']); $in_index++) {
@@ -2655,10 +2644,7 @@ class Blockchain {
 			
 			if ($first_passthrough_index === false && $db_address['is_passthrough_address'] == 1) $first_passthrough_index = $out_index;
 			
-			$new_output_q = "INSERT INTO transaction_ios SET blockchain_id=:blockchain_id, out_index=:out_index, address_id=:address_id, option_index=:option_index, create_block_id=:create_block_id, create_transaction_id=:create_transaction_id, amount=:amount";
-			if ((string)$block_height !== "") $new_output_q .= ", spend_status='unspent'";
-			$new_output_q .= ", is_destroy=:is_destroy, is_separator=:is_separator, is_passthrough=:is_passthrough, is_receiver=:is_receiver;";
-			$this->app->run_query($new_output_q, [
+			$new_output_params = [
 				'blockchain_id' => $this->db_blockchain['blockchain_id'],
 				'out_index' => $out_index,
 				'address_id' => $db_address['address_id'],
@@ -2670,7 +2656,13 @@ class Blockchain {
 				'is_separator' => $db_address['is_separator_address'],
 				'is_passthrough' => $db_address['is_passthrough_address'],
 				'is_receiver' => ($first_passthrough_index !== false && $db_address['is_destroy_address']+$db_address['is_separator_address']+$db_address['is_passthrough_address'] == 0) ? 1 : 0
-			]);
+			];
+			
+			if ((string)$block_height !== "") {
+				$new_output_params["spend_status"] = "unspent";
+			}
+			
+			$this->app->run_query("transaction_ios", $new_output_params);
 		}
 		
 		$this->app->dbh->commit();

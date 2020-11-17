@@ -38,11 +38,11 @@ if ($app->running_as_admin()) {
 				$user_games = $app->run_query("SELECT * FROM user_games ug JOIN currency_accounts ca ON ug.account_id=ca.account_id JOIN users u ON ug.user_id=u.user_id WHERE ug.game_id=:game_id AND ca.has_option_indices_until<:to_option_index ORDER BY ca.account_id ASC;", [
 					'game_id' => $running_games[$game_i]->db_game['game_id'],
 					'to_option_index' => $to_option_index
-				]);
+				])->fetchAll();
 				
-				if ($print_debug) $app->print_debug("Looping through ".$user_games->rowCount()." users for ".$running_games[$game_i]->db_game['name'].".");
+				if ($print_debug) $app->print_debug("Looping through ".count($user_games)." users for ".$running_games[$game_i]->db_game['name'].".");
 				
-				while ($user_game = $user_games->fetch()) {
+				foreach ($user_games as $user_game) {
 					$user = new User($app, $user_game['user_id']);
 					$user->generate_user_addresses($running_games[$game_i], $user_game);
 					if ($print_debug) {
@@ -68,7 +68,7 @@ if ($app->running_as_admin()) {
 					$num_sets_needed = $buffer_address_sets-count($game_addrsets);
 					
 					for ($new_addrset_i=0; $new_addrset_i<$num_sets_needed; $new_addrset_i++) {
-						$app->run_query("INSERT INTO address_sets SET game_id=:game_id;", [
+						$app->run_insert_query("address_sets", [
 							'game_id' => $running_games[$game_i]->db_game['game_id']
 						]);
 					}

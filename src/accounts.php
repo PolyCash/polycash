@@ -28,15 +28,15 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 				$db_io = $app->fetch_io_by_id($io_id);
 				
 				if ($db_io) {
-					$gios_by_io = $sale_game->fetch_game_ios_by_io($io_id);
+					$gios_by_io = $sale_game->fetch_game_ios_by_io($io_id)->fetchAll();
 					
-					if ($gios_by_io->rowCount() > 0) {
+					if (count($gios_by_io) > 0) {
 						$game_sale_account = $sale_game->check_set_game_sale_account($thisuser);
 						
 						$game_ios = [];
 						$colored_coin_sum = 0;
 						
-						while ($game_io = $gios_by_io->fetch()) {
+						foreach ($gios_by_io as $game_io) {
 							array_push($game_ios, $game_io);
 							$colored_coin_sum += $game_io['colored_amount'];
 						}
@@ -70,14 +70,12 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 							}
 							
 							$account_q = "SELECT ca.* FROM currency_accounts ca JOIN games g ON g.game_id=ca.game_id JOIN address_keys k ON k.account_id=ca.account_id WHERE ca.user_id=:user_id AND k.address_id=:address_id;";
-							$account_r = $app->run_query($account_q, [
+							$donate_account = $app->run_query($account_q, [
 								'user_id' => $thisuser->db_user['user_id'],
 								'address_id' => $game_ios[0]['address_id']
-							]);
+							])->fetch();
 							
-							if ($account_r->rowCount() > 0) {
-								$donate_account = $account_r->fetch();
-								
+							if ($donate_account) {
 								if ($total_cost_satoshis < $colored_coin_sum && $coin_sum > ($chain_coins_each*$quantity) - $fee_amount) {
 									$remainder_satoshis = $coin_sum - ($chain_coins_each*$quantity) - $fee_amount;
 									
@@ -149,15 +147,15 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 				$db_io = $app->fetch_io_by_id($io_id);
 				
 				if ($db_io) {
-					$gios_by_io = $donate_game->fetch_game_ios_by_io($io_id);
+					$gios_by_io = $donate_game->fetch_game_ios_by_io($io_id)->fetchAll();
 					
-					if ($gios_by_io->rowCount() > 0) {
+					if (count($gios_by_io) > 0) {
 						$faucet_account = $donate_game->check_set_faucet_account();
 						
 						$game_ios = [];
 						$colored_coin_sum = 0;
 						
-						while ($game_io = $gios_by_io->fetch()) {
+						foreach ($gios_by_io as $game_io) {
 							array_push($game_ios, $game_io);
 							$colored_coin_sum += $game_io['colored_amount'];
 						}
@@ -192,14 +190,12 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 							}
 							
 							$account_q = "SELECT ca.* FROM currency_accounts ca JOIN games g ON g.game_id=ca.game_id JOIN address_keys k ON k.account_id=ca.account_id WHERE ca.user_id=:user_id AND k.address_id=:address_id;";
-							$account_r = $app->run_query($account_q, [
+							$donate_account = $app->run_query($account_q, [
 								'user_id' => $thisuser->db_user['user_id'],
 								'address_id' => $game_ios[0]['address_id']
-							]);
+							])->fetch();
 							
-							if ($account_r->rowCount() > 0) {
-								$donate_account = $account_r->fetch();
-								
+							if ($donate_account) {
 								if ($total_cost_satoshis < $colored_coin_sum && $coin_sum > ($chain_coins_each*$quantity*$utxos_each) - $fee_amount) {
 									$remainder_satoshis = $coin_sum - ($chain_coins_each*$quantity*$utxos_each) - $fee_amount;
 									
@@ -298,14 +294,14 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 					$account_q .= " AND ca.account_id=:account_id";
 					$account_params['account_id'] = $selected_account_id;
 				}
-				$account_r = $app->run_query($account_q, $account_params);
+				$accounts = $app->run_query($account_q, $account_params)->fetchAll();
 				
 				$show_balances = false;
-				if ($account_r->rowCount() <= 50 || !empty($_REQUEST['show_balances'])) $show_balances = true;
+				if (count($accounts) <= 50 || !empty($_REQUEST['show_balances'])) $show_balances = true;
 				
 				if ($selected_account_id) {
 					$show_balances = true;
-					$selected_account = $account_r->fetch();
+					$selected_account = $accounts[0];
 					$account_r = $app->run_query($account_q, $account_params);
 					echo '
 						<div class="panel-title">Account: '.$selected_account['account_name'].'</div>
@@ -320,12 +316,12 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 					</div>
 					<div class="panel-body">';
 					
-					echo "<p>You have ".$account_r->rowCount()." coin account";
-					if ($account_r->rowCount() != 1) echo "s";
+					echo "<p>You have ".count($accounts)." coin account";
+					if (count($accounts) != 1) echo "s";
 					echo ".</p>\n";
 				}
 				
-				while ($account = $account_r->fetch()) {
+				foreach ($accounts as $account) {
 					$blockchain = new Blockchain($app, $account['blockchain_id']);
 					
 					if ($account['game_id'] > 0) {
@@ -390,14 +386,14 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 							$transaction_in_params['blockchain_id'] = $blockchain->db_blockchain['blockchain_id'];
 						}
 						$transaction_in_q .= " ORDER BY (t.block_id IS NULL) DESC, t.block_id DESC LIMIT 200;";
-						$transaction_in_r = $app->run_query($transaction_in_q, $transaction_in_params);
+						$transaction_in_arr = $app->run_query($transaction_in_q, $transaction_in_params)->fetchAll();
 						
 						$transaction_out_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.spend_transaction_id JOIN addresses a ON a.address_id=io.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id=:account_id";
 						if ($account['game_id'] > 0) $transaction_out_q .= " AND t.blockchain_id=:blockchain_id";
 						$transaction_out_q .= " ORDER BY (t.block_id IS NULL) DESC, t.block_id DESC LIMIT 200;";
-						$transaction_out_r = $app->run_query($transaction_out_q, $transaction_in_params);
+						$transaction_out_arr = $app->run_query($transaction_out_q, $transaction_in_params)->fetchAll();
 						
-						echo ' ('.($transaction_in_r->rowCount()+$transaction_out_r->rowCount()).')';
+						echo ' ('.(count($transaction_in_arr)+count($transaction_out_arr)).')';
 						
 						echo '</a></div>';
 						echo "</div>\n";
@@ -468,9 +464,9 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 						
 						echo '<div id="transactions_'.$account['account_id'].'" class="tab-pane'.($account_selected_tab == "transactions" ? ' active' : ' fade').'">';
 						
-						echo "<p>Rendering ".($transaction_in_r->rowCount() + $transaction_out_r->rowCount())." transactions.</p>";
+						echo "<p>Rendering ".(count($transaction_in_arr) + count($transaction_out_arr))." transactions.</p>";
 						
-						while ($transaction = $transaction_in_r->fetch()) {
+						foreach ($transaction_in_arr as $transaction) {
 							if ($account_game) $colored_coin_amount = $account_game->game_amount_by_io($transaction['io_id']);
 							
 							echo '<div class="row">';
@@ -507,7 +503,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 							echo "</div>\n";
 						}
 						
-						while ($transaction = $transaction_out_r->fetch()) {
+						foreach ($transaction_out_arr as $transaction) {
 							if ($account_game) $colored_coin_amount = $account_game->game_amount_by_io($transaction['io_id']);
 							
 							echo '<div class="row">';
@@ -536,12 +532,12 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 						echo '
 							</div>
 							<div id="addresses_'.$account['account_id'].'" class="tab-pane'.($account_selected_tab == "addresses" ? ' active' : ' fade').'">';
-						$addr_r = $app->run_query("SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id=:account_id ORDER BY a.option_index ASC LIMIT 500;", [
+						$addr_arr = $app->run_query("SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id=:account_id ORDER BY a.option_index ASC LIMIT 500;", [
 							'account_id' => $account['account_id']
-						]);
-						echo "<p>This account has ".$addr_r->rowCount()." addresses.</p>";
+						])->fetchAll();
+						echo "<p>This account has ".count($addr_arr)." addresses.</p>";
 						
-						while ($address = $addr_r->fetch()) {
+						foreach ($addr_arr as $address) {
 							$address_balance = $blockchain->address_balance_at_block($address, false);
 							if ($account_game) $game_balance = $account_game->address_balance_at_block($address, false);
 							
@@ -624,8 +620,8 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 						<select class="form-control" id="create_account_blockchain_id" onchange="thisPageManager.create_account_step(2);">
 							<option value="">-- Please Select --</option>
 							<?php
-							$all_blockchains = $app->run_query("SELECT * FROM blockchains ORDER BY blockchain_name ASC;");
-							while ($db_blockchain = $all_blockchains->fetch()) {
+							$all_blockchains = $app->run_query("SELECT * FROM blockchains ORDER BY blockchain_name ASC;")->fetchAll();
+							foreach ($all_blockchains as $db_blockchain) {
 								echo '<option value="'.$db_blockchain['blockchain_id'].'">'.$db_blockchain['blockchain_name'].'</option>'."\n";
 							}
 							?>
@@ -781,8 +777,8 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 								<?php
 								$my_games = $app->run_query("SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_id=:user_id GROUP BY g.game_id ORDER BY g.name ASC;", [
 									'user_id' => $thisuser->db_user['user_id']
-								]);
-								while ($db_game = $my_games->fetch()) {
+								])->fetchAll();
+								foreach ($my_games as $db_game) {
 									echo "<option value=\"".$db_game['game_id']."\">".$db_game['name']."</option>\n";
 								}
 								?>

@@ -18,11 +18,12 @@ class PageviewController {
 		$ip_identifier = $this->ip_identifier();
 		
 		if (!$ip_identifier) {
-			$this->app->run_query("INSERT INTO viewers SET time_created=:time_created;", ['time_created'=>time()]);
+			$this->app->run_insert_query("viewers", ['time_created'=>time()]);
 			$viewer_id = $this->app->last_insert_id();
 			
-			$this->app->run_query("INSERT INTO viewer_identifiers SET type='ip', identifier=:identifier, viewer_id=:viewer_id;", [
+			$this->app->run_insert_query("viewer_identifiers", [
 				'identifier' => $_SERVER['REMOTE_ADDR'],
+				'type' => 'ip',
 				'viewer_id' => $viewer_id
 			]);
 			
@@ -50,7 +51,7 @@ class PageviewController {
 		$pv_page_id = (int)($this->app->run_query("SELECT page_url_id FROM page_urls WHERE url=:url;", ['url'=>$_SERVER['REQUEST_URI']])->fetch(PDO::FETCH_NUM)[0]);
 		
 		if (!$pv_page_id) {
-			$this->app->run_query("INSERT INTO page_urls SET url=:url;", ['url'=>$_SERVER['REQUEST_URI']]);
+			$this->app->run_insert_query("page_urls", ['url'=>$_SERVER['REQUEST_URI']]);
 			$pv_page_id = $this->app->last_insert_id();
 		}
 		
@@ -63,13 +64,10 @@ class PageviewController {
 				'pv_page_id' => $pv_page_id,
 				'refer_url' => $refer_url
 			];
-			$new_pv_q = "INSERT INTO pageviews SET ";
 			if ($thisuser) {
-				$new_pv_q .= "user_id=:user_id, ";
 				$new_pv_params['user_id'] = $thisuser->db_user['user_id'];
 			}
-			$new_pv_q .= "viewer_id=:viewer_id, ip_id=:ip_id, time=:time, pageview_date=:pageview_date, pv_page_id=:pv_page_id, refer_url=:refer_url;";
-			$this->app->run_query($new_pv_q, $new_pv_params);
+			$this->app->run_insert_query("pageviews", $new_pv_params);
 			$pageview_id = $this->app->last_insert_id();
 			
 			$result[0] = $pageview_id;

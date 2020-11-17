@@ -40,7 +40,7 @@ else {
 							$general_entity_type = $app->check_set_entity_type("general entity");
 							$member_entity = $app->check_set_entity($general_entity_type['entity_type_id'], $member_name);
 							
-							$app->run_query("INSERT INTO option_group_memberships SET option_group_id=:option_group_id, entity_id=:entity_id;", [
+							$app->run_insert_query("option_group_memberships", [
 								'option_group_id' => $selected_group['group_id'],
 								'entity_id' => $member_entity['entity_id']
 							]);

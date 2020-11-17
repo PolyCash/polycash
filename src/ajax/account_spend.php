@@ -321,10 +321,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 						}
 						else $app->output_message(8, "Error: not enough coins.", false);
 					}
-					else if ($io_game_r->rowCount() == 0) {
-						$app->output_message(7, "Error: no game found for this UTXO.", false);
-					}
-					else $app->output_message(6, "Error: found multiple games associated with this UTXO.", false);
+					else $app->output_message(6, "Error: no game found for this UTXO.", false);
 				}
 			}
 			else $app->output_message(5, "Error, you don't have permission to spend these coins.", false);
@@ -403,13 +400,13 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 				$db_io = $app->fetch_io_by_id($io_id);
 				
 				if ($db_io) {
-					$db_game_ios = $game->fetch_game_ios_by_io($db_io['io_id']);
+					$db_game_ios = $game->fetch_game_ios_by_io($db_io['io_id'])->fetchAll();
 					
-					if ($db_game_ios->rowCount() > 0) {
+					if (count($db_game_ios) > 0) {
 						$game_ios = [];
 						$colored_coin_sum = 0;
 						
-						while ($game_io = $db_game_ios->fetch()) {
+						foreach ($db_game_ios as $game_io) {
 							array_push($game_ios, $game_io);
 							$colored_coin_sum += $game_io['colored_amount'];
 						}

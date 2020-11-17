@@ -12,7 +12,14 @@ class AppSettings {
 			self::$hasLoaded = true;
 			self::$srcPath = realpath(dirname(dirname(__FILE__)));
 			self::$publicPath = realpath(dirname(dirname(dirname(__FILE__))))."/public";
-			$config_path = self::$srcPath."/config/config.json";
+			
+			$server_software_parts = explode("/", $_SERVER['SERVER_SOFTWARE']);
+			$server_software = $server_software_parts[0];
+			
+			if ($server_software == "Mongoose") $config_file = "phpdesktop_default_config.json";
+			else $config_file = "config.json";
+			
+			$config_path = self::$srcPath."/config/".$config_file;
 			
 			if (is_file($config_path)) {
 				$config_fh = fopen($config_path, 'r');
@@ -38,7 +45,10 @@ class AppSettings {
 					
 					$base_url .= $site_domain;
 					
+					if ($server_software != "Apache") $base_url .= ":".$_SERVER['SERVER_PORT'];
+					
 					self::$settings->base_url = $base_url;
+					self::$settings->server_software = $server_software;
 				}
 				else die("Failed to read the config file.");
 			}

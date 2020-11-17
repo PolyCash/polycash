@@ -135,9 +135,8 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 						
 						$genesis_first_address_r = $app->run_query("SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON io.address_id=a.address_id WHERE t.tx_hash=:genesis_tx_hash AND io.out_index=0;", [
 							'genesis_tx_hash' => $genesis_tx_hash
-						]);
-						if ($genesis_first_address_r->rowCount() == 1) {
-							$genesis_first_address = $genesis_first_address_r->fetch();
+						])->fetch();
+						if ($genesis_first_address) {
 							$escrow_address = $genesis_first_address['address'];
 						}
 					}
@@ -348,12 +347,14 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 					}
 					$change_gde_q = substr($change_gde_q, 0, strlen($change_gde_q)-2);
 					
-					if ($gde_id == "new") $change_gde_q .= ";";
+					if ($gde_id == "new") {
+						$app->run_insert_query("game_defined_events", $change_gde_params);
+					}
 					else {
 						$change_gde_q .= " WHERE game_defined_event_id=:game_defined_event_id;";
 						$change_gde_params['game_defined_event_id'] = $gde['game_defined_event_id'];
+						$app->run_query($change_gde_q, $change_gde_params);
 					}
-					$app->run_query($change_gde_q, $change_gde_params);
 					
 					list($final_defined_game_def_hash, $final_defined_game_def) = GameDefinition::fetch_game_definition($game, "defined", $show_internal_params, false);
 					GameDefinition::check_set_game_definition($app, $final_defined_game_def_hash, $final_defined_game_def);
@@ -447,7 +448,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 									'event_index' => $gde['event_index']
 								])->fetch()['COUNT(*)']);
 								
-								$app->run_query("INSERT INTO game_defined_options SET game_id=:game_id, event_index=:event_index, entity_id=:entity_id, name=:name, option_index=:option_index;", [
+								$app->run_insert_query("game_defined_options", [
 									'game_id' => $game->db_game['game_id'],
 									'event_index' => $gde['event_index'],
 									'entity_id' => $entity['entity_id'],

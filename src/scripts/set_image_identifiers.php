@@ -2,10 +2,10 @@
 require_once(dirname(dirname(__FILE__))."/includes/connect.php");
 
 if ($app->running_as_admin()) {
-	$relevant_images = $app->run_query("SELECT * FROM images WHERE image_identifier IS NULL;");
-	echo "Setting image identifiers for ".$relevant_images->rowCount()." images.<br/>\n";
+	$relevant_images = $app->run_query("SELECT * FROM images WHERE image_identifier IS NULL;")->fetchAll();
+	echo "Setting image identifiers for ".count($relevant_images)." images.<br/>\n";
 	
-	while ($db_image = $relevant_images->fetch()) {
+	foreach ($relevant_images as $db_image) {
 		$image_fname = AppSettings::srcPath().$app->image_url($db_image);
 		$fh = fopen($image_fname, 'r');
 		$raw_image = fread($fh, filesize($image_fname));

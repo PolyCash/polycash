@@ -118,15 +118,15 @@ if ($user_game) {
 					$bet_i = 0;
 					
 					foreach ($db_events as $db_event) {
-						$options_by_event = $app->fetch_options_by_event($db_event['event_id']);
+						$options_by_event = $app->fetch_options_by_event($db_event['event_id'])->fetchAll();
 						
 						$address_error = false;
 						$thisevent_io_amounts = [];
 						$thisevent_address_ids = [];
 						
-						$num_options_this_event = $options_by_event->rowCount();
+						$num_options_this_event = count($options_by_event);
 						
-						while ($option = $options_by_event->fetch()) {
+						foreach ($options_by_event->fetch() as $option) {
 							$this_address = $app->fetch_addresses_in_account($account, $option['option_index'], 1)[0];
 							
 							if ($this_address) {

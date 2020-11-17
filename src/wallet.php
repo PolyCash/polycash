@@ -151,7 +151,7 @@ if ($thisuser) {
 				
 				if ($payout_address != "") {
 					$base_currency = $app->fetch_currency_by_id($game->blockchain->currency_id());
-					$app->run_query("INSERT INTO external_addresses SET user_id=:user_id, currency_id=:currency_id, address=:address, time_created=:time_created;", [
+					$app->run_insert_query("external_addresses", [
 						'user_id' => $thisuser->db_user['user_id'],
 						'currency_id' => $base_currency['currency_id'],
 						'address' => $payout_address,
@@ -309,16 +309,16 @@ if ($thisuser) {
 		<div class="container-fluid">
 			<div class="panel panel-default" style="margin-top: 15px;">
 				<?php
-				$my_games = $app->my_games($thisuser->db_user['user_id'], false);
+				$my_games = $app->my_games($thisuser->db_user['user_id'], false)->fetchAll();
 				
-				if ($my_games->rowCount() > 0) {
+				if (count($my_games) > 0) {
 					?>
 					<div class="panel-heading">
 						<div class="panel-title">Please select a game:</div>
 					</div>
 					<div class="panel-body">
 						<?php
-						while ($user_game = $my_games->fetch()) {
+						foreach ($my_games as $user_game) {
 							echo "<a href=\"/wallet/".$user_game['url_identifier']."/\">".$user_game['name']."</a><br/>\n";
 						}
 						?>
@@ -357,7 +357,7 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 		if (!$user_strategy || $user_strategy['user_id'] != $thisuser->db_user['user_id']) die("Invalid strategy ID");
 	}
 	else {
-		$app->run_query("INSERT INTO user_strategies SET user_id=:user_id, game_id=:game_id;", [
+		$app->run_insert_query("user_strategies", [
 			'user_id' => $thisuser->db_user['user_id'],
 			'game_id' => $game->db_game['game_id']
 		]);
@@ -428,7 +428,7 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 			foreach ($entities_by_game as $entity) {
 				$entity_pct = intval($_REQUEST['entity_pct_'.$entity['entity_id']]);
 				if ($entity_pct > 0) {
-					$app->run_query("INSERT INTO user_strategy_entities SET strategy_id=:strategy_id, entity_id=:entity_id, pct_points=:pct_points;", [
+					$app->run_insert_query("user_strategy_entities", [
 						'strategy_id' => $user_strategy['strategy_id'],
 						'entity_id' => $entity['entity_id'],
 						'pct_points' => $entity_pct
@@ -451,7 +451,7 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 			
 			if (isset($_REQUEST['vote_on_block_'.$block]) && $_REQUEST['vote_on_block_'.$block] == "1") {
 				if (!$strategy_block) {
-					$app->run_query("INSERT INTO user_strategy_blocks SET strategy_id=:strategy_id, block_within_round=:block_within_round;", [
+					$app->run_insert_query("user_strategy_blocks", [
 						'strategy_id' => $user_strategy['strategy_id'],
 						'block_within_round' => $block
 					]);
@@ -567,11 +567,11 @@ if ($thisuser && $game) {
 			'game_id' => $game->db_game['game_id'],
 			'from_block_id' => $from_block_id,
 			'to_block_id' => $to_block_id
-		]);
-		$num_initial_load_events = $initial_load_events->rowCount();
+		])->fetchAll();
+		$num_initial_load_events = count($initial_load_events);
 		$i=0;
 		
-		while ($db_event = $initial_load_events->fetch()) {
+		foreach ($initial_load_events as $db_event) {
 			if ($i == 0) echo "games[0].all_events_start_index = ".$db_event['event_index'].";\n";
 			else if ($i == $num_initial_load_events-1) echo "games[0].all_events_stop_index = ".$db_event['event_index'].";\n";
 			
@@ -709,7 +709,7 @@ if ($thisuser && $game) {
 					<?php
 				}
 				
-				if ($game->fetch_featured_strategies()->rowCount() > 0) {
+				if (count($game->fetch_featured_strategies()->fetchAll()) > 0) {
 					?>
 					<button class="btn btn-sm btn-info" style="margin-top: 8px;" onclick="thisPageManager.apply_my_strategy();"><i class="fas fa-hand-point-up"></i> &nbsp; Apply my strategy now</button>
 					<button class="btn btn-sm btn-danger" style="margin-top: 8px;" onclick="thisPageManager.show_featured_strategies(); return false;"><i class="fas fa-list"></i> &nbsp; Change my strategy</button>
@@ -754,11 +754,11 @@ if ($thisuser && $game) {
 									$user_games_by_game = $app->run_query("SELECT * FROM user_games WHERE user_id=:user_id AND game_id=:game_id ORDER BY account_id ASC;", [
 										'user_id' => $thisuser->db_user['user_id'],
 										'game_id' => $game->db_game['game_id']
-									]);
-									if ($user_games_by_game->rowCount() <= 5) $user_game_show_balances = true;
+									])->fetchAll();
+									if (count($user_games_by_game) <= 5) $user_game_show_balances = true;
 									else $user_game_show_balances = false;
 									
-									while ($db_user_game = $user_games_by_game->fetch()) {
+									foreach ($user_games_by_game as $db_user_game) {
 										echo "<option ";
 										if ($db_user_game['user_game_id'] == $user_game['user_game_id']) echo "selected=\"selected\" ";
 										echo "value=\"".$db_user_game['user_game_id']."\">Account #".$db_user_game['account_id'];
@@ -1046,11 +1046,11 @@ if ($thisuser && $game) {
 											echo '<input type="checkbox" name="vote_on_block_'.$block.'" id="vote_on_block_'.$block.'" value="1"';
 											
 											$strategy_block_q = "SELECT * FROM user_strategy_blocks WHERE strategy_id=:strategy_id AND block_within_round=:block_within_round;";
-											$strategy_block_r = $app->run_query($strategy_block_q, [
+											$strategy_block_arr = $app->run_query($strategy_block_q, [
 												'strategy_id' => $user_strategy['strategy_id'],
 												'block_within_round' => $block
-											]);
-											if ($strategy_block_r->rowCount() > 0) echo ' checked="checked"';
+											])->fetchAll();
+											if (count($strategy_block_arr) > 0) echo ' checked="checked"';
 											
 											echo '><label class="plainlabel" for="vote_on_block_'.$block.'">&nbsp;&nbsp;';
 											echo $block."</label>";

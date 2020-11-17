@@ -89,7 +89,7 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 			}
 		}
 		
-		$blockchain_r = $app->run_query("SELECT * FROM blockchains ORDER BY blockchain_id ASC;");
+		$blockchain_arr = $app->run_query("SELECT * FROM blockchains ORDER BY blockchain_id ASC;")->fetchAll();
 		?>
 		<div class="panel panel-default" style="margin-top: 15px;">
 			<div class="panel-heading">
@@ -100,7 +100,7 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 			<div class="panel-body">
 				<button class="btn btn-success btn-sm" style="margin-bottom: 15px; float: right;" onclick="$('#new_blockchain_modal').modal('show');">+ New Blockchain</button>
 				
-				<p><?php echo $blockchain_r->rowCount(); ?> blockchains are installed.</p>
+				<p><?php echo count($blockchain_arr); ?> blockchains are installed.</p>
 				
 				<table style="width: 100%;" class="table table-bordered">
 					<thead style="background-color: #f6f6f6;">
@@ -114,7 +114,7 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 					</thead>
 					<tbody>
 						<?php
-						while ($db_blockchain = $blockchain_r->fetch()) {
+						foreach ($blockchain_arr as $db_blockchain) {
 							$blockchain = new Blockchain($app, $db_blockchain['blockchain_id']);
 							?>
 							<tr>
