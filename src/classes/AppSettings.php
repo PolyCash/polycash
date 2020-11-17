@@ -30,6 +30,8 @@ class AppSettings {
 					
 					$base_url .= $site_domain;
 					
+					if (empty(self::$settings->server)) die('Please add this to your src/config/config.json: "server": "Apache"');
+					
 					if (self::$settings->server != "Apache") $base_url .= ":".$_SERVER['SERVER_PORT'];
 					
 					self::$settings->base_url = $base_url;
