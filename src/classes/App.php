@@ -2593,11 +2593,17 @@ class App {
 	}
 	
 	public function create_new_user($verify_code, $salt, $username, $password) {
+		if (empty(AppSettings::getParam("sendgrid_api_key"))) $login_method = "password";
+		else {
+			if (strpos($username, '@') === false) $login_method = "password";
+			else $login_method = "email";
+		}
+		
 		$new_user_params = [
 			'username' => $username,
 			'password' => $this->normalize_password($password, $salt),
 			'salt' => $salt,
-			'login_method' => strpos($username, '@') === false ? "password" : "email",
+			'login_method' => $login_method,
 			'time_created' => time(),
 			'verify_code' => $verify_code,
 			'ip_address' => AppSettings::getParam('pageview_tracking_enabled') ? $_SERVER['REMOTE_ADDR'] : null

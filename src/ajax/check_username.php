@@ -38,7 +38,7 @@ else {
 				}
 			}
 			else {
-				if (strpos($username, '@') === false) {
+				if (empty(AppSettings::getParam('sendgrid_api_key')) || strpos($username, '@') === false) {
 					$message = "To sign up, please enter your password.";
 					$status_code = 4;
 				}
