@@ -638,7 +638,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 		echo '
 		<div class="panel panel-info" style="margin-top: 15px;">
 			<div class="panel-heading">
-				<div class="panel-title">My Print Requests ('.count($my_printrequest).')</div>
+				<div class="panel-title">My Print Requests ('.count($my_printrequests).')</div>
 			</div>
 			<div class="panel-body">';
 		

@@ -19,6 +19,20 @@ else {
 		<div class="panel-title">To continue, please register for a user account.</div>
 	</div>
 	<div class="panel-body">
+		<?php
+		if (empty($app->get_site_constant('admin_user_id'))) {
+			?>
+			<p>
+				<font class="text-success">
+					Thanks for installing PolyCash.<br/>
+					The user account you create now will have special privileges that allow you to install blockchains and games.<br/>
+					Be sure to remember or write down your username and password.<br/>
+					If you're installing PolyCash on a public server, please use a secure username & password.
+				</font>
+			</p>
+			<?php
+		}
+		?>
 		<p>Have you already signed up?</p>
 		<p>
 			<button class="btn btn-primary" onclick="thisPageManager.existing_account=1; thisPageManager.toggle_to_panel('login');">Yes, I already have an account</button>

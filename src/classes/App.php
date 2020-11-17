@@ -2619,7 +2619,7 @@ class App {
 		
 		$thisuser = new User($this, $user_id);
 		
-		if ($user_id == 1) $this->set_site_constant("admin_user_id", $user_id);
+		if (empty($this->get_site_constant('admin_user_id'))) $this->set_site_constant("admin_user_id", $user_id);
 		
 		return $thisuser;
 	}

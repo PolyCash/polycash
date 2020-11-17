@@ -70,8 +70,6 @@ if ($app->running_as_admin()) {
 			include(AppSettings::srcPath()."/includes/html_start.php");
 			?>
 			<div class="container-fluid">
-				<h2>Install the database</h1>
-				Great, the database was installed.<br/>
 				<?php
 				if (empty($thisuser)) {
 					$redirect_url = $app->get_redirect_url($_SERVER['REQUEST_URI']);
@@ -121,7 +119,10 @@ if ($app->running_as_admin()) {
 						else echo "<p>The module must already exist in DB before you can install it.</p>\n";
 					}
 					?>
-					<h2>Run <?php echo AppSettings::getParam('site_name'); ?></h1>
+					<p style="margin-top: 20px;">
+						Welcome to the PolyCash install page. The information below may help you install games and resolve problems with your installation.
+					</p>
+					<h3>Run <?php echo AppSettings::getParam('site_name'); ?></h3>
 					Make sure this line has been added to your /etc/crontab:<br/>
 <pre>
 * * * * * root <?php echo $app->php_binary_location(); ?> <?php echo str_replace("\\", "/", AppSettings::srcPath())."/cron/minutely.php"; ?>
@@ -131,12 +132,15 @@ if ($app->running_as_admin()) {
 					<br/>
 					<pre><?php echo $app->php_binary_location(); ?> <?php echo str_replace("\\", "/", AppSettings::srcPath()."/scripts/main.php"); ?></pre>
 					
-					<h2>Configure Apache for symlinked URLs</h1>
-					Please run this command:<br/>
-					<pre>a2enmod rewrite</pre>
-					
-					Then enter "AllowOverride All" in your apache configuration file (/etc/apache2/apache2.conf or /etc/httpd/httpd.conf or /etc/httpd/conf/httpd.conf)<br/>
-					Example:
+					<?php
+					if (AppSettings::getParam('server') == "Apache") {
+						?>
+						<h3>Configure Apache for symlinked URLs</h3>
+						Please run this command:<br/>
+						<pre>a2enmod rewrite</pre>
+						
+						Then enter "AllowOverride All" in your apache configuration file (/etc/apache2/apache2.conf or /etc/httpd/httpd.conf or /etc/httpd/conf/httpd.conf)<br/>
+						Example:
 <pre>
 &lt;Directory <?php echo AppSettings::publicPath(); ?>&gt;
 	Options FollowSymLinks
@@ -144,11 +148,14 @@ if ($app->running_as_admin()) {
 	Require all granted
 &lt;/Directory&gt;
 </pre>
-					<h2>Blockchains</h2>
+						<?php
+					}
+					?>
+					<h3>Blockchains</h3>
 					To configure &amp; install blockchains, go to the <a href="/manage_blockchains/">blockchain manager</a>.
 					<br/>
 					
-					<h2>Modules</h2>
+					<h3>Modules</h3>
 					<?php
 					$installed_modules = $app->run_query("SELECT * FROM modules m JOIN games g ON m.primary_game_id=g.game_id;")->fetchAll();
 					if (count($installed_modules) > 0) {
