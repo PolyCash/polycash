@@ -38,7 +38,7 @@ if ($email != "") {
 		$message = "<p>Someone requested a password reset for your ".AppSettings::getParam('site_name')." web wallet.  If you did not request a password reset, please delete this email.</p>";
 		$message .= "<p>If you did request the reset and you would like to reset your password, please follow this link:</p>";
 		$message .= "<p><a href=\"".$reset_link."\">".$reset_link."</a></p>";
-		$message .= "<p>Sent by <a href=\"".AppSettings::getParam('base_url')."\">".AppSettings::getParam('site_name_short')."</a></p>";
+		$message .= "<p>Sent by <a href=\"".AppSettings::getParam('base_url')."\">".AppSettings::getParam('site_name')."</a></p>";
 		
 		$res = $app->mail_async($db_user['notification_email'], AppSettings::getParam('site_name'), "no-reply@".AppSettings::getParam('site_domain'), $subject, $message, "", "", "");
 		

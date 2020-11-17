@@ -13,7 +13,7 @@ if (!empty($_REQUEST['import_mode']) && $_REQUEST['import_mode'] == "blockchain"
 $pagetitle = "Import a ";
 if ($import_mode == "game") $pagetitle .= "Game Definition";
 else $pagetitle .= "Blockchain";
-$pagetitle .= " - ".AppSettings::getParam('coin_brand_name');
+$pagetitle .= " - ".AppSettings::getParam('site_name');
 
 $nav_tab_selected = "import";
 

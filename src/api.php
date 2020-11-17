@@ -13,7 +13,7 @@ $uri_parts = explode("/", $uri);
 
 if ($uri_parts[1] == "api") {
 	if ($uri_parts[2] == "about") {
-		$pagetitle = AppSettings::getParam('coin_brand_name')." API Documentation";
+		$pagetitle = AppSettings::getParam('site_name')." API Documentation";
 		$nav_tab_selected = "api";
 		include(AppSettings::srcPath().'/includes/html_start.php');
 		
@@ -32,11 +32,11 @@ if ($uri_parts[1] == "api") {
 		<div class="container-fluid">
 			<div class="panel panel-default" style="margin-top: 15px;">
 				<div class="panel-heading">
-					<div class="panel-title"><?php echo AppSettings::getParam('coin_brand_name'); ?> API Documentation</div>
+					<div class="panel-title"><?php echo AppSettings::getParam('site_name'); ?> API Documentation</div>
 				</div>
 				<div class="panel-body">
 					<p>
-						<?php echo AppSettings::getParam('coin_brand_name'); ?> web wallets provide several strategies for automating your <?php echo AppSettings::getParam('coin_brand_name'); ?> voting behavior.  However, some users may wish to use custom logic in their voting strategies. The <?php echo AppSettings::getParam('coin_brand_name'); ?> API allows this functionality through a standardized format for sharing <?php echo AppSettings::getParam('coin_brand_name'); ?> voting recommendations. Using the <?php echo AppSettings::getParam('coin_brand_name'); ?> API can be as simple as finding a public recommendations URL and plugging it into your <?php echo AppSettings::getParam('coin_brand_name'); ?> user account.  Or you can set up your own voting recommendations client using the information below.
+						<?php echo AppSettings::getParam('site_name'); ?> web wallets provide several strategies for automating your <?php echo AppSettings::getParam('site_name'); ?> voting behavior.  However, some users may wish to use custom logic in their voting strategies. The <?php echo AppSettings::getParam('site_name'); ?> API allows this functionality through a standardized format for sharing <?php echo AppSettings::getParam('site_name'); ?> voting recommendations. Using the <?php echo AppSettings::getParam('site_name'); ?> API can be as simple as finding a public recommendations URL and plugging it into your <?php echo AppSettings::getParam('site_name'); ?> user account.  Or you can set up your own voting recommendations client using the information below.
 					</p>
 					<p>
 						To get started, please download this example API client written in PHP.<br/>
@@ -72,7 +72,7 @@ if ($uri_parts[1] == "api") {
 		$raw = str_replace('AppSettings::getParam(\'operator_key\')', "'".$example_password."'", $raw);
 		
 		header('Content-Type: application/x-download');
-		header('Content-disposition: attachment; filename="'.AppSettings::getParam('coin_brand_name').'APIClient.php"');
+		header('Content-disposition: attachment; filename="'.AppSettings::getParam('site_name').'APIClient.php"');
 		header('Cache-Control: public, must-revalidate, max-age=0');
 		header('Pragma: public');
 		header('Content-Length: '.strlen($raw));

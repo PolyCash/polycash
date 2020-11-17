@@ -58,7 +58,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 	
 	if ($explore_mode == "explorer_home") {
 		$mode_error = false;
-		$pagetitle = AppSettings::getParam('coin_brand_name')." - Please select a game";
+		$pagetitle = AppSettings::getParam('site_name')." - Please select a game";
 	}
 	else if ($explore_mode == "my_bets") {
 		$mode_error = false;
@@ -280,7 +280,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 		Router::Send404();
 	}
 	else {
-		if (empty($pagetitle)) $pagetitle = AppSettings::getParam('coin_brand_name')." - Blockchain Explorer";
+		if (empty($pagetitle)) $pagetitle = AppSettings::getParam('site_name')." - Blockchain Explorer";
 		$nav_tab_selected = "explorer";
 		include(AppSettings::srcPath().'/includes/html_start.php');
 		?>
@@ -637,7 +637,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							if ($block['locally_saved'] == 0) {
 								if ($block['block_id'] < $blockchain->db_blockchain['first_required_block']) {
 									echo "This block is before <a href=\"/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/blocks/".$blockchain->db_blockchain['first_required_block']."\">".$blockchain->db_blockchain['blockchain_name']." block #".$blockchain->db_blockchain['first_required_block']."</a>. ";
-									echo AppSettings::getParam('coin_brand_name')." has not fully loaded this block.\n";
+									echo AppSettings::getParam('site_name')." has not fully loaded this block.\n";
 								}
 								else {
 									if (!empty($block['num_transactions'])) {
@@ -649,7 +649,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 										echo "Still loading... ".number_format($load_time, 2)." seconds elapsed.\n";
 									}
 									else {
-										echo AppSettings::getParam('coin_brand_name')." hasn't loaded this block yet.\n";
+										echo AppSettings::getParam('site_name')." hasn't loaded this block yet.\n";
 									}
 								}
 								echo "<br/>\n";
@@ -658,7 +658,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 								$load_time = $block['load_time'];
 								if ($game) $load_time += $block['game_load_time'];
 								
-								echo AppSettings::getParam('coin_brand_name')." took ".number_format($load_time, 2)." seconds to load this block.<br/>\n";
+								echo AppSettings::getParam('site_name')." took ".number_format($load_time, 2)." seconds to load this block.<br/>\n";
 							}
 							
 							if (empty($game)) {

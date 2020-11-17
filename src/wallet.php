@@ -302,7 +302,7 @@ if ($thisuser) {
 		else die("Error: this game has an invalid giveaway_status");
 	}
 	else {
-		$pagetitle = AppSettings::getParam('site_name_short')." - My web wallet";
+		$pagetitle = AppSettings::getParam('site_name')." - My web wallet";
 		$nav_tab_selected = "wallet";
 		include(AppSettings::srcPath().'/includes/html_start.php');
 		?>

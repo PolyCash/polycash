@@ -16,8 +16,8 @@ class App {
 		}
 		
 		if (!$skip_select_db) {
-			if (empty(AppSettings::getParam('mysql_database'))) die('You need to specify a database name in your configuration.');
-			else $this->select_db(AppSettings::getParam('mysql_database'));
+			if (empty(AppSettings::getParam('database_name'))) die('You need to specify a database name in your configuration.');
+			else $this->select_db(AppSettings::getParam('database_name'));
 		}
 	}
 	
@@ -172,12 +172,6 @@ class App {
 		return htmlspecialchars(strip_tags($string));
 	}
 	
-	public function recaptcha_check_answer($recaptcha_privatekey, $ip_address, $g_recaptcha_response) {
-		$response = json_decode(file_get_contents("https://www.google.com/recaptcha/api/siteverify?secret=".$recaptcha_privatekey."&response=".$g_recaptcha_response."&remoteip=".$ip_address), true);
-		if ($response['success'] == false) return false;
-		else return true;
-	}
-	
 	public function fetch_game_by_id($game_id) {
 		return $this->run_query("SELECT * FROM games WHERE game_id=:game_id;", ['game_id'=>$game_id])->fetch();
 	}
@@ -208,7 +202,7 @@ class App {
 				if (is_file($fname)) {
 					$cmd = $this->mysql_binary_location()." -u ".AppSettings::getParam('mysql_user')." -h ".AppSettings::getParam('mysql_server');
 					if (AppSettings::getParam('mysql_password')) $cmd .= " -p'".AppSettings::getParam('mysql_password')."'";
-					$cmd .= " ".AppSettings::getParam('mysql_database')." < ".$fname." 2>&1";
+					$cmd .= " ".AppSettings::getParam('database_name')." < ".$fname." 2>&1";
 					
 					$cmd_response = exec($cmd);
 					
@@ -2504,7 +2498,7 @@ class App {
 				'last_name' => $last_name,
 				'amount' => $amount,
 				'currency' => 'UGX',
-				'description' => AppSettings::getParam('site_name_short')
+				'description' => AppSettings::getParam('site_name')
 			));
 		}
 		catch (Exception $e) {
@@ -2817,14 +2811,14 @@ class App {
 		}
 		$this->run_insert_query("user_login_links", $new_login_link_params);
 		
-		$subject = "Click here to log in to ".AppSettings::getParam('coin_brand_name');
+		$subject = "Click here to log in to ".AppSettings::getParam('site_name');
 		
-		$message = "<p>Someone just tried to log in to your ".AppSettings::getParam('coin_brand_name')." account with username: <b>".$username."</b></p>\n";
+		$message = "<p>Someone just tried to log in to your ".AppSettings::getParam('site_name')." account with username: <b>".$username."</b></p>\n";
 		$message .= "<p>To complete the login, please follow <a href=\"".$login_url."\">this link</a>:</p>\n";
 		$message .= "<p><a href=\"".$login_url."\">".$login_url."</a></p>\n";
 		$message .= "<p>If you didn't try to sign in, please delete this email.</p>\n";
 		
-		$delivery_id = $this->mail_async($username, AppSettings::getParam('coin_brand_name'), "no-reply@".AppSettings::getParam('site_domain'), $subject, $message, "", "", "");
+		$delivery_id = $this->mail_async($username, AppSettings::getParam('site_name'), "no-reply@".AppSettings::getParam('site_domain'), $subject, $message, "", "", "");
 	}
 	
 	public function first_snippet_between($string, $delim1, $delim2) {

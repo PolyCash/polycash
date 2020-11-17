@@ -2,14 +2,14 @@
 require(AppSettings::srcPath()."/includes/connect.php");
 require(AppSettings::srcPath()."/includes/get_session.php");
 
-$pagetitle = "Download ".AppSettings::getParam('coin_brand_name');
+$pagetitle = "Download ".AppSettings::getParam('site_name');
 $nav_tab_selected = "download";
 include(AppSettings::srcPath().'/includes/html_start.php');
 ?>
 <div class="container-fluid">
 	<div class="panel panel-default" style="margin-top: 15px;">
 		<div class="panel-heading">
-			<div class="panel-title">Download <?php echo AppSettings::getParam('coin_brand_name'); ?></div>
+			<div class="panel-title">Download <?php echo AppSettings::getParam('site_name'); ?></div>
 		</div>
 		<div class="panel-body">
 			<div class="row">

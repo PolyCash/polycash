@@ -9,15 +9,15 @@ if ($app->running_as_admin()) {
 	// For CSRF protection on this page, operator_key is used instead of synchronizer_token
 	// The admin needs to visit this page before the db is installed so we can't require a user account here
 	
-	if (AppSettings::getParam('mysql_database') != "") {
-		if (strpos(AppSettings::getParam('mysql_database'), "'") === false && AppSettings::getParam('mysql_database') === strip_tags(AppSettings::getParam('mysql_database'))) {
+	if (AppSettings::getParam('database_name') != "") {
+		if (strpos(AppSettings::getParam('database_name'), "'") === false && AppSettings::getParam('database_name') === strip_tags(AppSettings::getParam('database_name'))) {
 			$db_exists = false;
 
 			if (!empty(AppSettings::getParam('sqlite_db'))) {}
 			else {
 				$list_of_dbs = $app->run_query("SHOW DATABASES;");
 				while ($dbname = $list_of_dbs->fetch()) {
-					if ($dbname['Database'] == AppSettings::getParam('mysql_database')) $db_exists = true;
+					if ($dbname['Database'] == AppSettings::getParam('database_name')) $db_exists = true;
 				}
 				
 				if (strpos(AppSettings::getParam('mysql_password'), "'") !== false) {
@@ -25,12 +25,12 @@ if ($app->running_as_admin()) {
 				}
 				
 				if ($db_exists) {
-					$app->select_db(AppSettings::getParam('mysql_database'));
+					$app->select_db(AppSettings::getParam('database_name'));
 				}
 				else {
-					$app->run_query("CREATE DATABASE ".AppSettings::getParam('mysql_database'));
-					$app->dbh->query("USE ".AppSettings::getParam('mysql_database').";") or die("Failed to create database '".AppSettings::getParam('mysql_database')."'");
-					$app->select_db(AppSettings::getParam('mysql_database'));
+					$app->run_query("CREATE DATABASE ".AppSettings::getParam('database_name'));
+					$app->dbh->query("USE ".AppSettings::getParam('database_name').";") or die("Failed to create database '".AppSettings::getParam('database_name')."'");
+					$app->select_db(AppSettings::getParam('database_name'));
 				}
 				
 				$table_exists = count($app->run_query("SHOW TABLES;")->fetchAll()) > 0;
@@ -42,7 +42,7 @@ if ($app->running_as_admin()) {
 					if (is_file(AppSettings::srcPath()."/sql/schema-base.sql")) $base_schema_path = AppSettings::srcPath()."/sql/schema-base.sql";
 					else $base_schema_path = AppSettings::srcPath()."/sql/schema-initial.sql";
 					
-					$cmd .= " ".AppSettings::getParam('mysql_database')." < ".$base_schema_path;
+					$cmd .= " ".AppSettings::getParam('database_name')." < ".$base_schema_path;
 					echo exec($cmd);
 				}
 				
@@ -178,7 +178,7 @@ if ($app->running_as_admin()) {
 		else echo "An invalid database name was specified in includes/config.php\n";
 	}
 	else {
-		echo 'Please set the "mysql_database" variable in includes/config.php'."\n";
+		echo 'Please set the "database_name" variable in includes/config.php'."\n";
 	}
 }
 else {

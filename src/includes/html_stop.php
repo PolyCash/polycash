@@ -89,10 +89,6 @@ foreach ($optional_js_files as $optional_js_file) {
 		echo '<script async type="text/javascript" src="/js/'.$optional_js_file.'"></script>'."\n";
 	}
 }
-
-if (AppSettings::getParam('signup_captcha_required')) { ?>
-<script type="text/javascript" src="https://www.google.com/jsapi"></script>
-<script type='text/javascript' src='https://www.google.com/recaptcha/api.js'></script>
-<?php } ?>
+?>
 </body>
 </html>

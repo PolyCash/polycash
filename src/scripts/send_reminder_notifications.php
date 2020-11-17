@@ -63,7 +63,7 @@ while ($db_running_game = $running_games->fetch()) {
 						$message_html .= $faucet_txt."<br/><br/>\n";
 						$message_html .= "To stop receiving these notifications please <a href=\"".AppSettings::getParam('base_url')."/wallet/".$running_game->db_game['url_identifier']."/?action=unsubscribe&delivery_key=".$delivery_key."\">click here to unsubscribe</a></p>\n";
 						
-						$app->mail_async($notify_user['notification_email'], AppSettings::getParam('site_name_short'), "no-reply@".AppSettings::getParam('site_domain'), $subject, $message_html, "", "", $delivery_key);
+						$app->mail_async($notify_user['notification_email'], AppSettings::getParam('site_name'), "no-reply@".AppSettings::getParam('site_domain'), $subject, $message_html, "", "", $delivery_key);
 						
 						$app->set_latest_event_reminder_time($notify_user['user_game_id'], time());
 					}

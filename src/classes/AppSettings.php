@@ -13,13 +13,7 @@ class AppSettings {
 			self::$srcPath = realpath(dirname(dirname(__FILE__)));
 			self::$publicPath = realpath(dirname(dirname(dirname(__FILE__))))."/public";
 			
-			$server_software_parts = explode("/", $_SERVER['SERVER_SOFTWARE']);
-			$server_software = $server_software_parts[0];
-			
-			if ($server_software == "Mongoose") $config_file = "phpdesktop_default_config.json";
-			else $config_file = "config.json";
-			
-			$config_path = self::$srcPath."/config/".$config_file;
+			$config_path = self::$srcPath."/config/config.json";
 			
 			if (is_file($config_path)) {
 				$config_fh = fopen($config_path, 'r');
@@ -29,30 +23,65 @@ class AppSettings {
 					$base_url = "http://";
 					if (self::$settings->use_https) $base_url = "https://";
 					
-					if (!empty(self::$settings->dev_site_domain) && $_SERVER['SERVER_NAME'] == self::$settings->dev_site_domain) {
-						self::setIsDev(true);
-						$site_domain = self::$settings->dev_site_domain;
-						self::$settings->mysql_database = self::$settings->dev_database;
-					}
-					else {
-						self::setIsDev(false);
-						$site_domain = self::$settings->site_domain;
-						self::$settings->mysql_database = self::$settings->database;
-					}
+					$site_domain = self::$settings->site_domain;
 					
 					$http_prefix = "http";
 					if (strlen($site_domain) >= strlen($http_prefix) && substr($site_domain, 0, strlen($http_prefix)) == $http_prefix) die('Please don\'t include a prefix like "http://" in your site domain');
 					
 					$base_url .= $site_domain;
 					
-					if ($server_software != "Apache") $base_url .= ":".$_SERVER['SERVER_PORT'];
+					if (self::$settings->server != "Apache") $base_url .= ":".$_SERVER['SERVER_PORT'];
 					
 					self::$settings->base_url = $base_url;
-					self::$settings->server_software = $server_software;
 				}
 				else die("Failed to read the config file.");
 			}
-			else die("Please create the file src/config/config.json");
+			else {
+				$example_config_path = self::$srcPath."/config/example_config.json";
+				if ($example_config_fh = fopen($example_config_path, 'r')) {
+					if ($raw_example_config = fread($example_config_fh, filesize($example_config_path))) {
+						if ($example_config_obj = json_decode($raw_example_config)) {
+							if (!empty($_SERVER['SERVER_SOFTWARE'])) {
+								$server_parts = explode("/", $_SERVER['SERVER_SOFTWARE']);
+								$server = $server_parts[0];
+								
+								if ($server != 'Mongoose') $server = 'Apache';
+								
+								$new_config = (array) $example_config_obj;
+								$new_config['server'] = $server;
+								
+								if ($server == "Mongoose") {
+									$new_config['sqlite_db'] = "polycash_sqlite.db";
+									$new_config['site_domain'] = "127.0.0.1";
+									$new_config['use_https'] = true;
+								}
+								
+								if ($new_config_fh = fopen($config_path, 'w')) {
+									if (fwrite($new_config_fh, json_encode($new_config, JSON_PRETTY_PRINT))) {
+										?>
+										Your configuration file was created successfully.<br/>
+										<script type="text/javascript">
+										window.onload = function() {
+											setTimeout(function() {
+												window.location = '/install.php?key=<?php echo $new_config["operator_key"]; ?>';
+											}, 1000);
+										};
+										</script>
+										<?php
+										die();
+									}
+									else die("Failed to write ".$config_path."\n");
+								}
+								else die("Failed to create ".$config_path."\n");
+							}
+							else die("Please use a browser to install PolyCash.\n");
+						}
+						else die("Failed to parse JSON in ".$example_config_path."\n");
+					}
+					else die("Failed to read ".$example_config_path."\n");
+				}
+				else die("Failed to open ".$example_config_path."\n");
+			}
 		}
 	}
 	
@@ -68,14 +97,6 @@ class AppSettings {
 	public static function checkJsDependency($jsFile) {
 		if (isset(self::$jsDependencies[$jsFile]) && self::$jsDependencies[$jsFile]) return true;
 		else return false;
-	}
-	
-	public static function getIsDev() {
-		return self::$isDev;
-	}
-	
-	private static function setIsDev($isDev) {
-		self::$isDev = $isDev;
 	}
 	
 	public static function srcPath() {

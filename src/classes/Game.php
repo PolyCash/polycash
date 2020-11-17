@@ -1262,7 +1262,7 @@ class Game {
 				$private_game_message = "Mining new blocks... ".$this->blockchain->app->format_seconds($seconds_to_add)." left. \n";
 				$link_show_cron = true;
 			}
-			if ($link_show_cron) $private_game_message .= "Please <a target=\"_blank\" href=\"/cron/minutely.php?key=\">ensure ".AppSettings::getParam('site_name_short')." is running</a>";
+			if ($link_show_cron) $private_game_message .= "Please <a target=\"_blank\" href=\"/cron/minutely.php?key=\">ensure ".AppSettings::getParam('site_name')." is running</a>";
 			
 			if (!empty($private_game_message)) $html .= "<p>".$private_game_message."</p>\n";
 		}

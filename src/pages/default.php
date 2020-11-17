@@ -1,5 +1,5 @@
 <?php
-$pagetitle = AppSettings::getParam('coin_brand_name')." - Home";
+$pagetitle = AppSettings::getParam('site_name')." - Home";
 $nav_tab_selected = "home";
 include(AppSettings::srcPath().'/includes/html_start.php');
 ?>
