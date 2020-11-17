@@ -48,12 +48,13 @@ class PageviewController {
 		
 		if (strlen($_SERVER['REQUEST_URI']) > 255) $_SERVER['REQUEST_URI'] = substr($_SERVER['REQUEST_URI'], 0, 255);
 		
-		$pv_page_id = (int)($this->app->run_query("SELECT page_url_id FROM page_urls WHERE url=:url;", ['url'=>$_SERVER['REQUEST_URI']])->fetch(PDO::FETCH_NUM)[0]);
+		$pv_page_id = $this->app->run_query("SELECT page_url_id FROM page_urls WHERE url=:url;", ['url'=>$_SERVER['REQUEST_URI']])->fetch(PDO::FETCH_NUM);
 		
-		if (!$pv_page_id) {
+		if (empty($pv_page_id)) {
 			$this->app->run_insert_query("page_urls", ['url'=>$_SERVER['REQUEST_URI']]);
 			$pv_page_id = $this->app->last_insert_id();
 		}
+		else $pv_page_id = $pv_page_id[0];
 		
 		if ($ip_identifier['viewer_id']) {
 			$new_pv_params = [

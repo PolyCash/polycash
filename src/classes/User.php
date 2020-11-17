@@ -154,7 +154,7 @@ class User {
 			
 			$this->app->apply_address_set($game, $account['account_id']);
 		}
-		else $user_game = $existing_user_games->fetch();
+		else if (count($existing_user_games) > 0) $user_game = $existing_user_games[0];
 		
 		if ($user_game['strategy_id'] > 0) {}
 		else {

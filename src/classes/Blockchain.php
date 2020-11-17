@@ -1485,7 +1485,9 @@ class Blockchain {
 			$this_loop_blocks_to_load = count($load_blocks);
 			$load_block_pos = 0;
 			
-			while ($keep_looping && $unknown_block = $load_blocks[$load_block_pos]) {
+			while ($keep_looping && $load_block_pos < count($load_blocks)) {
+				$unknown_block = $load_blocks[$load_block_pos];
+				
 				if ($this->db_blockchain['p2p_mode'] == "rpc") {
 					$fetchblockhash_error = false;
 					
