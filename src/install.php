@@ -13,24 +13,7 @@ if ($app->running_as_admin()) {
 		if (strpos(AppSettings::getParam('mysql_database'), "'") === false && AppSettings::getParam('mysql_database') === strip_tags(AppSettings::getParam('mysql_database'))) {
 			$db_exists = false;
 
-			if (!empty(AppSettings::getParam('sqlite_db'))) {
-				$app->select_db(AppSettings::getParam('mysql_database'));
-				$app->load_module_classes();
-				//$app->update_schema();
-				
-				$initial_tables = $app->run_query("SELECT name FROM sqlite_master WHERE type='table' AND name='addresses';")->fetchAll();
-				
-				if (count($initial_tables) == 0) {
-					$base_fname = AppSettings::srcPath()."/sql/schema-base.sql";
-					$fh = fopen($base_fname, "r");
-					$base_sql = fread($fh, filesize($base_fname));
-					$app->run_query($base_sql);
-					
-					die("need initial schema");
-				}
-				
-				die("ok1");
-			}
+			if (!empty(AppSettings::getParam('sqlite_db'))) {}
 			else {
 				$list_of_dbs = $app->run_query("SHOW DATABASES;");
 				while ($dbname = $list_of_dbs->fetch()) {
@@ -50,7 +33,7 @@ if ($app->running_as_admin()) {
 					$app->select_db(AppSettings::getParam('mysql_database'));
 				}
 				
-				$table_exists = $app->run_query("SHOW TABLES;")->rowCount() > 0;
+				$table_exists = count($app->run_query("SHOW TABLES;")->fetchAll()) > 0;
 				
 				if (!$table_exists) {
 					$cmd = $app->mysql_binary_location()." -u ".AppSettings::getParam('mysql_user')." -h ".AppSettings::getParam('mysql_server');
@@ -63,7 +46,7 @@ if ($app->running_as_admin()) {
 					echo exec($cmd);
 				}
 				
-				$table_exists = $app->run_query("SHOW TABLES;")->rowCount() > 0;
+				$table_exists = count($app->run_query("SHOW TABLES;")->fetchAll()) > 0;
 				if (!$table_exists) {
 					echo "Database tables failed to be created, please install manually by importing all files in the \"sql\" folder via phpMyAdmin or any other MySQL interface.<br/>\n";
 					die();
@@ -87,9 +70,8 @@ if ($app->running_as_admin()) {
 			include(AppSettings::srcPath()."/includes/html_start.php");
 			?>
 			<div class="container-fluid">
-				<h2>Install the MySQL database</h1>
+				<h2>Install the database</h1>
 				Great, the database was installed.<br/>
-				If there was an error installing the database please use mysql to delete the database, then try again.<br/>
 				<?php
 				if (empty($thisuser)) {
 					$redirect_url = $app->get_redirect_url($_SERVER['REQUEST_URI']);
@@ -168,17 +150,17 @@ if ($app->running_as_admin()) {
 					
 					<h2>Modules</h2>
 					<?php
-					$installed_modules = $app->run_query("SELECT * FROM modules m JOIN games g ON m.primary_game_id=g.game_id;");
-					if ($installed_modules->rowCount() > 0) {
-						while ($installed_module = $installed_modules->fetch()) {
+					$installed_modules = $app->run_query("SELECT * FROM modules m JOIN games g ON m.primary_game_id=g.game_id;")->fetchAll();
+					if (count($installed_modules) > 0) {
+						foreach ($installed_modules as $installed_module) {
 							echo '<a href="/'.$installed_module['url_identifier'].'/">'.$installed_module['name']."</a> is already installed.<br/>\n";
 						}
 						echo "<br/>\n";
 					}
 					
-					$open_modules = $app->run_query("SELECT * FROM modules WHERE primary_game_id IS NULL;");
+					$open_modules = $app->run_query("SELECT * FROM modules WHERE primary_game_id IS NULL;")->fetchAll();
 					$module_html = '<option value="">-- Select a module to install --</option>';
-					while ($open_module = $open_modules->fetch()) {
+					foreach ($open_modules as $open_module) {
 						$module_html .= '<option value="'.$open_module['module_name'].'">'.$open_module['module_name']."</option>\n";
 					}
 					

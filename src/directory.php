@@ -27,10 +27,10 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 	if (!empty($selected_category)) {
 		$subcategories = $app->run_query("SELECT * FROM categories WHERE parent_category_id=:parent_category_id;", [
 			'parent_category_id' => $selected_category['category_id']
-		]);
+		])->fetchAll();
 		
-		if ($subcategories->rowCount() > 0) {
-			while ($subcategory = $subcategories->fetch()) {
+		if (count($subcategories) > 0) {
+			foreach ($subcategories as $subcategory) {
 				echo "<a href=\"/".$subcategory['url_identifier']."\">".$subcategory['category_name']."</a><br/>\n";
 			}
 			echo "<br/>\n";

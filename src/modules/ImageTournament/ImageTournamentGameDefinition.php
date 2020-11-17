@@ -169,10 +169,10 @@ class ImageTournamentGameDefinition {
 			if (empty($game)) $game_id = "";
 			else $game_id = $game->db_game['game_id'];
 			
-			$entities_by_game = $this->app->fetch_game_defined_options($game_id, $event_index, false, true);
+			$entities_by_game = $this->app->fetch_game_defined_options($game_id, $event_index, false, true)->fetchAll();
 			
-			if ($entities_by_game->rowCount() > 0) {
-				while ($entity = $entities_by_game->fetch()) {
+			if (count($entities_by_game) > 0) {
+				foreach ($entities_by_game as $entity) {
 					$event_name .= $entity['entity_name']." vs. ";
 					
 					$possible_outcome = array("title" => $entity['entity_name']." wins", "entity_id" => $entity['entity_id']);

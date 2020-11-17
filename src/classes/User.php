@@ -104,9 +104,9 @@ class User {
 		$existing_user_games = $this->app->run_query("SELECT *, ug.user_id AS user_id, ug.game_id AS game_id FROM user_games ug JOIN games g ON ug.game_id=g.game_id LEFT JOIN user_strategies us ON us.strategy_id=ug.strategy_id LEFT JOIN featured_strategies fs ON us.featured_strategy_id=fs.featured_strategy_id WHERE ug.user_id=:user_id AND ug.game_id=:game_id ORDER BY ug.selected DESC;", [
 			'user_id' => $this->db_user['user_id'],
 			'game_id' => $game->db_game['game_id']
-		]);
+		])->fetchAll();
 		
-		if ($force_new || $existing_user_games->rowCount() == 0) {
+		if ($force_new || count($existing_user_games) == 0) {
 			$new_user_game_params = [
 				'user_id' => $this->db_user['user_id'],
 				'game_id' => $game->db_game['game_id'],
@@ -114,7 +114,7 @@ class User {
 				'display_currency_id' => $game->db_game['default_display_currency_id'],
 				'buyin_currency_id' => $game->db_game['default_buyin_currency_id'],
 				'created_at' => time(),
-				'show_intro_message' => $game->fetch_featured_strategies()->rowCount() > 0 ? 1 : 0,
+				'show_intro_message' => count($game->fetch_featured_strategies()->fetchAll()) > 0 ? 1 : 0,
 				'prompt_notification_preference' => empty($this->db_user['notification_email']) ? 1 : 0,
 				'notification_preference' => 'email',
 				'betting_mode' => 'principal'
@@ -269,9 +269,9 @@ class User {
 	}
 	
 	public function count_user_games_created() {
-		return (int)($this->app->run_query("SELECT * FROM games WHERE creator_id=:user_id;", [
+		return count($this->app->run_query("SELECT * FROM games WHERE creator_id=:user_id;", [
 			'user_id' => $this->db_user['user_id']
-		])->rowCount());
+		])->fetchAll());
 	}
 	
 	public function new_game_permission() {

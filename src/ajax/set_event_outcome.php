@@ -55,9 +55,9 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 					else {
 						$outcome_index = (int)$_REQUEST['outcome_index'];
 						
-						$gdo_r = $app->fetch_game_defined_options($game->db_game['game_id'], $db_event['event_index'], $outcome_index, false);
+						$gdo_arr = $app->fetch_game_defined_options($game->db_game['game_id'], $db_event['event_index'], $outcome_index, false)->fetchAll();
 						
-						if ($gdo_r->rowCount() == 1) $option_ok = true;
+						if (count($gdo_arr) == 1) $option_ok = true;
 						else $option_ok = false;
 					}
 					

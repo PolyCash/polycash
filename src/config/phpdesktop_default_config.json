@@ -7,7 +7,7 @@
 	"mysql_user": "",
 	"mysql_password": "",
 	"database": "polycash",
-	"sqlite_db": "polycash.db",
+	"sqlite_db": "polycash_sqlite.db",
 	"operator_key": "",
 	"use_https": true,
 	"signup_captcha_required": false,

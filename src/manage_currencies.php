@@ -24,7 +24,7 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 	else {
 		$reference_currency = $app->get_reference_currency();
 		$display_currency = $app->fetch_currency_by_id(1);
-		$all_currencies = $app->fetch_currencies([]);
+		$all_currencies = $app->fetch_currencies([])->fetchAll();
 		?>
 		<div class="panel panel-default" style="margin-top: 15px;">
 			<div class="panel-heading">
@@ -33,7 +33,7 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 				</div>
 			</div>
 			<div class="panel-body">
-				<p><?php echo $all_currencies->rowCount(); ?> currencies are installed.</p>
+				<p><?php echo count($all_currencies); ?> currencies are installed.</p>
 				
 				<table style="width: 100%;" class="table table-bordered">
 					<thead style="background-color: #f6f6f6;">
@@ -46,7 +46,7 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 					</thead>
 					<tbody>
 						<?php
-						while ($currency = $all_currencies->fetch()) {
+						foreach ($all_currencies as $currency) {
 							$price_info = $app->exchange_rate_between_currencies($display_currency['currency_id'], $currency['currency_id'], time(), $reference_currency['currency_id']);
 							?>
 							<tr>

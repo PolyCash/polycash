@@ -63,11 +63,9 @@ class eSportsGameDefinition {
 			'game_id' => $game->db_game['game_id'],
 			'from_block' => $from_block,
 			'to_block' => $to_block
-		]);
+		])->fetch();
 		
-		if ($info->rowCount() > 0) {
-			$info = $info->fetch();
-			
+		if ($info) {
 			$gde_r = $this->app->run_query("SELECT gde.*, sp.entity_name AS sport_name, le.entity_name AS league_name FROM game_defined_events gde LEFT JOIN entities sp ON gde.sport_entity_id=sp.entity_id LEFT JOIN entities le ON gde.league_entity_id=le.entity_id WHERE gde.game_id=:game_id AND gde.event_index>=:from_event_index AND gde.event_index<=:to_event_index;", [
 				'game_id' => $game->db_game['game_id'],
 				'from_event_index' => $info['MIN(event_index)'],

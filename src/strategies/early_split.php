@@ -109,10 +109,10 @@ if ($user_game) {
 					$bet_i = 0;
 					
 					foreach ($db_events as $db_event) {
-						$db_options = $app->fetch_options_by_event($db_event['event_id']);
-						$options_this_event = $db_options->rowCount();
+						$db_options = $app->fetch_options_by_event($db_event['event_id'])->fetchAll();
+						$options_this_event = count($db_options);
 						
-						while ($option = $db_options->fetch()) {
+						foreach ($db_options as $option) {
 							$address_error = false;
 							$thisevent_io_amounts = [];
 							$thisevent_address_ids = [];

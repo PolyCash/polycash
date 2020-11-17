@@ -721,13 +721,13 @@ else {
 										<button id="reset_game_btn" class="btn btn-warning" onclick="thisPageManager.manage_game(<?php echo $game->db_game['game_id']; ?>, 'reset'); return false;">Reset</button>
 									</div>
 									<?php
-									$sale_accounts = $app->run_query("SELECT * FROM currency_accounts ca JOIN currencies c ON ca.currency_id=c.currency_id LEFT JOIN users u ON ca.user_id=u.user_id WHERE ca.game_id=:game_id AND (ca.is_game_sale_account=1 OR ca.is_blockchain_sale_account=1);", ['game_id' => $game->db_game['game_id']]);
+									$sale_accounts = $app->run_query("SELECT * FROM currency_accounts ca JOIN currencies c ON ca.currency_id=c.currency_id LEFT JOIN users u ON ca.user_id=u.user_id WHERE ca.game_id=:game_id AND (ca.is_game_sale_account=1 OR ca.is_blockchain_sale_account=1);", ['game_id' => $game->db_game['game_id']])->fetchAll();
 									
-									echo '<p>This game has '.$sale_accounts->rowCount()." sale accounts.</p>\n";
+									echo '<p>This game has '.count($sale_accounts)." sale accounts.</p>\n";
 									
 									echo "<table style=\"width: 100%;\">\n";
 									
-									while ($sale_account = $sale_accounts->fetch()) {
+									foreach ($sale_accounts as $sale_account) {
 										echo "<tr>\n";
 										
 										echo "<td>";

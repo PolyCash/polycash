@@ -359,12 +359,12 @@ if (!empty($_REQUEST['action'])) {
 			
 			if ($printrequest) {
 				if ($printrequest['user_id'] == $thisuser->db_user['user_id']) {
-					$card_r = $app->run_query("SELECT * FROM card_printrequests pr JOIN card_designs d ON pr.design_id=d.design_id JOIN cards c ON c.design_id=d.design_id WHERE pr.request_id=:request_id ORDER BY c.card_id ASC;", ['request_id' => $printrequest['request_id']]);
+					$card_arr = $app->run_query("SELECT * FROM card_printrequests pr JOIN card_designs d ON pr.design_id=d.design_id JOIN cards c ON c.design_id=d.design_id WHERE pr.request_id=:request_id ORDER BY c.card_id ASC;", ['request_id' => $printrequest['request_id']])->fetchAll();
 					
 					$change_count = 0;
 					
-					if ($card_r->rowCount() > 0) {
-						while ($card = $card_r->fetch()) {
+					if (count($card_arr) > 0) {
+						foreach ($card_arr as $card) {
 							if (in_array($card['status'], array('issued','printed','assigned'))) {
 								$app->change_card_status($card, 'sold');
 								$change_count++;
@@ -633,16 +633,16 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 		<?php
 	}
 	else if ($nav_subtab_selected == "manage") {
-		$my_printrequests = $app->run_query("SELECT * FROM card_printrequests pr JOIN card_designs cd ON pr.design_id=cd.design_id JOIN card_currency_denominations denom ON cd.denomination_id=denom.denomination_id JOIN currencies c ON denom.currency_id=c.currency_id WHERE pr.user_id=:user_id ORDER BY pr.time_created DESC;", ['user_id'=>$thisuser->db_user['user_id']]);
+		$my_printrequests = $app->run_query("SELECT * FROM card_printrequests pr JOIN card_designs cd ON pr.design_id=cd.design_id JOIN card_currency_denominations denom ON cd.denomination_id=denom.denomination_id JOIN currencies c ON denom.currency_id=c.currency_id WHERE pr.user_id=:user_id ORDER BY pr.time_created DESC;", ['user_id'=>$thisuser->db_user['user_id']])->fetchAll();
 		
 		echo '
 		<div class="panel panel-info" style="margin-top: 15px;">
 			<div class="panel-heading">
-				<div class="panel-title">My Print Requests ('.$my_printrequests->rowCount().')</div>
+				<div class="panel-title">My Print Requests ('.count($my_printrequest).')</div>
 			</div>
 			<div class="panel-body">';
 		
-		while ($printrequest = $my_printrequests->fetch()) {
+		foreach ($my_printrequests as $printrequest) {
 			$peer = $app->fetch_peer_by_id($printrequest['peer_id']);
 			
 			$minmax = $app->run_query("SELECT MIN(card_id), MAX(card_id), MIN(peer_card_id), MAX(peer_card_id) FROM cards WHERE group_id=:group_id;", [
@@ -664,16 +664,16 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 		}
 		echo "</div></div>\n";
 		
-		$my_cards_r = $app->run_query("SELECT * FROM card_printrequests pr JOIN card_designs cd ON pr.design_id=cd.design_id JOIN card_currency_denominations denom ON cd.denomination_id=denom.denomination_id JOIN currencies c ON denom.currency_id=c.currency_id JOIN cards ON cards.design_id=cd.design_id WHERE pr.user_id=:user_id ORDER BY cards.card_id ASC;", ['user_id'=>$thisuser->db_user['user_id']]);
+		$my_cards_arr = $app->run_query("SELECT * FROM card_printrequests pr JOIN card_designs cd ON pr.design_id=cd.design_id JOIN card_currency_denominations denom ON cd.denomination_id=denom.denomination_id JOIN currencies c ON denom.currency_id=c.currency_id JOIN cards ON cards.design_id=cd.design_id WHERE pr.user_id=:user_id ORDER BY cards.card_id ASC;", ['user_id'=>$thisuser->db_user['user_id']])->fetchAll();
 		
 		echo '
 		<div class="panel panel-info" style="margin-top: 15px;">
 			<div class="panel-heading">
-				<div class="panel-title">My Cards ('.$my_cards_r->rowCount().')</div>
+				<div class="panel-title">My Cards ('.count($my_cards_arr).')</div>
 			</div>
 			<div class="panel-body">';
 		
-		while ($db_card = $my_cards_r->fetch()) {
+		foreach ($my_cards_arr as $db_card) {
 			echo '<div class="card_small">';
 			echo '<a target="_blank" href="/redeem/'.$db_card['peer_id'].'/'.$db_card['peer_card_id'].'">'.$db_card['peer_card_id']."</a><br/>\n";
 			echo " ".$app->format_bignum($db_card['amount'])." ".$db_card['abbreviation'];

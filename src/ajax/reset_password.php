@@ -11,10 +11,10 @@ $email = $app->normalize_username($_REQUEST['email']);
 if ($email != "") {
 	$users_by_email = $app->run_query("SELECT * FROM users WHERE username=:email OR notification_email=:email;", [
 		'email' => $email
-	]);
+	])->fetchAll();
 	
-	if ($users_by_email->rowCount() == 1) {
-		$db_user = $users_by_email->fetch();
+	if (count($users_by_email) == 1) {
+		$db_user = $users_by_email[0];
 		
 		$token_key = $app->random_string(32);
 		

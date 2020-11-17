@@ -13,18 +13,18 @@ if ($app->running_as_admin()) {
 	
 	do {
 		if ($_REQUEST['action'] == "send_all") {
-			$deliveries = $app->run_query("SELECT * FROM async_email_deliveries WHERE time_delivered=0 ORDER BY delivery_id ASC LIMIT 1;");
+			$deliveries = $app->run_query("SELECT * FROM async_email_deliveries WHERE time_delivered=0 ORDER BY delivery_id ASC LIMIT 1;")->fetchAll();
 		}
 		else {
 			$delivery_id = (int) $_REQUEST['delivery_id'];
 			
 			$deliveries = $app->run_query("SELECT * FROM async_email_deliveries WHERE delivery_id=:delivery_id AND time_delivered=0;", [
 				'delivery_id' => $delivery_id
-			]);
+			])->fetchAll();
 		}
 		
-		if ($deliveries->rowCount() == 1) {
-			$delivery = $deliveries->fetch();
+		if (count($deliveries) == 1) {
+			$delivery = $deliveries[0];
 			
 			$sendgrid_api_url = 'https://api.sendgrid.com/v3/mail/send';
 			

@@ -194,9 +194,9 @@ else if ($thisuser) $left_menu_open = $thisuser->db_user['left_menu_open'];
 					$db_categories = $app->run_query("SELECT * FROM categories WHERE category_level=0 ORDER BY display_rank ASC;");
 					
 					while ($db_category = $db_categories->fetch()) {
-						$subcategories = $app->run_query("SELECT * FROM categories WHERE parent_category_id=:category_id ORDER BY display_rank ASC;", ['category_id'=>$db_category['category_id']]);
+						$subcategories = $app->run_query("SELECT * FROM categories WHERE parent_category_id=:category_id ORDER BY display_rank ASC;", ['category_id'=>$db_category['category_id']])->fetchAll();
 						
-						if ($subcategories->rowCount() > 0) {
+						if (count($subcategories) > 0) {
 							echo '<li class="treeview';
 							if (!empty($selected_category) && $selected_category['category_id'] == $db_category['category_id']) echo " active";
 							echo '">';
@@ -207,7 +207,7 @@ else if ($thisuser) $left_menu_open = $thisuser->db_user['left_menu_open'];
 							echo '<span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span>';
 							echo '</a><ul class="treeview-menu">';
 							echo '<li><a href="/'.$db_category['url_identifier'].'/">All</a></li>'."\n";
-							while ($subcategory = $subcategories->fetch()) {
+							foreach ($subcategories as $subcategory) {
 								echo '<li';
 								if (!empty($selected_subcategory) && $selected_subcategory['category_id'] == $subcategory['category_id']) echo ' class="active"';
 								echo '><a href="/'.$db_category['url_identifier'].'/'.$subcategory['url_identifier'].'/">'.$subcategory['category_name']."</a></li>\n";

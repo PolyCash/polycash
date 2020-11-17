@@ -20,11 +20,11 @@ if ($app->running_as_admin()) {
 		$ref_user = false;
 		$blockchains = [];
 		
-		$buyin_invoices = $app->run_query("SELECT *, ug.user_id AS user_id, ug.account_id AS user_game_account_id FROM user_games ug JOIN currency_invoices i ON ug.user_game_id=i.user_game_id JOIN addresses a ON i.address_id=a.address_id JOIN games g ON ug.game_id=g.game_id WHERE i.status IN ('unpaid','unconfirmed','confirmed') AND (i.status='unconfirmed' OR i.expire_time >= :current_time) AND i.invoice_type != 'sellout' GROUP BY a.address_id;", ['current_time'=>time()]);
+		$buyin_invoices = $app->run_query("SELECT *, ug.user_id AS user_id, ug.account_id AS user_game_account_id FROM user_games ug JOIN currency_invoices i ON ug.user_game_id=i.user_game_id JOIN addresses a ON i.address_id=a.address_id JOIN games g ON ug.game_id=g.game_id WHERE i.status IN ('unpaid','unconfirmed','confirmed') AND (i.status='unconfirmed' OR i.expire_time >= :current_time) AND i.invoice_type != 'sellout' GROUP BY a.address_id;", ['current_time'=>time()])->fetchAll();
 		
-		if ($print_debug) echo "Checking ".$buyin_invoices->rowCount()." buyin addresses.\n";
+		if ($print_debug) echo "Checking ".count($buyin_invoices)." buyin addresses.\n";
 		
-		while ($invoice_address = $buyin_invoices->fetch()) {
+		foreach ($buyin_invoices as $invoice_address) {
 			$transaction_id = false;
 			
 			if (empty($blockchains[$invoice_address['blockchain_id']])) $blockchains[$invoice_address['blockchain_id']] = new Blockchain($app, $invoice_address['blockchain_id']);

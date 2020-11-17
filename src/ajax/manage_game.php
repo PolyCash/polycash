@@ -135,9 +135,8 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 						
 						$genesis_first_address_r = $app->run_query("SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON io.address_id=a.address_id WHERE t.tx_hash=:genesis_tx_hash AND io.out_index=0;", [
 							'genesis_tx_hash' => $genesis_tx_hash
-						]);
-						if ($genesis_first_address_r->rowCount() == 1) {
-							$genesis_first_address = $genesis_first_address_r->fetch();
+						])->fetch();
+						if ($genesis_first_address) {
 							$escrow_address = $genesis_first_address['address'];
 						}
 					}

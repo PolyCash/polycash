@@ -9,9 +9,9 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 		$coinbase_quantity = (int) $_REQUEST['quantity'];
 		$db_address = $blockchain->create_or_fetch_address($_REQUEST['to_address'], true, false, true, false, false);
 		
-		$coinbase_ios = $app->run_query("SELECT * FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id JOIN address_keys ak ON io.address_id=ak.address_id WHERE t.blockchain_id=".$blockchain->db_blockchain['blockchain_id']." AND t.transaction_desc='coinbase' AND io.spend_status='unspent' AND ak.account_id IS NULL ORDER BY t.block_id ASC LIMIT ".$coinbase_quantity.";");
+		$coinbase_ios = $app->run_query("SELECT * FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id JOIN address_keys ak ON io.address_id=ak.address_id WHERE t.blockchain_id=".$blockchain->db_blockchain['blockchain_id']." AND t.transaction_desc='coinbase' AND io.spend_status='unspent' AND ak.account_id IS NULL ORDER BY t.block_id ASC LIMIT ".$coinbase_quantity.";")->fetchAll();
 		
-		if ($coinbase_ios->rowCount() == $coinbase_quantity) {
+		if (count($coinbase_ios) == $coinbase_quantity) {
 			$in_sum = 0;
 			$io_ids = [];
 			

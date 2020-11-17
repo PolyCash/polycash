@@ -407,7 +407,7 @@ class App {
 	}
 	
 	public function generate_games_by_type($game_type, $default_blockchain_id) {
-		$num_running_games = $this->run_query("SELECT * FROM games WHERE game_type_id=:game_type_id AND game_status IN('editable','published','running');", ['game_type_id'=>$game_type['game_type_id']])->rowCount();
+		$num_running_games = count($this->run_query("SELECT * FROM games WHERE game_type_id=:game_type_id AND game_status IN('editable','published','running');", ['game_type_id'=>$game_type['game_type_id']])->fetchAll());
 		$needed_games = $game_type['target_open_games'] - $num_running_games;
 		
 		for ($i=0; $i<$needed_games; $i++) {
@@ -805,7 +805,7 @@ class App {
 	}
 	
 	public function set_reference_currency($reference_currency_id) {
-		$has_ref_price = $this->run_query("SELECT * FROM currency_prices WHERE currency_id=:currency_id AND reference_currency_id=:currency_id;", ['currency_id' => $reference_currency_id])->rowCount() > 0;
+		$has_ref_price = count($this->run_query("SELECT * FROM currency_prices WHERE currency_id=:currency_id AND reference_currency_id=:currency_id;", ['currency_id' => $reference_currency_id])->fetchAll()) > 0;
 		if (!$has_ref_price) {
 			$app->run_insert_query("currency_prices", [
 				'reference_currency_id' => $reference_currency_id,
@@ -1061,15 +1061,15 @@ class App {
 			$display_games_params['game_id'] = $game_id;
 		}
 		$display_games_q .= " ORDER BY g.featured_score DESC, g.game_id DESC;";
-		$display_games = $this->run_query($display_games_q, $display_games_params);
+		$display_games = $this->run_query($display_games_q, $display_games_params)->fetchAll();
 		
-		if ($display_games->rowCount() > 0) {
+		if (count($display_games) > 0) {
 			$cell_width = 12;
 			
 			$counter = 0;
 			echo '<div class="row">';
 			
-			while ($db_game = $display_games->fetch()) {
+			foreach ($display_games as $db_game) {
 				$blockchain = new Blockchain($this, $db_game['blockchain_id']);
 				$featured_game = new Game($blockchain, $db_game['game_id']);
 				$last_block_id = $blockchain->last_block_id();
@@ -1187,11 +1187,11 @@ class App {
 	public function add_image(&$raw_image, $extension, $access_key, &$error_message) {
 		$db_image = false;
 		$image_identifier = $this->image_identifier($raw_image);
-		$existing_r = $this->run_query("SELECT * FROM images WHERE image_identifier=:image_identifier;", ['image_identifier'=>$image_identifier]);
+		$existing_images = $this->run_query("SELECT * FROM images WHERE image_identifier=:image_identifier;", ['image_identifier'=>$image_identifier])->fetchAll();
 		
-		if ($existing_r->rowCount() > 0) {
+		if (count($existing_images) > 0) {
 			$error_message = "This image already exists.";
-			$db_image = $existing_r->fetch();
+			$db_image = $existing_images[0];
 		}
 		else {
 			if (in_array($extension, ['jpg','jpeg','png','gif','tif','tiff','bmp','webp'])) {
@@ -1429,11 +1429,11 @@ class App {
 		}
 		
 		if ($game) {
-			$escrow_amounts = EscrowAmount::fetch_escrow_amounts_in_game($game, "actual");
+			$escrow_amounts = EscrowAmount::fetch_escrow_amounts_in_game($game, "actual")->fetchAll();
 			
-			if ($escrow_amounts->rowCount() > 0) {
+			if (count($escrow_amounts) > 0) {
 				$html .= '<div class="row"><div class="col-sm-5">Backed by:</div><div class="col-sm-7">';
-				while ($escrow_amount = $escrow_amounts->fetch()) {
+				foreach ($escrow_amounts as $escrow_amount) {
 					if ($escrow_amount['escrow_type'] == "fixed") {
 						$html .= $this->format_bignum($escrow_amount['amount'])." ".$escrow_amount['abbreviation']."<br/>\n";
 					}
@@ -3621,8 +3621,8 @@ class App {
 	
 	public function load_module_classes() {
 		try {
-			$all_dbs = $this->run_query("SHOW DATABASES;");
-			if ($all_dbs->rowCount() > 0) {
+			$all_dbs = $this->run_query("SHOW DATABASES;")->fetchAll();
+			if (count($all_dbs) > 0) {
 				try {
 					$all_modules = $this->run_query("SELECT * FROM modules ORDER BY module_id ASC;");
 					

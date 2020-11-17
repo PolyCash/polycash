@@ -70,12 +70,12 @@ class PeerVerifier {
 				'game_id' => $this->game->db_game['game_id']
 			];
 			$events_by_game_q = "SELECT ev.event_id, gde.event_index, gde.event_name, gde.outcome_index FROM game_defined_events gde LEFT JOIN events ev ON gde.event_index=ev.event_index WHERE gde.game_id=:game_id AND ev.game_id=:game_id ORDER BY gde.event_index ASC;";
-			$events_by_game = $this->app->run_query($events_by_game_q, $events_by_game_params);
+			$events_by_game = $this->app->run_query($events_by_game_q, $events_by_game_params)->fetchAll(PDO::FETCH_ASSOC);
 			
-			while ($db_event = $events_by_game->fetch(PDO::FETCH_ASSOC)) {
+			foreach ($events_by_game as $db_event) {
 				if ($check_tx_count && !empty($db_event['event_id'])) {
-					$event_tx_r = $this->game->blockchain->transactions_by_event($db_event['event_id']);
-					$db_event['num_transactions'] = $event_tx_r->rowCount();
+					$event_tx_arr = $this->game->blockchain->transactions_by_event($db_event['event_id'])->fetchAll();
+					$db_event['num_transactions'] = count($event_tx_arr);
 				}
 				unset($db_event['event_id']);
 				
@@ -85,11 +85,11 @@ class PeerVerifier {
 			return $out_obj;
 		}
 		else if ($this->mode == "blockchain") {
-			$all_blocks = $this->app->run_query("SELECT block_id, num_transactions, sum_coins_in, sum_coins_out FROM blocks WHERE blockchain_id=:blockchain_id AND block_id>0 ORDER BY block_id ASC;", ['blockchain_id'=>$this->blockchain->db_blockchain['blockchain_id']]);
+			$all_blocks = $this->app->run_query("SELECT block_id, num_transactions, sum_coins_in, sum_coins_out FROM blocks WHERE blockchain_id=:blockchain_id AND block_id>0 ORDER BY block_id ASC;", ['blockchain_id'=>$this->blockchain->db_blockchain['blockchain_id']])->fetchAll();
 			
 			$out_obj = [];
 			
-			while ($block = $all_blocks->fetch()) {
+			while ($all_blocks as $block) {
 				array_push($out_obj, [
 					"block_id" => $block['block_id'],
 					"num_transactions" => $block['num_transactions'],

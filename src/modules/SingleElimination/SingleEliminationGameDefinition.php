@@ -194,10 +194,10 @@ class SingleEliminationGameDefinition {
 			if (empty($game)) $game_id = "";
 			else $game_id = $game->db_game['game_id'];
 			
-			$entities_by_game = $this->app->fetch_game_defined_options($game_id, $event_index, false, true);
+			$entities_by_game = $this->app->fetch_game_defined_options($game_id, $event_index, false, true)->fetchAll();
 			
-			if ($entities_by_game->rowCount() > 0) {
-				while ($entity = $entities_by_game->fetch()) {
+			if (count($entities_by_game) > 0) {
+				foreach ($entities_by_game as $entity) {
 					$event_name .= $entity['entity_name']." vs. ";
 					
 					$possible_outcome = array("title" => $entity['entity_name']." wins", "entity_id" => $entity['entity_id']);
@@ -292,11 +292,11 @@ class SingleEliminationGameDefinition {
 	public function set_event_outcome(&$game, &$payout_event) {
 		$first_options = $this->app->run_query("SELECT *, SUM(ob.score) AS score FROM option_blocks ob JOIN options o ON ob.option_id=o.option_id LEFT JOIN entities e ON o.entity_id=e.entity_id WHERE o.event_id=:event_id GROUP BY o.option_id ORDER BY o.option_index ASC;", [
 			'event_id' => $payout_event->db_event['event_id']
-		]);
+		])->fetchAll();
 		
-		if ($first_options->rowCount() > 0) {
-			$first_option = $first_options->fetch();
-			$second_option = $first_options->fetch();
+		if (count($first_options) > 0) {
+			$first_option = $first_options[0];
+			$second_option = $first_options[1];
 			$winning_option = false;
 			
 			if ($first_option['score'] != $second_option['score']) {

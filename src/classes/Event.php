@@ -511,12 +511,12 @@ class Event {
 		if ($this->game->db_game['payout_weight'] == "coin") $score_field = "colored_amount";
 		else $score_field = $this->game->db_game['payout_weight']."s_destroyed";
 		
-		$all_bets = $this->game->blockchain->app->run_query("SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id WHERE gio.event_id=:event_id AND gio.is_coinbase=0;", ['event_id'=>$this->db_event['event_id']]);
-		$log_text .= "Refunding ".$all_bets->rowCount()." bets.<br/>\n";
+		$all_bets = $this->game->blockchain->app->run_query("SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id WHERE gio.event_id=:event_id AND gio.is_coinbase=0;", ['event_id'=>$this->db_event['event_id']])->fetchAll();
+		$log_text .= "Refunding ".count($all_bets)." bets.<br/>\n";
 		
 		$coins_per_vote = $this->game->blockchain->app->coins_per_vote($this->game->db_game);
 		
-		while ($bet = $all_bets->fetch()) {
+		foreach ($all_bets as $bet) {
 			$bet_amount = floor($bet[$score_field]*$coins_per_vote) + $bet['destroy_amount'];
 			
 			$this->game->blockchain->app->run_query("UPDATE transaction_game_ios SET colored_amount=FLOOR(".$bet_amount."*contract_parts/".$bet['contract_parts'].") WHERE parent_io_id=:parent_io_id;", [
@@ -579,14 +579,14 @@ class Event {
 		// Loop through the correctly voted UTXOs
 		$winning_bets = $this->game->blockchain->app->run_query("SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id WHERE gio.option_id=:winning_option AND gio.is_coinbase=0;", [
 			'winning_option' => $winning_option
-		]);
-		$log_text .= "Paying out ".$winning_bets->rowCount()." correct votes.<br/>\n";
+		])->fetchAll();
+		$log_text .= "Paying out ".count($winning_bets)." correct votes.<br/>\n";
 		
 		list($inflationary_reward, $destroy_reward, $total_reward) = $this->event_rewards();
 		$coins_per_vote = $this->game->blockchain->app->coins_per_vote($this->game->db_game);
 		$winning_effective_coins = floor($winning_votes*$coins_per_vote) + $winning_effective_destroy_score;
 		
-		while ($input = $winning_bets->fetch()) {
+		foreach ($winning_bets as $input) {
 			$this_input_effective_coins = floor($input['votes']*$coins_per_vote) + $input['effective_destroy_amount'];
 			$this_input_payout_amount = $winning_effective_coins>0 ? floor($total_reward*$this->db_event['payout_rate']*($this_input_effective_coins/$winning_effective_coins)) : 0;
 			$weighted_payout = $input['contract_parts'] > 0 ? $this_input_payout_amount/$input['contract_parts'] : 0;

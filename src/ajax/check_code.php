@@ -25,10 +25,10 @@ if ($card) {
 	else $remote_peer = false;
 	
 	if (AppSettings::getParam('pageview_tracking_enabled')) {
-		$num_bruteforce = $app->run_query("SELECT * FROM card_failedchecks WHERE ip_address=:ip_address AND check_time > :check_time;", [
+		$num_bruteforce = count($app->run_query("SELECT * FROM card_failedchecks WHERE ip_address=:ip_address AND check_time > :check_time;", [
 			'ip_address' => $_SERVER['REMOTE_ADDR'],
 			'check_time' => (time()-3600*24*4)
-		])->rowCount();
+		])->fetchAll());
 	}
 	else $num_bruteforce = 0;
 	

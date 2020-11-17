@@ -1481,10 +1481,11 @@ class Blockchain {
 				'blockchain_id' => $this->db_blockchain['blockchain_id'],
 				'from_block_id' => $load_from_block,
 				'to_block_id' => $load_to_block
-			]);
-			$this_loop_blocks_to_load = $load_blocks->rowCount();
+			])->fetchAll();
+			$this_loop_blocks_to_load = count($load_blocks);
+			$load_block_pos = 0;
 			
-			while ($keep_looping && $unknown_block = $load_blocks->fetch()) {
+			while ($keep_looping && $unknown_block = $load_blocks[$load_block_pos]) {
 				if ($this->db_blockchain['p2p_mode'] == "rpc") {
 					$fetchblockhash_error = false;
 					
@@ -1528,6 +1529,8 @@ class Blockchain {
 				$loop_i++;
 				
 				if (microtime(true)-$start_time >= $max_execution_time) $keep_looping = false;
+				
+				$load_block_pos++;
 			}
 			
 			if ($print_debug) $this->app->print_debug("Loaded ".number_format($blocks_loaded)." (to block ".$this->db_blockchain['last_complete_block'].") in ".round(microtime(true)-$ref_time, 6)." sec");

@@ -200,13 +200,13 @@ if ($thisuser && $refresh_page == "wallet") {
 	$unseen_message_threads = $app->run_query("SELECT * FROM user_messages WHERE game_id=:game_id AND to_user_id=:to_user_id AND seen=0 GROUP BY from_user_id;", [
 		'game_id' => $game->db_game['game_id'],
 		'to_user_id' => $thisuser->db_user['user_id']
-	]);
+	])->fetchAll();
 	
-	if ($unseen_message_threads->rowCount() > 0) {
+	if (count($unseen_message_threads) > 0) {
 		$output['new_messages'] = 1;
 		$output['new_message_user_ids'] = "";
 		
-		while ($thread = $unseen_message_threads->fetch()) {
+		foreach ($unseen_message_threads as $thread) {
 			$output['new_message_user_ids'] .= $thread['from_user_id'].",";
 		}
 		$output['new_message_user_ids'] = substr($output['new_message_user_ids'], 0, strlen($output['new_message_user_ids'])-1);
