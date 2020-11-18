@@ -1942,6 +1942,7 @@ class App {
 					$gdo_params['game_id'] = $game->db_game['game_id'];
 					$gdo_params['event_index'] = $gde['event_index'];
 					$gdo_params['option_index'] = $k;
+					$gdo_q = "";
 				}
 				$gdo_q .= "name=:name, target_probability=:target_probability";
 				
@@ -2009,7 +2010,6 @@ class App {
 					$var_type = $verbatim_vars[$var_i][0];
 					$var_name = $verbatim_vars[$var_i][1];
 					
-					$import_q .= $var_name."=:".$var_name.", ";
 					$import_params[$var_name] = $blockchain_def->$var_name;
 				}
 				
@@ -3767,6 +3767,13 @@ class App {
 			'user_game_id' => $user_game['user_game_id']
 		]);
 		$user_game['net_risk_view'] = $net_risk_view;
+	}
+	
+	public function fetch_sessions_by_key($session_key) {
+		return $this->run_query("SELECT * FROM user_sessions WHERE session_key=:session_key AND expire_time > :expire_time AND logout_time=0 AND synchronizer_token IS NOT NULL;", [
+			'session_key' => $session_key,
+			'expire_time' => time()
+		])->fetchAll();
 	}
 }
 ?>

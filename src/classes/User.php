@@ -196,7 +196,7 @@ class User {
 	}
 
 	public function log_user_in(&$redirect_url, $viewer_id) {
-		if (AppSettings::getParam('pageview_tracking_enabled')) {
+		if (AppSettings::getParam('pageview_tracking_enabled') && !empty($viewer_id)) {
 			$viewer_connection = $this->app->run_query("SELECT * FROM viewer_connections WHERE type='viewer2user' AND from_id=:viewer_id AND to_id=:user_id;", [
 				'viewer_id' => $viewer_id,
 				'user_id' => $this->db_user['user_id']
