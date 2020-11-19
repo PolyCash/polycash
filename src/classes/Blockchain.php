@@ -2664,7 +2664,7 @@ class Blockchain {
 				$new_output_params["spend_status"] = "unspent";
 			}
 			
-			$this->app->run_query("transaction_ios", $new_output_params);
+			$this->app->run_insert_query("transaction_ios", $new_output_params);
 		}
 		
 		$this->app->dbh->commit();

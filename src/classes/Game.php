@@ -3905,15 +3905,15 @@ class Game {
 			$faucet_io = $this->check_faucet($user_game);
 			
 			if ($faucet_io) {
-				$app->run_query("UPDATE address_keys SET account_id=:account_id WHERE address_key_id=:address_key_id;", [
+				$this->blockchain->app->run_query("UPDATE address_keys SET account_id=:account_id WHERE address_key_id=:address_key_id;", [
 					'account_id' => $user_game['account_id'],
 					'address_key_id' => $faucet_io['address_key_id']
 				]);
-				$app->run_query("UPDATE addresses SET user_id=:user_id WHERE address_id=:address_id;", [
+				$this->blockchain->app->run_query("UPDATE addresses SET user_id=:user_id WHERE address_id=:address_id;", [
 					'user_id' => $user_game['user_id'],
 					'address_id' => $faucet_io['address_id']
 				]);
-				$app->run_query("UPDATE user_games SET faucet_claims=faucet_claims+1, latest_claim_time=:latest_claim_time WHERE user_game_id=:user_game_id;", [
+				$this->blockchain->app->run_query("UPDATE user_games SET faucet_claims=faucet_claims+1, latest_claim_time=:latest_claim_time WHERE user_game_id=:user_game_id;", [
 					'user_game_id' => $user_game['user_game_id'],
 					'latest_claim_time' => time()
 				]);
