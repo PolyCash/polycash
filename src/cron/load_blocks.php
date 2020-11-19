@@ -6,32 +6,30 @@ $script_target_time = 595;
 $min_loop_target_time = 5;
 $script_start_time = microtime(true);
 
-$allowed_params = ['print_debug','blockchain_id'];
+$allowed_params = ['print_debug','blockchain_id','never_stop'];
 $app->safe_merge_argv_to_request($argv, $allowed_params);
 
 if ($app->running_as_admin()) {
 	$print_debug = false;
 	if (!empty($_REQUEST['print_debug'])) $print_debug = true;
 	
+	$never_stop = false;
+	if (!empty($_REQUEST['never_stop'])) $never_stop = true;
+	
 	$only_blockchain_id = false;
 	if (!empty($_REQUEST['blockchain_id'])) $only_blockchain_id = (int) $_REQUEST['blockchain_id'];
 	
 	// If running from browser, run in background to get a unique PID, to avoid process lock problems
 	if (!AppSettings::runningFromCommandline()) {
-		$pipe_config = [
-			0 => ['pipe', 'r'],
-			1 => ['pipe', 'w'],
-			2 => ['pipe', 'w']
-		];
-		$pipes = [];
-		
 		$cmd = $app->php_binary_location().' "'.AppSettings::srcPath().'/cron/load_blocks.php"';
 		if ($only_blockchain_id) $cmd .= " blockchain_id=".$only_blockchain_id;
-		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
-		else $cmd .= " 2>&1 >/dev/null";
-		$block_loading_process = proc_open($cmd, $pipe_config, $pipes);
-		if (is_resource($block_loading_process)) echo "Started the background process.<br/>$cmd<br/>\n";
-		else echo "Failed to start a process for loading blocks.<br/>$cmd<br/>\n";
+		
+		echo '<pre>';
+		$block_loading_process = $app->run_shell_command($cmd, $print_debug);
+		if (is_resource($block_loading_process)) echo "Started the background process.<br/>\n";
+		else echo "Failed to start a process for loading blocks.<br/>\n";
+		echo '</pre>';
+		
 		die();
 	}
 	
@@ -88,7 +86,7 @@ if ($app->running_as_admin()) {
 			
 			if ($any_success) usleep($sleep_usec);
 		}
-		while ($any_success && microtime(true) < $script_start_time + ($script_target_time-$loop_target_time));
+		while ($any_success && ($never_stop || microtime(true) < $script_start_time + ($script_target_time-$loop_target_time)));
 	}
 	else {
 		if ($print_debug) $app->print_debug("Block loading script is already running, skip...");

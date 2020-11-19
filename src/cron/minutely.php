@@ -10,8 +10,11 @@ if ($app->running_as_admin()) {
 		include(AppSettings::srcPath()."/scripts/send_performance_notifications.php");
 	}
 	
-	$msg = $app->start_regular_background_processes();
-	if (!empty($_REQUEST['print_debug'])) echo $msg;
+	$print_debug = @((bool) $_REQUEST['print_debug']);
+	
+	echo '<pre>';
+	echo $app->start_regular_background_processes($print_debug);
+	echo '</pre>';
 	
 	if (empty($argv)) {
 		$runtime_sec = microtime(true)-$script_start_time;

@@ -277,9 +277,24 @@ class Blockchain {
 		
 		$tx_hash_csv = "'".implode("','", array_keys($tx_hash_to_pos))."'";
 		
-		$this->app->run_query("DELETE t.*, io.*, gio.* FROM transactions t LEFT JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id LEFT JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE t.blockchain_id=:blockchain_id AND t.tx_hash IN (".$tx_hash_csv.");", [
-			'blockchain_id' => $this->db_blockchain['blockchain_id']
-		]);
+		if (empty(AppSettings::getParam('sqlite_db'))) {
+			$this->app->run_query("DELETE t.*, io.*, gio.* FROM transactions t LEFT JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id LEFT JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE t.blockchain_id=:blockchain_id AND t.tx_hash IN (".$tx_hash_csv.");", [
+				'blockchain_id' => $this->db_blockchain['blockchain_id']
+			]);
+		}
+		else {
+			$this->app->run_query("DELETE FROM transaction_game_ios WHERE io_id IN (SELECT io.io_id FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id WHERE t.blockchain_id=:blockchain_id AND t.tx_hash IN (".$tx_hash_csv."));", [
+				'blockchain_id' => $this->db_blockchain['blockchain_id']
+			]);
+			
+			$this->app->run_query("DELETE FROM transaction_ios WHERE io_id IN (SELECT io.io_id FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id WHERE t.blockchain_id=:blockchain_id AND t.tx_hash IN (".$tx_hash_csv."));", [
+				'blockchain_id' => $this->db_blockchain['blockchain_id']
+			]);
+			
+			$this->app->run_query("DELETE FROM transactions WHERE tx_hash IN (".$tx_hash_csv.") AND blockchain_id=:blockchain_id;", [
+				'blockchain_id' => $this->db_blockchain['blockchain_id']
+			]);
+		}
 		
 		// Insert to transactions table
 		$insert_q = "INSERT INTO transactions (blockchain_id, block_id, transaction_desc, tx_hash, time_created, position_in_block, num_inputs, num_outputs, has_all_outputs) VALUES ";
@@ -344,7 +359,7 @@ class Blockchain {
 		
 		$db_existing_addresses_by_address = (array)(AppSettings::arrayToMapOnKey($db_existing_addresses, "address"));
 		
-		$insert_addresses_q = "INSERT IGNORE INTO addresses (primary_blockchain_id, address, time_created, is_mine, vote_identifier, option_index, is_destroy_address, is_separator_address, is_passthrough_address) VALUES ";
+		$insert_addresses_q = "INSERT ".(!empty(AppSettings::getParam('sqlite_db')) ? "OR " : "")."IGNORE INTO addresses (primary_blockchain_id, address, time_created, is_mine, vote_identifier, option_index, is_destroy_address, is_separator_address, is_passthrough_address) VALUES ";
 		$time = time();
 		$insert_addr_count = 0;
 		
@@ -553,12 +568,38 @@ class Blockchain {
 		if (count($full_input_info_by_tx_id) > 0) {
 			$this->app->run_query("UPDATE transactions SET has_all_inputs=1 WHERE transaction_id IN (".implode(",", array_keys($full_input_info_by_tx_id)).");");
 			
-			$this->app->run_query("UPDATE transactions t INNER JOIN (SELECT infot.transaction_id, SUM(io.amount) AS io_amount_sum FROM transaction_ios io JOIN transactions infot ON io.spend_transaction_id=infot.transaction_id WHERE infot.block_id=".$block_height." AND infot.blockchain_id=".$this->db_blockchain['blockchain_id']." AND infot.has_all_inputs=1 GROUP BY infot.transaction_id) info ON t.transaction_id=info.transaction_id SET t.amount=info.io_amount_sum WHERE t.blockchain_id=".$this->db_blockchain['blockchain_id']." AND t.block_id=".$block_height.";");
+			$inner_q = "SELECT infot.transaction_id, SUM(io.amount) AS io_amount_sum FROM transaction_ios io JOIN transactions infot ON io.spend_transaction_id=infot.transaction_id WHERE infot.block_id=".$block_height." AND infot.blockchain_id=".$this->db_blockchain['blockchain_id']." AND infot.has_all_inputs=1 GROUP BY infot.transaction_id";
+			
+			if (empty(AppSettings::getParam('sqlite_db'))) {
+				$this->app->run_query("UPDATE transactions t INNER JOIN (".$inner_q.") info ON t.transaction_id=info.transaction_id SET t.amount=info.io_amount_sum WHERE t.blockchain_id=".$this->db_blockchain['blockchain_id']." AND t.block_id=".$block_height.";");
+			}
+			else {
+				$info_by_tx = $this->app->run_query($inner_q)->fetchAll(PDO::FETCH_COLUMN | PDO::FETCH_GROUP);
+				$tx_ids = array_keys($info_by_tx);
+				
+				if (count($tx_ids) > 0) {
+					$amount_sums = array_column(array_values($info_by_tx), 0);
+					$this->app->bulk_mapped_update_query("transactions", ['amount' => $amount_sums], ['transaction_id' => $tx_ids]);
+				}
+			}
 		}
 		
-		$this->app->run_query("UPDATE transactions t INNER JOIN (SELECT infot.transaction_id, SUM(io.amount) AS io_amount_sum FROM transaction_ios io JOIN transactions infot ON io.create_transaction_id=infot.transaction_id WHERE infot.block_id=".$block_height." AND infot.blockchain_id=".$this->db_blockchain['blockchain_id']." AND infot.has_all_outputs=1 GROUP BY infot.transaction_id) info ON t.transaction_id=info.transaction_id SET t.output_sum=info.io_amount_sum WHERE t.blockchain_id=".$this->db_blockchain['blockchain_id']." AND t.block_id=".$block_height.";");
+		$inner_q = "SELECT infot.transaction_id, SUM(io.amount) AS io_amount_sum FROM transaction_ios io JOIN transactions infot ON io.create_transaction_id=infot.transaction_id WHERE infot.block_id=".$block_height." AND infot.blockchain_id=".$this->db_blockchain['blockchain_id']." AND infot.has_all_outputs=1 GROUP BY infot.transaction_id";
 		
-		$this->app->run_query("UPDATE transactions t SET t.fee_amount=t.amount-t.output_sum WHERE t.blockchain_id=".$this->db_blockchain['blockchain_id']." AND t.block_id=".$block_height." AND t.has_all_inputs=1 AND t.has_all_outputs=1;");
+		if (empty(AppSettings::getParam('sqlite_db'))) {
+			$this->app->run_query("UPDATE transactions t INNER JOIN (".$inner_q.") info ON t.transaction_id=info.transaction_id SET t.output_sum=info.io_amount_sum WHERE t.blockchain_id=".$this->db_blockchain['blockchain_id']." AND t.block_id=".$block_height.";");
+		}
+		else {
+			$info_by_tx = $this->app->run_query($inner_q)->fetchAll(PDO::FETCH_COLUMN | PDO::FETCH_GROUP);
+			$tx_ids = array_keys($info_by_tx);
+			
+			if (count($tx_ids) > 0) {
+				$amount_sums = array_column(array_values($info_by_tx), 0);
+				$this->app->bulk_mapped_update_query("transactions", ['amount' => $amount_sums], ['transaction_id' => $tx_ids]);
+			}
+		}
+		
+		$this->app->run_query("UPDATE transactions SET fee_amount=amount-output_sum WHERE blockchain_id=".$this->db_blockchain['blockchain_id']." AND block_id=".$block_height." AND has_all_inputs=1 AND has_all_outputs=1 AND output_sum IS NOT NULL;");
 		
 		$this->set_block_stats($db_block);
 		
@@ -1655,18 +1696,18 @@ class Blockchain {
 	
 	public function delete_blocks_from_height($block_height) {
 		// Reset IOs that have been confirmed spent ahead of this block
-		$this->app->run_query("UPDATE transaction_ios io SET io.coin_blocks_created=0, io.spend_transaction_id=NULL, io.spend_status='unspent', io.in_index=NULL, io.spend_block_id=NULL WHERE io.blockchain_id=:blockchain_id AND io.spend_block_id >= :spend_block_id;", [
+		$this->app->run_query("UPDATE transaction_ios SET coin_blocks_created=0, spend_transaction_id=NULL, spend_status='unspent', in_index=NULL, spend_block_id=NULL WHERE blockchain_id=:blockchain_id AND spend_block_id >= :spend_block_id;", [
 			'blockchain_id' => $this->db_blockchain['blockchain_id'],
 			'spend_block_id' => $block_height
 		]);
 		
 		// Reset IOs that have been spent but the spend has not been confirmed
-		$this->app->run_query("UPDATE transaction_ios io JOIN transactions t ON io.spend_transaction_id=t.transaction_id SET io.coin_blocks_created=0, io.spend_transaction_id=NULL, io.spend_status='unspent', io.in_index=NULL, io.spend_block_id=NULL WHERE t.blockchain_id=:blockchain_id AND t.block_id IS NULL;", [
+		$this->app->run_query("UPDATE transaction_ios SET coin_blocks_created=0, spend_transaction_id=NULL, spend_status='unspent', in_index=NULL, spend_block_id=NULL WHERE spend_transaction_id IN (SELECT transaction_id FROM transactions WHERE blockchain_id=:blockchain_id AND block_id IS NULL);", [
 			'blockchain_id' => $this->db_blockchain['blockchain_id']
 		]);
 		
 		// Delete any confirmed transactions and IOs created from this block
-		$this->app->run_query("DELETE io.* FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id WHERE t.blockchain_id=:blockchain_id AND t.block_id >= :create_block_id;", [
+		$this->app->run_query("DELETE FROM transaction_ios WHERE create_transaction_id IN (SELECT transaction_id FROM transactions WHERE blockchain_id=:blockchain_id AND block_id >= :create_block_id);", [
 			'blockchain_id' => $this->db_blockchain['blockchain_id'],
 			'create_block_id' => $block_height
 		]);
@@ -1676,7 +1717,7 @@ class Blockchain {
 		]);
 		
 		// Delete any outputs of unconfirmed transactions
-		$this->app->run_query("DELETE io.* FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id WHERE t.blockchain_id=:blockchain_id AND t.block_id IS NULL;", [
+		$this->app->run_query("DELETE FROM transaction_ios WHERE create_transaction_id IN (SELECT transaction_id FROM transactions WHERE blockchain_id=:blockchain_id AND block_id IS NULL);", [
 			'blockchain_id' => $this->db_blockchain['blockchain_id']
 		]);
 		

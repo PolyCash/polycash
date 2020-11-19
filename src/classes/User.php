@@ -211,9 +211,8 @@ class User {
 			}
 		}
 		
-		$session_key = $_COOKIE['my_session_global'];
-		
-		if (!empty($session_key)) {
+		if (!empty($_COOKIE['my_session_global'])) {
+			$session_key = $_COOKIE['my_session_global'];
 			$expire_time = time()+3600*24;
 			
 			$new_session_params = [

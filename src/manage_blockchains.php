@@ -23,7 +23,7 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 	}
 	else {
 		if (!empty($_REQUEST['action']) && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'])) {
-			$first_required_block = (string) $_REQUEST['first_required_block'] == "" ? null : (int) $_REQUEST['first_required_block'];
+			$first_required_block = (string) @($_REQUEST['first_required_block'] == "" ? null : (int) $_REQUEST['first_required_block']);
 			
 			if ($_REQUEST['action'] == "new_blockchain") {
 				$p2p_mode = $_REQUEST['p2p_mode'];
