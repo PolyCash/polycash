@@ -3071,7 +3071,7 @@ class Game {
 		$sum_coins_out = 0;
 		$num_transactions = count($out_stats);
 		
-		foreach ($out_stats->fetch() as $out_stat) {
+		foreach ($out_stats as $out_stat) {
 			$num_ios_out += (int)$out_stat['ios_out'];
 			$sum_coins_out += (int)$out_stat['coins_out'];
 		}

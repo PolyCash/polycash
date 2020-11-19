@@ -126,7 +126,7 @@ if ($user_game) {
 						
 						$num_options_this_event = count($options_by_event);
 						
-						foreach ($options_by_event->fetch() as $option) {
+						foreach ($options_by_event as $option) {
 							$this_address = $app->fetch_addresses_in_account($account, $option['option_index'], 1)[0];
 							
 							if ($this_address) {
