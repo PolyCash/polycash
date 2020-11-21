@@ -26,9 +26,9 @@ if ($app->running_as_admin()) {
 		do {
 			$loop_start_time = microtime(true);
 			
-			$db_running_games = $app->fetch_running_games();
+			$db_running_games = $app->fetch_running_games()->fetchAll();
 			
-			while ($db_running_game = $db_running_games->fetch()) {
+			foreach ($db_running_games as $db_running_game) {
 				if (!$only_game_id || $db_running_game['game_id'] == $only_game_id) {
 					if (empty($blockchains[$db_running_game['blockchain_id']])) $blockchains[$db_running_game['blockchain_id']] = new Blockchain($app, $db_running_game['blockchain_id']);
 					$running_game = new Game($blockchains[$db_running_game['blockchain_id']], $db_running_game['game_id']);

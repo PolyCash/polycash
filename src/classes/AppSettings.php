@@ -56,8 +56,8 @@ class AppSettings {
 									$new_config['sqlite_db'] = "polycash_sqlite.db";
 									$new_config['site_domain'] = "127.0.0.1";
 									$new_config['use_https'] = true;
-                                    $new_config['only_user_username'] = "admin";
-                                    $new_config['only_user_password'] = "admin";
+									$new_config['only_user_username'] = "admin";
+									$new_config['only_user_password'] = "admin";
 								}
 								
 								if ($new_config_fh = fopen($config_path, 'w')) {
@@ -137,6 +137,21 @@ class AppSettings {
 		}
 		
 		return $map;
+	}
+	
+	public static function sqlNow() {
+		if (empty(self::$settings->sqlite_db)) return "NOW()";
+		else return "date('now')";
+	}
+	
+	public static function sqlRand() {
+		if (empty(self::$settings->sqlite_db)) return "RAND()";
+		else return "RANDOM()";
+	}
+	
+	public static function sqlFloor($str) {
+		if (empty(self::$settings->sqlite_db)) return "FLOOR(".$str.")";
+		else return "CAST(".$str." AS INT)";
 	}
 }
 ?>

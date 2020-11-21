@@ -446,6 +446,8 @@ class GameDefinition {
 										}
 									}
 									
+									if (!array_key_exists("short_description", $new_game_params)) $new_game_params['short_description'] = "";
+									
 									$game = Game::create_game($blockchain, $new_game_params);
 									
 									if (!empty($game_def->module)) {

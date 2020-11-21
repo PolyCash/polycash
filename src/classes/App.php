@@ -79,15 +79,13 @@ class App {
 		
 		foreach ($set_columns as $set_column) {
 			$q .= $set_column."=(CASE";
-			$in_csv = "";
 			$data_pos = 0;
 			for ($data_pos=0; $data_pos<count($set_data[$set_column]); $data_pos++) {
 				$q .= " WHEN (".$where_columns[0]."=".$where_data[$where_columns[0]][$data_pos].") THEN '".$set_data[$set_column][$data_pos]."'";
-				$in_csv .= $where_data[$where_columns[0]][$data_pos].",";
 			}
-			$in_csv = substr($in_csv, 0, -1);
-			$q .= " END) WHERE ".$where_columns[0]." IN (".$in_csv.");";
+			$q .= " END),";
 		}
+		$q = substr($q, 0, -1)." WHERE ".$where_columns[0]." IN (".implode(",",$where_data[$where_columns[0]]) .");";
 		
 		$this->run_query($q);
 	}
@@ -3403,7 +3401,7 @@ class App {
 	}
 	
 	public function apply_address_set(&$game, $account_id) {
-		$address_set = $this->run_query("SELECT * FROM address_sets WHERE game_id=:game_id AND applied=0 AND has_option_indices_until IS NOT NULL ORDER BY RAND() LIMIT 1;", [
+		$address_set = $this->run_query("SELECT * FROM address_sets WHERE game_id=:game_id AND applied=0 AND has_option_indices_until IS NOT NULL ORDER BY ".AppSettings::sqlRand()." LIMIT 1;", [
 			'game_id' => $game->db_game['game_id']
 		])->fetch();
 		

@@ -28,7 +28,7 @@ if ($app->running_as_admin()) {
 			}
 		}
 
-		$unstarted_games = $app->run_query("SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE b.online=1 AND g.game_status='published' AND g.start_condition='fixed_time' AND g.start_datetime <= NOW() AND g.start_datetime IS NOT NULL;");
+		$unstarted_games = $app->run_query("SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE b.online=1 AND g.game_status='published' AND g.start_condition='fixed_time' AND g.start_datetime <= ".AppSettings::sqlNow()." AND g.start_datetime IS NOT NULL;");
 		
 		while ($db_unstarted_game = $unstarted_games->fetch()) {
 			if (time() >= strtotime($db_unstarted_game['start_datetime'])) {
