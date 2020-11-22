@@ -2381,17 +2381,20 @@ class Game {
 							$this->blockchain->app->run_query("UPDATE transaction_game_ios SET resolved_before_spent=0 WHERE game_io_id IN (".implode(",", $unresolved_before_spent_gio_ids).");");
 						}
 						
+						$this->blockchain->app->dbh->beginTransaction();
 						$output_ios = $this->blockchain->app->run_query("SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id=:create_transaction_id;", [
 							'create_transaction_id' => $db_transaction['transaction_id']
-						]);
+						])->fetchAll();
 						
+						$output_io_ids = [];
 						$tx_chain_output_sum = 0;
 						$tx_chain_destroy_sum = 0;
 						$tx_chain_separator_sum = 0;
 						$tx_chain_passthrough_sum = 0;
 						$tx_chain_receiver_sum = 0;
 						
-						while ($output_io = $output_ios->fetch()) {
+						foreach ($output_ios as $output_io) {
+							array_push($output_io_ids, $output_io['io_id']);
 							$tx_chain_output_sum += $output_io['amount'];
 							if ($output_io['is_destroy_address'] == 1) $tx_chain_destroy_sum += $output_io['amount'];
 							if ($output_io['is_separator_address'] == 1) $tx_chain_separator_sum += $output_io['amount'];
@@ -2411,8 +2414,9 @@ class Game {
 						$regular_outputs = $this->blockchain->app->run_query("SELECT io.*, a.* FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id=:transaction_id AND a.is_destroy_address=0 AND a.is_separator_address=0 AND a.is_passthrough_address=0 AND io.is_receiver=0 ORDER BY io.out_index ASC;", ['transaction_id'=>$db_transaction['transaction_id']])->fetchAll();
 						$output_i = 0;
 						
-						$this->blockchain->app->dbh->beginTransaction();
-						$this->blockchain->app->run_query("DELETE FROM transaction_game_ios WHERE io_id IN (SELECT io_id FROM transaction_ios WHERE create_transaction_id=:transaction_id);", ['transaction_id'=>$db_transaction['transaction_id']]);
+						if (count($output_io_ids) > 0) {
+							$this->blockchain->app->run_query("DELETE FROM transaction_game_ios WHERE io_id IN (".implode(",", $output_io_ids).");");
+						}
 						
 						if (count($regular_outputs) > 0) {
 							$new_option_indices = [];
