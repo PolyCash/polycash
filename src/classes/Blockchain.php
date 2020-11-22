@@ -2659,24 +2659,46 @@ class Blockchain {
 		for ($in_index=0; $in_index<count($tx['inputs']); $in_index++) {
 			$tx_input = get_object_vars($tx['inputs'][$in_index]);
 			
-			$update_input_q = "UPDATE transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id SET io.spend_transaction_id=:transaction_id, io.in_index=:in_index";
-			
-			$update_input_params = [
-				'transaction_id' => $transaction_id,
-				'in_index' => $in_index,
-				'blockchain_id' => $this->db_blockchain['blockchain_id'],
-				'tx_hash' => $tx_input['tx_hash'],
-				'out_index' => $tx_input['out_index']
-			];
-			
-			if ((string)$block_height !== "") {
-				$update_input_q .= ", io.spend_block_id=:spend_block_id";
-				$update_input_params['spend_block_id'] = $block_height;
+			if (empty(AppSettings::getParam('sqlite_db'))) {
+				$update_input_q = "UPDATE transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id SET io.spend_transaction_id=:transaction_id, io.in_index=:in_index";
+				
+				$update_input_params = [
+					'transaction_id' => $transaction_id,
+					'in_index' => $in_index,
+					'blockchain_id' => $this->db_blockchain['blockchain_id'],
+					'tx_hash' => $tx_input['tx_hash'],
+					'out_index' => $tx_input['out_index']
+				];
+				
+				if ((string)$block_height !== "") {
+					$update_input_q .= ", io.spend_block_id=:spend_block_id";
+					$update_input_params['spend_block_id'] = $block_height;
+				}
+				
+				$update_input_q .= " WHERE t.blockchain_id=:blockchain_id AND t.tx_hash=:tx_hash AND io.out_index=:out_index;";
+				
+				$this->app->run_query($update_input_q, $update_input_params);
 			}
-			
-			$update_input_q .= " WHERE t.blockchain_id=:blockchain_id AND t.tx_hash=:tx_hash AND io.out_index=:out_index;";
-			
-			$this->app->run_query($update_input_q, $update_input_params);
+			else {
+				$update_input_q = "UPDATE transaction_ios SET spend_transaction_id=:transaction_id, in_index=:in_index";
+				
+				$update_input_params = [
+					'transaction_id' => $transaction_id,
+					'in_index' => $in_index,
+					'blockchain_id' => $this->db_blockchain['blockchain_id'],
+					'tx_hash' => $tx_input['tx_hash'],
+					'out_index' => $tx_input['out_index']
+				];
+				
+				if ((string)$block_height !== "") {
+					$update_input_q .= ", spend_block_id=:spend_block_id";
+					$update_input_params['spend_block_id'] = $block_height;
+				}
+				
+				$update_input_q .= " WHERE out_index=:out_index AND create_transaction_id IN (SELECT transaction_id FROM transactions WHERE blockchain_id=:blockchain_id AND tx_hash=:tx_hash);";
+				
+				$this->app->run_query($update_input_q, $update_input_params);
+			}
 		}
 		
 		$first_passthrough_index = false;

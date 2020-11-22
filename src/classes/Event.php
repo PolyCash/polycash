@@ -850,7 +850,7 @@ class Event {
 					$winning_votes = $rankings[$rank_index]['votes'];
 					$winning_effective_destroy_score = $rankings[$rank_index]['effective_destroy_score'];
 				}
-				else throw new Exception("Failed to identify the winning option for event #".$this->db_event['event_id']);
+				else throw new Exception("Failed to identify the winning option for event #".$this->db_event['event_index']);
 			}
 		}
 		
@@ -1113,7 +1113,7 @@ class Event {
 			$event_info = $this->game->blockchain->app->run_query($inner_q, ['event_id' => $this->db_event['event_id']])->fetch();
 			$update_q = "UPDATE events SET ";
 			foreach ($update_fields as $update_field) {
-				$update_q .= $update_field."=".$event_info[$update_field].", ";
+				$update_q .= $update_field."='".$event_info[$update_field]."', ";
 			}
 			$update_q = substr($update_q, 0, -2)." WHERE event_id=:event_id;";
 			

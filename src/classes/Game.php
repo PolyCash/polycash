@@ -106,7 +106,7 @@ class Game {
 					$new_tx_params['block_id'] = $block_id;
 					$new_tx_params['round_id'] = $this->block_to_round($block_id);
 				}
-				$this->blockchain->app->run_query("transactions", $new_tx_params);
+				$this->blockchain->app->run_insert_query("transactions", $new_tx_params);
 				$transaction_id = $this->blockchain->app->last_insert_id();
 			}
 			
@@ -1818,7 +1818,7 @@ class Game {
 		])->fetch();
 	}
 	
-	public function ensure_events_until_block($block_id) {
+	public function ensure_events_until_block($block_id, $print_debug) {
 		$msg = "";
 		$ensured_block = max((int)$this->db_game['events_until_block'], $this->db_game['game_starting_block']);
 		
@@ -1851,7 +1851,7 @@ class Game {
 				
 				$gdes_to_add = $this->module->events_starting_between_blocks($this, $ensured_block, $block_id);
 				
-				$msg .= "Resetting ".count($gdes_to_add)." game defined events by module for blocks ".$ensured_block.":".$block_id."\n";
+				if ($print_debug) $this->blockchain->app->print_debug("Resetting ".count($gdes_to_add)." game defined events by module for blocks ".$ensured_block.":".$block_id);
 				
 				$sports_entity_type = $this->blockchain->app->check_set_entity_type("sports");
 				$leagues_entity_type = $this->blockchain->app->check_set_entity_type("leagues");
@@ -1905,7 +1905,7 @@ class Game {
 					'to_event_index' => $to_event_index
 				])->fetchAll();
 				
-				$msg .= "Ensuring ".count($change_gdes)." events from game definition (".$from_event_index.":".$to_event_index.").\n";
+				if ($print_debug) $this->blockchain->app->print_debug("Ensuring ".count($change_gdes)." events from game definition (".$from_event_index.":".$to_event_index.")");
 				
 				foreach ($change_gdes as $game_defined_event) {
 					$event_start_time = microtime(true);
@@ -1988,13 +1988,12 @@ class Game {
 				}
 			}
 			
-			$msg .= "Added ".$add_count." events\n";
+			if ($print_debug) $this->blockchain->app->print_debug("Added ".$add_count." events");
 			
 			$this->set_events_until_block($block_id);
 			
 			$this->blockchain->app->dbh->commit();
 		}
-		return $msg;
 	}
 	
 	public function set_events_until_block($block_id) {
@@ -2171,25 +2170,21 @@ class Game {
 		$ensure_block_id = $to_block_height+1;
 		
 		// Load events
-		$ensure_events_debug_text = $this->ensure_events_until_block($ensure_block_id);
-		if ($print_debug) $this->blockchain->app->print_debug($ensure_events_debug_text);
+		$this->ensure_events_until_block($ensure_block_id, $print_debug);
 		
 		// Sync with peer
 		if (!empty($this->db_game['definitive_game_peer_id']) && $this->db_game['loaded_until_block'] == $this->blockchain->last_block_id()) {
 			$sync_definitive_message = $this->sync_with_definitive_peer($print_debug);
 			
 			if ($this->db_game['finite_events'] == 1) $ensure_block_id = max($ensure_block_id, $this->max_gde_starting_block());
-			$ensure_events_debug_text = $this->ensure_events_until_block($ensure_block_id);
+			$this->ensure_events_until_block($ensure_block_id, $print_debug);
 			
 			GameDefinition::set_cached_definition_hashes($this);
-			
-			if ($print_debug) $this->blockchain->app->print_debug($ensure_events_debug_text);
 		}
 		else if ($this->db_game['finite_events'] == 1) $ensure_block_id = max($ensure_block_id, $this->max_gde_starting_block());
 		
 		// Load events
-		$ensure_events_debug_text = $this->ensure_events_until_block($ensure_block_id);
-		if ($print_debug) $this->blockchain->app->print_debug($ensure_events_debug_text);
+		$this->ensure_events_until_block($ensure_block_id, $print_debug);
 		
 		// Load blocks
 		if ($to_block_height >= $load_block_height) {

@@ -95,7 +95,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 						$ensure_block_id = $game->blockchain->last_block_id()+1;
 						if ($game->db_game['finite_events'] == 1) $ensure_block_id = max($ensure_block_id, $game->max_gde_starting_block());
 						
-						$debug_text = $game->ensure_events_until_block($ensure_block_id);
+						$game->ensure_events_until_block($ensure_block_id, false);
 						
 						$user_game = false;
 						$game->add_genesis_transaction($user_game);
