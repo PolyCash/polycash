@@ -2601,15 +2601,17 @@ class Game {
 			}
 			
 			$payout_events = $this->events_by_payout_block($block_height);
-			
+			$payout_resolved_event_ids = [];
 			foreach ($payout_events as $payout_event) {
 				$payout_event->pay_out_event();
+				if ((string)$payout_event->db_event['outcome_index'] !== "" || (string)$payout_event->db_event['track_payout_price'] !== "") {
+					array_push($payout_resolved_event_ids, $payout_event->db_event['event_id']);
+				}
 			}
 			
-			$this->blockchain->app->run_query("UPDATE transaction_game_ios SET is_resolved=1 WHERE event_id IN (SELECT event_id FROM events WHERE game_id=:game_id AND event_payout_block=:block_id AND (outcome_index IS NOT NULL OR track_payout_price IS NOT NULL));", [
-				'game_id' => $this->db_game['game_id'],
-				'block_id' => $block_height
-			]);
+			if (count($payout_resolved_event_ids) > 0) {
+				$this->blockchain->app->run_query("UPDATE transaction_game_ios SET is_resolved=1 WHERE event_id IN (".implode(",", $payout_resolved_event_ids).");");
+			}
 			
 			$this->blockchain->app->run_query("UPDATE game_blocks SET locally_saved=1, time_loaded=:current_time, load_time=load_time+:add_load_time, max_game_io_index=:max_game_io_index WHERE game_block_id=:game_block_id;", [
 				'current_time' => time(),
