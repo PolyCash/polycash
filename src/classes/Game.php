@@ -339,7 +339,7 @@ class Game {
 	
 	public function set_game_status($new_status) {
 		if (in_array($new_status, ['completed','editable','running','published'])) {
-			$this->blockchain->app->run_query("UPDATE games SET game_status=:new_status, completion_datetime=NOW() WHERE game_id=:game_id;", [
+			$this->blockchain->app->run_query("UPDATE games SET game_status=:new_status, completion_datetime=".AppSettings::sqlNow()." WHERE game_id=:game_id;", [
 				'new_status' => $new_status,
 				'game_id' => $this->db_game['game_id']
 			]);
@@ -373,7 +373,7 @@ class Game {
 			$strategies_q .= " WHERE g.game_id=:game_id AND usb.block_within_round=:block_of_round";
 			$strategies_q .= " AND (s.voting_strategy IN ('by_rank', 'by_entity', 'api', 'by_plan', 'featured','hit_url'))";
 			$strategies_q .= " AND (s.time_next_apply IS NULL OR s.time_next_apply<:current_time)";
-			$strategies_q .= " ORDER BY RAND();";
+			$strategies_q .= " ORDER BY ".AppSettings::sqlRand().";";
 			$apply_strategies = $this->blockchain->app->run_query($strategies_q, $strategies_params)->fetchAll();
 			
 			if ($print_debug) {
@@ -698,7 +698,7 @@ class Game {
 			'game_id' => $this->db_game['game_id'],
 			'round_id' => $this->block_to_round($block_height)
 		]);
-		$this->blockchain->app->run_query("DELETE ob.* FROM option_blocks ob JOIN options o ON ob.option_id=o.option_id JOIN events e ON o.event_id=e.event_id WHERE e.game_id=:game_id AND ob.block_height >= :block_id;", [
+		$this->blockchain->app->run_query("DELETE FROM option_blocks WHERE block_height >= :block_id AND option_id IN (SELECT o.option_id FROM options o JOIN events e ON o.event_id=e.event_id WHERE e.game_id=:game_id);", [
 			'game_id' => $this->db_game['game_id'],
 			'block_id' => $block_height
 		]);
@@ -778,8 +778,9 @@ class Game {
 			]);
 		}
 		
-		$this->blockchain->app->run_query("DELETE ob.* FROM option_blocks ob JOIN options o ON ob.option_id=o.option_id JOIN events e ON o.event_id=e.event_id WHERE e.game_id=:game_id;", ['game_id'=>$this->db_game['game_id']]);
-		$this->blockchain->app->run_query("DELETE e.*, o.* FROM events e LEFT JOIN options o ON e.event_id=o.event_id WHERE e.game_id=:game_id;", ['game_id'=>$this->db_game['game_id']]);
+		$this->blockchain->app->run_query("DELETE FROM option_blocks where option_id IN (SELECT o.option_id FROM options o JOIN events e ON o.event_id=e.event_id WHERE e.game_id=:game_id);", ['game_id'=>$this->db_game['game_id']]);
+		$this->blockchain->app->run_query("DELETE FROM options WHERE event_id IN (SELECT event_id FROM events WHERE game_id=:game_id);", ['game_id'=>$this->db_game['game_id']]);
+		$this->blockchain->app->run_query("DELETE FROM events WHERE game_id=:game_id;", ['game_id'=>$this->db_game['game_id']]);
 		$this->blockchain->app->run_query("UPDATE games SET events_until_block=NULL, loaded_until_block=NULL, min_option_index=NULL, max_option_index=NULL WHERE game_id=:game_id;", ['game_id'=>$this->db_game['game_id']]);
 		
 		if ($delete_or_reset == "reset") {
@@ -1574,7 +1575,7 @@ class Game {
 		if (!empty($filter_arr['require_option_block_rule'])) {
 			$events_q .= " AND ev.option_block_rule IS NOT NULL";
 		}
-		$events_q .= " AND (ev.event_starting_time IS NULL OR ev.event_starting_time < NOW()) AND (ev.event_final_time IS NULL OR ev.event_final_time > NOW()) ORDER BY ev.event_final_time ASC, ev.event_id ASC;";
+		$events_q .= " AND (ev.event_starting_time IS NULL OR ev.event_starting_time < ".AppSettings::sqlNow().") AND (ev.event_final_time IS NULL OR ev.event_final_time > ".AppSettings::sqlNow().") ORDER BY ev.event_final_time ASC, ev.event_id ASC;";
 		$db_events = $this->blockchain->app->run_query($events_q, $events_params);
 		
 		while ($db_event = $db_events->fetch()) {
@@ -2131,7 +2132,7 @@ class Game {
 		return $error_message;
 	}
 	
-	public function sync($show_debug, $max_load_seconds) {
+	public function sync($print_debug, $max_load_seconds) {
 		$sync_start_time = microtime(true);
 		$last_set_loaded_time = microtime(true);
 		
@@ -2141,7 +2142,7 @@ class Game {
 		// Reset game if there's a reset scheduled
 		$extra_info = $this->fetch_extra_info();
 		if (!empty($extra_info['pending_reset'])) {
-			if ($show_debug) $this->blockchain->app->print_debug("Resetting the game..");
+			if ($print_debug) $this->blockchain->app->print_debug("Resetting the game..");
 			
 			if (array_key_exists("reset_from_block", $extra_info)) {
 				$this->reset_blocks_from_block($extra_info['reset_from_block']);
@@ -2171,28 +2172,28 @@ class Game {
 		
 		// Load events
 		$ensure_events_debug_text = $this->ensure_events_until_block($ensure_block_id);
-		if ($show_debug) $this->blockchain->app->print_debug($ensure_events_debug_text);
+		if ($print_debug) $this->blockchain->app->print_debug($ensure_events_debug_text);
 		
 		// Sync with peer
 		if (!empty($this->db_game['definitive_game_peer_id']) && $this->db_game['loaded_until_block'] == $this->blockchain->last_block_id()) {
-			$sync_definitive_message = $this->sync_with_definitive_peer($show_debug);
+			$sync_definitive_message = $this->sync_with_definitive_peer($print_debug);
 			
 			if ($this->db_game['finite_events'] == 1) $ensure_block_id = max($ensure_block_id, $this->max_gde_starting_block());
 			$ensure_events_debug_text = $this->ensure_events_until_block($ensure_block_id);
 			
 			GameDefinition::set_cached_definition_hashes($this);
 			
-			if ($show_debug) $this->blockchain->app->print_debug($ensure_events_debug_text);
+			if ($print_debug) $this->blockchain->app->print_debug($ensure_events_debug_text);
 		}
 		else if ($this->db_game['finite_events'] == 1) $ensure_block_id = max($ensure_block_id, $this->max_gde_starting_block());
 		
 		// Load events
 		$ensure_events_debug_text = $this->ensure_events_until_block($ensure_block_id);
-		if ($show_debug) $this->blockchain->app->print_debug($ensure_events_debug_text);
+		if ($print_debug) $this->blockchain->app->print_debug($ensure_events_debug_text);
 		
 		// Load blocks
 		if ($to_block_height >= $load_block_height) {
-			if ($show_debug) $this->blockchain->app->print_debug($this->db_game['name'].".. loading blocks ".$load_block_height." to ".$to_block_height);
+			if ($print_debug) $this->blockchain->app->print_debug($this->db_game['name'].".. loading blocks ".$load_block_height." to ".$to_block_height);
 			
 			if ($load_block_height == $this->db_game['game_starting_block']) $game_io_index = 0;
 			else {
@@ -2201,12 +2202,10 @@ class Game {
 			}
 			
 			for ($block_height=$load_block_height; $block_height<=$to_block_height; $block_height++) {
-				list($successful, $log_text, $bulk_to_block) = $this->add_block($block_height, $game_io_index);
+				list($successful, $bulk_to_block) = $this->add_block($block_height, $game_io_index, $print_debug);
 				if ($bulk_to_block) $block_height = $bulk_to_block;
 				
 				if ($successful) $this->set_loaded_until_block($block_height);
-				
-				if ($show_debug) $this->blockchain->app->print_debug($log_text);
 				
 				if (microtime(true)-$last_set_loaded_time >= 3) {
 					if ($max_load_seconds && microtime(true)-$sync_start_time >= $max_load_seconds) {
@@ -2217,7 +2216,7 @@ class Game {
 				if (!$successful) $block_height = $to_block_height+1;
 			}
 		}
-		else if ($show_debug) $this->blockchain->app->print_debug($this->db_game['name']." is already fully loaded.");
+		else if ($print_debug) $this->blockchain->app->print_debug($this->db_game['name']." is already fully loaded.");
 		
 		$this->update_option_votes();
 	}
@@ -2229,11 +2228,10 @@ class Game {
 		])->fetch();
 	}
 	
-	public function add_block($block_height, &$game_io_index) {
+	public function add_block($block_height, &$game_io_index, $print_debug) {
 		$successful = true;
 		$start_time = microtime(true);
-		$msg = "Adding block ".$block_height." to ".$this->db_game['name']."\n";
-		$log_text = $msg;
+		if ($print_debug) $this->blockchain->app->print_debug("Adding block ".$block_height." to ".$this->db_game['name']);
 		$bulk_to_block = false;
 		
 		$db_block = $this->blockchain->fetch_block_by_id($block_height);
@@ -2250,19 +2248,16 @@ class Game {
 			if ($check_game_block) {
 				// The game block already exists. There was an error in a previous load or multiple processes are loading games simultaneously
 				if (empty(AppSettings::getParam('fix_game_blocks_disabled')) && $block_height > 1) {
-					$log_text .= "Game block already exists: resetting from ".($block_height-1)."\n";
+					if ($print_debug) $this->blockchain->app->print_debug("Game block already exists: resetting from ".($block_height-1));
 					$this->reset_blocks_from_block($block_height-1);
 					$this->blockchain->app->log_message("Reset ".$this->db_game['name']." due to error on block #".$block_height);
 				}
-				else $log_text .= "Failed: game block already exists.\n";
+				else if ($print_debug) $this->blockchain->app->print_debug("Failed: game block already exists.");
 				
 				$successful = false;
-				return array($successful, $log_text, $bulk_to_block);
+				return array($successful, $bulk_to_block);
 			}
 			else {
-				$msg = "Creating new game block #".$block_height."\n";
-				$log_text .= $msg;
-				
 				$this->blockchain->app->run_insert_query("game_blocks", [
 					'game_id' => $this->db_game['game_id'],
 					'block_id' => $block_height,
@@ -2283,8 +2278,7 @@ class Game {
 					'escrow_address_id' => $escrow_address['address_id']
 				])->fetchAll();
 				
-				$msg = "Looping through ".count($buyin_transactions)." buyin transactions\n";
-				$log_text .= $msg;
+				if ($print_debug) $this->blockchain->app->print_debug("Looping through ".count($buyin_transactions)." buyin transactions");
 				
 				foreach ($buyin_transactions as $buyin_tx) {
 					// Check if buy-in transaction has already been paid
@@ -2418,7 +2412,7 @@ class Game {
 						$output_i = 0;
 						
 						$this->blockchain->app->dbh->beginTransaction();
-						$this->blockchain->app->run_query("DELETE gio.* FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE io.create_transaction_id=:transaction_id;", ['transaction_id'=>$db_transaction['transaction_id']]);
+						$this->blockchain->app->run_query("DELETE FROM transaction_game_ios WHERE io_id IN (SELECT io_id FROM transaction_ios WHERE create_transaction_id=:transaction_id);", ['transaction_id'=>$db_transaction['transaction_id']]);
 						
 						if (count($regular_outputs) > 0) {
 							$new_option_indices = [];
@@ -2513,11 +2507,11 @@ class Game {
 							
 							$insert_q = substr($insert_q, 0, -2).";";
 							$this->blockchain->app->run_query($insert_q);
-							$this->blockchain->app->run_query("UPDATE transaction_ios io JOIN transaction_game_ios gio ON gio.io_id=io.io_id SET gio.parent_io_id=gio.game_io_id-1 WHERE io.create_transaction_id=:transaction_id AND gio.game_id=:game_id AND gio.is_coinbase=1;", [
+							$this->blockchain->app->run_query("UPDATE transaction_game_ios SET parent_io_id=game_io_id-1 WHERE game_id=:game_id AND is_coinbase=1 AND io_id IN (SELECT io_id FROM transaction_ios WHERE create_transaction_id=:transaction_id);", [
 								'transaction_id' => $db_transaction['transaction_id'],
 								'game_id' => $this->db_game['game_id']
 							]);
-							$this->blockchain->app->run_query("UPDATE transaction_ios io JOIN transaction_game_ios gio ON gio.io_id=io.io_id SET gio.payout_io_id=gio.game_io_id+1 WHERE gio.event_id IS NOT NULL AND io.create_transaction_id=:transaction_id AND gio.game_id=:game_id AND gio.is_coinbase=0;", [
+							$this->blockchain->app->run_query("UPDATE transaction_game_ios SET payout_io_id=game_io_id+1 WHERE event_id IS NOT NULL AND game_id=:game_id AND is_coinbase=0 AND io_id IN (SELECT io_id FROM transaction_ios WHERE create_transaction_id=:transaction_id);", [
 								'transaction_id' => $db_transaction['transaction_id'],
 								'game_id' => $this->db_game['game_id']
 							]);
@@ -2598,7 +2592,7 @@ class Game {
 						$this->blockchain->load_coin_rpc();
 					}
 					
-					$log_text .= $this->module->set_event_outcome($this, $set_outcome_event);
+					$this->module->set_event_outcome($this, $set_outcome_event);
 				}
 				if (!empty($this->module) && method_exists($this->module, "event_index_to_next_event_index")) {
 					$event_index = $this->module->event_index_to_next_event_index($set_outcome_event->db_event['event_index']);
@@ -2612,7 +2606,7 @@ class Game {
 				$payout_event->pay_out_event();
 			}
 			
-			$this->blockchain->app->run_query("UPDATE transaction_game_ios gio JOIN events ev ON gio.event_id=ev.event_id SET gio.is_resolved=1 WHERE ev.game_id=:game_id AND ev.event_payout_block=:block_id AND (ev.outcome_index IS NOT NULL OR ev.track_payout_price IS NOT NULL);", [
+			$this->blockchain->app->run_query("UPDATE transaction_game_ios SET is_resolved=1 WHERE event_id IN (SELECT event_id FROM events WHERE game_id=:game_id AND event_payout_block=:block_id AND (outcome_index IS NOT NULL OR track_payout_price IS NOT NULL));", [
 				'game_id' => $this->db_game['game_id'],
 				'block_id' => $block_height
 			]);
@@ -2666,7 +2660,7 @@ class Game {
 					$ref_time = time();
 					
 					if ($bulk_from_block < $bulk_to_block) {
-						$log_text .= "Adding ".($bulk_to_block-$bulk_from_block)." game blocks in bulk.. ".$bulk_from_block." to ".$bulk_to_block."\n";
+						if ($print_debug) $this->blockchain->app->print_debug("Adding ".($bulk_to_block-$bulk_from_block)." game blocks in bulk.. ".$bulk_from_block." to ".$bulk_to_block);
 						
 						$bulk_insert_q = "INSERT INTO game_blocks (game_id, block_id, locally_saved, num_transactions, time_created, time_loaded, load_time, max_game_io_index) VALUES ";
 						for ($bulk_block_id=$bulk_from_block; $bulk_block_id<=$bulk_to_block; $bulk_block_id++) {
@@ -2681,11 +2675,10 @@ class Game {
 		}
 		else {
 			$successful = false;
-			$msg = "Skipping.. block ".$block_height." does not exist on ".$this->blockchain->db_blockchain['url_identifier']."\n";
-			$log_text .= $msg;
+			if ($print_debug) $this->blockchain->app->print_debug("Skipping.. block ".$block_height." does not exist on ".$this->blockchain->db_blockchain['url_identifier']);
 		}
 		
-		return array($successful, $log_text, $bulk_to_block);
+		return array($successful, $bulk_to_block);
 	}
 	
 	public function set_event_labels_by_gde($event_index) {

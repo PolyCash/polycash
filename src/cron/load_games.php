@@ -6,12 +6,15 @@ $script_target_time = 290;
 $loop_target_time = 1;
 $script_start_time = microtime(true);
 
-$allowed_params = ['print_debug', 'game_id'];
+$allowed_params = ['print_debug', 'game_id', 'never_stop'];
 $app->safe_merge_argv_to_request($argv, $allowed_params);
 
 if ($app->running_as_admin()) {
 	$print_debug = false;
 	if (!empty($_REQUEST['print_debug'])) $print_debug = true;
+	
+	$never_stop = false;
+	if (!empty($_REQUEST['never_stop'])) $never_stop = true;
 	
 	$only_game_id = empty($_REQUEST['game_id']) ? false : (int) $_REQUEST['game_id'];
 	
@@ -26,9 +29,9 @@ if ($app->running_as_admin()) {
 		do {
 			$loop_start_time = microtime(true);
 			
-			$db_running_games = $app->fetch_running_games();
+			$db_running_games = $app->fetch_running_games()->fetchAll();
 			
-			while ($db_running_game = $db_running_games->fetch()) {
+			foreach ($db_running_games as $db_running_game) {
 				if (!$only_game_id || $db_running_game['game_id'] == $only_game_id) {
 					if (empty($blockchains[$db_running_game['blockchain_id']])) $blockchains[$db_running_game['blockchain_id']] = new Blockchain($app, $db_running_game['blockchain_id']);
 					$running_game = new Game($blockchains[$db_running_game['blockchain_id']], $db_running_game['game_id']);
@@ -44,7 +47,7 @@ if ($app->running_as_admin()) {
 			
 			usleep($sleep_usec);
 		}
-		while (microtime(true) < $script_start_time + ($script_target_time-$loop_target_time));
+		while ($never_stop || microtime(true) < $script_start_time + ($script_target_time-$loop_target_time));
 	}
 	else echo "Game load script is already running...\n";
 }

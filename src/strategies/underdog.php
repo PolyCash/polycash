@@ -33,7 +33,7 @@ if ($user_game) {
 		if ($account) {
 			$event_q = "SELECT * FROM events ev JOIN options op ON ev.event_id=op.event_id WHERE ev.game_id=:game_id AND op.target_probability IS NOT NULL";
 			$event_q .= " AND ev.event_starting_block <= :mining_block_id AND ev.event_final_block > :mining_block_id";
-			$event_q .= " AND (ev.event_starting_time IS NULL OR ev.event_starting_time < NOW()) AND (ev.event_final_time IS NULL OR ev.event_final_time > NOW()) GROUP BY ev.event_id ORDER BY ev.event_index ASC;";
+			$event_q .= " AND (ev.event_starting_time IS NULL OR ev.event_starting_time < ".AppSettings::sqlNow().") AND (ev.event_final_time IS NULL OR ev.event_final_time > ".AppSettings::sqlNow().") GROUP BY ev.event_id ORDER BY ev.event_index ASC;";
 			$db_events = $app->run_query($event_q, [
 				'game_id' => $game->db_game['game_id'],
 				'mining_block_id' => $mining_block_id

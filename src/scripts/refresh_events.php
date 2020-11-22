@@ -9,15 +9,18 @@ if ($app->running_as_admin()) {
 		$db_event = $app->fetch_event_by_id((int)$_REQUEST['event_id']);
 		
 		if ($db_event) {
-			$blockchain = new Blockchain($app, $db_event['blockchain_id']);
-			$game = new Game($blockchain, $db_event['game_id']);
+			$db_game = $app->fetch_game_by_id($db_event['game_id']);
+			$blockchain = new Blockchain($app, $db_game['blockchain_id']);
+			$game = new Game($blockchain, $db_game['game_id']);
 			$event = new Event($game, false, $db_event['event_id']);
 			
 			$last_block_id = $blockchain->last_block_id();
 			
+			$ref_time = microtime(true);
 			$event->update_option_votes($last_block_id, false);
+			$benchmark_time = microtime(true)-$ref_time;
 			
-			echo "Done!\n";
+			echo "Completed in ".$app->format_bignum($benchmark_time)."\n";
 		}
 	}
 	else if (!empty($_REQUEST['game_id'])) {

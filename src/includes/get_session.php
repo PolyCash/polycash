@@ -11,10 +11,29 @@ $thisuser = FALSE;
 $game = FALSE;
 
 if (strlen($session_key) > 0) {
-	$sessions = $app->run_query("SELECT * FROM user_sessions WHERE session_key=:session_key AND expire_time > :expire_time AND logout_time=0 AND synchronizer_token IS NOT NULL;", [
-		'session_key' => $session_key,
-		'expire_time' => time()
-	])->fetchAll();
+	if (!empty(AppSettings::getParam('only_user_username')) && !empty(AppSettings::getParam('only_user_username'))) {
+		$db_only_user = $app->fetch_user_by_username(AppSettings::getParam('only_user_username'));
+		
+		if (!$db_only_user) {
+			$verify_code = $app->random_string(32);
+			$salt = $app->random_string(16);
+			$redirect_url = false;
+			
+			$only_user = $app->create_new_user($verify_code, $salt, AppSettings::getParam('only_user_username'), AppSettings::getParam('only_user_password'));
+			$only_user->log_user_in($redirect_url, null);
+		}
+		else {
+			$sessions = $app->fetch_sessions_by_key($session_key);
+			
+			if (count($sessions) == 0) {
+				$only_user = new User($app, $db_only_user['user_id']);
+				$redirect_url = false;
+				$only_user->log_user_in($redirect_url, null);
+			}
+		}
+	}
+	
+	$sessions = $app->fetch_sessions_by_key($session_key);
 	
 	if (count($sessions) == 1) {
 		$session = $sessions[0];

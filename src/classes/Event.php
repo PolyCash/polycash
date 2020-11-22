@@ -519,7 +519,7 @@ class Event {
 		foreach ($all_bets as $bet) {
 			$bet_amount = floor($bet[$score_field]*$coins_per_vote) + $bet['destroy_amount'];
 			
-			$this->game->blockchain->app->run_query("UPDATE transaction_game_ios SET colored_amount=FLOOR(".$bet_amount."*contract_parts/".$bet['contract_parts'].") WHERE parent_io_id=:parent_io_id;", [
+			$this->game->blockchain->app->run_query("UPDATE transaction_game_ios SET colored_amount=".AppSettings::sqlFloor($bet_amount."*contract_parts/".$bet['contract_parts'])." WHERE parent_io_id=:parent_io_id;", [
 				'parent_io_id' => $bet['game_io_id']
 			]);
 		}
@@ -560,7 +560,7 @@ class Event {
 					$this_payout_amount = floor($this->db_event['payout_rate']*$option_payout_total*$this_effective_coins/$option_effective_coins);
 					$weighted_payout = $this_payout_amount/$parent_io['contract_parts'];
 					
-					$this->game->blockchain->app->run_query("UPDATE transaction_game_ios SET colored_amount=FLOOR(".$weighted_payout."*contract_parts) WHERE parent_io_id=:parent_io_id AND resolved_before_spent=1;", [
+					$this->game->blockchain->app->run_query("UPDATE transaction_game_ios SET colored_amount=".AppSettings::sqlFloor($weighted_payout."*contract_parts")." WHERE parent_io_id=:parent_io_id AND resolved_before_spent=1;", [
 						'parent_io_id' => $parent_io['game_io_id']
 					]);
 				}
@@ -591,7 +591,7 @@ class Event {
 			$this_input_payout_amount = $winning_effective_coins>0 ? floor($total_reward*$this->db_event['payout_rate']*($this_input_effective_coins/$winning_effective_coins)) : 0;
 			$weighted_payout = $input['contract_parts'] > 0 ? $this_input_payout_amount/$input['contract_parts'] : 0;
 			
-			$this->game->blockchain->app->run_query("UPDATE transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id SET gio.colored_amount=FLOOR(".$weighted_payout."*gio.contract_parts) WHERE gio.parent_io_id=:game_io_id AND gio.resolved_before_spent=1;", [
+			$this->game->blockchain->app->run_query("UPDATE transaction_game_ios SET colored_amount=".AppSettings::sqlFloor($weighted_payout."*contract_parts")." WHERE parent_io_id=:game_io_id AND resolved_before_spent=1;", [
 				'game_io_id' => $input['game_io_id']
 			]);
 		}
@@ -742,7 +742,7 @@ class Event {
 	}
 	
 	public function set_event_completed() {
-		$this->game->blockchain->app->run_query("UPDATE events SET completion_datetime=NOW() WHERE event_id=:event_id;", ['event_id'=>$this->db_event['event_id']]);
+		$this->game->blockchain->app->run_query("UPDATE events SET completion_datetime=".AppSettings::sqlNow()." WHERE event_id=:event_id;", ['event_id'=>$this->db_event['event_id']]);
 	}
 	
 	public function delete_options() {
@@ -982,11 +982,26 @@ class Event {
 		$this->game->blockchain->app->run_query("UPDATE options SET coin_score=0, unconfirmed_coin_score=0, coin_block_score=0, unconfirmed_coin_block_score=0, coin_round_score=0, unconfirmed_coin_round_score=0, destroy_score=0, unconfirmed_destroy_score=0, votes=0, unconfirmed_votes=0, effective_destroy_score=0, unconfirmed_effective_destroy_score=0 WHERE event_id=:event_id;", ['event_id'=>$this->db_event['event_id']]);
 		
 		// Set option confirmed values
-		$this->game->blockchain->app->run_query("UPDATE options op INNER JOIN (
-			SELECT option_id, SUM(colored_amount) sum_amount, SUM(coin_blocks_destroyed) sum_cbd, SUM(coin_rounds_destroyed) sum_crd, SUM(votes) sum_votes, SUM(destroy_amount) sum_destroyed, SUM(effective_destroy_amount) sum_effective_destroyed FROM transaction_game_ios 
-			WHERE event_id=:event_id AND create_round_id IS NOT NULL AND colored_amount > 0
-			GROUP BY option_id
-		) i ON op.option_id=i.option_id SET op.coin_score=i.sum_amount, op.coin_block_score=i.sum_cbd, op.coin_round_score=i.sum_crd, op.votes=i.sum_votes, op.destroy_score=i.sum_destroyed, op.effective_destroy_score=i.sum_effective_destroyed WHERE op.event_id=:event_id;", ['event_id'=>$this->db_event['event_id']]);
+		$inner_q = "SELECT option_id, SUM(colored_amount) sum_amount, SUM(coin_blocks_destroyed) sum_cbd, SUM(coin_rounds_destroyed) sum_crd, SUM(votes) sum_votes, SUM(destroy_amount) sum_destroyed, SUM(effective_destroy_amount) sum_effective_destroyed FROM transaction_game_ios WHERE event_id=:event_id AND create_round_id IS NOT NULL AND colored_amount > 0 GROUP BY option_id";
+		
+		if (empty(AppSettings::getParam('sqlite_db'))) {
+			$this->game->blockchain->app->run_query("UPDATE options op INNER JOIN (".$inner_q.") i ON op.option_id=i.option_id SET op.coin_score=i.sum_amount, op.coin_block_score=i.sum_cbd, op.coin_round_score=i.sum_crd, op.votes=i.sum_votes, op.destroy_score=i.sum_destroyed, op.effective_destroy_score=i.sum_effective_destroyed WHERE op.event_id=:event_id;", ['event_id'=>$this->db_event['event_id']]);
+		}
+		else {
+			$info_by_op = $this->game->blockchain->app->run_query($inner_q, ['event_id' => $this->db_event['event_id']])->fetchAll();
+			
+			if (count($info_by_op) > 0) {
+				$option_ids = array_column($info_by_op, 0);
+				$set_data['coin_score'] = array_column($info_by_op, 1);
+				$set_data['coin_block_score'] = array_column($info_by_op, 2);
+				$set_data['coin_round_score'] = array_column($info_by_op, 3);
+				$set_data['votes'] = array_column($info_by_op, 4);
+				$set_data['destroy_score'] = array_column($info_by_op, 5);
+				$set_data['effective_destroy_score'] = array_column($info_by_op, 6);
+				
+				$this->game->blockchain->app->bulk_mapped_update_query("options", $set_data, ['option_id' => $option_ids]);
+			}
+		}
 		
 		// Only set unconfirmed option values when the event is in progress to exclude bets confirmed too late
 		if ($last_block_id < $this->db_event['event_final_block']) {
@@ -994,46 +1009,118 @@ class Event {
 			
 			// 3 different queries to set option unconfirmed values depending on the event payout weight type
 			if ($this->game->db_game['payout_weight'] == "coin") {
-				$this->game->blockchain->app->run_query("UPDATE options op INNER JOIN (
-					SELECT option_id, SUM(colored_amount) sum_amount, SUM(colored_amount)*:effectiveness_factor sum_votes, SUM(destroy_amount) sum_destroyed FROM transaction_game_ios 
-					WHERE event_id=:event_id AND create_round_id IS NULL AND colored_amount > 0
-					GROUP BY option_id
-				) i ON op.option_id=i.option_id SET op.unconfirmed_coin_score=i.sum_amount, op.unconfirmed_votes=i.sum_votes, op.unconfirmed_destroy_score=i.sum_destroyed WHERE op.event_id=:event_id;", [
-					'effectiveness_factor' => $effectiveness_factor,
-					'event_id' => $this->db_event['event_id']
-				]);
+				$inner_q = "SELECT option_id, SUM(colored_amount) sum_amount, SUM(colored_amount)*:effectiveness_factor sum_votes, SUM(destroy_amount) sum_destroyed FROM transaction_game_ios WHERE event_id=:event_id AND create_round_id IS NULL AND colored_amount > 0 GROUP BY option_id";
+				
+				if (empty(AppSettings::getParam('sqlite_db'))) {
+					$this->game->blockchain->app->run_query("UPDATE options op INNER JOIN (".$inner_q.") i ON op.option_id=i.option_id SET op.unconfirmed_coin_score=i.sum_amount, op.unconfirmed_votes=i.sum_votes, op.unconfirmed_destroy_score=i.sum_destroyed WHERE op.event_id=:event_id;", [
+						'effectiveness_factor' => $effectiveness_factor,
+						'event_id' => $this->db_event['event_id']
+					]);
+				}
+				else {
+					$info_by_op = $this->game->blockchain->app->run_query($inner_q, [
+						'effectiveness_factor' => $effectiveness_factor,
+						'event_id' => $this->db_event['event_id']
+					])->fetchAll();
+					
+					if (count($info_by_op) > 0) {
+						$option_ids = array_column($info_by_op, 0);
+						$set_data['unconfirmed_coin_score'] = array_column($info_by_op, 1);
+						$set_data['unconfirmed_votes'] = array_column($info_by_op, 2);
+						$set_data['unconfirmed_destroy_score'] = array_column($info_by_op, 3);
+						
+						$this->game->blockchain->app->bulk_mapped_update_query("options", $set_data, ['option_id' => $option_ids]);
+					}
+				}
 			}
 			else if ($this->game->db_game['payout_weight'] == "coin_block") {
-				$this->game->blockchain->app->run_query("UPDATE options op INNER JOIN (
-					SELECT option_id, SUM(ref_coin_blocks+(:ref_block_id-ref_block_id)*colored_amount) sum_cbd, SUM(ref_coin_blocks+(:ref_block_id-ref_block_id)*colored_amount)*:effectiveness_factor sum_votes, SUM(destroy_amount) sum_destroyed, SUM(destroy_amount)*:effectiveness_factor unconfirmed_sum_destroyed FROM transaction_game_ios 
-					WHERE event_id=:event_id AND create_round_id IS NULL AND colored_amount > 0
-					GROUP BY option_id
-				) i ON op.option_id=i.option_id SET op.unconfirmed_coin_block_score=i.sum_cbd, op.unconfirmed_votes=i.sum_votes, op.unconfirmed_destroy_score=i.sum_destroyed, op.unconfirmed_effective_destroy_score=i.unconfirmed_sum_destroyed WHERE op.event_id=:event_id;", [
-					'ref_block_id' => ($last_block_id+1),
-					'effectiveness_factor' => $effectiveness_factor,
-					'event_id' => $this->db_event['event_id']
-				]);
+				$inner_q = "SELECT option_id, SUM(ref_coin_blocks+(:ref_block_id-ref_block_id)*colored_amount) sum_cbd, SUM(ref_coin_blocks+(:ref_block_id-ref_block_id)*colored_amount)*:effectiveness_factor sum_votes, SUM(destroy_amount) sum_destroyed, SUM(destroy_amount)*:effectiveness_factor unconfirmed_sum_destroyed FROM transaction_game_ios WHERE event_id=:event_id AND create_round_id IS NULL AND colored_amount > 0 GROUP BY option_id";
+				
+				if (empty(AppSettings::getParam('sqlite_db'))) {
+					$this->game->blockchain->app->run_query("UPDATE options op INNER JOIN (".$inner_q.") i ON op.option_id=i.option_id SET op.unconfirmed_coin_block_score=i.sum_cbd, op.unconfirmed_votes=i.sum_votes, op.unconfirmed_destroy_score=i.sum_destroyed, op.unconfirmed_effective_destroy_score=i.unconfirmed_sum_destroyed WHERE op.event_id=:event_id;", [
+						'ref_block_id' => ($last_block_id+1),
+						'effectiveness_factor' => $effectiveness_factor,
+						'event_id' => $this->db_event['event_id']
+					]);
+				}
+				else {
+					$info_by_op = $this->game->blockchain->app->run_query($inner_q, [
+						'ref_block_id' => ($last_block_id+1),
+						'effectiveness_factor' => $effectiveness_factor,
+						'event_id' => $this->db_event['event_id']
+					])->fetchAll();
+					
+					if (count($info_by_op) > 0) {
+						$option_ids = array_column($info_by_op, 0);
+						$set_data['unconfirmed_coin_block_score'] = array_column($info_by_op, 1);
+						$set_data['unconfirmed_votes'] = array_column($info_by_op, 2);
+						$set_data['unconfirmed_destroy_score'] = array_column($info_by_op, 3);
+						$set_data['unconfirmed_effective_destroy_score'] = array_column($info_by_op, 4);
+						
+						$this->game->blockchain->app->bulk_mapped_update_query("options", $set_data, ['option_id' => $option_ids]);
+					}
+				}
 			}
 			else { // payout_weight = "coin_round"
 				if (empty($round_id)) $round_id = $this->game->block_to_round($last_block_id+1);
-				$this->game->blockchain->app->run_query("UPDATE options op INNER JOIN (
-					SELECT option_id, SUM(ref_coin_rounds+(:round_id-ref_round_id)*colored_amount) sum_crd, SUM(ref_coin_rounds+(:round_id-ref_round_id)*colored_amount)*:effectiveness_factor sum_votes, SUM(destroy_amount) sum_destroyed, SUM(destroy_amount)*:effectiveness_factor unconfirmed_sum_destroyed FROM transaction_game_ios
-					WHERE event_id=:event_id AND create_round_id IS NULL AND colored_amount > 0
-					GROUP BY option_id
-				) i ON op.option_id=i.option_id SET op.unconfirmed_coin_round_score=i.sum_crd, op.unconfirmed_votes=i.sum_votes, op.unconfirmed_destroy_score=i.sum_destroyed, op.unconfirmed_effective_destroy_score=i.unconfirmed_sum_destroyed WHERE op.event_id=:event_id;", [
-					'round_id' => $round_id,
-					'effectiveness_factor' => $effectiveness_factor,
-					'event_id' => $this->db_event['event_id']
-				]);
+				
+				$inner_q = "SELECT option_id, SUM(ref_coin_rounds+(:round_id-ref_round_id)*colored_amount) sum_crd, SUM(ref_coin_rounds+(:round_id-ref_round_id)*colored_amount)*:effectiveness_factor sum_votes, SUM(destroy_amount) sum_destroyed, SUM(destroy_amount)*:effectiveness_factor unconfirmed_sum_destroyed FROM transaction_game_ios WHERE event_id=:event_id AND create_round_id IS NULL AND colored_amount > 0 GROUP BY option_id";
+				
+				if (empty(AppSettings::getParam('sqlite_db'))) {
+					$this->game->blockchain->app->run_query("UPDATE options op INNER JOIN (".$inner_q.") i ON op.option_id=i.option_id SET op.unconfirmed_coin_round_score=i.sum_crd, op.unconfirmed_votes=i.sum_votes, op.unconfirmed_destroy_score=i.sum_destroyed, op.unconfirmed_effective_destroy_score=i.unconfirmed_sum_destroyed WHERE op.event_id=:event_id;", [
+						'round_id' => $round_id,
+						'effectiveness_factor' => $effectiveness_factor,
+						'event_id' => $this->db_event['event_id']
+					]);
+				}
+				else {
+					$info_by_op = $this->game->blockchain->app->run_query($inner_q, [
+						'round_id' => $round_id,
+						'effectiveness_factor' => $effectiveness_factor,
+						'event_id' => $this->db_event['event_id']
+					])->fetchAll();
+					
+					if (count($info_by_op) > 0) {
+						$option_ids = array_column($info_by_op, 0);
+						$set_data['unconfirmed_coin_round_score'] = array_column($info_by_op, 1);
+						$set_data['unconfirmed_votes'] = array_column($info_by_op, 2);
+						$set_data['unconfirmed_destroy_score'] = array_column($info_by_op, 3);
+						$set_data['unconfirmed_effective_destroy_score'] = array_column($info_by_op, 4);
+						
+						$this->game->blockchain->app->bulk_mapped_update_query("options", $set_data, ['option_id' => $option_ids]);
+					}
+				}
 			}
 		}
 		
 		// Now set event values by summing up the option values
-		$this->game->blockchain->app->run_query("UPDATE events e JOIN (
-			SELECT SUM(".$this->game->db_game['payout_weight']."_score) sum_score, SUM(destroy_score) destroy_score, SUM(votes) sum_votes, SUM(effective_destroy_score) effective_destroy_score, SUM(unconfirmed_".$this->game->db_game['payout_weight']."_score) sum_unconfirmed_score, SUM(unconfirmed_votes) sum_unconfirmed_votes, SUM(unconfirmed_destroy_score) sum_unconfirmed_destroy_score, SUM(unconfirmed_effective_destroy_score) sum_unconfirmed_effective_destroy_score FROM options WHERE event_id=:event_id
-		) op SET e.sum_score=op.sum_score, e.destroy_score=op.destroy_score, e.sum_votes=op.sum_votes, e.effective_destroy_score=op.effective_destroy_score, e.sum_unconfirmed_score=op.sum_unconfirmed_score, e.sum_unconfirmed_votes=op.sum_unconfirmed_votes, e.sum_unconfirmed_destroy_score=op.sum_unconfirmed_destroy_score, e.sum_unconfirmed_effective_destroy_score=op.sum_unconfirmed_effective_destroy_score WHERE e.event_id=:event_id;", [
-			'event_id' => $this->db_event['event_id']
-		]);
+		$inner_q = "SELECT SUM(".$this->game->db_game['payout_weight']."_score) sum_score, SUM(destroy_score) destroy_score, SUM(votes) sum_votes, SUM(effective_destroy_score) effective_destroy_score, SUM(unconfirmed_".$this->game->db_game['payout_weight']."_score) sum_unconfirmed_score, SUM(unconfirmed_votes) sum_unconfirmed_votes, SUM(unconfirmed_destroy_score) sum_unconfirmed_destroy_score, SUM(unconfirmed_effective_destroy_score) sum_unconfirmed_effective_destroy_score FROM options WHERE event_id=:event_id";
+		
+		$update_fields = ['sum_score', 'destroy_score', 'sum_votes', 'effective_destroy_score', 'sum_unconfirmed_score', 'sum_unconfirmed_votes', 'sum_unconfirmed_destroy_score', 'sum_unconfirmed_effective_destroy_score'];
+		
+		if (empty(AppSettings::getParam('sqlite_db'))) {
+			$update_q = "UPDATE events e JOIN (".$inner_q.") op SET ";
+			foreach ($update_fields as $update_field) {
+				$update_q .= "e.".$update_field."=op.".$update_field.", ";
+			}
+			$update_q = substr($update_q, 0, -2)." WHERE e.event_id=:event_id;";
+			
+			$this->game->blockchain->app->run_query($update_q, [
+				'event_id' => $this->db_event['event_id']
+			]);
+		}
+		else {
+			$event_info = $this->game->blockchain->app->run_query($inner_q, ['event_id' => $this->db_event['event_id']])->fetch();
+			$update_q = "UPDATE events SET ";
+			foreach ($update_fields as $update_field) {
+				$update_q .= $update_field."=".$event_info[$update_field].", ";
+			}
+			$update_q = substr($update_q, 0, -2)." WHERE event_id=:event_id;";
+			
+			$this->game->blockchain->app->run_query($update_q, [
+				'event_id' => $this->db_event['event_id']
+			]);
+		}
 	}
 }
 ?>

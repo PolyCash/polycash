@@ -71,6 +71,25 @@ class App {
 		$this->run_query($query, $values);
 	}
 	
+	public function bulk_mapped_update_query($table, $set_data, $where_data) {
+		$set_columns = array_keys($set_data);
+		$where_columns = array_keys($where_data);
+		
+		$q = "UPDATE ".$table." SET ";
+		
+		foreach ($set_columns as $set_column) {
+			$q .= $set_column."=(CASE";
+			$data_pos = 0;
+			for ($data_pos=0; $data_pos<count($set_data[$set_column]); $data_pos++) {
+				$q .= " WHEN (".$where_columns[0]."=".$where_data[$where_columns[0]][$data_pos].") THEN '".$set_data[$set_column][$data_pos]."'";
+			}
+			$q .= " END),";
+		}
+		$q = substr($q, 0, -1)." WHERE ".$where_columns[0]." IN (".implode(",",$where_data[$where_columns[0]]) .");";
+		
+		$this->run_query($q);
+	}
+	
 	public function log_then_die($message) {
 		$this->log_message($message);
 		throw new Exception($message);
@@ -257,21 +276,44 @@ class App {
 	}
 	
 	public function php_binary_location() {
-		if (!empty(AppSettings::getParam('php_binary_location'))) return AppSettings::getParam('php_binary_location');
-		else if (PHP_OS == "WINNT") return str_replace("\\", "/", dirname(ini_get('extension_dir')))."/php.exe";
-		else return PHP_BINDIR ."/php";
+		if (!empty(AppSettings::getParam('php_binary_location'))) $location = AppSettings::getParam('php_binary_location');
+		else if (PHP_OS == "WINNT") {
+			if (AppSettings::getParam('server') == "Mongoose") $location = dirname(dirname(dirname(__DIR__)))."/php/php.exe";
+			else $location = dirname(ini_get('extension_dir'))."/php.exe";
+		}
+		else $location = PHP_BINDIR ."/php";
+		
+		return $location;
 	}
 	
-	public function start_regular_background_processes() {
+	public function run_shell_command($cmd, $print_debug) {
+		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
+		else $cmd .= " 2>&1 >/dev/null";
+		$cmd .= " &";
+		
+		$cmd = str_replace("\\", "/", $cmd);
+		
+		if ($print_debug) echo $cmd."\n";
+		
+		if (empty($this->pipe_config)) {
+			$this->pipe_config = [
+				0 => ['pipe', 'r'],
+				1 => ['pipe', 'w'],
+				2 => ['pipe', 'w']
+			];
+		}
+		if (empty($this->pipes)) {
+			$this->pipes = [];
+		}
+		
+		$new_process = proc_open($cmd, $this->pipe_config, $this->pipes);
+		
+		return $new_process;
+	}
+	
+	public function start_regular_background_processes($print_debug=false) {
 		$html = "";
 		$process_count = 0;
-		
-		$pipe_config = [
-			0 => ['pipe', 'r'],
-			1 => ['pipe', 'w'],
-			2 => ['pipe', 'w']
-		];
-		$pipes = [];
 		
 		$last_script_run_time = (int) $this->get_site_constant("last_script_run_time");
 		
@@ -281,11 +323,9 @@ class App {
 		
 		while ($sync_blockchain = $sync_blockchains->fetch()) {
 			$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/load_blocks.php" blockchain_id='.$sync_blockchain['blockchain_id'];
-			if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
-			else $cmd .= " 2>&1 >/dev/null";
-			$block_loading_process = proc_open($cmd, $pipe_config, $pipes);
+			$block_loading_process = $this->run_shell_command($cmd, $print_debug);
 			if (is_resource($block_loading_process)) $process_count++;
-			else $html .= "Failed to start a process for syncing ".$sync_blockchain['blockchain_name'].".<br/>\n";
+			else $html .= "Failed to start a process for syncing ".$sync_blockchain['blockchain_name'].".\n";
 			sleep(0.02);
 		}
 		
@@ -293,91 +333,71 @@ class App {
 		
 		while ($running_game = $running_games->fetch()) {
 			$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/load_games.php" game_id='.$running_game['game_id'];
-			if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
-			else $cmd .= " 2>&1 >/dev/null";
-			$game_loading_process = proc_open($cmd, $pipe_config, $pipes);
+			$game_loading_process = $this->run_shell_command($cmd, $print_debug);
 			if (is_resource($game_loading_process)) $process_count++;
-			else $html .= "Failed to start a process for loading ".$running_game['game_name'].".<br/>\n";
+			else $html .= "Failed to start a process for loading ".$running_game['game_name'].".\n";
 			sleep(0.02);
 		}
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/mine_blocks.php"';
-		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
-		else $cmd .= " 2>&1 >/dev/null";
-		$main_process = proc_open($cmd, $pipe_config, $pipes);
-		if (is_resource($main_process)) $process_count++;
-		else $html .= "Failed to start the block mining process.<br/>\n";
+		$mine_blocks_process = $this->run_shell_command($cmd, $print_debug);
+		if (is_resource($mine_blocks_process)) $process_count++;
+		else $html .= "Failed to start the block mining process.\n";
 		sleep(0.02);
 		
 		$apply_strategy_games = $this->run_query("SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE b.online=1 AND g.game_status='running'");
 		
 		while ($strategy_game = $apply_strategy_games->fetch()) {
 			$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/apply_strategies.php" game_id='.$strategy_game['game_id'];
-			if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
-			else $cmd .= " 2>&1 >/dev/null";
-			$main_process = proc_open($cmd, $pipe_config, $pipes);
+			$main_process = $this->run_shell_command($cmd, $print_debug);
 			if (is_resource($main_process)) $process_count++;
-			else $html .= "Failed to start a process for applying strategies for ".$strategy_game['name'].".<br/>\n";
+			else $html .= "Failed to start a process for applying strategies for ".$strategy_game['name'].".\n";
 			sleep(0.02);
 		}
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/game_regular_actions.php"';
-		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
-		else $cmd .= " 2>&1 >/dev/null";
-		$main_process = proc_open($cmd, $pipe_config, $pipes);
-		if (is_resource($main_process)) $process_count++;
-		else $html .= "Failed to start a process for game regular actions.<br/>\n";
+		$regular_actions_process = $this->run_shell_command($cmd, $print_debug);
+		if (is_resource($regular_actions_process)) $process_count++;
+		else $html .= "Failed to start a process for game regular actions.\n";
 		sleep(0.02);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/minutely_check_payments.php"';
-		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
-		else $cmd .= " 2>&1 >/dev/null";
-		$payments_process = proc_open($cmd, $pipe_config, $pipes);
+		$payments_process = $this->run_shell_command($cmd, $print_debug);
 		if (is_resource($payments_process)) $process_count++;
-		else $html .= "Failed to start a process for processing payments.<br/>\n";
+		else $html .= "Failed to start a process for processing payments.\n";
 		sleep(0.02);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/fetch_currency_prices.php"';
-		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
-		else $cmd .= " 2>&1 >/dev/null";
-		$currency_prices_process = proc_open($cmd, $pipe_config, $pipes);
+		$currency_prices_process = $this->run_shell_command($cmd, $print_debug);
 		if (is_resource($currency_prices_process)) $process_count++;
-		else $html .= "Failed to start a process for updating currency prices.<br/>\n";
+		else $html .= "Failed to start a process for updating currency prices.\n";
 		sleep(0.02);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/load_cached_urls.php"';
-		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
-		else $cmd .= " 2>&1 >/dev/null";
-		$cached_url_process = proc_open($cmd, $pipe_config, $pipes);
+		$cached_url_process = $this->run_shell_command($cmd, $print_debug);
 		if (is_resource($cached_url_process)) $process_count++;
-		else $html .= "Failed to start a process for loading cached urls.<br/>\n";
+		else $html .= "Failed to start a process for loading cached urls.\n";
 		sleep(0.02);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/ensure_user_addresses.php"';
-		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
-		else $cmd .= " 2>&1 >/dev/null";
-		$ensure_addresses_process = proc_open($cmd, $pipe_config, $pipes);
+		$ensure_addresses_process = $this->run_shell_command($cmd, $print_debug);
 		if (is_resource($ensure_addresses_process)) $process_count++;
-		else $html .= "Failed to start a process for ensuring user addresses.<br/>\n";
+		else $html .= "Failed to start a process for ensuring user addresses.\n";
 		sleep(0.02);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/set_cached_game_definition_hashes.php"';
-		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
-		else $cmd .= " 2>&1 >/dev/null";
-		$ensure_addresses_process = proc_open($cmd, $pipe_config, $pipes);
-		if (is_resource($ensure_addresses_process)) $process_count++;
-		else $html .= "Failed to start a process for caching game definitions.<br/>\n";
+		$set_game_def_process = $this->run_shell_command($cmd, $print_debug);
+		if (is_resource($set_game_def_process)) $process_count++;
+		else $html .= "Failed to start a process for caching game definitions.\n";
 		
 		if (!empty(AppSettings::getParam('coinbase_key'))) {
 			$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/process_target_balances.php"';
-			if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
-			else $cmd .= " 2>&1 >/dev/null";
-			$target_balances_process = proc_open($cmd, $pipe_config, $pipes);
+			$target_balances_process = $this->run_shell_command($cmd, $print_debug);
 			if (is_resource($target_balances_process)) $process_count++;
-			else $html .= "Failed to start a process for target balances.<br/>\n";
+			else $html .= "Failed to start a process for target balances.\n";
 		}
 		
-		$html .= "Started ".$process_count." background processes.<br/>\n";
+		$html .= "Started ".$process_count." background processes.\n";
 		return $html;
 	}
 	
@@ -1942,6 +1962,7 @@ class App {
 					$gdo_params['game_id'] = $game->db_game['game_id'];
 					$gdo_params['event_index'] = $gde['event_index'];
 					$gdo_params['option_index'] = $k;
+					$gdo_q = "";
 				}
 				$gdo_q .= "name=:name, target_probability=:target_probability";
 				
@@ -2009,7 +2030,6 @@ class App {
 					$var_type = $verbatim_vars[$var_i][0];
 					$var_name = $verbatim_vars[$var_i][1];
 					
-					$import_q .= $var_name."=:".$var_name.", ";
 					$import_params[$var_name] = $blockchain_def->$var_name;
 				}
 				
@@ -3381,7 +3401,7 @@ class App {
 	}
 	
 	public function apply_address_set(&$game, $account_id) {
-		$address_set = $this->run_query("SELECT * FROM address_sets WHERE game_id=:game_id AND applied=0 AND has_option_indices_until IS NOT NULL ORDER BY RAND() LIMIT 1;", [
+		$address_set = $this->run_query("SELECT * FROM address_sets WHERE game_id=:game_id AND applied=0 AND has_option_indices_until IS NOT NULL ORDER BY ".AppSettings::sqlRand()." LIMIT 1;", [
 			'game_id' => $game->db_game['game_id']
 		])->fetch();
 		
@@ -3621,8 +3641,14 @@ class App {
 	
 	public function load_module_classes() {
 		try {
-			$all_dbs = $this->run_query("SHOW DATABASES;")->fetchAll();
-			if (count($all_dbs) > 0) {
+			if (!empty(AppSettings::getParam('sqlite_db'))) $db_ok = true;
+			else {
+				$all_dbs = $this->run_query("SHOW DATABASES;")->fetchAll();
+				if (count($all_dbs) > 0) $db_ok = true;
+				else $db_ok = false;
+			}
+			
+			if ($db_ok) {
 				try {
 					$all_modules = $this->run_query("SELECT * FROM modules ORDER BY module_id ASC;");
 					
@@ -3767,6 +3793,13 @@ class App {
 			'user_game_id' => $user_game['user_game_id']
 		]);
 		$user_game['net_risk_view'] = $net_risk_view;
+	}
+	
+	public function fetch_sessions_by_key($session_key) {
+		return $this->run_query("SELECT * FROM user_sessions WHERE session_key=:session_key AND expire_time > :expire_time AND logout_time=0 AND synchronizer_token IS NOT NULL;", [
+			'session_key' => $session_key,
+			'expire_time' => time()
+		])->fetchAll();
 	}
 }
 ?>

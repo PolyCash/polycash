@@ -35,7 +35,7 @@ if ($user_game) {
 				'mining_block_id' => $mining_block_id,
 				'ref_block' => $mining_block_id
 			];
-			$event_q = "events ev JOIN options op ON ev.event_id=op.event_id WHERE ev.game_id=:game_id AND ev.event_starting_block <= :mining_block_id AND ev.event_final_block > :ref_block AND (ev.event_starting_time < NOW() OR ev.event_starting_time IS NULL) AND (ev.event_final_time > NOW() OR ev.event_final_time IS NULL)";
+			$event_q = "events ev JOIN options op ON ev.event_id=op.event_id WHERE ev.game_id=:game_id AND ev.event_starting_block <= :mining_block_id AND ev.event_final_block > :ref_block AND (ev.event_starting_time < ".AppSettings::sqlNow()." OR ev.event_starting_time IS NULL) AND (ev.event_final_time > ".AppSettings::sqlNow()." OR ev.event_final_time IS NULL)";
 			$option_info = $app->run_query("SELECT COUNT(*) FROM ".$event_q.";", $event_params)->fetch();
 			$db_events = $app->run_query("SELECT * FROM ".$event_q." GROUP BY ev.event_id ORDER BY ev.event_index ASC;", $event_params)->fetchAll();
 			$num_events = count($db_events);
