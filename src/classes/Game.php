@@ -701,10 +701,18 @@ class Game {
 			'game_id' => $this->db_game['game_id'],
 			'round_id' => $this->block_to_round($block_height)
 		]);
-		$this->blockchain->app->run_query("DELETE FROM option_blocks WHERE block_height >= :block_id AND option_id IN (SELECT o.option_id FROM options o JOIN events e ON o.event_id=e.event_id WHERE e.game_id=:game_id);", [
-			'game_id' => $this->db_game['game_id'],
-			'block_id' => $block_height
-		]);
+		if (empty(AppSettings::getParam('sqlite_db'))) {
+			$this->blockchain->app->run_query("DELETE ob.* FROM option_blocks ob JOIN options o ON ob.option_id=o.option_id JOIN events e ON o.event_id=e.event_id WHERE e.game_id=:game_id AND ob.block_height >= :block_id;", [
+				'game_id' => $this->db_game['game_id'],
+				'block_id' => $block_height
+			]);
+		}
+		else {
+			$this->blockchain->app->run_query("DELETE FROM option_blocks WHERE block_height >= :block_id AND option_id IN (SELECT o.option_id FROM options o JOIN events e ON o.event_id=e.event_id WHERE e.game_id=:game_id);", [
+				'game_id' => $this->db_game['game_id'],
+				'block_id' => $block_height
+			]);
+		}
 		$this->blockchain->app->run_query("UPDATE games SET loaded_until_block=NULL, coins_in_existence=0, cached_pending_bets=NULL, cached_vote_supply=NULL WHERE game_id=:game_id;", [
 			'game_id' => $this->db_game['game_id']
 		]);
@@ -793,9 +801,16 @@ class Game {
 			]);
 		}
 		
-		$this->blockchain->app->run_query("DELETE FROM option_blocks where option_id IN (SELECT o.option_id FROM options o JOIN events e ON o.event_id=e.event_id WHERE e.game_id=:game_id);", ['game_id'=>$this->db_game['game_id']]);
-		$this->blockchain->app->run_query("DELETE FROM options WHERE event_id IN (SELECT event_id FROM events WHERE game_id=:game_id);", ['game_id'=>$this->db_game['game_id']]);
-		$this->blockchain->app->run_query("DELETE FROM events WHERE game_id=:game_id;", ['game_id'=>$this->db_game['game_id']]);
+		if (empty(AppSettings::getParam('sqlite_db'))) {
+			$this->blockchain->app->run_query("DELETE ob.* FROM option_blocks ob JOIN options o ON ob.option_id=o.option_id JOIN events e ON o.event_id=e.event_id WHERE e.game_id=:game_id;", ['game_id'=>$this->db_game['game_id']]);
+			$this->blockchain->app->run_query("DELETE e.*, o.* FROM events e LEFT JOIN options o ON e.event_id=o.event_id WHERE e.game_id=:game_id;", ['game_id'=>$this->db_game['game_id']]);
+		}
+		else {
+			$this->blockchain->app->run_query("DELETE FROM option_blocks where option_id IN (SELECT o.option_id FROM options o JOIN events e ON o.event_id=e.event_id WHERE e.game_id=:game_id);", ['game_id'=>$this->db_game['game_id']]);
+			$this->blockchain->app->run_query("DELETE FROM options WHERE event_id IN (SELECT event_id FROM events WHERE game_id=:game_id);", ['game_id'=>$this->db_game['game_id']]);
+			$this->blockchain->app->run_query("DELETE FROM events WHERE game_id=:game_id;", ['game_id'=>$this->db_game['game_id']]);
+		}
+
 		$this->blockchain->app->run_query("UPDATE games SET events_until_block=NULL, loaded_until_block=NULL, min_option_index=NULL, max_option_index=NULL WHERE game_id=:game_id;", ['game_id'=>$this->db_game['game_id']]);
 		
 		if ($delete_or_reset == "reset") {
@@ -2521,14 +2536,26 @@ class Game {
 							
 							$insert_q = substr($insert_q, 0, -2).";";
 							$this->blockchain->app->run_query($insert_q);
-							$this->blockchain->app->run_query("UPDATE transaction_game_ios SET parent_io_id=game_io_id-1 WHERE game_id=:game_id AND is_coinbase=1 AND io_id IN (SELECT io_id FROM transaction_ios WHERE create_transaction_id=:transaction_id);", [
-								'transaction_id' => $db_transaction['transaction_id'],
-								'game_id' => $this->db_game['game_id']
-							]);
-							$this->blockchain->app->run_query("UPDATE transaction_game_ios SET payout_io_id=game_io_id+1 WHERE event_id IS NOT NULL AND game_id=:game_id AND is_coinbase=0 AND io_id IN (SELECT io_id FROM transaction_ios WHERE create_transaction_id=:transaction_id);", [
-								'transaction_id' => $db_transaction['transaction_id'],
-								'game_id' => $this->db_game['game_id']
-							]);
+							if (empty(AppSettings::getParam('sqlite_db'))) {
+								$this->blockchain->app->run_query("UPDATE transaction_ios io JOIN transaction_game_ios gio ON gio.io_id=io.io_id SET gio.parent_io_id=gio.game_io_id-1 WHERE io.create_transaction_id=:transaction_id AND gio.game_id=:game_id AND gio.is_coinbase=1;", [
+									'transaction_id' => $db_transaction['transaction_id'],
+									'game_id' => $this->db_game['game_id']
+								]);
+								$this->blockchain->app->run_query("UPDATE transaction_ios io JOIN transaction_game_ios gio ON gio.io_id=io.io_id SET gio.payout_io_id=gio.game_io_id+1 WHERE gio.event_id IS NOT NULL AND io.create_transaction_id=:transaction_id AND gio.game_id=:game_id AND gio.is_coinbase=0;", [
+									'transaction_id' => $db_transaction['transaction_id'],
+									'game_id' => $this->db_game['game_id']
+								]);
+							}
+							else {
+								$this->blockchain->app->run_query("UPDATE transaction_game_ios SET parent_io_id=game_io_id-1 WHERE game_id=:game_id AND is_coinbase=1 AND io_id IN (SELECT io_id FROM transaction_ios WHERE create_transaction_id=:transaction_id);", [
+									'transaction_id' => $db_transaction['transaction_id'],
+									'game_id' => $this->db_game['game_id']
+								]);
+								$this->blockchain->app->run_query("UPDATE transaction_game_ios SET payout_io_id=game_io_id+1 WHERE event_id IS NOT NULL AND game_id=:game_id AND is_coinbase=0 AND io_id IN (SELECT io_id FROM transaction_ios WHERE create_transaction_id=:transaction_id);", [
+									'transaction_id' => $db_transaction['transaction_id'],
+									'game_id' => $this->db_game['game_id']
+								]);
+							}
 						}
 						
 						$unresolved_inputs = $this->blockchain->app->run_query("SELECT * FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE io.spend_transaction_id=:transaction_id AND gio.game_id=:game_id AND gio.is_coinbase=1 AND gio.resolved_before_spent=0 ORDER BY io.in_index ASC;", [

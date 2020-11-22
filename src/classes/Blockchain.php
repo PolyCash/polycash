@@ -1714,24 +1714,46 @@ class Blockchain {
 		]);
 		
 		// Reset IOs that have been spent but the spend has not been confirmed
-		$this->app->run_query("UPDATE transaction_ios SET coin_blocks_created=0, spend_transaction_id=NULL, spend_status='unspent', in_index=NULL, spend_block_id=NULL WHERE spend_transaction_id IN (SELECT transaction_id FROM transactions WHERE blockchain_id=:blockchain_id AND block_id IS NULL);", [
-			'blockchain_id' => $this->db_blockchain['blockchain_id']
-		]);
+		if (empty(AppSettings::getParam('sqlite_db'))) {
+			$this->app->run_query("UPDATE transaction_ios io JOIN transactions t ON io.spend_transaction_id=t.transaction_id SET io.coin_blocks_created=0, io.spend_transaction_id=NULL, io.spend_status='unspent', io.in_index=NULL, io.spend_block_id=NULL WHERE t.blockchain_id=:blockchain_id AND t.block_id IS NULL;", [
+				'blockchain_id' => $this->db_blockchain['blockchain_id']
+			]);
+		}
+		else {
+			$this->app->run_query("UPDATE transaction_ios SET coin_blocks_created=0, spend_transaction_id=NULL, spend_status='unspent', in_index=NULL, spend_block_id=NULL WHERE spend_transaction_id IN (SELECT transaction_id FROM transactions WHERE blockchain_id=:blockchain_id AND block_id IS NULL);", [
+				'blockchain_id' => $this->db_blockchain['blockchain_id']
+			]);
+		}
 		
 		// Delete any confirmed transactions and IOs created from this block
-		$this->app->run_query("DELETE FROM transaction_ios WHERE create_transaction_id IN (SELECT transaction_id FROM transactions WHERE blockchain_id=:blockchain_id AND block_id >= :create_block_id);", [
-			'blockchain_id' => $this->db_blockchain['blockchain_id'],
-			'create_block_id' => $block_height
-		]);
+		if (empty(AppSettings::getParam('sqlite_db'))) {
+			$this->app->run_query("DELETE io.* FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id WHERE t.blockchain_id=:blockchain_id AND t.block_id >= :create_block_id;", [
+				'blockchain_id' => $this->db_blockchain['blockchain_id'],
+				'create_block_id' => $block_height
+			]);
+		}
+		else {
+			$this->app->run_query("DELETE FROM transaction_ios WHERE create_transaction_id IN (SELECT transaction_id FROM transactions WHERE blockchain_id=:blockchain_id AND block_id >= :create_block_id);", [
+				'blockchain_id' => $this->db_blockchain['blockchain_id'],
+				'create_block_id' => $block_height
+			]);
+		}
 		$this->app->run_query("DELETE FROM transactions WHERE blockchain_id=:blockchain_id AND block_id >= :block_id;", [
 			'blockchain_id' => $this->db_blockchain['blockchain_id'],
 			'block_id' => $block_height
 		]);
 		
 		// Delete any outputs of unconfirmed transactions
-		$this->app->run_query("DELETE FROM transaction_ios WHERE create_transaction_id IN (SELECT transaction_id FROM transactions WHERE blockchain_id=:blockchain_id AND block_id IS NULL);", [
-			'blockchain_id' => $this->db_blockchain['blockchain_id']
-		]);
+		if (empty(AppSettings::getParam('sqlite_db'))) {
+			$this->app->run_query("DELETE io.* FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id WHERE t.blockchain_id=:blockchain_id AND t.block_id IS NULL;", [
+				'blockchain_id' => $this->db_blockchain['blockchain_id']
+			]);
+		}
+		else {
+			$this->app->run_query("DELETE FROM transaction_ios WHERE create_transaction_id IN (SELECT transaction_id FROM transactions WHERE blockchain_id=:blockchain_id AND block_id IS NULL);", [
+				'blockchain_id' => $this->db_blockchain['blockchain_id']
+			]);
+		}
 		
 		// Delete any unconfirmed transactions
 		$this->app->run_query("DELETE FROM transactions WHERE blockchain_id=:blockchain_id AND block_id IS NULL;", [
