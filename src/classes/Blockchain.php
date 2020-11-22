@@ -1251,14 +1251,26 @@ class Blockchain {
 				if ($num_gios_added > 0) {
 					$insert_q = substr($insert_q, 0, -2).";";
 					$this->app->run_query($insert_q);
-					$this->app->run_query("UPDATE transaction_ios io JOIN transaction_game_ios gio ON gio.io_id=io.io_id SET gio.parent_io_id=gio.game_io_id-1 WHERE io.create_transaction_id=:create_transaction_id AND gio.game_id=:game_id AND gio.is_coinbase=1;", [
-						'create_transaction_id' => $db_transaction_id,
-						'game_id' => $color_game->db_game['game_id']
-					]);
-					$this->app->run_query("UPDATE transaction_ios io JOIN transaction_game_ios gio ON gio.io_id=io.io_id SET gio.payout_io_id=gio.game_io_id+1 WHERE gio.event_id IS NOT NULL AND io.create_transaction_id=:create_transaction_id AND gio.game_id=:game_id AND gio.is_coinbase=0;", [
-						'create_transaction_id' => $db_transaction_id,
-						'game_id' => $color_game->db_game['game_id']
-					]);
+					if (empty(AppSettings::getParam('sqlite_db'))) {
+						$this->app->run_query("UPDATE transaction_ios io JOIN transaction_game_ios gio ON gio.io_id=io.io_id SET gio.parent_io_id=gio.game_io_id-1 WHERE io.create_transaction_id=:create_transaction_id AND gio.game_id=:game_id AND gio.is_coinbase=1;", [
+							'create_transaction_id' => $db_transaction_id,
+							'game_id' => $color_game->db_game['game_id']
+						]);
+						$this->app->run_query("UPDATE transaction_ios io JOIN transaction_game_ios gio ON gio.io_id=io.io_id SET gio.payout_io_id=gio.game_io_id+1 WHERE gio.event_id IS NOT NULL AND io.create_transaction_id=:create_transaction_id AND gio.game_id=:game_id AND gio.is_coinbase=0;", [
+							'create_transaction_id' => $db_transaction_id,
+							'game_id' => $color_game->db_game['game_id']
+						]);
+					}
+					else {
+						$this->app->run_query("UPDATE transaction_game_ios SET parent_io_id=game_io_id-1 WHERE io_id IN (SELECT io_id FROM transaction_ios WHERE create_transaction_id=:create_transaction_id) AND game_id=:game_id AND is_coinbase=1;", [
+							'create_transaction_id' => $db_transaction_id,
+							'game_id' => $color_game->db_game['game_id']
+						]);
+						$this->app->run_query("UPDATE transaction_game_ios SET payout_io_id=game_io_id+1 WHERE event_id IS NOT NULL AND io_id IN (SELECT io_id FROM transaction_ios WHERE create_transaction_id=:create_transaction_id) AND game_id=:game_id AND is_coinbase=0;", [
+							'create_transaction_id' => $db_transaction_id,
+							'game_id' => $color_game->db_game['game_id']
+						]);
+					}
 				}
 				
 				$unresolved_inputs = $this->app->run_query("SELECT * FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE io.spend_transaction_id=:transaction_id AND gio.game_id=:game_id AND gio.is_coinbase=1 AND gio.resolved_before_spent=0 ORDER BY io.in_index ASC;", [

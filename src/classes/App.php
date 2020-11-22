@@ -74,13 +74,14 @@ class App {
 	public function bulk_mapped_update_query($table, $set_data, $where_data) {
 		$set_columns = array_keys($set_data);
 		$where_columns = array_keys($where_data);
+		$num_records = count($where_data[$where_columns[0]]);
 		
 		$q = "UPDATE ".$table." SET ";
 		
 		foreach ($set_columns as $set_column) {
 			$q .= $set_column."=(CASE";
 			$data_pos = 0;
-			for ($data_pos=0; $data_pos<count($set_data[$set_column]); $data_pos++) {
+			for ($data_pos=0; $data_pos<$num_records; $data_pos++) {
 				$q .= " WHEN (".$where_columns[0]."=".$where_data[$where_columns[0]][$data_pos].") THEN '".$set_data[$set_column][$data_pos]."'";
 			}
 			$q .= " END),";

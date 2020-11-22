@@ -720,10 +720,22 @@ class Game {
 		
 		$this->blockchain->app->dbh->beginTransaction();
 		
-		$this->blockchain->app->run_query("DELETE e.*, o.* FROM events e LEFT JOIN options o ON e.event_id=o.event_id WHERE e.game_id=:game_id AND e.event_index >= :event_index;", [
-			'game_id' => $this->db_game['game_id'],
-			'event_index' => $event_index
-		]);
+		if (empty(AppSettings::getParam('sqlite_db'))) {
+			$this->blockchain->app->run_query("DELETE e.*, o.* FROM events e LEFT JOIN options o ON e.event_id=o.event_id WHERE e.game_id=:game_id AND e.event_index >= :event_index;", [
+				'game_id' => $this->db_game['game_id'],
+				'event_index' => $event_index
+			]);
+		}
+		else {
+			$this->blockchain->app->run_query("DELETE FROM options WHERE event_id IN (SELECT event_id FROM events WHERE game_id=:game_id AND event_index >= :event_index);", [
+				'game_id' => $this->db_game['game_id'],
+				'event_index' => $event_index
+			]);
+			$this->blockchain->app->run_query("DELETE FROM events WHERE game_id=:game_id AND event_index >= :event_index;", [
+				'game_id' => $this->db_game['game_id'],
+				'event_index' => $event_index
+			]);
+		}
 		
 		$info = $this->blockchain->app->run_query("SELECT MAX(event_starting_block) FROM events WHERE game_id=:game_id;", [
 			'game_id' => $this->db_game['game_id']
