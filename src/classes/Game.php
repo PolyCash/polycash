@@ -688,7 +688,10 @@ class Game {
 		
 		$prev_block = $this->fetch_game_block_by_height($block_height-1);
 		if ($prev_block) {
-			$this->blockchain->app->run_query("DELETE FROM transaction_game_ios WHERE game_id=:game_id AND (game_io_index > :game_io_index OR game_io_index IS NULL);", [
+			$this->blockchain->app->run_query("DELETE FROM transaction_game_ios WHERE game_id=:game_id AND game_io_index IS NULL;", [
+				'game_id' => $this->db_game['game_id']
+			]);
+			$this->blockchain->app->run_query("DELETE FROM transaction_game_ios WHERE game_id=:game_id AND game_io_index > :game_io_index;", [
 				'game_id' => $this->db_game['game_id'],
 				'game_io_index' => $prev_block['max_game_io_index']
 			]);

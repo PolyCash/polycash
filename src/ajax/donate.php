@@ -5,14 +5,14 @@ require(AppSettings::srcPath()."/includes/get_session.php");
 $action = $_REQUEST['action'];
 
 if ($action == "load") {
-	$bitcoin_currency = $app->get_currency_by_abbreviation("btc");
-	$blockchain = new Blockchain($app, $bitcoin_currency['blockchain_id']);
+	$donate_currency = $app->get_currency_by_abbreviation("ltc");
+	$blockchain = new Blockchain($app, $donate_currency['blockchain_id']);
 	$admin_user_id = (int) $app->get_site_constant("admin_user_id");
 	
 	if ($admin_user_id > 0) {
 		$admin_user = new User($app, $admin_user_id);
-		$admin_donation_account = $app->user_blockchain_account($admin_user->db_user['user_id'], $bitcoin_currency['currency_id']);
-		$new_donation_address = $app->new_normal_address_key($bitcoin_currency['currency_id'], $admin_donation_account);
+		$admin_donation_account = $app->user_blockchain_account($admin_user->db_user['user_id'], $donate_currency['currency_id']);
+		$new_donation_address = $app->new_normal_address_key($donate_currency['currency_id'], $admin_donation_account);
 		
 		if ($new_donation_address) {
 			$donation_access_key = $app->random_string(20);
@@ -21,7 +21,7 @@ if ($action == "load") {
 				'address_key_id' => $new_donation_address['address_key_id']
 			]);
 			?>
-			<p>To donate bitcoins, please send BTC to the address below. This address was just generated and will remain private unless you share it.</p>
+			<p>To donate <?php echo $donate_currency['short_name_plural']; ?>, please send <?php echo $donate_currency['abbreviation']; ?> to the address below. This address was just generated and will remain private unless you share it.</p>
 			<center>
 				<p><?php echo $new_donation_address['address']; ?></p>
 				<p><img src="render_qr_code.php?data=<?php echo $new_donation_address['address']; ?>" /></p>
@@ -29,7 +29,7 @@ if ($action == "load") {
 			<form action="/" method="get" onsubmit="thisPageManager.donate_step('save_email'); return false;" id="donate_email_form">
 				<input type="hidden" id="donate_access_key" value="<?php echo $donation_access_key; ?>" />
 				<div class="form-group">
-					<label for="donate_email_address">Donations count towards our ICO. To receive coins proportional to your donation, please enter an email address here:</label>
+					<label for="donate_email_address">If you'd like us to know who the donation is from, you can enter your email address here:</label>
 					<input class="form-control" type="text" id="donate_email_address" placeholder="Please enter an email address" />
 				</div>
 				<div class="form-group">
