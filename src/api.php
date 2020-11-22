@@ -261,13 +261,18 @@ if ($uri_parts[1] == "api") {
 				$data = $_REQUEST['data'];
 				$tx = get_object_vars(json_decode($data));
 				
-				$transaction_id = $blockchain->add_transaction_from_web_api(false, $tx);
+				$existing_transaction = $blockchain->fetch_transaction_by_hash($tx['tx_hash']);
 				
-				$successful = true;
-				$db_transaction = $blockchain->add_transaction($tx['tx_hash'], false, true, $successful, false, [false], false);
-				
-				if ($db_transaction) $app->output_message(1, "Transaction successfully imported!", false);
-				else $app->output_message(4, "There was an error importing the transaction.", false);
+				if (!$existing_transaction) {
+					$transaction_id = $blockchain->add_transaction_from_web_api(false, $tx);
+					
+					$successful = true;
+					$db_transaction = $blockchain->add_transaction($tx['tx_hash'], false, true, $successful, false, [false], false);
+					
+					if ($db_transaction) $app->output_message(1, "Transaction successfully imported!", false);
+					else $app->output_message(5, "There was an error importing the transaction.", false);
+				}
+				else $app->output_message(4, "Transaction already exists.", false);
 			}
 			else $app->output_message(3, "Invalid action specified.", false);
 		}
