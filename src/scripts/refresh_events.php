@@ -17,10 +17,7 @@ if ($app->running_as_admin()) {
 			$last_block_id = $blockchain->last_block_id();
 			
 			$ref_time = microtime(true);
-			$repeat_count = 50;
-			for ($i=0; $i<$repeat_count; $i++) {
-				$event->update_option_votes($last_block_id, false);
-			}
+			$event->update_option_votes($last_block_id, false);
 			$benchmark_time = microtime(true)-$ref_time;
 			
 			echo "Completed in ".$app->format_bignum($benchmark_time)."\n";

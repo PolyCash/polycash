@@ -2132,7 +2132,7 @@ class Game {
 		return $error_message;
 	}
 	
-	public function sync($show_debug, $max_load_seconds) {
+	public function sync($print_debug, $max_load_seconds) {
 		$sync_start_time = microtime(true);
 		$last_set_loaded_time = microtime(true);
 		
@@ -2142,7 +2142,7 @@ class Game {
 		// Reset game if there's a reset scheduled
 		$extra_info = $this->fetch_extra_info();
 		if (!empty($extra_info['pending_reset'])) {
-			if ($show_debug) $this->blockchain->app->print_debug("Resetting the game..");
+			if ($print_debug) $this->blockchain->app->print_debug("Resetting the game..");
 			
 			if (array_key_exists("reset_from_block", $extra_info)) {
 				$this->reset_blocks_from_block($extra_info['reset_from_block']);
@@ -2172,28 +2172,28 @@ class Game {
 		
 		// Load events
 		$ensure_events_debug_text = $this->ensure_events_until_block($ensure_block_id);
-		if ($show_debug) $this->blockchain->app->print_debug($ensure_events_debug_text);
+		if ($print_debug) $this->blockchain->app->print_debug($ensure_events_debug_text);
 		
 		// Sync with peer
 		if (!empty($this->db_game['definitive_game_peer_id']) && $this->db_game['loaded_until_block'] == $this->blockchain->last_block_id()) {
-			$sync_definitive_message = $this->sync_with_definitive_peer($show_debug);
+			$sync_definitive_message = $this->sync_with_definitive_peer($print_debug);
 			
 			if ($this->db_game['finite_events'] == 1) $ensure_block_id = max($ensure_block_id, $this->max_gde_starting_block());
 			$ensure_events_debug_text = $this->ensure_events_until_block($ensure_block_id);
 			
 			GameDefinition::set_cached_definition_hashes($this);
 			
-			if ($show_debug) $this->blockchain->app->print_debug($ensure_events_debug_text);
+			if ($print_debug) $this->blockchain->app->print_debug($ensure_events_debug_text);
 		}
 		else if ($this->db_game['finite_events'] == 1) $ensure_block_id = max($ensure_block_id, $this->max_gde_starting_block());
 		
 		// Load events
 		$ensure_events_debug_text = $this->ensure_events_until_block($ensure_block_id);
-		if ($show_debug) $this->blockchain->app->print_debug($ensure_events_debug_text);
+		if ($print_debug) $this->blockchain->app->print_debug($ensure_events_debug_text);
 		
 		// Load blocks
 		if ($to_block_height >= $load_block_height) {
-			if ($show_debug) $this->blockchain->app->print_debug($this->db_game['name'].".. loading blocks ".$load_block_height." to ".$to_block_height);
+			if ($print_debug) $this->blockchain->app->print_debug($this->db_game['name'].".. loading blocks ".$load_block_height." to ".$to_block_height);
 			
 			if ($load_block_height == $this->db_game['game_starting_block']) $game_io_index = 0;
 			else {
@@ -2202,12 +2202,10 @@ class Game {
 			}
 			
 			for ($block_height=$load_block_height; $block_height<=$to_block_height; $block_height++) {
-				list($successful, $log_text, $bulk_to_block) = $this->add_block($block_height, $game_io_index);
+				list($successful, $bulk_to_block) = $this->add_block($block_height, $game_io_index, $print_debug);
 				if ($bulk_to_block) $block_height = $bulk_to_block;
 				
 				if ($successful) $this->set_loaded_until_block($block_height);
-				
-				if ($show_debug) $this->blockchain->app->print_debug($log_text);
 				
 				if (microtime(true)-$last_set_loaded_time >= 3) {
 					if ($max_load_seconds && microtime(true)-$sync_start_time >= $max_load_seconds) {
@@ -2218,7 +2216,7 @@ class Game {
 				if (!$successful) $block_height = $to_block_height+1;
 			}
 		}
-		else if ($show_debug) $this->blockchain->app->print_debug($this->db_game['name']." is already fully loaded.");
+		else if ($print_debug) $this->blockchain->app->print_debug($this->db_game['name']." is already fully loaded.");
 		
 		$this->update_option_votes();
 	}
@@ -2230,11 +2228,10 @@ class Game {
 		])->fetch();
 	}
 	
-	public function add_block($block_height, &$game_io_index) {
+	public function add_block($block_height, &$game_io_index, $print_debug) {
 		$successful = true;
 		$start_time = microtime(true);
-		$msg = "Adding block ".$block_height." to ".$this->db_game['name']."\n";
-		$log_text = $msg;
+		if ($print_debug) $this->blockchain->app->print_debug("Adding block ".$block_height." to ".$this->db_game['name']);
 		$bulk_to_block = false;
 		
 		$db_block = $this->blockchain->fetch_block_by_id($block_height);
@@ -2251,19 +2248,16 @@ class Game {
 			if ($check_game_block) {
 				// The game block already exists. There was an error in a previous load or multiple processes are loading games simultaneously
 				if (empty(AppSettings::getParam('fix_game_blocks_disabled')) && $block_height > 1) {
-					$log_text .= "Game block already exists: resetting from ".($block_height-1)."\n";
+					if ($print_debug) $this->blockchain->app->print_debug("Game block already exists: resetting from ".($block_height-1));
 					$this->reset_blocks_from_block($block_height-1);
 					$this->blockchain->app->log_message("Reset ".$this->db_game['name']." due to error on block #".$block_height);
 				}
-				else $log_text .= "Failed: game block already exists.\n";
+				else if ($print_debug) $this->blockchain->app->print_debug("Failed: game block already exists.");
 				
 				$successful = false;
-				return array($successful, $log_text, $bulk_to_block);
+				return array($successful, $bulk_to_block);
 			}
 			else {
-				$msg = "Creating new game block #".$block_height."\n";
-				$log_text .= $msg;
-				
 				$this->blockchain->app->run_insert_query("game_blocks", [
 					'game_id' => $this->db_game['game_id'],
 					'block_id' => $block_height,
@@ -2284,8 +2278,7 @@ class Game {
 					'escrow_address_id' => $escrow_address['address_id']
 				])->fetchAll();
 				
-				$msg = "Looping through ".count($buyin_transactions)." buyin transactions\n";
-				$log_text .= $msg;
+				if ($print_debug) $this->blockchain->app->print_debug("Looping through ".count($buyin_transactions)." buyin transactions");
 				
 				foreach ($buyin_transactions as $buyin_tx) {
 					// Check if buy-in transaction has already been paid
@@ -2599,7 +2592,7 @@ class Game {
 						$this->blockchain->load_coin_rpc();
 					}
 					
-					$log_text .= $this->module->set_event_outcome($this, $set_outcome_event);
+					$this->module->set_event_outcome($this, $set_outcome_event);
 				}
 				if (!empty($this->module) && method_exists($this->module, "event_index_to_next_event_index")) {
 					$event_index = $this->module->event_index_to_next_event_index($set_outcome_event->db_event['event_index']);
@@ -2667,7 +2660,7 @@ class Game {
 					$ref_time = time();
 					
 					if ($bulk_from_block < $bulk_to_block) {
-						$log_text .= "Adding ".($bulk_to_block-$bulk_from_block)." game blocks in bulk.. ".$bulk_from_block." to ".$bulk_to_block."\n";
+						if ($print_debug) $this->blockchain->app->print_debug("Adding ".($bulk_to_block-$bulk_from_block)." game blocks in bulk.. ".$bulk_from_block." to ".$bulk_to_block);
 						
 						$bulk_insert_q = "INSERT INTO game_blocks (game_id, block_id, locally_saved, num_transactions, time_created, time_loaded, load_time, max_game_io_index) VALUES ";
 						for ($bulk_block_id=$bulk_from_block; $bulk_block_id<=$bulk_to_block; $bulk_block_id++) {
@@ -2682,11 +2675,10 @@ class Game {
 		}
 		else {
 			$successful = false;
-			$msg = "Skipping.. block ".$block_height." does not exist on ".$this->blockchain->db_blockchain['url_identifier']."\n";
-			$log_text .= $msg;
+			if ($print_debug) $this->blockchain->app->print_debug("Skipping.. block ".$block_height." does not exist on ".$this->blockchain->db_blockchain['url_identifier']);
 		}
 		
-		return array($successful, $log_text, $bulk_to_block);
+		return array($successful, $bulk_to_block);
 	}
 	
 	public function set_event_labels_by_gde($event_index) {
