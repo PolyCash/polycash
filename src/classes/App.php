@@ -2037,7 +2037,7 @@ class App {
 				$this->run_insert_query("blockchains", $import_params);
 				$blockchain_id = $this->last_insert_id();
 				
-				$error_message = "Import was a success! Next please <a href=\"/scripts/sync_blockchain_initial.php?key=".AppSettings::getParam('operator_key')."&blockchain_id=".$blockchain_id."\">reset and synchronize ".$blockchain_def->blockchain_name."</a>";
+				$error_message = "Successfully imported the ".$blockchain_def->blockchain_name." blockchain. Next please <a href=\"/scripts/sync_blockchain_initial.php?key=".AppSettings::getParam('operator_key')."&blockchain_id=".$blockchain_id."\">reset and synchronize ".$blockchain_def->blockchain_name."</a>";
 				
 				return $blockchain_id;
 			}
@@ -3801,6 +3801,70 @@ class App {
 			'session_key' => $session_key,
 			'expire_time' => time()
 		])->fetchAll();
+	}
+	
+	public function install_configured_games_and_blockchains($thisuser) {
+		$messages = [];
+		
+		if ($this->user_is_admin($thisuser)) {
+			$blockchains_dir = dirname(__DIR__).'/config/install_blockchains';
+
+			if (is_dir($blockchains_dir)) {
+				foreach (scandir($blockchains_dir) as $blockchain_fname) {
+					if (!in_array($blockchain_fname, ['.', '..'])) {
+						$blockchain_fpath = $blockchains_dir."/".$blockchain_fname;
+						if ($blockchain_fh = fopen($blockchain_fpath, 'r')) {
+							$blockchain_def = fread($blockchain_fh, filesize($blockchain_fpath));
+							$blockchain_obj = json_decode($blockchain_def);
+							
+							if (!empty($blockchain_obj->url_identifier)) {
+								$existing_blockchain = $this->fetch_blockchain_by_identifier($blockchain_obj->url_identifier);
+								
+								if (!$existing_blockchain) {
+									$import_blockchain_message = null;
+									$new_blockchain_id = $this->create_blockchain_from_definition($blockchain_def, $thisuser, $import_blockchain_message);
+									$this->blockchain_ensure_currencies();
+									array_push($messages, $import_blockchain_message);
+								}
+							}
+						}
+					}
+				}
+			}
+			
+			$games_dir = dirname(__DIR__).'/config/install_games';
+
+			if (is_dir($games_dir)) {
+				foreach (scandir($games_dir) as $game_fname) {
+					if (!in_array($game_fname, ['.', '..'])) {
+						$game_fpath = $games_dir."/".$game_fname;
+						if ($game_fh = fopen($game_fpath, 'r')) {
+							$game_def = fread($game_fh, filesize($game_fpath));
+							$game_obj = json_decode($game_def);
+							
+							if (!empty($game_obj->url_identifier)) {
+								$existing_game = $this->fetch_game_by_identifier($game_obj->url_identifier);
+								
+								if (!$existing_game) {
+									$new_game_message = null;
+									$db_new_game = null;
+									GameDefinition::set_game_from_definition($this, $game_def, $thisuser, $new_game_message, $db_new_game, false);
+									
+									if (!empty($error_message)) array_push($messages, $new_game_message);
+									
+									if ($db_new_game) {
+										array_push($messages, "The ".$db_new_game['name']." game was successfully created.");
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		else array_push($messages, "Please log in as admin to install configured games & blockchains.");
+		
+		return $messages;
 	}
 }
 ?>

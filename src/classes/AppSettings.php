@@ -56,9 +56,14 @@ class AppSettings {
 									$new_config['sqlite_db'] = "polycash_sqlite.db";
 									$new_config['site_domain'] = "127.0.0.1";
 									$new_config['use_https'] = true;
+								}
+								
+								if (!empty($new_config['desktop_mode'])) {
+									$new_config['desktop_mode'] = true;
 									$new_config['only_user_username'] = "admin";
 									$new_config['only_user_password'] = "admin";
 								}
+								else $new_config['desktop_mode'] = false;
 								
 								if ($new_config_fh = fopen($config_path, 'w')) {
 									if (fwrite($new_config_fh, json_encode($new_config, JSON_PRETTY_PRINT))) {

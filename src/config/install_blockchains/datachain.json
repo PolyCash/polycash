@@ -1,0 +1,11 @@
+{
+    "peer": "https:\/\/poly.cash",
+    "p2p_mode": "web",
+    "blockchain_name": "Datachain",
+    "url_identifier": "datachain",
+    "coin_name": "datacoin",
+    "coin_name_plural": "datacoins",
+    "seconds_per_block": 60,
+    "decimal_places": 8,
+    "initial_pow_reward": 5000000000
+}

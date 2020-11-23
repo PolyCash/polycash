@@ -122,8 +122,7 @@ CREATE TABLE `blockchains` (
 
 INSERT INTO `blockchains` (`blockchain_id`, `creator_id`, `only_game_id`, `default_image_id`, `authoritative_peer_id`, `blockchain_name`, `url_identifier`, `online`, `p2p_mode`, `coin_name`, `coin_name_plural`, `seconds_per_block`, `average_seconds_per_block`, `decimal_places`, `rpc_host`, `rpc_username`, `rpc_password`, `rpc_port`, `default_rpc_port`, `first_required_block`, `last_complete_block`, `load_unconfirmed_transactions`, `initial_pow_reward`, `supports_getblockheader`, `last_hash_time`, `rpc_last_time_connected`, `block_height`, `genesis_address`) VALUES
 (1, NULL, NULL, 35, NULL, 'Bitcoin', 'bitcoin', 1, 'rpc', 'bitcoin', 'bitcoins', 600, NULL, 8, '127.0.0.1', NULL, NULL, NULL, 8332, NULL, NULL, 0, 5000000000, 1, NULL, NULL, NULL, NULL),
-(2, NULL, NULL, 73, NULL, 'Litecoin', 'litecoin', 1, 'rpc', 'litecoin', 'litecoins', 150, NULL, 8, '127.0.0.1', NULL, NULL, NULL, 9332, NULL, NULL, 1, 5000000000, 0, NULL, NULL, NULL, NULL),
-(3, NULL, NULL, 77, 1, 'StakeChain', 'stakechain', 1, 'web_api', 'stake', 'stakes', 30, 45, 8, '127.0.0.1', NULL, NULL, NULL, NULL, 0, NULL, 1, 10000000000, 0, NULL, NULL, NULL, NULL);
+(2, NULL, NULL, 73, NULL, 'Litecoin', 'litecoin', 1, 'rpc', 'litecoin', 'litecoins', 150, NULL, 8, '127.0.0.1', NULL, NULL, NULL, 9332, NULL, NULL, 1, 5000000000, 0, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 

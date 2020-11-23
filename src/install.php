@@ -77,6 +77,8 @@ if ($app->running_as_admin()) {
 					include(AppSettings::srcPath()."/includes/html_login.php");
 				}
 				else {
+					$install_messages = $app->install_configured_games_and_blockchains($thisuser);
+					
 					if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "install_module") {
 						$module_name = $_REQUEST['module_name'];
 						
@@ -122,6 +124,12 @@ if ($app->running_as_admin()) {
 					<p style="margin-top: 20px;">
 						Welcome to the PolyCash install page. The information below may help you install games and resolve problems with your installation.
 					</p>
+					<?php
+					if (!empty($install_messages) && count($install_messages) > 0) {
+						echo "Installing games and blockchains from your config directory:<br/>\n";
+						echo "<pre>".implode("\n", $install_messages)."</pre>\n";
+					}
+					?>
 					<h3>Run <?php echo AppSettings::getParam('site_name'); ?></h3>
 					Make sure this line has been added to your /etc/crontab:<br/>
 <pre>

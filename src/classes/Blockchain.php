@@ -250,7 +250,7 @@ class Blockchain {
 			'time_mined' => $time_mined,
 			'num_transactions' => $num_tx_in_block,
 			'internal_block_id' => $db_block['internal_block_id'],
-			'sec_since_prev_block' => $prev_block['time_mined'] ? $time_mined - $prev_block['time_mined'] : null
+			'sec_since_prev_block' => empty($prev_block['time_mined']) ? null : $time_mined - $prev_block['time_mined']
 		]);
 		
 		// Fetch all transactions via RPC, getrawtransaction

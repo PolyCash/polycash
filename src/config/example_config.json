@@ -2,6 +2,7 @@
 	"site_name": "PolyCash",
 	"site_domain": "localhost",
 	"server": "Apache",
+	"desktop_mode": true,
 	"mysql_server": "127.0.0.1",
 	"mysql_user": "",
 	"mysql_password": "",
