@@ -4,7 +4,7 @@
 	"server": "Apache",
 	"desktop_mode": true,
 	"mysql_server": "127.0.0.1",
-	"mysql_user": "",
+	"mysql_user": "root",
 	"mysql_password": "",
 	"database_name": "polycash",
 	"operator_key": "",

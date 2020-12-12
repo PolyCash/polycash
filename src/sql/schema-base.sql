@@ -1328,9 +1328,7 @@ CREATE TABLE `modules` (
 INSERT INTO `modules` (`module_id`, `module_name`, `primary_game_id`) VALUES
 (1, 'CoinBattles', NULL),
 (2, 'SingleElimination', NULL),
-(3, 'ElectionSim', NULL),
 (4, 'EmpirecoinClassic', NULL),
-(5, 'StakemoneyShares', NULL),
 (6, 'ImageTournament', NULL),
 (7, 'CryptoDuels', NULL),
 (8, 'DailyCryptoMarkets', NULL),
@@ -1487,13 +1485,6 @@ CREATE TABLE `peers` (
   `time_created` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
---
--- Dumping data for table `peers`
---
-
-INSERT INTO `peers` (`peer_id`, `visible`, `peer_identifier`, `peer_name`, `base_url`, `time_created`) VALUES
-(1, 1, 'poly.cash', 'poly.cash', 'https://poly.cash', 1554050326);
-
 -- --------------------------------------------------------
 
 --
@@ -1506,13 +1497,6 @@ CREATE TABLE `redirect_urls` (
   `url` varchar(255) NOT NULL DEFAULT '',
   `time_created` int(20) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-
---
--- Dumping data for table `redirect_urls`
---
-
-INSERT INTO `redirect_urls` (`redirect_url_id`, `redirect_key`, `url`, `time_created`) VALUES
-(1, 'kfN41nYBmtMnKKBEBHLum9BF', '/install.php?key=35neeke8XPpu', 1578254616);
 
 -- --------------------------------------------------------
 
