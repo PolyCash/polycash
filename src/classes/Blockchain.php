@@ -296,27 +296,29 @@ class Blockchain {
 			]);
 		}
 		
-		// Insert to transactions table
-		$insert_q = "INSERT INTO transactions (blockchain_id, block_id, transaction_desc, tx_hash, time_created, position_in_block, num_inputs, num_outputs, has_all_outputs) VALUES ";
-		$tx_pos = 0;
-		$time = time();
-		foreach ($rpc_transactions as &$rpc_transaction) {
-			if ($this->db_blockchain['p2p_mode'] == "rpc") {
-				$tx_num_in = count($rpc_transaction['vin']);
-				$tx_num_out = count($rpc_transaction['vout']);
-				$tx_hash = $rpc_transaction['txid'];
+		if (count($rpc_transactions) > 0) {
+			// Insert to transactions table
+			$insert_q = "INSERT INTO transactions (blockchain_id, block_id, transaction_desc, tx_hash, time_created, position_in_block, num_inputs, num_outputs, has_all_outputs) VALUES ";
+			$tx_pos = 0;
+			$time = time();
+			foreach ($rpc_transactions as &$rpc_transaction) {
+				if ($this->db_blockchain['p2p_mode'] == "rpc") {
+					$tx_num_in = count($rpc_transaction['vin']);
+					$tx_num_out = count($rpc_transaction['vout']);
+					$tx_hash = $rpc_transaction['txid'];
+				}
+				else {
+					$tx_num_in = count($rpc_transaction['inputs']);
+					$tx_num_out = count($rpc_transaction['outputs']);
+					$tx_hash = $rpc_transaction['tx_hash'];
+				}
+				
+				$insert_q .= "(".$this->db_blockchain['blockchain_id'].", ".$block_height.", '".($tx_pos == 0 ? "coinbase" : "transaction")."', '".$tx_hash."', ".$time.", ".$tx_pos.", ".$tx_num_in.", ".$tx_num_out.", 1), ";
+				$tx_pos++;
 			}
-			else {
-				$tx_num_in = count($rpc_transaction['inputs']);
-				$tx_num_out = count($rpc_transaction['outputs']);
-				$tx_hash = $rpc_transaction['tx_hash'];
-			}
-			
-			$insert_q .= "(".$this->db_blockchain['blockchain_id'].", ".$block_height.", '".($tx_pos == 0 ? "coinbase" : "transaction")."', '".$tx_hash."', ".$time.", ".$tx_pos.", ".$tx_num_in.", ".$tx_num_out.", 1), ";
-			$tx_pos++;
+			$insert_q = substr($insert_q, 0, -2).";";
+			$this->app->run_query($insert_q);
 		}
-		$insert_q = substr($insert_q, 0, -2).";";
-		$this->app->run_query($insert_q);
 		
 		$db_transactions = $this->app->run_query("SELECT * FROM transactions WHERE blockchain_id=".$this->db_blockchain['blockchain_id']." AND tx_hash IN (".$tx_hash_csv.");")->fetchAll();
 		$db_transactions_by_hash = (array)(AppSettings::arrayToMapOnKey($db_transactions, "tx_hash"));

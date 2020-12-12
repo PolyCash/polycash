@@ -44,7 +44,7 @@ if (rtrim($_SERVER['REQUEST_URI'], "/") == "/explorer") $explore_mode = "explore
 else if ($game && rtrim($_SERVER['REQUEST_URI'], "/") == "/explorer/games/".$game->db_game['url_identifier']) $explore_mode = "blocks";
 else if (!$game && $blockchain && rtrim($_SERVER['REQUEST_URI'], "/") == "/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']) $explore_mode = "blocks";
 
-if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($explore_mode, array('blocks','addresses','transactions','utxos','utxo','definition'))) || ($game && in_array($explore_mode, array('events','blocks','addresses','transactions','utxos','utxo','my_bets','definition','search')))) {
+if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($explore_mode, array('blocks','addresses','transactions','utxos','utxo','definition'))) || ($game && in_array($explore_mode, array('events','blocks','addresses','transactions','utxos','utxo','my_bets','definition','search','history')))) {
 	if ($game) {
 		$last_block_id = $blockchain->last_block_id();
 		$current_round = $game->block_to_round($last_block_id+1);
@@ -268,6 +268,10 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 	else if ($explore_mode == "definition") {
 		if ($game) $pagetitle = $game->db_game['name']." game definition";
 		else $pagetitle = $blockchain->db_blockchain['blockchain_name']." blockchain definition";
+		$mode_error = false;
+	}
+	else if ($explore_mode == "history") {
+		$pagetitle = $game->db_game['name']." game definition history";
 		$mode_error = false;
 	}
 	else if ($explore_mode == "search") {
@@ -1512,6 +1516,9 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						
 						echo "</div>\n";
 					}
+				}
+				else if ($explore_mode == "history") {
+					include(dirname(__FILE__).'/game_definition_history.php');
 				}
 				else if ($explore_mode == "definition") {
 					if ($game) {
