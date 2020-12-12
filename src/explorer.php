@@ -1530,7 +1530,16 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							$def_field = 'cached_definition_hash';
 						}
 						
-						list($game_def_hash, $game_def) = GameDefinition::fetch_game_definition($game, $definition_mode, false, true);
+						if (!empty($uri_parts[5])) {
+							$game_def_hash = $uri_parts[5];
+							$game_def = json_decode(GameDefinition::get_game_definition_by_hash($app, $game_def_hash));
+							if (empty($game_def)) Router::send404();
+							else $definition_mode = "actual";
+						}
+						
+						if (empty($game_def)) {
+							list($game_def_hash, $game_def) = GameDefinition::fetch_game_definition($game, $definition_mode, false, true);
+						}
 						?>
 						<div class="panel-heading">
 							<div class="panel-title">Game definition for <?php echo $game->db_game['name']; ?></div>

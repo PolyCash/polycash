@@ -209,6 +209,105 @@ class GameDefinition {
 		return $game->blockchain->app->run_query("SELECT * FROM game_definition_migrations WHERE migration_id=:migration_id;", ['migration_id' => $game->blockchain->app->last_insert_id()])->fetch();
 	}
 	
+	public static function analyze_definition_differences($app, $from_def, $to_def) {
+		// Base Parameters
+		$base_params = $app->game_definition_verbatim_vars();
+		$base_param_differences = [];
+		
+		foreach ($base_params as $base_param) {
+			list($var_type, $var_name, $var_required) = $base_param;
+			
+			$from_val = empty($from_def->$var_name) ? null : $from_def->$var_name;
+			$to_val = empty($to_def->$var_name) ? null : $to_def->$var_name;
+			
+			if ((string)$from_val != (string)$to_val) {
+				array_push($base_param_differences, [
+					'parameter' => $var_name,
+					'from_value' => $from_val,
+					'to_value' => $to_val
+				]);
+			}
+		}
+		
+		// Escrow Amounts
+		$from_escrow_amounts = empty($from_def->escrow_amounts) ? [] : $from_def->escrow_amounts;
+		$to_escrow_amounts = empty($to_def->escrow_amounts) ? [] : $to_def->escrow_amounts;
+		
+		$escrow_differences = [
+			'added' => [],
+			'removed' => [],
+			'changed' => []
+		];
+		$matched_escrow_amounts = min(count($from_escrow_amounts), count($to_escrow_amounts));
+		
+		if (count($from_escrow_amounts) != count($to_escrow_amounts)) {
+			if (count($from_escrow_amounts) > count($to_escrow_amounts)) {
+				$escrow_differences['removed'] = array_slice($from_escrow_amounts, count($to_escrow_amounts), count($from_escrow_amounts) - count($to_escrow_amounts));
+			}
+			else {
+				$escrow_differences['added'] = array_slice($to_escrow_amounts, count($from_escrow_amounts), count($to_escrow_amounts) - count($from_escrow_amounts));
+			}
+		}
+		
+		if ($matched_escrow_amounts > 0) {
+			$changed_escrows = [];
+			for ($escrow_pos=0; $escrow_pos<$matched_escrow_amounts; $escrow_pos++) {
+				if (json_encode($from_escrow_amounts[$escrow_pos]) != json_encode($to_escrow_amounts[$escrow_pos])) {
+					array_push($changed_escrows, [
+						'from' => $from_escrow_amounts[$escrow_pos],
+						'to' => $to_escrow_amounts[$escrow_pos]
+					]);
+				}
+			}
+			$escrow_differences['changed'] = $changed_escrows;
+		}
+		
+		// Events
+		$matched_events = min(count($from_def->events), count($to_def->events));
+		$event_differences = [
+			'new_events' => 0,
+			'removed_events' => 0,
+			'block_changed_events' => 0,
+			'other_changed_events' => 0
+		];
+		
+		if (count($from_def->events) != count($to_def->events)) {
+			if (count($to_def->events) > 0) {
+				$event_differences['new_events'] = count($to_def->events) - count($from_def->events);
+			}
+			else {
+				$event_differences['removed_events'] = count($from_def->events) - count($to_def->events);
+			}
+		}
+		
+		if ($matched_events > 0) {
+			for ($event_pos=0; $event_pos<$matched_events; $event_pos++) {
+				if (json_encode($from_def->events[$event_pos]) != json_encode($to_def->events[$event_pos])) {
+					$ref_from_event = $from_def->events[$event_pos];
+					$ref_from_event->event_starting_block = null;
+					$ref_from_event->event_final_block = null;
+					$ref_from_event->event_outcome_block = null;
+					$ref_from_event->event_payout_block = null;
+					
+					$ref_to_event = $to_def->events[$event_pos];
+					$ref_to_event->event_starting_block = null;
+					$ref_to_event->event_final_block = null;
+					$ref_to_event->event_outcome_block = null;
+					$ref_to_event->event_payout_block = null;
+					
+					if (json_encode($ref_from_event) == json_encode($ref_to_event)) $event_differences['block_changed_events']++;
+					else $event_differences['other_changed_events']++;
+				}
+			}
+		}
+		
+		return [
+			'base_params' => $base_param_differences,
+			'escrow' => $escrow_differences,
+			'events' => $event_differences
+		];
+	}
+	
 	public static function migrate_game_definitions(&$game, $user_id, $migration_type, $show_internal_params, &$initial_game_def, &$new_game_def) {
 		$log_message = "";
 		

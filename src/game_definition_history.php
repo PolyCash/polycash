@@ -13,31 +13,43 @@ foreach ($migrations as $migration) {
 }
 $migrations = array_slice($migrations, 0, $migrationsPerPage);
 ?>
+<style>
+.migration-header-cell {
+	font-weight: bold;
+}
+.migration-header-cell, .migration-cell {
+	text-align: center;
+	line-height: 30px;
+}
+.migration-row:hover {
+	background-color: #f6f6f6;
+}
+</style>
 <div class="panel-heading">
 	<div class="panel-title">Game definition history for <?php echo $game->db_game['name']; ?></div>
 </div>
 <div class="panel-body">
 	<p>Showing <?php echo count($migrations)."/".$migrationQuantity; ?> game definition migrations.</p>
 	
-	<div class="row">
-		<div class="col-md-2 text-bold" style="text-align: center;">Migration Time</div>
-		<div class="col-md-2 text-bold" style="text-align: center;">Time Since Previous Migration</div>
-		<div class="col-md-3 text-bold" style="text-align: center;">Migration</div>
+	<div class="row migration-header-row">
+		<div class="col-md-2 migration-header-cell">Migration Time</div>
+		<div class="col-md-2 migration-header-cell">Time Since Previous</div>
+		<div class="col-md-3 migration-header-cell">Migration</div>
 	</div>
 	<?php
 	foreach ($migrations as $migration) {
 		?>
-		<div class="row">
-			<div class="col-md-2" style="text-align: center;">
+		<div class="row migration-row">
+			<div class="col-md-2 migration-cell">
 				<?php echo date("M j, Y g:ia", $migration['migration_time']); ?>
 			</div>
-			<div class="col-md-2" style="text-align: center;">
+			<div class="col-md-2 migration-cell">
 				<?php
 				$secSincePrev = $migration['migration_time'] - $migrationsByToHash[$migration['from_hash']]['migration_time'];
 				echo $app->format_seconds($secSincePrev);
 				?>
 			</div>
-			<div class="col-md-3" style="text-align: center;">
+			<div class="col-md-3 migration-cell" style="cursor: pointer;" onclick="thisPageManager.view_game_migration(<?php echo $migration['migration_id']; ?>);">
 				<?php
 				echo GameDefinition::shorten_game_def_hash($migration['from_hash'])." &rarr; ".GameDefinition::shorten_game_def_hash($migration['to_hash']);
 				?>
@@ -47,3 +59,10 @@ $migrations = array_slice($migrations, 0, $migrationsPerPage);
 	}
 	?>
 </div>
+
+<div style="display: none;" class="modal fade" id="migration_modal">
+	<div class="modal-dialog modal-lg">
+		<div class="modal-content" id="migration_modal_content"></div>
+	</div>
+</div>
+

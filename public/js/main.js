@@ -3046,6 +3046,20 @@ var PageManager = function() {
 			}
 		});
 	};
+	this.view_game_migration = function(migration_id) {
+		$.ajax({
+			url: "/ajax/migration_details.php",
+			type: "GET",
+			data: {
+				migration_id: migration_id
+			},
+			success: function(migration_details) {
+				console.log("done");
+				$('#migration_modal').modal('show');
+				$('#migration_modal_content').html(migration_details);
+			}
+		});
+	};
 }
 
 var thisPageManager = new PageManager();
