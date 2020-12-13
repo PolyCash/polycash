@@ -268,6 +268,7 @@ class GameDefinition {
 			'new_events' => 0,
 			'removed_events' => 0,
 			'block_changed_events' => 0,
+			'outcome_changed_events' => 0,
 			'other_changed_events' => 0
 		];
 		
@@ -296,16 +297,53 @@ class GameDefinition {
 					$ref_to_event->event_payout_block = null;
 					
 					if (json_encode($ref_from_event) == json_encode($ref_to_event)) $event_differences['block_changed_events']++;
-					else $event_differences['other_changed_events']++;
+					else {
+						$ref_from_event->outcome_index = null;
+						$ref_to_event->outcome_index = null;
+						
+						if (json_encode($ref_from_event) == json_encode($ref_to_event)) $event_differences['outcome_changed_events']++;
+						else $event_differences['other_changed_events']++;
+					}
 				}
 			}
 		}
 		
-		return [
+		$differences = [
 			'base_params' => $base_param_differences,
 			'escrow' => $escrow_differences,
 			'events' => $event_differences
 		];
+		
+		$difference_summary_lines = [];
+		if (count($differences['base_params']) > 0) {
+			array_push($difference_summary_lines, count($differences['base_params'])." game parameter".(count($differences['base_params']) == 1 ? " was" : "s were")." changed");
+		}
+		if (count($differences['escrow']['added']) > 0) {
+			array_push($difference_summary_lines, $differences['escrow']['added']." new amount".($differences['escrow']['added'] != 1 ? "s were" : " was")." added to the escrow");
+		}
+		if (count($differences['escrow']['removed']) > 0) {
+			array_push($difference_summary_lines, count($differences['escrow']['removed'])." amount".(count($differences['escrow']['removed']) != 1 ? "s were" : " was")." removed from the escrow");
+		}
+		if (count($differences['escrow']['changed']) > 0) {
+			array_push($difference_summary_lines, count($differences['escrow']['changed'])." escrow amount".(count($differences['escrow']['changed']) == 1 ? " was" : "s were")." changed");
+		}
+		if ($differences['events']['new_events'] > 0) {
+			array_push($difference_summary_lines, $differences['events']['new_events']." new event".($differences['events']['new_events'] == 1 ? " was " : "s were")." added");
+		}
+		if ($differences['events']['removed_events'] > 0) {
+			array_push($difference_summary_lines, $differences['events']['removed_events']." event".($differences['events']['removed_events'] == 1 ? " was" : "s were")." removed");
+		}
+		if ($differences['events']['block_changed_events'] > 0) {
+			array_push($difference_summary_lines, "Blocks were changed in ".$differences['events']['block_changed_events']." event".($differences['events']['block_changed_events'] == 1 ? "" : "s"));
+		}
+		if ($differences['events']['outcome_changed_events'] > 0) {
+			array_push($difference_summary_lines, "Outcomes were set for ".$differences['events']['outcome_changed_events']." event".($differences['events']['outcome_changed_events'] == 1 ? "" : "s"));
+		}
+		if ($differences['events']['other_changed_events'] > 0) {
+			array_push($difference_summary_lines, $differences['events']['other_changed_events']." event".($differences['events']['other_changed_events'] != 1 ? "s were" : " was")." changed");
+		}
+		
+		return [$differences, $difference_summary_lines];
 	}
 	
 	public static function migrate_game_definitions(&$game, $user_id, $migration_type, $show_internal_params, &$initial_game_def, &$new_game_def) {
