@@ -1374,7 +1374,7 @@ class Game {
 			$last_block = $this->fetch_game_block_by_height($last_block_loaded);
 			$sample_block = $this->fetch_game_block_by_height(max($this->db_game['game_starting_block'], $last_block_loaded-100));
 			
-			if ($last_block['block_id'] == $sample_block['block_id']) $time_per_block = 0;
+			if (empty($sample_block) || $last_block['block_id'] == $sample_block['block_id']) $time_per_block = 0;
 			else $time_per_block = ($last_block['time_loaded']-$sample_block['time_loaded'])/($last_block['block_id']-$sample_block['block_id']);
 			
 			$html .= "<p>Loading ".$this->blockchain->app->format_bignum($missing_game_blocks)." game block";
