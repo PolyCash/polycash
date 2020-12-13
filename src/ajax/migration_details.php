@@ -26,12 +26,13 @@ if ($action == "see_history") {
 	
 }
 else {
-	if (!empty($migration)) {
-		$from_game_def = json_decode(GameDefinition::get_game_definition_by_hash($app, $migration['from_hash']));
-		$to_game_def = json_decode(GameDefinition::get_game_definition_by_hash($app, $migration['to_hash']));
-		
+	if (empty($migration)) {
 		$from_game_def = json_decode(GameDefinition::get_game_definition_by_hash($app, $_REQUEST['from_hash']));
 		$to_game_def = json_decode(GameDefinition::get_game_definition_by_hash($app, $_REQUEST['to_hash']));
+	}
+	else {
+		$from_game_def = json_decode(GameDefinition::get_game_definition_by_hash($app, $migration['from_hash']));
+		$to_game_def = json_decode(GameDefinition::get_game_definition_by_hash($app, $migration['to_hash']));
 	}
 	
 	list($differences, $difference_summary_lines) = GameDefinition::analyze_definition_differences($app, $from_game_def, $to_game_def);
