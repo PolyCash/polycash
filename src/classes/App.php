@@ -3866,5 +3866,31 @@ class App {
 		
 		return $messages;
 	}
+	
+	public function fetch_recent_migrations(&$game, $fetchQuantity) {
+		$migrationQueryBase = "game_definition_migrations WHERE game_id=:game_id AND migration_type = 'apply_defined_to_actual' ORDER BY migration_time DESC";
+		$migrationQuantity = $this->run_query("SELECT COUNT(*) FROM ".$migrationQueryBase, [
+			'game_id' => $game->db_game['game_id']
+		])->fetch()['COUNT(*)'];
+		$migrations = $this->run_query("SELECT * FROM ".$migrationQueryBase." LIMIT ".($fetchQuantity+1)."", [
+			'game_id' => $game->db_game['game_id']
+		])->fetchAll();
+		$migrationsByToHash = [];
+		$definitionsByHash = [];
+		foreach ($migrations as $migration) {
+			$migrationsByToHash[$migration['to_hash']] = $migration;
+			if (empty($definitionsByHash[$migration['from_hash']])) $definitionsByHash[$migration['from_hash']] = json_decode(GameDefinition::get_game_definition_by_hash($this, $migration['from_hash']));
+			if (empty($definitionsByHash[$migration['to_hash']])) $definitionsByHash[$migration['to_hash']] = json_decode(GameDefinition::get_game_definition_by_hash($this, $migration['to_hash']));
+		}
+		
+		$migrations = array_slice($migrations, 0, $fetchQuantity);
+		
+		return [
+			$migrations,
+			$definitionsByHash,
+			$migrationsByToHash,
+			$migrationQuantity
+		];
+	}
 }
 ?>

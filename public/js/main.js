@@ -3060,6 +3060,24 @@ var PageManager = function() {
 			}
 		});
 	};
+	this.game_history_clicked = 0;
+	this.more_game_history = function(initial_per_page) {
+		var history_pos = initial_per_page*Math.pow(2, 1+this.game_history_clicked);
+		this.game_history_clicked++;
+		
+		$.ajax({
+			url: "/ajax/migration_details.php",
+			type: "GET",
+			data: {
+				action: 'see_history',
+				game_id: games[0].game_id,
+				history_pos: history_pos
+			},
+			success: function(migration_history) {
+				$('#migration_history').html(migration_history);
+			}
+		});
+	};
 }
 
 var thisPageManager = new PageManager();
