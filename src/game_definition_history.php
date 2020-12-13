@@ -1,5 +1,5 @@
 <?php
-$migrationsPerPage = 50;
+$migrationsPerPage = 30;
 $migrationQueryBase = "game_definition_migrations WHERE game_id=:game_id AND migration_type = 'apply_defined_to_actual' ORDER BY migration_time DESC";
 $migrationQuantity = $app->run_query("SELECT COUNT(*) FROM ".$migrationQueryBase, [
 	'game_id' => $game->db_game['game_id']
@@ -8,9 +8,13 @@ $migrations = $app->run_query("SELECT * FROM ".$migrationQueryBase." LIMIT ".($m
 	'game_id' => $game->db_game['game_id']
 ])->fetchAll();
 $migrationsByToHash = [];
+$definitionsByHash = [];
 foreach ($migrations as $migration) {
 	$migrationsByToHash[$migration['to_hash']] = $migration;
+	if (empty($definitionsByHash[$migration['from_hash']])) $definitionsByHash[$migration['from_hash']] = json_decode(GameDefinition::get_game_definition_by_hash($app, $migration['from_hash']));
+	if (empty($definitionsByHash[$migration['to_hash']])) $definitionsByHash[$migration['to_hash']] = json_decode(GameDefinition::get_game_definition_by_hash($app, $migration['to_hash']));
 }
+	
 $migrations = array_slice($migrations, 0, $migrationsPerPage);
 ?>
 <style>
@@ -38,6 +42,7 @@ $migrations = array_slice($migrations, 0, $migrationsPerPage);
 	</div>
 	<?php
 	foreach ($migrations as $migration) {
+		list($differences, $difference_summary_lines) = GameDefinition::analyze_definition_differences($app, $definitionsByHash[$migration['from_hash']], $definitionsByHash[$migration['to_hash']]);
 		?>
 		<div class="row migration-row">
 			<div class="col-md-2 migration-cell">
@@ -45,13 +50,20 @@ $migrations = array_slice($migrations, 0, $migrationsPerPage);
 			</div>
 			<div class="col-md-2 migration-cell">
 				<?php
-				$secSincePrev = $migration['migration_time'] - $migrationsByToHash[$migration['from_hash']]['migration_time'];
-				echo $app->format_seconds($secSincePrev);
+				if (!empty($migrationsByToHash[$migration['from_hash']]['migration_time'])) {
+					$secSincePrev = $migration['migration_time'] - $migrationsByToHash[$migration['from_hash']]['migration_time'];
+					echo $app->format_seconds($secSincePrev);
+				}
 				?>
 			</div>
 			<div class="col-md-3 migration-cell" style="cursor: pointer;" onclick="thisPageManager.view_game_migration(<?php echo $migration['migration_id']; ?>);">
 				<?php
 				echo GameDefinition::shorten_game_def_hash($migration['from_hash'])." &rarr; ".GameDefinition::shorten_game_def_hash($migration['to_hash']);
+				?>
+			</div>
+			<div class="col-md-5 migration-cell" style="text-align: left;">
+				<?php
+				echo ucfirst(strtolower(implode(", ", $difference_summary_lines)));
 				?>
 			</div>
 		</div>
