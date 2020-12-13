@@ -23,7 +23,8 @@ else {
 list($differences, $difference_summary_lines) = GameDefinition::analyze_definition_differences($app, $from_game_def, $to_game_def);
 ?>
 <div class="modal-header">
-	<b class="modal-title"><?php echo $game->db_game['name']." migration: &nbsp; ".$migration['from_hash']." &rarr; ".$migration['to_hash']; ?></b>
+	<b class="modal-title"><?php echo $game->db_game['name']; ?> migration: &nbsp; 
+	<a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/definition/<?php echo $migration['from_hash']; ?>"> <?php echo $migration['from_hash']; ?></a> &rarr; <a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/definition/<?php echo $migration['to_hash']; ?>"><?php echo $migration['to_hash']; ?></a></b>
 	
 	<button type="button" class="close" data-dismiss="modal" aria-label="Close">
 		<span aria-hidden="true">&times;</span>
