@@ -1075,6 +1075,8 @@ class Game {
 		$this->db_game['seconds_per_block'] = $this->blockchain->db_blockchain['seconds_per_block'];
 		
 		$this->set_loaded_until_block(null);
+		
+		$this->sync_with_definitive_peer(true);
 	}
 	
 	public function max_game_io_index() {
@@ -2138,6 +2140,8 @@ class Game {
 			
 			$api_response = json_decode($this->blockchain->app->safe_fetch_url($api_url));
 
+			if ($print_debug) $this->blockchain->app->print_debug($api_response->status_code);
+			
 			if ($api_response->status_code == 1) {
 				if ($api_response->definition->url_identifier == $this->db_game['url_identifier']) {
 					if ($api_response->definition_hash == $send_hash) $error_message = "Already in sync.\n";

@@ -3654,7 +3654,10 @@ class App {
 					$all_modules = $this->run_query("SELECT * FROM modules ORDER BY module_id ASC;");
 					
 					while ($module = $all_modules->fetch()) {
-						include(AppSettings::srcPath()."/modules/".$module['module_name']."/".$module['module_name']."GameDefinition.php");
+						$game_def_fname = AppSettings::srcPath()."/modules/".$module['module_name']."/".$module['module_name']."GameDefinition.php";
+						if (is_file($game_def_fname)) {
+							include($game_def_fname);
+						}
 					}
 				}
 				catch(Exception $ee) {}

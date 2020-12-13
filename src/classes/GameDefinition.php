@@ -482,9 +482,6 @@ class GameDefinition {
 		
 		if (!$decode_error) {
 			$module_ok = true;
-			if (!empty($game_def->module)) {
-				if (!$app->check_module($game_def->module)) $module_ok = false;
-			}
 			
 			if ($module_ok) {
 				if (!empty($game_def->blockchain_identifier)) {
