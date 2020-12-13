@@ -39,6 +39,7 @@ $migrations = array_slice($migrations, 0, $migrationsPerPage);
 		<div class="col-md-2 migration-header-cell">Migration Time</div>
 		<div class="col-md-2 migration-header-cell">Time Since Previous</div>
 		<div class="col-md-3 migration-header-cell">Migration</div>
+		<div class="col-md-5 migration-header-cell" style="text-align: left;">Description</div>
 	</div>
 	<?php
 	foreach ($migrations as $migration) {
