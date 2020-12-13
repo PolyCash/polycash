@@ -1881,7 +1881,7 @@ class Game {
 				$option_offset = 0;
 			}
 			
-			if (!empty($this->db_game['module']) && !$this->get_definitive_peer()) {
+			if (!empty($this->db_game['module']) && !$this->get_definitive_peer() && !empty($this->module)) {
 				$event_verbatim_vars = $this->blockchain->app->event_verbatim_vars();
 				
 				$gdes_to_add = $this->module->events_starting_between_blocks($this, $ensured_block, $block_id);
