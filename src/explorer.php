@@ -1525,16 +1525,10 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$definition_mode = "defined";
 						$def_field = 'defined_cached_definition_hash';
 						
-						if (!empty($_REQUEST['definition_mode']) && $_REQUEST['definition_mode'] == "actual") {
-							$definition_mode = "actual";
-							$def_field = 'cached_definition_hash';
-						}
-						
 						if (!empty($uri_parts[5])) {
 							$game_def_hash = $uri_parts[5];
 							$game_def = json_decode(GameDefinition::get_game_definition_by_hash($app, $game_def_hash));
 							if (empty($game_def)) Router::send404();
-							else $definition_mode = "actual";
 						}
 						
 						if (empty($game_def)) {
@@ -1545,11 +1539,6 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							<div class="panel-title">Game definition for <?php echo $game->db_game['name']; ?></div>
 						</div>
 						<div class="panel-body">
-							<p>
-								<a <?php if ($definition_mode == "defined") echo 'class="selected" '; ?>href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/definition/?definition_mode=defined">As Defined</a>
-								 &nbsp;&nbsp; 
-								<a <?php if ($definition_mode == "actual") echo 'class="selected" '; ?>href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/definition/?definition_mode=actual">Actual Game</a>
-							</p>
 							<div class="row">
 								<div class="col-sm-2"><label class="form-control-static" for="definition_hash">Definition hash:</label></div>
 								<div class="col-sm-10"><input type="text" class="form-control" id="definition_hash" value="<?php echo $game_def_hash; ?>" /></div>
