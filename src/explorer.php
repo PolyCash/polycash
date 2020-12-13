@@ -1525,7 +1525,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$definition_mode = "defined";
 						$def_field = 'defined_cached_definition_hash';
 						
-						if (!empty($uri_parts[5])) {
+						if (empty($_REQUEST['definition_mode']) && !empty($uri_parts[5])) {
 							$game_def_hash = $uri_parts[5];
 							$game_def = json_decode(GameDefinition::get_game_definition_by_hash($app, $game_def_hash));
 							if (empty($game_def)) Router::send404();
