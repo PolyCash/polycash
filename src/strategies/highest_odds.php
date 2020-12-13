@@ -21,7 +21,7 @@ if ($user_game) {
 	
 	$bet_quantity = empty($_REQUEST['bet_quantity']) ? 2 : (int) $_REQUEST['bet_quantity'];
 	
-	$hours_between_applications = $_REQUEST['hours'] ?? 2;
+	$hours_between_applications = $_REQUEST['hours'] ?? 20;
 	$sec_between_applications = 60*60*$hours_between_applications;
 	$rand_sec_offset = rand(0, $sec_between_applications*2);
 	
