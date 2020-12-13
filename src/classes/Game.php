@@ -13,7 +13,10 @@ class Game {
 		
 		if (!empty($this->db_game['module'])) {
 			$module_class = $this->db_game['module'].'GameDefinition';
-			$this->module = new $module_class($this->blockchain->app);
+			$module_fname = dirname(__DIR__)."/modules/".$module_class.".php";
+			if (is_file($module_fname)) {
+				$this->module = new $module_class($this->blockchain->app);
+			}
 		}
 	}
 	
