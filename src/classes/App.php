@@ -888,6 +888,10 @@ class App {
 						$price_usd = $this_price_data->offers->price;
 					}
 				}
+				else if ($currency_url['format_id'] == 5) {
+					$coin_data = json_decode($api_response_raw);
+					$price_in_ref_currency = 1/$coin_data->bpi->USD->rate_float;
+				}
 				
 				if ($price_in_ref_currency == null) {
 					$price_in_ref_currency = $price_usd/$ref_currency_info['exchange_rate'];

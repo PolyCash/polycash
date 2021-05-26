@@ -92,8 +92,9 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 										array_push($send_address_ids, $address_ids[$i]);
 									}
 									if ($remainder_satoshis > 0) {
+										$remainder_address_key = $app->new_normal_address_key($donate_account['currency_id'], $donate_account);
 										array_push($amounts, $remainder_satoshis);
-										array_push($send_address_ids, $game_ios[0]['address_id']);
+										array_push($send_address_ids, $remainder_address_key['address_id']);
 									}
 									
 									$error_message = false;
@@ -209,8 +210,9 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 										}
 									}
 									if ($remainder_satoshis > 0) {
+										$remainder_address_key = $app->new_normal_address_key($donate_account['currency_id'], $donate_account);
 										array_push($amounts, $remainder_satoshis);
-										array_push($send_address_ids, $game_ios[0]['address_id']);
+										array_push($send_address_ids, $remainder_address_key['address_id']);
 									}
 									
 									$error_message = false;
