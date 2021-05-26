@@ -1005,6 +1005,7 @@ class App {
 						catch (Exception $e) {
 							$failed = true;
 						}
+						if (empty($address_text)) $failed = true;
 					}
 					else $failed = true;
 				}
