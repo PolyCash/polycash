@@ -5,6 +5,7 @@ if (isset($_COOKIE['my_session_global'])) {
 else {
 	$session_key = $app->random_string(24);
 	setcookie('my_session_global', $session_key, time()+24*3600, "/");
+	$_COOKIE['my_session_global'] = $session_key;
 }
 
 $thisuser = FALSE;
