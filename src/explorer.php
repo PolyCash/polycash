@@ -337,16 +337,16 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				
 				if ($game) {
 					if (in_array($explore_mode, array('blocks','addresses','transactions','utxo'))) {
-						echo "<a class='btn btn-sm btn-primary' href='/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/";
-						echo $explore_mode."/";
-						if ($explore_mode == "blocks") echo $block['block_id'];
-						else if ($explore_mode == "addresses") echo $address['address'];
-						else if ($explore_mode == "transactions") echo $transaction['tx_hash'];
-						else if ($explore_mode == "utxo") echo $io['tx_hash']."/".$io['out_index'];
-						else if ($explore_mode == "utxos") {
-							if ($account) echo "?account_id=".$account['account_id'];
+						echo "<a class='btn btn-sm btn-primary' href='/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/".$explore_mode;
+						if ($explore_mode == "blocks") {
+							if (!empty($block)) echo "/".$block['block_id'];
 						}
-						if ($explore_mode != "utxos") echo "/";
+						else if ($explore_mode == "addresses") echo "/".$address['address'];
+						else if ($explore_mode == "transactions") echo "/".$transaction['tx_hash'];
+						else if ($explore_mode == "utxo") echo "/".$io['tx_hash']."/".$io['out_index'];
+						else if ($explore_mode == "utxos") {
+							if ($account) echo "/?account_id=".$account['account_id'];
+						}
 						echo "'><i class=\"fas fa-link\"></i> &nbsp; View on ".$game->blockchain->db_blockchain['blockchain_name']."</a>\n";
 					}
 					?>
