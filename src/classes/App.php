@@ -1613,7 +1613,10 @@ class App {
 					else {
 						$process_is_php = strpos($pid_response, 'php.exe') === false ? false : true;
 						if ($process_is_php) return $process_running;
-						else return 0;
+						else {
+							$this->set_site_constant($lock_name, 0);
+							return 0;
+						}
 					}
 				}
 				else {
@@ -1634,14 +1637,12 @@ class App {
 			if ($running < 0) $running = 0;
 			else if ($running > 1) $running = 1;
 			$num_running = $running;
-			$this->log_message("$num_running $cmd");
 			
 			$cmd = "ps aux|grep \"".basename($_SERVER["SCRIPT_FILENAME"])."\"|grep -v grep|wc -l";
 			$running = (int) (trim(exec($cmd))-1);
 			if ($running < 0) $running = 0;
 			else if ($running > 1) $running = 1;
 			$num_running += $running;
-			$this->log_message("$num_running $cmd");
 			
 			if ($num_running > 0) return 1;
 			else return 0;
