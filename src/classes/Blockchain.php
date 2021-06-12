@@ -243,15 +243,7 @@ class Blockchain {
 			$time_mined = $web_api_block['time_mined'];
 		}
 		
-		if ($print_debug) echo "Processing ".$num_tx_in_block." transactions in block ".$block_height." in fast mode.\n";
-		
-		$prev_block = $this->fetch_block_by_id($db_block['block_id']-1);
-		$this->app->run_query("UPDATE blocks SET time_mined=:time_mined, num_transactions=:num_transactions, sec_since_prev_block=:sec_since_prev_block WHERE internal_block_id=:internal_block_id;", [
-			'time_mined' => $time_mined,
-			'num_transactions' => $num_tx_in_block,
-			'internal_block_id' => $db_block['internal_block_id'],
-			'sec_since_prev_block' => empty($prev_block['time_mined']) ? null : $time_mined - $prev_block['time_mined']
-		]);
+		if ($print_debug) $this->app->print_debug("Processing ".$num_tx_in_block." transactions in block ".$block_height." in fast mode.");
 		
 		// Fetch all transactions via RPC, getrawtransaction
 		$tx_hash_to_pos = [];
@@ -275,173 +267,6 @@ class Blockchain {
 			}
 		}
 		
-		$tx_hash_csv = "'".implode("','", array_keys($tx_hash_to_pos))."'";
-		
-		if (empty(AppSettings::getParam('sqlite_db'))) {
-			$this->app->run_query("DELETE t.*, io.*, gio.* FROM transactions t LEFT JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id LEFT JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE t.blockchain_id=:blockchain_id AND t.tx_hash IN (".$tx_hash_csv.");", [
-				'blockchain_id' => $this->db_blockchain['blockchain_id']
-			]);
-		}
-		else {
-			$this->app->run_query("DELETE FROM transaction_game_ios WHERE io_id IN (SELECT io.io_id FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id WHERE t.blockchain_id=:blockchain_id AND t.tx_hash IN (".$tx_hash_csv."));", [
-				'blockchain_id' => $this->db_blockchain['blockchain_id']
-			]);
-			
-			$this->app->run_query("DELETE FROM transaction_ios WHERE io_id IN (SELECT io.io_id FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id WHERE t.blockchain_id=:blockchain_id AND t.tx_hash IN (".$tx_hash_csv."));", [
-				'blockchain_id' => $this->db_blockchain['blockchain_id']
-			]);
-			
-			$this->app->run_query("DELETE FROM transactions WHERE tx_hash IN (".$tx_hash_csv.") AND blockchain_id=:blockchain_id;", [
-				'blockchain_id' => $this->db_blockchain['blockchain_id']
-			]);
-		}
-		
-		if (count($rpc_transactions) > 0) {
-			// Insert to transactions table
-			$insert_q = "INSERT INTO transactions (blockchain_id, block_id, transaction_desc, tx_hash, time_created, position_in_block, num_inputs, num_outputs, has_all_outputs) VALUES ";
-			$tx_pos = 0;
-			$time = time();
-			foreach ($rpc_transactions as &$rpc_transaction) {
-				if ($this->db_blockchain['p2p_mode'] == "rpc") {
-					$tx_num_in = count($rpc_transaction['vin']);
-					$tx_num_out = count($rpc_transaction['vout']);
-					$tx_hash = $rpc_transaction['txid'];
-				}
-				else {
-					$tx_num_in = count($rpc_transaction['inputs']);
-					$tx_num_out = count($rpc_transaction['outputs']);
-					$tx_hash = $rpc_transaction['tx_hash'];
-				}
-				
-				$insert_q .= "(".$this->db_blockchain['blockchain_id'].", ".$block_height.", '".($tx_pos == 0 ? "coinbase" : "transaction")."', '".$tx_hash."', ".$time.", ".$tx_pos.", ".$tx_num_in.", ".$tx_num_out.", 1), ";
-				$tx_pos++;
-			}
-			$insert_q = substr($insert_q, 0, -2).";";
-			$this->app->run_query($insert_q);
-		}
-		
-		$db_transactions = $this->app->run_query("SELECT * FROM transactions WHERE blockchain_id=".$this->db_blockchain['blockchain_id']." AND tx_hash IN (".$tx_hash_csv.");")->fetchAll();
-		$db_transactions_by_hash = (array)(AppSettings::arrayToMapOnKey($db_transactions, "tx_hash"));
-		
-		// Insert and load addresses for all outputs
-		$address_strings = [];
-		$address_to_id = [];
-		
-		foreach ($rpc_transactions as &$rpc_transaction) {
-			$vout_pos = 0;
-			
-			if ($this->db_blockchain['p2p_mode'] == "rpc") {
-				foreach ($rpc_transaction['vout'] as &$vout) {
-					list($address_text, $script_type, $address_error) = $this->vout_to_address_info($vout);
-					
-					if ($address_error) {
-						if ($print_debug) echo "No address for ".$rpc_transaction['txid'].", vout #".$vout_pos."\n";
-					}
-					else {
-						array_push($address_strings, $address_text);
-						$address_to_id[$address_text] = null;
-					}
-					
-					$vout_pos++;
-				}
-			}
-			else {
-				foreach ($rpc_transaction['outputs'] as &$vout) {
-					array_push($address_strings, $vout->address);
-					$address_to_id[$vout->address] = null;
-				}
-			}
-		}
-		
-		$addresses_csv = "'".implode("','", $address_strings)."'";
-		
-		$db_existing_addresses = $this->app->run_query("SELECT * FROM addresses WHERE address IN (".$addresses_csv.") AND primary_blockchain_id=:blockchain_id;", [
-			'blockchain_id' => $this->db_blockchain['blockchain_id']
-		])->fetchAll();
-		
-		$db_existing_addresses_by_address = (array)(AppSettings::arrayToMapOnKey($db_existing_addresses, "address"));
-		
-		$insert_addresses_q = "INSERT ".(!empty(AppSettings::getParam('sqlite_db')) ? "OR " : "")."IGNORE INTO addresses (primary_blockchain_id, address, time_created, is_mine, vote_identifier, option_index, is_destroy_address, is_separator_address, is_passthrough_address) VALUES ";
-		$time = time();
-		$insert_addr_count = 0;
-		
-		foreach ($address_strings as &$address_string) {
-			if (empty($db_existing_addresses_by_address[$address_string])) {
-				$vote_identifier = $this->app->addr_text_to_vote_identifier($address_string);
-				$option_index = $this->app->vote_identifier_to_option_index($vote_identifier);
-				
-				list($is_destroy_address, $is_separator_address, $is_passthrough_address) = $this->app->option_index_to_special_address_types($option_index);
-				
-				$insert_addresses_q .= "(".$this->db_blockchain['blockchain_id'].", '".$address_string."', ".$time.", 0, '".$vote_identifier."', '".$option_index."', ".(int)$is_destroy_address.", ".(int)$is_separator_address.", ".(int)$is_passthrough_address."), ";
-				
-				$insert_addr_count++;
-			}
-		}
-		
-		if ($insert_addr_count > 0) {
-			if ($print_debug) echo "Adding ".$insert_addr_count." addresses\n";
-			$insert_addresses_q = substr($insert_addresses_q, 0, -2).";";
-			$this->app->run_query($insert_addresses_q);
-		}
-		
-		$db_existing_addresses = $this->app->run_query("SELECT * FROM addresses WHERE address IN (".$addresses_csv.") AND primary_blockchain_id=:blockchain_id;", [
-			'blockchain_id' => $this->db_blockchain['blockchain_id']
-		])->fetchAll();
-		
-		$db_existing_addresses_by_address = (array) (AppSettings::arrayToMapOnKey($db_existing_addresses, "address"));
-		
-		// Process all outputs
-		$insert_outputs_q = "INSERT INTO transaction_ios (blockchain_id, address_id, option_index, spend_status, out_index, is_destroy, is_separator, is_passthrough, is_receiver, create_transaction_id, script_type, amount, create_block_id) VALUES ";
-		$block_num_outputs = 0;
-		
-		foreach ($rpc_transactions as &$rpc_transaction) {
-			$out_index = 0;
-			$last_regular_output_index = false;
-			$first_passthrough_index = false;
-			
-			$vouts = $this->db_blockchain['p2p_mode'] == "rpc" ? $rpc_transaction['vout'] : $rpc_transaction['outputs'];
-			$tx_hash = $this->db_blockchain['p2p_mode'] == "rpc" ? $rpc_transaction['txid'] : $rpc_transaction['tx_hash'];
-			
-			foreach ($vouts as &$vout) {
-				if ($this->db_blockchain['p2p_mode'] == "rpc") {
-					list($address_text, $script_type, $address_error) = $this->vout_to_address_info($vout);
-					$output_value_int = (int)(pow(10, $this->db_blockchain['decimal_places'])*$vout['value']);
-				}
-				else {
-					$address_text = $vout->address;
-					$script_type = "pubkeyhash";
-					$output_value_int = $vout->amount;
-				}
-				
-				$this_addr = (array)($db_existing_addresses_by_address[$address_text]);
-				
-				if ($first_passthrough_index === false && $this_addr['is_passthrough_address'] == 1) $first_passthrough_index = $out_index;
-				
-				$is_receiver = 0;
-				if ($first_passthrough_index !== false && $this_addr['is_destroy_address'] == 0 && $this_addr['is_separator_address'] == 0 && $this_addr['is_passthrough_address'] == 0) $is_receiver = 1;
-				
-				if ($this_addr['is_destroy_address'] == 1) {}
-				else if ($this_addr['is_separator_address'] == 0 && $this_addr['is_passthrough_address'] == 0 && $is_receiver == 0) $last_regular_output_index = $out_index;
-				
-				$this_transaction_id = $db_transactions_by_hash[$tx_hash]->transaction_id;
-				
-				$insert_outputs_q .= "(".$this->db_blockchain['blockchain_id'].", ".$this_addr['address_id'].", '".$this_addr['option_index']."', 'unspent', '".$out_index."', '".$this_addr['is_destroy_address']."', '".$this_addr['is_separator_address']."', '".$this_addr['is_passthrough_address']."', '".$is_receiver."', ".$this_transaction_id.", '".$script_type."', '".$output_value_int."', ".$block_height."), ";
-				
-				$out_index++;
-			}
-			
-			$block_num_outputs += count($vouts);
-		}
-		
-		if ($block_num_outputs > 0) {
-			$insert_outputs_q = substr($insert_outputs_q, 0, -2).";";
-			
-			if ($print_debug) echo "Inserting ".$block_num_outputs." outputs\n";
-			
-			$this->app->run_query($insert_outputs_q);
-		}
-		
-		// Process all inputs
 		$inputs_q = "SELECT io.*, t.tx_hash FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE t.blockchain_id=".$this->db_blockchain['blockchain_id']." AND (";
 		$block_num_inputs = 0;
 		foreach ($rpc_transactions as &$rpc_transaction) {
@@ -463,117 +288,316 @@ class Blockchain {
 			}
 		}
 		
-		$full_input_info_by_tx_id = [];
+		$max_inputs_for_fast_mode = 3000;
 		
-		if ($block_num_inputs > 0) {
-			$inputs_q = substr($inputs_q, 0, -4).");";
-			$block_inputs = $this->app->run_query($inputs_q)->fetchAll();
-			
-			echo "Processing ".count($block_inputs)." inputs\n";
-			
-			if (count($block_inputs) > 0) {
-				$block_inputs_by_id = [];
-				foreach ($block_inputs as &$block_input) {
-					$id = $block_input['out_index']."-".$block_input['tx_hash'];
-					$block_inputs_by_id[$id] = $block_input;
-				}
-				
-				$input_io_ids = array_keys(AppSettings::arrayToMapOnKey($block_inputs, "io_id"));
-				
-				$this->app->run_query("DELETE FROM transaction_ios WHERE io_id IN (".implode(",", $input_io_ids).");");
-				
-				$io_fields = [
-					'io_id',
-					'blockchain_id',
-					'address_id',
-					'user_id',
-					'option_index',
-					'spend_status',
-					'out_index',
-					'in_index',
-					'is_destroy',
-					'is_separator',
-					'is_passthrough',
-					'is_receiver',
-					'create_transaction_id',
-					'spend_transaction_id',
-					'script_type',
-					'amount',
-					'coin_blocks_created',
-					'coin_blocks_destroyed',
-					'create_block_id',
-					'spend_block_id'
-				];
-				
-				$insert_spend_ios_q = "INSERT INTO transaction_ios (".implode(", ", $io_fields).") VALUES ";
-				
-				foreach ($rpc_transactions as &$rpc_transaction) {
-					$tx_hash = $this->db_blockchain['p2p_mode'] == "rpc" ? $rpc_transaction['txid'] : $rpc_transaction['tx_hash'];
-					$is_coinbase = false;
-					
-					if ($this->db_blockchain['p2p_mode'] == "rpc") {
-						if (!empty($rpc_transaction['vin'])) {
-							if (!empty($rpc_transaction['vin'][0]['coinbase'])) $is_coinbase = true;
-							$vins = $rpc_transaction['vin'];
-						}
-						else $vins = [];
-					}
-					else {
-						$vins = $rpc_transaction['inputs'];
-						if (count($vins) == 0) $is_coinbase = true;
-					}
-					
-					if (!$is_coinbase) {
-						$in_index = 0;
-						$processed_inputs_this_tx = 0;
-						$processed_inputs_amount_sum = 0;
-						
-						foreach ($vins as &$vin) {
-							$vin_identifier = $this->db_blockchain['p2p_mode'] == "rpc" ? $vin['vout']."-".$vin['txid'] : $vin->out_index."-".$vin->tx_hash;
-							
-							if (!empty($block_inputs_by_id[$vin_identifier])) {
-								$this_block_input = $block_inputs_by_id[$vin_identifier];
-								
-								$this_block_input['spend_status'] = 'spent';
-								$this_block_input['in_index'] = $in_index;
-								$this_block_input['spend_transaction_id'] = $db_transactions_by_hash[$tx_hash]->transaction_id;
-								$this_block_input['spend_block_id'] = $block_height;
-								$this_block_input['coin_blocks_created'] = ($block_height-$this_block_input['create_block_id'])*$this_block_input['amount'];
-								
-								$this_input_sql = "(";
-								foreach ($io_fields as &$io_field) {
-									$this_input_sql .= "'".$this_block_input[$io_field]."', ";
-								}
-								$this_input_sql = substr($this_input_sql, 0, -2)."), ";
-								$insert_spend_ios_q .= $this_input_sql;
-								$processed_inputs_this_tx++;
-								$processed_inputs_amount_sum += $this_block_input['amount'];
-							}
-							
-							$in_index++;
-						}
-						
-						if ($processed_inputs_this_tx == count($vins)) {
-							$full_input_info_by_tx_id[$db_transactions_by_hash[$tx_hash]->transaction_id] = [
-								'input_sum' => $processed_inputs_amount_sum
-							];
-						}
-					}
-				}
-				
-				$insert_spend_ios_q = substr($insert_spend_ios_q, 0, -2).";";
-				$this->app->run_query($insert_spend_ios_q);
-			}
+		if ($block_num_inputs > $max_inputs_for_fast_mode) {
+			if ($print_debug) $this->app->print_debug("Block has ".$block_num_inputs."/".$max_inputs_for_fast_mode." inputs; switching to slow mode.");
+			$any_error = $this->coind_add_block($block_hash, $block_height, false, $print_debug);
 		}
-		
-		// Set block & tx meta data
-		if (count($full_input_info_by_tx_id) > 0) {
-			$this->app->run_query("UPDATE transactions SET has_all_inputs=1 WHERE transaction_id IN (".implode(",", array_keys($full_input_info_by_tx_id)).");");
+		else {
+			$prev_block = $this->fetch_block_by_id($db_block['block_id']-1);
+			$this->app->run_query("UPDATE blocks SET time_mined=:time_mined, num_transactions=:num_transactions, sec_since_prev_block=:sec_since_prev_block WHERE internal_block_id=:internal_block_id;", [
+				'time_mined' => $time_mined,
+				'num_transactions' => $num_tx_in_block,
+				'internal_block_id' => $db_block['internal_block_id'],
+				'sec_since_prev_block' => empty($prev_block['time_mined']) ? null : $time_mined - $prev_block['time_mined']
+			]);
 			
-			$inner_q = "SELECT infot.transaction_id, SUM(io.amount) AS io_amount_sum FROM transaction_ios io JOIN transactions infot ON io.spend_transaction_id=infot.transaction_id WHERE infot.block_id=".$block_height." AND infot.blockchain_id=".$this->db_blockchain['blockchain_id']." AND infot.has_all_inputs=1 GROUP BY infot.transaction_id";
+			$tx_hash_csv = "'".implode("','", array_keys($tx_hash_to_pos))."'";
 			
 			if (empty(AppSettings::getParam('sqlite_db'))) {
-				$this->app->run_query("UPDATE transactions t INNER JOIN (".$inner_q.") info ON t.transaction_id=info.transaction_id SET t.amount=info.io_amount_sum WHERE t.blockchain_id=".$this->db_blockchain['blockchain_id']." AND t.block_id=".$block_height.";");
+				$this->app->run_query("DELETE t.*, io.*, gio.* FROM transactions t LEFT JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id LEFT JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE t.blockchain_id=:blockchain_id AND t.tx_hash IN (".$tx_hash_csv.");", [
+					'blockchain_id' => $this->db_blockchain['blockchain_id']
+				]);
+			}
+			else {
+				$this->app->run_query("DELETE FROM transaction_game_ios WHERE io_id IN (SELECT io.io_id FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id WHERE t.blockchain_id=:blockchain_id AND t.tx_hash IN (".$tx_hash_csv."));", [
+					'blockchain_id' => $this->db_blockchain['blockchain_id']
+				]);
+				
+				$this->app->run_query("DELETE FROM transaction_ios WHERE io_id IN (SELECT io.io_id FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id WHERE t.blockchain_id=:blockchain_id AND t.tx_hash IN (".$tx_hash_csv."));", [
+					'blockchain_id' => $this->db_blockchain['blockchain_id']
+				]);
+				
+				$this->app->run_query("DELETE FROM transactions WHERE tx_hash IN (".$tx_hash_csv.") AND blockchain_id=:blockchain_id;", [
+					'blockchain_id' => $this->db_blockchain['blockchain_id']
+				]);
+			}
+			
+			if (count($rpc_transactions) > 0) {
+				// Insert to transactions table
+				$insert_q = "INSERT INTO transactions (blockchain_id, block_id, transaction_desc, tx_hash, time_created, position_in_block, num_inputs, num_outputs, has_all_outputs) VALUES ";
+				$tx_pos = 0;
+				$time = time();
+				foreach ($rpc_transactions as &$rpc_transaction) {
+					if ($this->db_blockchain['p2p_mode'] == "rpc") {
+						$tx_num_in = count($rpc_transaction['vin']);
+						$tx_num_out = count($rpc_transaction['vout']);
+						$tx_hash = $rpc_transaction['txid'];
+					}
+					else {
+						$tx_num_in = count($rpc_transaction['inputs']);
+						$tx_num_out = count($rpc_transaction['outputs']);
+						$tx_hash = $rpc_transaction['tx_hash'];
+					}
+					
+					$insert_q .= "(".$this->db_blockchain['blockchain_id'].", ".$block_height.", '".($tx_pos == 0 ? "coinbase" : "transaction")."', '".$tx_hash."', ".$time.", ".$tx_pos.", ".$tx_num_in.", ".$tx_num_out.", 1), ";
+					$tx_pos++;
+				}
+				$insert_q = substr($insert_q, 0, -2).";";
+				$this->app->run_query($insert_q);
+			}
+			
+			$db_transactions = $this->app->run_query("SELECT * FROM transactions WHERE blockchain_id=".$this->db_blockchain['blockchain_id']." AND tx_hash IN (".$tx_hash_csv.");")->fetchAll();
+			$db_transactions_by_hash = (array)(AppSettings::arrayToMapOnKey($db_transactions, "tx_hash"));
+			
+			// Insert and load addresses for all outputs
+			$address_strings = [];
+			$address_to_id = [];
+			
+			foreach ($rpc_transactions as &$rpc_transaction) {
+				$vout_pos = 0;
+				
+				if ($this->db_blockchain['p2p_mode'] == "rpc") {
+					foreach ($rpc_transaction['vout'] as &$vout) {
+						list($address_text, $script_type, $address_error) = $this->vout_to_address_info($vout);
+						
+						if ($address_error) {
+							if ($print_debug) echo "No address for ".$rpc_transaction['txid'].", vout #".$vout_pos."\n";
+						}
+						else {
+							array_push($address_strings, $address_text);
+							$address_to_id[$address_text] = null;
+						}
+						
+						$vout_pos++;
+					}
+				}
+				else {
+					foreach ($rpc_transaction['outputs'] as &$vout) {
+						array_push($address_strings, $vout->address);
+						$address_to_id[$vout->address] = null;
+					}
+				}
+			}
+			
+			$addresses_csv = "'".implode("','", $address_strings)."'";
+			
+			$db_existing_addresses = $this->app->run_query("SELECT * FROM addresses WHERE address IN (".$addresses_csv.") AND primary_blockchain_id=:blockchain_id;", [
+				'blockchain_id' => $this->db_blockchain['blockchain_id']
+			])->fetchAll();
+			
+			$db_existing_addresses_by_address = (array)(AppSettings::arrayToMapOnKey($db_existing_addresses, "address"));
+			
+			$insert_addresses_q = "INSERT ".(!empty(AppSettings::getParam('sqlite_db')) ? "OR " : "")."IGNORE INTO addresses (primary_blockchain_id, address, time_created, is_mine, vote_identifier, option_index, is_destroy_address, is_separator_address, is_passthrough_address) VALUES ";
+			$time = time();
+			$insert_addr_count = 0;
+			
+			foreach ($address_strings as &$address_string) {
+				if (empty($db_existing_addresses_by_address[$address_string])) {
+					$vote_identifier = $this->app->addr_text_to_vote_identifier($address_string);
+					$option_index = $this->app->vote_identifier_to_option_index($vote_identifier);
+					
+					list($is_destroy_address, $is_separator_address, $is_passthrough_address) = $this->app->option_index_to_special_address_types($option_index);
+					
+					$insert_addresses_q .= "(".$this->db_blockchain['blockchain_id'].", '".$address_string."', ".$time.", 0, '".$vote_identifier."', '".$option_index."', ".(int)$is_destroy_address.", ".(int)$is_separator_address.", ".(int)$is_passthrough_address."), ";
+					
+					$insert_addr_count++;
+				}
+			}
+			
+			if ($insert_addr_count > 0) {
+				if ($print_debug) $this->app->print_debug("Adding ".$insert_addr_count." addresses");
+				$insert_addresses_q = substr($insert_addresses_q, 0, -2).";";
+				$this->app->run_query($insert_addresses_q);
+			}
+			
+			$db_existing_addresses = $this->app->run_query("SELECT * FROM addresses WHERE address IN (".$addresses_csv.") AND primary_blockchain_id=:blockchain_id;", [
+				'blockchain_id' => $this->db_blockchain['blockchain_id']
+			])->fetchAll();
+			
+			$db_existing_addresses_by_address = (array) (AppSettings::arrayToMapOnKey($db_existing_addresses, "address"));
+			
+			// Process all outputs
+			$insert_outputs_q = "INSERT INTO transaction_ios (blockchain_id, address_id, option_index, spend_status, out_index, is_destroy, is_separator, is_passthrough, is_receiver, create_transaction_id, script_type, amount, create_block_id) VALUES ";
+			$block_num_outputs = 0;
+			
+			foreach ($rpc_transactions as &$rpc_transaction) {
+				$out_index = 0;
+				$last_regular_output_index = false;
+				$first_passthrough_index = false;
+				
+				$vouts = $this->db_blockchain['p2p_mode'] == "rpc" ? $rpc_transaction['vout'] : $rpc_transaction['outputs'];
+				$tx_hash = $this->db_blockchain['p2p_mode'] == "rpc" ? $rpc_transaction['txid'] : $rpc_transaction['tx_hash'];
+				
+				foreach ($vouts as &$vout) {
+					if ($this->db_blockchain['p2p_mode'] == "rpc") {
+						list($address_text, $script_type, $address_error) = $this->vout_to_address_info($vout);
+						$output_value_int = (int)(pow(10, $this->db_blockchain['decimal_places'])*$vout['value']);
+					}
+					else {
+						$address_text = $vout->address;
+						$script_type = "pubkeyhash";
+						$output_value_int = $vout->amount;
+					}
+					
+					$this_addr = (array)($db_existing_addresses_by_address[$address_text]);
+					
+					if ($first_passthrough_index === false && $this_addr['is_passthrough_address'] == 1) $first_passthrough_index = $out_index;
+					
+					$is_receiver = 0;
+					if ($first_passthrough_index !== false && $this_addr['is_destroy_address'] == 0 && $this_addr['is_separator_address'] == 0 && $this_addr['is_passthrough_address'] == 0) $is_receiver = 1;
+					
+					if ($this_addr['is_destroy_address'] == 1) {}
+					else if ($this_addr['is_separator_address'] == 0 && $this_addr['is_passthrough_address'] == 0 && $is_receiver == 0) $last_regular_output_index = $out_index;
+					
+					$this_transaction_id = $db_transactions_by_hash[$tx_hash]->transaction_id;
+					
+					$insert_outputs_q .= "(".$this->db_blockchain['blockchain_id'].", ".$this_addr['address_id'].", '".$this_addr['option_index']."', 'unspent', '".$out_index."', '".$this_addr['is_destroy_address']."', '".$this_addr['is_separator_address']."', '".$this_addr['is_passthrough_address']."', '".$is_receiver."', ".$this_transaction_id.", '".$script_type."', '".$output_value_int."', ".$block_height."), ";
+					
+					$out_index++;
+				}
+				
+				$block_num_outputs += count($vouts);
+			}
+			
+			if ($block_num_outputs > 0) {
+				$insert_outputs_q = substr($insert_outputs_q, 0, -2).";";
+				
+				if ($print_debug) $this->app->print_debug("Inserting ".$block_num_outputs." outputs");
+				
+				$this->app->run_query($insert_outputs_q);
+			}
+			
+			// Process all inputs
+			$full_input_info_by_tx_id = [];
+			
+			if ($block_num_inputs > 0) {
+				$inputs_q = substr($inputs_q, 0, -4).");";
+				//if ($print_debug) $this->app->print_debug($inputs_q);
+				$block_inputs = $this->app->run_query($inputs_q)->fetchAll();
+				
+				if ($print_debug) $this->app->print_debug("Processing ".count($block_inputs)." inputs");
+				
+				if (count($block_inputs) > 0) {
+					$block_inputs_by_id = [];
+					foreach ($block_inputs as &$block_input) {
+						$id = $block_input['out_index']."-".$block_input['tx_hash'];
+						$block_inputs_by_id[$id] = $block_input;
+					}
+					
+					$input_io_ids = array_keys(AppSettings::arrayToMapOnKey($block_inputs, "io_id"));
+					
+					$this->app->run_query("DELETE FROM transaction_ios WHERE io_id IN (".implode(",", $input_io_ids).");");
+					
+					$io_fields = [
+						'io_id',
+						'blockchain_id',
+						'address_id',
+						'user_id',
+						'option_index',
+						'spend_status',
+						'out_index',
+						'in_index',
+						'is_destroy',
+						'is_separator',
+						'is_passthrough',
+						'is_receiver',
+						'create_transaction_id',
+						'spend_transaction_id',
+						'script_type',
+						'amount',
+						'coin_blocks_created',
+						'coin_blocks_destroyed',
+						'create_block_id',
+						'spend_block_id'
+					];
+					
+					$insert_spend_ios_q = "INSERT INTO transaction_ios (".implode(", ", $io_fields).") VALUES ";
+					
+					foreach ($rpc_transactions as &$rpc_transaction) {
+						$tx_hash = $this->db_blockchain['p2p_mode'] == "rpc" ? $rpc_transaction['txid'] : $rpc_transaction['tx_hash'];
+						$is_coinbase = false;
+						
+						if ($this->db_blockchain['p2p_mode'] == "rpc") {
+							if (!empty($rpc_transaction['vin'])) {
+								if (!empty($rpc_transaction['vin'][0]['coinbase'])) $is_coinbase = true;
+								$vins = $rpc_transaction['vin'];
+							}
+							else $vins = [];
+						}
+						else {
+							$vins = $rpc_transaction['inputs'];
+							if (count($vins) == 0) $is_coinbase = true;
+						}
+						
+						if (!$is_coinbase) {
+							$in_index = 0;
+							$processed_inputs_this_tx = 0;
+							$processed_inputs_amount_sum = 0;
+							
+							foreach ($vins as &$vin) {
+								$vin_identifier = $this->db_blockchain['p2p_mode'] == "rpc" ? $vin['vout']."-".$vin['txid'] : $vin->out_index."-".$vin->tx_hash;
+								
+								if (!empty($block_inputs_by_id[$vin_identifier])) {
+									$this_block_input = $block_inputs_by_id[$vin_identifier];
+									
+									$this_block_input['spend_status'] = 'spent';
+									$this_block_input['in_index'] = $in_index;
+									$this_block_input['spend_transaction_id'] = $db_transactions_by_hash[$tx_hash]->transaction_id;
+									$this_block_input['spend_block_id'] = $block_height;
+									$this_block_input['coin_blocks_created'] = ($block_height-$this_block_input['create_block_id'])*$this_block_input['amount'];
+									
+									$this_input_sql = "(";
+									foreach ($io_fields as &$io_field) {
+										$this_input_sql .= "'".$this_block_input[$io_field]."', ";
+									}
+									$this_input_sql = substr($this_input_sql, 0, -2)."), ";
+									$insert_spend_ios_q .= $this_input_sql;
+									$processed_inputs_this_tx++;
+									$processed_inputs_amount_sum += $this_block_input['amount'];
+								}
+								
+								$in_index++;
+							}
+							
+							if ($processed_inputs_this_tx == count($vins)) {
+								$full_input_info_by_tx_id[$db_transactions_by_hash[$tx_hash]->transaction_id] = [
+									'input_sum' => $processed_inputs_amount_sum
+								];
+							}
+						}
+					}
+					
+					$insert_spend_ios_q = substr($insert_spend_ios_q, 0, -2).";";
+					$this->app->run_query($insert_spend_ios_q);
+				}
+			}
+			
+			// Set block & tx meta data
+			if (count($full_input_info_by_tx_id) > 0) {
+				$this->app->run_query("UPDATE transactions SET has_all_inputs=1 WHERE transaction_id IN (".implode(",", array_keys($full_input_info_by_tx_id)).");");
+				
+				$inner_q = "SELECT infot.transaction_id, SUM(io.amount) AS io_amount_sum FROM transaction_ios io JOIN transactions infot ON io.spend_transaction_id=infot.transaction_id WHERE infot.block_id=".$block_height." AND infot.blockchain_id=".$this->db_blockchain['blockchain_id']." AND infot.has_all_inputs=1 GROUP BY infot.transaction_id";
+				
+				if (empty(AppSettings::getParam('sqlite_db'))) {
+					$this->app->run_query("UPDATE transactions t INNER JOIN (".$inner_q.") info ON t.transaction_id=info.transaction_id SET t.amount=info.io_amount_sum WHERE t.blockchain_id=".$this->db_blockchain['blockchain_id']." AND t.block_id=".$block_height.";");
+				}
+				else {
+					$info_by_tx = $this->app->run_query($inner_q)->fetchAll(PDO::FETCH_COLUMN | PDO::FETCH_GROUP);
+					$tx_ids = array_keys($info_by_tx);
+					
+					if (count($tx_ids) > 0) {
+						$amount_sums = array_column(array_values($info_by_tx), 0);
+						$this->app->bulk_mapped_update_query("transactions", ['amount' => $amount_sums], ['transaction_id' => $tx_ids]);
+					}
+				}
+			}
+			
+			$inner_q = "SELECT infot.transaction_id, SUM(io.amount) AS io_amount_sum FROM transaction_ios io JOIN transactions infot ON io.create_transaction_id=infot.transaction_id WHERE infot.block_id=".$block_height." AND infot.blockchain_id=".$this->db_blockchain['blockchain_id']." AND infot.has_all_outputs=1 GROUP BY infot.transaction_id";
+			
+			if (empty(AppSettings::getParam('sqlite_db'))) {
+				$this->app->run_query("UPDATE transactions t INNER JOIN (".$inner_q.") info ON t.transaction_id=info.transaction_id SET t.output_sum=info.io_amount_sum WHERE t.blockchain_id=".$this->db_blockchain['blockchain_id']." AND t.block_id=".$block_height.";");
 			}
 			else {
 				$info_by_tx = $this->app->run_query($inner_q)->fetchAll(PDO::FETCH_COLUMN | PDO::FETCH_GROUP);
@@ -584,29 +608,14 @@ class Blockchain {
 					$this->app->bulk_mapped_update_query("transactions", ['amount' => $amount_sums], ['transaction_id' => $tx_ids]);
 				}
 			}
-		}
-		
-		$inner_q = "SELECT infot.transaction_id, SUM(io.amount) AS io_amount_sum FROM transaction_ios io JOIN transactions infot ON io.create_transaction_id=infot.transaction_id WHERE infot.block_id=".$block_height." AND infot.blockchain_id=".$this->db_blockchain['blockchain_id']." AND infot.has_all_outputs=1 GROUP BY infot.transaction_id";
-		
-		if (empty(AppSettings::getParam('sqlite_db'))) {
-			$this->app->run_query("UPDATE transactions t INNER JOIN (".$inner_q.") info ON t.transaction_id=info.transaction_id SET t.output_sum=info.io_amount_sum WHERE t.blockchain_id=".$this->db_blockchain['blockchain_id']." AND t.block_id=".$block_height.";");
-		}
-		else {
-			$info_by_tx = $this->app->run_query($inner_q)->fetchAll(PDO::FETCH_COLUMN | PDO::FETCH_GROUP);
-			$tx_ids = array_keys($info_by_tx);
 			
-			if (count($tx_ids) > 0) {
-				$amount_sums = array_column(array_values($info_by_tx), 0);
-				$this->app->bulk_mapped_update_query("transactions", ['amount' => $amount_sums], ['transaction_id' => $tx_ids]);
-			}
+			$this->app->run_query("UPDATE transactions SET fee_amount=amount-output_sum WHERE blockchain_id=".$this->db_blockchain['blockchain_id']." AND block_id=".$block_height." AND has_all_inputs=1 AND has_all_outputs=1 AND output_sum IS NOT NULL;");
+			
+			$this->set_block_stats($db_block);
+			
+			$postprocessing_error = $this->coind_postprocess_block($block_height, $db_block, $ref_time);
+			if ($postprocessing_error) $any_error = true;
 		}
-		
-		$this->app->run_query("UPDATE transactions SET fee_amount=amount-output_sum WHERE blockchain_id=".$this->db_blockchain['blockchain_id']." AND block_id=".$block_height." AND has_all_inputs=1 AND has_all_outputs=1 AND output_sum IS NOT NULL;");
-		
-		$this->set_block_stats($db_block);
-		
-		$postprocessing_error = $this->coind_postprocess_block($block_height, $db_block, $ref_time);
-		if ($postprocessing_error) $any_error = true;
 		
 		if ($any_error) $this->delete_blocks_from_height($block_height);
 		
@@ -891,7 +900,7 @@ class Blockchain {
 					'num_outputs' => count($outputs),
 					'time_created' => time()
 				];
-				$this->app->run_query("transactions", $new_tx_params);
+				$this->app->run_insert_query("transactions", $new_tx_params);
 				$db_transaction_id = $this->app->last_insert_id();
 			}
 			
