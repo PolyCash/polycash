@@ -1603,13 +1603,18 @@ class App {
 				if (PHP_OS == "WINNT") {
 					$pid_cmd = 'tasklist /fi "PID eq '.$process_running.'" /NH';
 					$pid_response = exec($pid_cmd);
+					
 					$pid_no_match_str = "INFO: No tasks";
 					
 					if (substr($pid_response, 0, strlen($pid_no_match_str)) == $pid_no_match_str) {
 						$this->set_site_constant($lock_name, 0);
 						return 0;
 					}
-					else return $process_running;
+					else {
+						$process_is_php = strpos($pid_response, 'php.exe') === false ? false : true;
+						if ($process_is_php) return $process_running;
+						else return 0;
+					}
 				}
 				else {
 					$cmd = "ps -p ".$process_running."|wc -l";
