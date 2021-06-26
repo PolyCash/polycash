@@ -89,7 +89,7 @@ class PeerVerifier {
 			
 			$out_obj = [];
 			
-			while ($all_blocks as $block) {
+			foreach ($all_blocks as $block) {
 				array_push($out_obj, [
 					"block_id" => $block['block_id'],
 					"num_transactions" => $block['num_transactions'],
