@@ -85,12 +85,12 @@ if ($app->running_as_admin()) {
 				$num_ios_in = $app->run_query("SELECT COUNT(*) FROM transaction_ios io JOIN transactions t ON io.spend_transaction_id=t.transaction_id WHERE t.block_id=:block_id AND t.blockchain_id=:blockchain_id;", [
 					'block_id' => $check_block['block_id'],
 					'blockchain_id' => $blockchain->db_blockchain['blockchain_id']
-				])->fetch(PDO::FETCH_NUM[0])[0];
+				])->fetch(PDO::FETCH_NUM)[0];
 				
 				$num_ios_out = $app->run_query("SELECT COUNT(*) FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE t.block_id=:block_id AND t.blockchain_id=:blockchain_id;", [
 					'block_id' => $check_block['block_id'],
 					'blockchain_id' => $blockchain->db_blockchain['blockchain_id']
-				])->fetch(PDO::FETCH_NUM[0])[0];
+				])->fetch(PDO::FETCH_NUM)[0];
 				
 				$this_block_error = false;
 				if ($check_block['num_ios_in'] != $num_ios_in) {

@@ -9,7 +9,8 @@ class GameDefinition {
 			'apply_defined_to_actual',
 			'create_from_text',
 			'set_from_text',
-			'set_from_peer'
+			'set_from_peer',
+			'set_blocks_by_ui',
 		];
 	}
 	

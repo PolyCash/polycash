@@ -3882,7 +3882,7 @@ class App {
 	}
 	
 	public function fetch_recent_migrations(&$game, $fetchQuantity) {
-		$migrationQueryBase = "game_definition_migrations WHERE game_id=:game_id AND migration_type = 'apply_defined_to_actual' ORDER BY migration_time DESC";
+		$migrationQueryBase = "game_definition_migrations WHERE game_id=:game_id AND migration_type != 'set_blocks_by_ui' ORDER BY migration_time DESC";
 		$migrationQuantity = $this->run_query("SELECT COUNT(*) FROM ".$migrationQueryBase, [
 			'game_id' => $game->db_game['game_id']
 		])->fetch()['COUNT(*)'];
