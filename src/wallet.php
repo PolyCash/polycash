@@ -379,7 +379,7 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 		$message = "Great, your transaction fee has been updated!";
 	}
 	else {
-		if (in_array($voting_strategy, ['manual', 'api', 'by_plan', 'by_entity','hit_url'])) {
+		if (in_array($voting_strategy, ['manual', 'api', 'by_plan', 'by_entity','hit_url','featured'])) {
 			$min_votesum_pct = intval($_REQUEST['min_votesum_pct']);
 			$max_votesum_pct = intval($_REQUEST['max_votesum_pct']);
 			

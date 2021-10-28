@@ -384,7 +384,9 @@ class Game {
 			}
 			
 			$apply_strategies_pos = 0;
-			while (microtime(true)-$ref_time < $max_seconds && $user_game = $apply_strategies[$apply_strategies_pos]) {
+			while (microtime(true)-$ref_time < $max_seconds && !empty($apply_strategies[$apply_strategies_pos])) {
+				$user_game = $apply_strategies[$apply_strategies_pos];
+				
 				$last_block_id = $this->blockchain->last_block_id();
 				
 				if ($this->last_block_id() == $last_block_id) {
