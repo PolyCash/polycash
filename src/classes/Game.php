@@ -367,13 +367,11 @@ class Game {
 			
 			$strategies_params = [
 				'game_id' => $this->db_game['game_id'],
-				'block_of_round' => $block_of_round,
 				'current_time' => time()
 			];
 			$strategies_q = "SELECT *, u.user_id, g.game_id FROM users u JOIN user_games g ON u.user_id=g.user_id JOIN user_strategies s ON g.strategy_id=s.strategy_id";
-			$strategies_q .= " JOIN user_strategy_blocks usb ON s.strategy_id=usb.strategy_id";
 			$strategies_q .= " LEFT JOIN featured_strategies fs ON s.featured_strategy_id=fs.featured_strategy_id";
-			$strategies_q .= " WHERE g.game_id=:game_id AND usb.block_within_round=:block_of_round";
+			$strategies_q .= " WHERE g.game_id=:game_id";
 			$strategies_q .= " AND (s.voting_strategy IN ('by_rank', 'by_entity', 'api', 'by_plan', 'featured','hit_url'))";
 			$strategies_q .= " AND (s.time_next_apply IS NULL OR s.time_next_apply<:current_time)";
 			$strategies_q .= " ORDER BY ".AppSettings::sqlRand().";";
@@ -411,7 +409,7 @@ class Game {
 					}
 				}
 				
-				$apply_strategies_pos = 0;
+				$apply_strategies_pos++;
 			}
 		}
 		else if ($print_debug) echo "Game and blockchain are out of sync: not applying user strategies.";

@@ -364,6 +364,11 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 		$voting_strategy_id = $app->last_insert_id();
 		
 		$user_strategy = $app->fetch_strategy_by_id($voting_strategy_id);
+		
+		$app->run_query("UPDATE user_games SET strategy_id=:strategy_id WHERE user_game_id=:user_game_id;", [
+			'strategy_id' => $user_strategy['strategy_id'],
+			'user_game_id' => $user_game['user_game_id'],
+		]);
 	}
 	
 	if ($_REQUEST['action'] == "save_voting_strategy_fees") {
@@ -402,12 +407,6 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 			
 			$update_strategy_q .= ", max_votesum_pct=:max_votesum_pct, min_votesum_pct=:min_votesum_pct, api_url=:api_url WHERE strategy_id=:strategy_id;";
 			$app->run_query($update_strategy_q, $update_strategy_params);
-			
-			$app->run_query("UPDATE user_games SET strategy_id=:strategy_id WHERE game_id=:game_id AND user_id=:user_id;", [
-				'strategy_id' => $user_strategy['strategy_id'],
-				'game_id' => $game->db_game['game_id'],
-				'user_id' => $thisuser->db_user['user_id']
-			]);
 		}
 		
 		$entity_pct_sum = 0;
@@ -440,27 +439,6 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 			if ($voting_strategy == "by_entity") {
 				$error_code = 2;
 				$message = "Error: the percentages that you entered did not add up to 100, your changes were discarded.";
-			}
-		}
-		
-		for ($block=1; $block<=$game->db_game['round_length']; $block++) {
-			$strategy_block = $app->run_query("SELECT * FROM user_strategy_blocks WHERE strategy_id=:strategy_id AND block_within_round=:block_within_round;", [
-				'strategy_id' => $user_strategy['strategy_id'],
-				'block_within_round' => $block
-			])->fetch();
-			
-			if (isset($_REQUEST['vote_on_block_'.$block]) && $_REQUEST['vote_on_block_'.$block] == "1") {
-				if (!$strategy_block) {
-					$app->run_insert_query("user_strategy_blocks", [
-						'strategy_id' => $user_strategy['strategy_id'],
-						'block_within_round' => $block
-					]);
-				}
-			}
-			else if ($strategy_block) {
-				$app->run_query("DELETE FROM user_strategy_blocks WHERE strategy_block_id=:strategy_block_id;", [
-					'strategy_block_id' => $strategy_block['strategy_block_id']
-				]);
 			}
 		}
 	}
@@ -1024,49 +1002,6 @@ if ($thisuser && $game) {
 								<button class="btn btn-sm btn-primary" onclick="thisPageManager.show_featured_strategies(); return false;"><i class="fas fa-list"></i> &nbsp; Choose a strategy</button>
 							</div>
 						</div>
-						<?php /*
-						<div class="row bordered_row">
-							<div class="col-md-12">
-								<br/><br/>
-								<b>Settings</b><br/>
-								These settings apply if you selected the "Plan my votes" option above.<br/>
-								Wait until <input size="4" type="text" name="aggregate_threshold" id="aggregate_threshold" value="<?php echo $user_strategy['aggregate_threshold']; ?>" />% of my coins are available to vote. <br/>
-								Only vote in these blocks of the round:<br/>
-								
-								<div style="border: 1px solid #bbb; padding: 10px; margin: 10px 0px; max-height: 200px; overflow-x: hidden; overflow-y: scroll;">
-									<div class="row">
-										<div class="col-md-2">
-											<input type="checkbox" id="vote_on_block_all" onchange="thisPageManager.vote_on_block_all_changed();" /><label class="plainlabel" for="vote_on_block_all">&nbsp;&nbsp;All</label>
-										</div>
-									</div>
-									<div class="row">
-										<?php
-										for ($block=1; $block<=$game->db_game['round_length']; $block++) {
-											echo '<div class="col-md-2">';
-											echo '<input type="checkbox" name="vote_on_block_'.$block.'" id="vote_on_block_'.$block.'" value="1"';
-											
-											$strategy_block_q = "SELECT * FROM user_strategy_blocks WHERE strategy_id=:strategy_id AND block_within_round=:block_within_round;";
-											$strategy_block_arr = $app->run_query($strategy_block_q, [
-												'strategy_id' => $user_strategy['strategy_id'],
-												'block_within_round' => $block
-											])->fetchAll();
-											if (count($strategy_block_arr) > 0) echo ' checked="checked"';
-											
-											echo '><label class="plainlabel" for="vote_on_block_'.$block.'">&nbsp;&nbsp;';
-											echo $block."</label>";
-											echo '</div>';
-											if ($block%6 == 0) echo '</div><div class="row">';
-										}
-										?>
-									</div>
-								</div>
-								
-								Only vote for options which have between <input type="tel" size="4" value="<?php echo $user_strategy['min_votesum_pct']; ?>" name="min_votesum_pct" id="min_votesum_pct" />% and <input type="tel" size="4" value="<?php echo $user_strategy['max_votesum_pct']; ?>" name="max_votesum_pct" id="max_votesum_pct" />% of the current votes.<br/>
-								
-								Maintain <input type="tel" size="6" id="min_coins_available" name="min_coins_available" value="<?php echo round($user_strategy['min_coins_available'], 2); ?>" /> EMP available at all times.  This number of coins will be reserved and won't be voted.
-							</div>
-						</div>
-						 */ ?>
 						<br/>
 						<button class="btn btn-sm btn-success" type="submit"><i class="fas fa-check-circle"></i> &nbsp; Save my Strategy</button>
 					</form>

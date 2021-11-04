@@ -170,13 +170,6 @@ class User {
 			
 			$strategy = $this->app->fetch_strategy_by_id($strategy_id);
 			
-			for ($block=1; $block<=$game->db_game['round_length']; $block++) {
-				$this->app->run_insert_query("user_strategy_blocks", [
-					'strategy_id' => $strategy_id,
-					'block_within_round' => $block
-				]);
-			}
-			
 			$this->app->run_query("UPDATE user_games SET strategy_id=:strategy_id WHERE user_game_id=:user_game_id;", [
 				'strategy_id' => $strategy_id,
 				'user_game_id' => $user_game['user_game_id']
