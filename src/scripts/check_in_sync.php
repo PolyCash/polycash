@@ -5,7 +5,7 @@ $script_start_time = microtime(true);
 require_once(dirname(dirname(__FILE__))."/includes/connect.php");
 require_once(dirname(dirname(__FILE__))."/classes/PeerVerifier.php");
 
-$allowed_params = ['mode','game_identifier','blockchain_identifier','peer_id','remote_key'];
+$allowed_params = ['mode','game_identifier','blockchain_identifier','peer_id','remote_key','remote_host'];
 $app->safe_merge_argv_to_request($argv, $allowed_params);
 
 if ($app->running_as_admin()) {
