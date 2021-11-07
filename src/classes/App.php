@@ -1754,16 +1754,6 @@ class App {
 		$verbatim_vars = $this->blockchain_verbatim_vars();
 		$blockchain_definition = [];
 		
-		if (in_array($blockchain->db_blockchain['p2p_mode'], array("web_api", "none"))) {
-			if ($blockchain->db_blockchain['p2p_mode'] == "none") {
-				$peer = $this->get_peer_by_server_name(AppSettings::getParam('base_url'), true);
-			}
-			else {
-				$peer = $this->fetch_peer_by_id($blockchain->db_blockchain['authoritative_peer_id']);
-			}
-			$blockchain_definition['peer'] = $peer['base_url'];
-		}
-		
 		for ($i=0; $i<count($verbatim_vars); $i++) {
 			$var_type = $verbatim_vars[$i][0];
 			$var_name = $verbatim_vars[$i][1];
@@ -1777,6 +1767,19 @@ class App {
 			
 			$blockchain_definition[$var_name] = $var_val;
 		}
+		
+		if ($blockchain_definition['p2p_mode'] == "none") $blockchain_definition['p2p_mode'] = "web_api";
+		
+		if (in_array($blockchain->db_blockchain['p2p_mode'], array("web_api", "none"))) {
+			if ($blockchain->db_blockchain['p2p_mode'] == "none") {
+				$peer = $this->get_peer_by_server_name(AppSettings::getParam('base_url'), true);
+			}
+			else {
+				$peer = $this->fetch_peer_by_id($blockchain->db_blockchain['authoritative_peer_id']);
+			}
+			$blockchain_definition['peer'] = $peer['base_url'];
+		}
+		
 		return $blockchain_definition;
 	}
 	
