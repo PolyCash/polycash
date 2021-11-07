@@ -83,6 +83,15 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 							'blockchain_id' => $existing_blockchain['blockchain_id']
 						]);
 					}
+					else if (in_array($_REQUEST['action'], ["start_mining", "stop_mining"])) {
+						if ($existing_blockchain['p2p_mode'] == "rpc") {
+							$app->run_query("UPDATE blockchains SET is_rpc_mining=:is_rpc_mining WHERE blockchain_id=:blockchain_id;", [
+								'is_rpc_mining' => $_REQUEST['action'] == "start_mining" ? 1 : 0,
+								'blockchain_id' => $existing_blockchain['blockchain_id']
+							]);
+						}
+						else die("Invalid action supplied.");
+					}
 					else die("Invalid action supplied.");
 				}
 				else die("Error: invalid blockchain ID.");
@@ -107,7 +116,7 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 						<tr>
 							<th style="width: 180px;">P2P Type</th>
 							<th>Name</th>
-							<th>Enabled?</th>
+							<th>Status</th>
 							<th>Connection Status</th>
 							<th>Actions</th>
 						</tr>
@@ -133,6 +142,12 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 								<td><?php
 								if ($blockchain->db_blockchain['online']) echo '<font class="text-success">Enabled</font>';
 								else echo '<font class="text-danger">Disabled</font>';
+								
+								echo ", ";
+								
+								if ($blockchain->db_blockchain['p2p_mode'] == "none") echo "Mining";
+								else if ($blockchain->db_blockchain['p2p_mode'] == "web_api") echo "Not Mining";
+								else echo $blockchain->db_blockchain['is_rpc_mining'] ? "Mining" : "Not Mining";
 								?></td>
 								<td>
 									<?php
@@ -178,6 +193,18 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 										if ($blockchain->db_blockchain['p2p_mode'] == "none") { ?>
 											<option value="claim_coinbase">Transfer mined coins to address</option>
 											<?php
+										}
+										if ($blockchain->db_blockchain['p2p_mode'] == "rpc") {
+											if ($blockchain->db_blockchain['is_rpc_mining']) {
+												?>
+												<option value="stop_mining">Stop Mining</option>
+												<?php
+											}
+											else {
+												?>
+												<option value="start_mining">Start Mining</option>
+												<?php
+											}
 										}
 										?>
 									</select>
@@ -229,6 +256,18 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 									
 									<form method="post" action="/manage_blockchains/" id="enable_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>">
 										<input type="hidden" name="action" value="enable" />
+										<input type="hidden" name="blockchain_id" value="<?php echo $blockchain->db_blockchain['blockchain_id']; ?>" />
+										<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
+									</form>
+									
+									<form method="post" action="/manage_blockchains/" id="start_mining_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>">
+										<input type="hidden" name="action" value="start_mining" />
+										<input type="hidden" name="blockchain_id" value="<?php echo $blockchain->db_blockchain['blockchain_id']; ?>" />
+										<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
+									</form>
+									
+									<form method="post" action="/manage_blockchains/" id="stop_mining_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>">
+										<input type="hidden" name="action" value="stop_mining" />
 										<input type="hidden" name="blockchain_id" value="<?php echo $blockchain->db_blockchain['blockchain_id']; ?>" />
 										<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
 									</form>
@@ -327,6 +366,8 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 					var confirm_message = "Are you sure you want to ";
 					if (action == "reset_synchronize") confirm_message += "reset & synchronize "+blockchain_name+"?";
 					else if (action == "claim_coinbase") confirm_message += "move mined coins to an address?";
+					else if (action == "start_mining") confirm_message += "start mining?";
+					else if (action == "stop_mining") confirm_message += "stop mining?";
 					else confirm_message += action+" "+blockchain_name+"?";
 					confirm_ok = confirm(confirm_message);
 				}

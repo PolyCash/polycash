@@ -38,65 +38,79 @@ if ($app->running_as_admin()) {
 			}
 		}
 		
-		$online_blockchains = $app->run_query("SELECT * FROM blockchains WHERE online=1 AND p2p_mode='rpc';");
-		while ($db_online_blockchain = $online_blockchains->fetch()) {
-			$online_blockchain = new Blockchain($app, $db_online_blockchain['blockchain_id']);
-			$online_blockchain->load_coin_rpc();
-			
-			if ($online_blockchain->coin_rpc) {
-				$getblockchaininfo = $online_blockchain->coin_rpc->getblockchaininfo();
-				
-				if (!empty($getblockchaininfo['headers'])) {
-					$app->run_query("UPDATE blockchains SET rpc_last_time_connected=:current_time, block_height=:block_height WHERE blockchain_id=:blockchain_id;", [
-						'current_time' => time(),
-						'block_height' => $getblockchaininfo['headers'],
-						'blockchain_id' => $online_blockchain->db_blockchain['blockchain_id']
-					]);
-				}
-			}
-		}
-		
 		$loop_target_time = 5;
 		do {
 			$loop_start_time = microtime(true);
 			
-			$mineable_blockchains = $app->run_query("SELECT * FROM blockchains WHERE online=1 AND p2p_mode='none';");
+			$mineable_blockchains = $app->run_query("SELECT * FROM blockchains WHERE online=1 AND p2p_mode IN ('none','rpc');");
 			
 			while ($db_mineable_blockchain = $mineable_blockchains->fetch()) {
 				$mineable_blockchain = new Blockchain($app, $db_mineable_blockchain['blockchain_id']);
 				
-				if ($mineable_blockchain->last_block_id()%10 == 0) $mineable_blockchain->set_average_seconds_per_block(false);
-				
-				$speedup_factor = $mineable_blockchain->seconds_per_block('average')/$mineable_blockchain->seconds_per_block('target');
-				$remaining_prob = round($speedup_factor*$loop_target_time/$mineable_blockchain->seconds_per_block('target'), 4);
-				
-				do {
-					$benchmark_time = microtime(true);
+				if ($mineable_blockchain->db_blockchain['p2p_mode'] == "rpc") {
+					$mineable_blockchain->load_coin_rpc();
 					
-					$last_block_id = $mineable_blockchain->last_block_id();
-					
-					$block_prob = min(1, $remaining_prob);
-					$remaining_prob = $remaining_prob-$block_prob;
-					$rand_num = rand(0, pow(10,4))/pow(10,4);
-					if (!empty($_REQUEST['force_new_block'])) $rand_num = 0;
-					
-					if ($print_debug) echo "\n".$mineable_blockchain->db_blockchain['blockchain_name']." (".$rand_num." vs ".$block_prob."): ";
-					
-					if ($rand_num <= $block_prob) {
-						if ($print_debug) echo "FOUND A BLOCK!!\n";
-						$txt = "";
-						$mineable_blockchain->new_block($txt);
-						if ($print_debug) echo $txt."\n";
+					if ($mineable_blockchain->coin_rpc) {
+						$getblockchaininfo = $mineable_blockchain->coin_rpc->getblockchaininfo();
+						
+						if (!empty($getblockchaininfo['headers'])) {
+							$app->run_query("UPDATE blockchains SET rpc_last_time_connected=:current_time, block_height=:block_height WHERE blockchain_id=:blockchain_id;", [
+								'current_time' => time(),
+								'block_height' => $getblockchaininfo['headers'],
+								'blockchain_id' => $mineable_blockchain->db_blockchain['blockchain_id']
+							]);
+							
+							if ($mineable_blockchain->db_blockchain['is_rpc_mining']) {
+								$rpc_mining_lock_name = "rpc_mining_".$mineable_blockchain->db_blockchain['blockchain_id'];
+								$rpc_mining_already = $app->check_process_running($rpc_mining_lock_name);
+								
+								if ($rpc_mining_already) {
+									if ($print_debug) echo "Already mining ".$mineable_blockchain->db_blockchain['blockchain_name']."\n";
+								}
+								else {
+									if ($print_debug) echo "Start mining ".$mineable_blockchain->db_blockchain['blockchain_name']."\n";
+									
+									$cmd = $app->php_binary_location().' "'.AppSettings::srcPath().'/cron/rpc_mine_block.php" blockchain_id='.$mineable_blockchain->db_blockchain['blockchain_id'];
+									$rpc_mining_process = $app->run_shell_command($cmd, $print_debug);
+								}
+							}
+						}
 					}
-					else if ($print_debug) echo "No block\n";
-					
-					if ($print_debug) $app->flush_buffers();
-					
-					$benchmark_time = microtime(true);
 				}
-				while ($remaining_prob > 0);
-				
-				$mineable_blockchain->set_last_hash_time(time());
+				else {
+					if ($mineable_blockchain->last_block_id()%10 == 0) $mineable_blockchain->set_average_seconds_per_block(false);
+					
+					$speedup_factor = $mineable_blockchain->seconds_per_block('average')/$mineable_blockchain->seconds_per_block('target');
+					$remaining_prob = round($speedup_factor*$loop_target_time/$mineable_blockchain->seconds_per_block('target'), 4);
+					
+					do {
+						$benchmark_time = microtime(true);
+						
+						$last_block_id = $mineable_blockchain->last_block_id();
+						
+						$block_prob = min(1, $remaining_prob);
+						$remaining_prob = $remaining_prob-$block_prob;
+						$rand_num = rand(0, pow(10,4))/pow(10,4);
+						if (!empty($_REQUEST['force_new_block'])) $rand_num = 0;
+						
+						if ($print_debug) echo "\n".$mineable_blockchain->db_blockchain['blockchain_name']." (".$rand_num." vs ".$block_prob."): ";
+						
+						if ($rand_num <= $block_prob) {
+							if ($print_debug) echo "FOUND A BLOCK!!\n";
+							$txt = "";
+							$mineable_blockchain->new_block($txt);
+							if ($print_debug) echo $txt."\n";
+						}
+						else if ($print_debug) echo "No block\n";
+						
+						if ($print_debug) $app->flush_buffers();
+						
+						$benchmark_time = microtime(true);
+					}
+					while ($remaining_prob > 0);
+					
+					$mineable_blockchain->set_last_hash_time(time());
+				}
 			}
 			
 			$loop_stop_time = microtime(true);
