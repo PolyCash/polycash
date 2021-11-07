@@ -2052,7 +2052,10 @@ class App {
 	public function permission_to_claim_address(&$thisuser, &$address_blockchain, &$db_address) {
 		if (!empty($thisuser) && $this->user_is_admin($thisuser) && empty($db_address['user_id'])) {
 			if ($address_blockchain->db_blockchain['p2p_mode'] == "none") return true;
-			else return false;
+			else {
+				if ($db_address['is_mine']) return true;
+				else return false;
+			}
 		}
 		else return false;
 	}
