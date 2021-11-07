@@ -52,13 +52,12 @@
 			echo '<div class="status_footer_section">';
 			echo '<a href="/explorer/blockchains/'.$db_blockchain['url_identifier'].'/blocks/">';
 			if ($db_blockchain['default_image_id'] > 0) echo '<img class="status_footer_img" src="/images/custom/'.$db_blockchain['default_image_id'].'.'.$db_blockchain['extension'].'" />';
-			else echo $db_blockchain['blockchain_name']." ";
 			
 			if ($blockchain->last_active_time() > time()-(60*60)) {
-				echo '<font class="text-success">Online</font>';
+				echo '<font class="text-success">'.$db_blockchain['blockchain_name'].'</font>';
 			}
 			else {
-				echo '<font class="text-danger">Offline</font>';
+				echo '<font class="text-danger">'.$db_blockchain['blockchain_name'].'</font>';
 			}
 			echo "</a>";
 			echo '</div>';
