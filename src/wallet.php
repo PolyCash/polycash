@@ -133,7 +133,47 @@ if ($requested_game) {
 	$blockchain = new Blockchain($app, $requested_game['blockchain_id']);
 	$game = new Game($blockchain, $requested_game['game_id']);
 }
-else {
+
+if (!$thisuser) {
+	if (!empty($_REQUEST['redirect_key'])) $redirect_url = $app->get_redirect_by_key($_REQUEST['redirect_key']);
+	else {
+		$uri = str_replace("?action=logout", "", $_SERVER['REQUEST_URI']);
+		$redirect_url = $app->get_redirect_url($uri);
+	}
+	
+	$nav_tab_selected = "wallet";
+	include(AppSettings::srcPath().'/includes/html_start.php');
+	
+	?>
+	<div class="container-fluid">
+		<?php
+		if ($game) {
+			$top_nav_show_search = true;
+			$explorer_type = "games";
+			$explore_mode = "wallet";
+			echo "<br/>\n";
+			include('includes/explorer_top_nav.php');
+		}
+		
+		include(AppSettings::srcPath()."/includes/html_login.php");
+		?>
+	</div>
+	<?php
+	include(AppSettings::srcPath().'/includes/html_stop.php');
+	die();
+}
+
+if (!empty($_REQUEST['invite_key'])) {
+	$invite_user_game = false;
+	$invite_game = false;
+	$success = $app->try_apply_invite_key($thisuser->db_user['user_id'], $_REQUEST['invite_key'], $invite_game, $invite_user_game);
+	if ($success) {
+		header("Location: /wallet/".$invite_game->db_game['url_identifier']);
+		die();
+	}
+}
+
+if (empty($game)) {
 	$pagetitle = AppSettings::getParam('site_name')." - My web wallet";
 	$nav_tab_selected = "wallet";
 	include(AppSettings::srcPath().'/includes/html_start.php');
@@ -175,44 +215,14 @@ else {
 	die();
 }
 
-if ($thisuser) {
-	if (!empty($_REQUEST['invite_key'])) {
-		$invite_user_game = false;
-		$invite_game = false;
-		$success = $app->try_apply_invite_key($thisuser->db_user['user_id'], $_REQUEST['invite_key'], $invite_game, $invite_user_game);
-		if ($success) {
-			header("Location: /wallet/".$invite_game->db_game['url_identifier']);
-			die();
-		}
-	}
+if ($_REQUEST['action'] == "change_user_game") {
+	$app->change_user_game($thisuser, $game, $_REQUEST['user_game_id']);
 	
-	if ($_REQUEST['action'] == "change_user_game") {
-		$app->change_user_game($thisuser, $game, $_REQUEST['user_game_id']);
-		
-		header("Location: /wallet/".$game->db_game['url_identifier']."/");
-		die();
-	}
-	
-	$user_game = $thisuser->ensure_user_in_game($game, false);
+	header("Location: /wallet/".$game->db_game['url_identifier']."/");
+	die();
 }
-else {
-	if (!empty($_REQUEST['redirect_key'])) $redirect_url = $app->get_redirect_by_key($_REQUEST['redirect_key']);
-	else {
-		$uri = str_replace("?action=logout", "", $_SERVER['REQUEST_URI']);
-		$redirect_url = $app->get_redirect_url($uri);
-	}
-	
-	$top_nav_show_search = true;
-	$explorer_type = "games";
-	$explore_mode = "wallet";
-	
-	if (empty(AppSettings::getParam('signup_content_page'))) {
-		echo "<br/>\n";
-		include('includes/explorer_top_nav.php');
-	}
-	
-	include(AppSettings::srcPath()."/includes/html_login.php");
-}
+
+$user_game = $thisuser->ensure_user_in_game($game, false);
 
 if (($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['action'] == "save_voting_strategy_fees") && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'])) {
 	$voting_strategy = $_REQUEST['voting_strategy'];
