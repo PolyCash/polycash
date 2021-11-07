@@ -22,9 +22,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 			$game_info['url_identifier'] = $game->db_game['url_identifier'];
 
 			if ($game->db_game['game_status'] == "editable") {
-				if (!empty($_REQUEST['giveaway_status']) && ($_REQUEST['giveaway_status'] == "public_free" || $_REQUEST['giveaway_status'] == "public_pay")) $game_info['redirect_user'] = 1;
-				
-				$game_form_vars = ['event_rule','option_group_id','event_entity_type_id','events_per_round','event_type_name','name','payout_weight','round_length','pos_reward','inflation','exponential_inflation_rate','final_round','coin_name','coin_name_plural','coin_abbreviation','start_condition','buyin_policy','game_buyin_cap','default_vote_effectiveness_function','default_effectiveness_param1','default_max_voting_fraction','game_starting_block','escrow_address','genesis_tx_hash','genesis_amount'];
+				$game_form_vars = ['event_rule','option_group_id','event_entity_type_id','events_per_round','event_type_name','name','payout_weight','round_length','inflation','exponential_inflation_rate','final_round','coin_name','coin_name_plural','coin_abbreviation','start_condition','buyin_policy','game_buyin_cap','default_vote_effectiveness_function','default_effectiveness_param1','default_max_voting_fraction','game_starting_block','escrow_address','genesis_tx_hash','genesis_amount'];
 				
 				if ($_REQUEST['inflation'] == "exponential") $_REQUEST['payout_weight'] = "coin_round";
 				if ($_REQUEST['event_rule'] == "single_event_series") $_REQUEST['events_per_round'] = 1;
@@ -42,7 +40,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 					$game_var = $game_form_vars[$i];
 					$game_val = empty($_REQUEST[$game_form_vars[$i]]) ? "" : $_REQUEST[$game_form_vars[$i]];
 					
-					if (in_array($game_var, ['pos_reward', 'genesis_amount'])) {
+					if (in_array($game_var, ['genesis_amount'])) {
 						if (empty($game_val)) $game_val = 0;
 						else $game_val = (int) ($game_val*pow(10,$game->db_game['decimal_places']));
 					}

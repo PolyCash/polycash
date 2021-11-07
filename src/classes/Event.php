@@ -795,13 +795,12 @@ class Event {
 	public function event_rewards() {
 		list($inflationary_score, $destroy_reward) = $this->event_total_scores();
 		
-		if ($this->game->db_game['inflation'] == "linear") $inflationary_reward = $this->game->db_game['pos_reward'];
-		else {
-			$votes_per_coin = $this->game->blockchain->app->votes_per_coin($this->game->db_game);
-			
-			if ($votes_per_coin == 0) $inflationary_reward = 0;
-			else $inflationary_reward = $inflationary_score/$votes_per_coin;
+		if ($this->game->db_game['inflation'] == "exponential") {
+			$coins_per_vote = $this->game->blockchain->app->coins_per_vote($this->game->db_game);
+			$inflationary_reward = $inflationary_score*$coins_per_vote;
 		}
+		else $inflationary_reward = 0;
+		
 		$total_reward = $destroy_reward + $inflationary_reward;
 		
 		return [$inflationary_reward, $destroy_reward, $total_reward];

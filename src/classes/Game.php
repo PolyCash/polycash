@@ -1046,10 +1046,6 @@ class Game {
 		return $html;
 	}
 	
-	public function paid_players_in_game() {
-		return (int)($this->blockchain->app->run_query("SELECT COUNT(*) FROM user_games ug JOIN users u ON ug.user_id=u.user_id WHERE ug.game_id=:game_id AND ug.payment_required=0;", ['game_id'=>$this->db_game['game_id']])->fetch(PDO::FETCH_NUM)[0]);
-	}
-	
 	public function start_game() {
 		$start_block = $this->blockchain->fetch_block_by_id($this->db_game['game_starting_block']);
 		
@@ -1202,42 +1198,16 @@ class Game {
 	}
 	
 	public function send_invitation_email($to_email, &$invitation) {
-		$blocks_per_hour = 3600/$this->blockchain->db_blockchain['seconds_per_block'];
-		$round_reward = ($this->db_game['pos_reward']+$this->db_game['pow_reward']*$this->db_game['round_length'])/pow(10,$this->db_game['decimal_places']);
-		$rounds_per_hour = 3600/($this->blockchain->db_blockchain['seconds_per_block']*$this->db_game['round_length']);
-		$coins_per_hour = $round_reward*$rounds_per_hour;
-		$seconds_per_round = $this->blockchain->db_blockchain['seconds_per_block']*$this->db_game['round_length'];
-		
-		if ($this->db_game['inflation'] == "linear") $miner_pct = 100*($this->db_game['pow_reward']*$this->db_game['round_length'])/($round_reward*pow(10,$this->db_game['decimal_places']));
-		else $miner_pct = 100*$this->db_game['exponential_inflation_minershare'];
-		
 		$invite_currency = false;
 		if ($this->db_game['invite_currency'] > 0) {
 			$invite_currency = $this->blockchain->app->fetch_currency_by_id($this->db_game['invite_currency']);
 		}
 		
 		$subject = "You've been invited to join ".$this->db_game['name'];
-		if ($this->db_game['giveaway_status'] == "invite_pay" || $this->db_game['giveaway_status'] == "public_pay") {
-			$subject .= ". Join by paying ".$this->blockchain->app->format_bignum($this->db_game['invite_cost'])." ".$invite_currency['short_name']."s for ".$this->blockchain->app->format_bignum($this->db_game['giveaway_amount']/pow(10,$this->db_game['decimal_places']))." ".$this->db_game['coin_name_plural'].".";
-		}
 		
-		$message = "<p>";
 		if ($this->db_game['short_description'] != "") {
 			$message .= "<p>".$this->db_game['short_description']."</p>";
 		}
-		else {
-			if ($this->db_game['inflation'] == "exponential") {}
-			else if ($this->db_game['inflation'] == "linear") $message .= $this->db_game['name']." is a cryptocurrency which generates ".$coins_per_hour." ".$this->db_game['coin_name_plural']." per hour. ";
-			else $message .= $this->db_game['name']." is a cryptocurrency with ".($this->db_game['exponential_inflation_rate']*100)."% inflation every ".$this->blockchain->app->format_seconds($seconds_per_round).". ";
-			$message .= $miner_pct."% is given to miners for securing the network and the remaining ".(100-$miner_pct)."% is given to players for casting winning votes. ";
-			if ($this->db_game['final_round'] > 0) {
-				$game_total_seconds = $seconds_per_round*$this->db_game['final_round'];
-				$message .= "Once this game starts, it will last for ".$this->blockchain->app->format_seconds($game_total_seconds)." (".$this->db_game['final_round']." rounds). ";
-				$message .= "At the end, all ".$invite_currency['short_name']."s that have been paid in will be divided up and given out to all players in proportion to players' final balances.";
-			}
-			$message .= "Team up with other players and cast your votes strategically to win coins and destroy your competitors. ";
-		}
-		$message .= "</p>";
 		
 		$this->db_game['seconds_per_block'] = $this->blockchain->db_blockchain['seconds_per_block'];
 		
@@ -1266,14 +1236,7 @@ class Game {
 		$html = "";
 		if ($this->db_game['game_status'] == "editable") $html .= "The game creator hasn't yet published this game; its parameters can still be changed. ";
 		else if ($this->db_game['game_status'] == "published") {
-			if ($this->db_game['start_condition'] == "players_joined") {
-				$num_players = $this->paid_players_in_game();
-				$players_needed = ($this->db_game['start_condition_players']-$num_players);
-				if ($players_needed > 0) {
-					$html .= $num_players."/".$this->db_game['start_condition_players']." players have already joined, waiting for ".$players_needed." more players. ";
-				}
-			}
-			else if ($this->db_game['start_condition'] == "fixed_block") {
+			if ($this->db_game['start_condition'] == "fixed_block") {
 				$html .= "This game starts ";
 				if ($this->db_game['game_starting_block'] > $this->blockchain->last_block_id()) $html .= " in ".($this->db_game['game_starting_block']-$this->blockchain->last_block_id())." blocks. ";
 				else $html .= " on block #".$this->db_game['game_starting_block'].". ";
@@ -1394,12 +1357,6 @@ class Game {
 	
 	public function game_description() {
 		$html = "";
-		$blocks_per_hour = 3600/$this->blockchain->db_blockchain['seconds_per_block'];
-		$round_reward = ($this->db_game['pos_reward']+$this->db_game['pow_reward']*$this->db_game['round_length'])/pow(10,$this->db_game['decimal_places']);
-		$rounds_per_hour = 3600/($this->blockchain->db_blockchain['seconds_per_block']*$this->db_game['round_length']);
-		$coins_per_hour = $round_reward*$rounds_per_hour;
-		$seconds_per_round = $this->blockchain->db_blockchain['seconds_per_block']*$this->db_game['round_length'];
-		$coins_per_block = $this->blockchain->app->format_bignum($this->db_game['pow_reward']/pow(10,$this->db_game['decimal_places']));
 		
 		if ($this->db_game['game_status'] == "running") {
 			$html .= "This game started ".$this->blockchain->app->format_seconds(time()-$this->db_game['start_time'])." ago; ".$this->blockchain->app->format_bignum($this->coins_in_existence(false, true)/pow(10,$this->db_game['decimal_places']))." ".$this->db_game['coin_name_plural']."  are already in circulation. ";
@@ -1413,38 +1370,8 @@ class Game {
 			else if ($this->db_game['start_condition'] == "fixed_block") {
 				$html .= "This game starts in ".($this->db_game['game_starting_block']-$this->blockchain->last_block_id())." blocks.";
 			}
-			else {
-				$current_players = $this->paid_players_in_game();
-				$html .= "This game will start when ".$this->db_game['start_condition_players']." player";
-				if ($this->db_game['start_condition_players'] == 1) $html .= " joins";
-				else $html .= "s have joined";
-				$html .= ". ".($this->db_game['start_condition_players']-$current_players)." player";
-				if ($this->db_game['start_condition_players']-$current_players == 1) $html .= " is";
-				else $html .= "s are";
-				$html .= " needed, ".$current_players;
-				if ($current_players == 1) $html .= " has";
-				else $html .= " have";
-				$html .= " already joined. ";
-			}
 		}
 
-		if ($this->db_game['final_round'] > 0) {
-			$game_total_seconds = $seconds_per_round*$this->db_game['final_round'];
-			$html .= "This game will last ".$this->db_game['final_round']." rounds (".$this->blockchain->app->format_seconds($game_total_seconds)."). ";
-		}
-		else $html .= "This game doesn't end, but you can sell out at any time. ";
-
-		$html .= '';
-		if ($this->db_game['inflation'] == "linear") {
-			$html .= "This coin has linear inflation: ".$this->blockchain->app->format_bignum($round_reward)." ".$this->db_game['coin_name_plural']." are minted approximately every ".$this->blockchain->app->format_seconds($seconds_per_round);
-			$html .= " (".$this->blockchain->app->format_bignum($coins_per_hour)." coins per hour)";
-			$html .= ". In each round, ".$this->blockchain->app->format_bignum($this->db_game['pos_reward']/pow(10,$this->db_game['decimal_places']))." ".$this->db_game['coin_name_plural']." are given to voters and ".$this->blockchain->app->format_bignum($this->db_game['pow_reward']*$this->db_game['round_length']/pow(10,$this->db_game['decimal_places']))." ".$this->db_game['coin_name_plural']." are given to miners";
-			$html .= " (".$coins_per_block." coin";
-			if ($coins_per_block != 1) $html .= "s";
-			$html .= " per block). ";
-		}
-		else if ($this->db_game['inflation'] == "fixed_exponential") $html .= "This currency grows by ".(100*$this->db_game['exponential_inflation_rate'])."% per round. ".(100 - 100*$this->db_game['exponential_inflation_minershare'])."% is given to voters and ".(100*$this->db_game['exponential_inflation_minershare'])."% is given to miners every ".$this->blockchain->app->format_seconds($seconds_per_round).". ";
-		
 		$html .= "Each round consists of ".$this->db_game['round_length'].", ".str_replace(" ", "-", rtrim($this->blockchain->app->format_seconds($this->blockchain->db_blockchain['seconds_per_block']), 's'))." blocks. ";
 		
 		return $html;
@@ -1454,7 +1381,7 @@ class Game {
 		$networth_sum = 0;
 		$html = "";
 		
-		$user_games = $this->blockchain->app->run_query("SELECT * FROM user_games ug JOIN users u ON ug.user_id=u.user_id WHERE ug.game_id=:game_id AND ug.payment_required=0 GROUP BY ug.user_id ORDER BY u.user_id ASC;", ['game_id'=>$this->db_game['game_id']])->fetchAll();
+		$user_games = $this->blockchain->app->run_query("SELECT * FROM user_games ug JOIN users u ON ug.user_id=u.user_id WHERE ug.game_id=:game_id GROUP BY ug.user_id ORDER BY u.user_id ASC;", ['game_id'=>$this->db_game['game_id']])->fetchAll();
 		
 		$html .= "<b>".count($user_games)." players</b><br/>\n";
 		

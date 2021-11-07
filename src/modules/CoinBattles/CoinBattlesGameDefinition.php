@@ -28,7 +28,6 @@ class CoinBattlesGameDefinition {
 			"events_per_round": 1,
 			"inflation": "exponential",
 			"exponential_inflation_rate": 0.01,
-			"pos_reward": 0,
 			"round_length": 1000,
 			"payout_weight": "coin_block",
 			"final_round": null,

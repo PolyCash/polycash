@@ -1281,7 +1281,6 @@ class App {
 		$html = '<div class="game_info_table">';
 		
 		$blocks_per_hour = 3600/$db_game['seconds_per_block'];
-		$round_reward = ($db_game['pos_reward']+$db_game['pow_reward']*$db_game['round_length'])/pow(10,$db_game['decimal_places']);
 		$seconds_per_round = $db_game['seconds_per_block']*$db_game['round_length'];
 		
 		$invite_currency = false;
@@ -1407,23 +1406,15 @@ class App {
 		$html .= "</div></div>\n";
 		
 		$html .= '<div class="row"><div class="col-sm-5">Inflation:</div><div class="col-sm-7">';	
-		if ($db_game['inflation'] == "linear") $html .= "Linear (".$this->format_bignum($round_reward)." coins per round)";
-		else if ($db_game['inflation'] == "fixed_exponential") $html .= "Fixed Exponential (".(100*$db_game['exponential_inflation_rate'])."% per round)";
-		else {
+		if ($db_game['inflation'] == "exponential") {
 			if ($db_game['exponential_inflation_rate'] == 0) {
 				$html .= "None, fixed supply";
 			}
 			else {
-				$html .= "Exponential (".(100*$db_game['exponential_inflation_rate'])."% per round)<br/>";
-				$html .= $this->format_bignum($this->votes_per_coin($db_game))." ".str_replace("_", " ", $db_game['payout_weight'])."s per ".$db_game['coin_name'];
+				$html .= "Exponential (".(100*$db_game['exponential_inflation_rate'])."% per round)";
 			}
 		}
 		$html .= "</div></div>\n";
-		
-		$total_inflation_pct = $this->game_final_inflation_pct($db_game);
-		if ($total_inflation_pct) {
-			$html .= '<div class="row"><div class="col-sm-5">Potential inflation:</div><div class="col-sm-7">'.number_format($total_inflation_pct)."%</div></div>\n";
-		}
 		
 		$html .= '<div class="row"><div class="col-sm-5">Blocks per round:</div><div class="col-sm-7">'.$db_game['round_length']."</div></div>\n";
 		
@@ -1465,93 +1456,6 @@ class App {
 		$html .= "</div>\n";
 		
 		return $html;
-	}
-	
-	public function game_final_inflation_pct(&$db_game) {
-		if ($db_game['final_round'] > 0) {
-			if ($db_game['inflation'] == "fixed_exponential" || $db_game['inflation'] == "exponential") {
-				$inflation_factor = pow(1+$db_game['exponential_inflation_rate'], $db_game['final_round']);
-			}
-			else {
-				if ($db_game['start_condition'] == "players_joined") {
-					$db_game['initial_coins'] = $db_game['genesis_amount'];
-					$final_coins = $this->ideal_coins_in_existence_after_round($db_game, $db_game['final_round']);
-					$inflation_factor = $final_coins/$db_game['initial_coins'];
-				}
-				else return false;
-			}
-			$inflation_pct = round(($inflation_factor-1)*100);
-			return $inflation_pct;
-		}
-		else return false;
-	}
-	
-	public function ideal_coins_in_existence_after_round(&$db_game, $round_id) {
-		if ($db_game['inflation'] == "linear") return $db_game['genesis_amount'] + $round_id*($db_game['pos_reward'] + $db_game['round_length']*$db_game['pow_reward']);
-		else if ($db_game['inflation'] == "fixed_exponential") return floor($db_game['genesis_amount'] * pow(1 + $db_game['exponential_inflation_rate'], $round_id));
-	}
-	
-	public function coins_created_in_round(&$db_game, $round_id) {
-		if ($db_game['inflation'] == "exponential") {
-			$blockchain = new Blockchain($this, $db_game['blockchain_id']);
-			$game = new Game($blockchain, $db_game['game_id']);
-			$coi_block = ($round_id-1)*$game->db_game['round_length'];
-			$coins_in_existence = $game->coins_in_existence($coi_block, false);
-			return $coins_in_existence*$game->db_game['exponential_inflation_rate'];
-		}
-		else {
-			$thisround_coins = $this->ideal_coins_in_existence_after_round($db_game, $round_id);
-			$prevround_coins = $this->ideal_coins_in_existence_after_round($db_game, $round_id-1);
-			if (is_nan($thisround_coins) || is_nan($prevround_coins) || is_infinite($thisround_coins) || is_infinite($prevround_coins)) return 0;
-			else return $thisround_coins - $prevround_coins;
-		}
-	}
-
-	public function pow_reward_in_round(&$db_game, $round_id) {
-		if ($db_game['inflation'] == "linear") return $db_game['pow_reward'];
-		else if ($db_game['inflation'] == "fixed_exponential" || $db_game['inflation'] == "exponential") {
-			$round_coins_created = $this->coins_created_in_round($db_game, $round_id);
-			$round_pow_coins = floor($db_game['exponential_inflation_minershare']*$round_coins_created);
-			return floor($round_pow_coins/$db_game['round_length']);
-		}
-		else return 0;
-	}
-
-	public function pos_reward_in_round(&$db_game, $round_id) {
-		if ($db_game['inflation'] == "linear") return $db_game['pos_reward'];
-		else if ($db_game['inflation'] == "fixed_exponential") {
-			if ($round_id > 1 || empty($db_game['game_id'])) {
-				$round_coins_created = $this->coins_created_in_round($db_game, $round_id);
-			}
-			else {
-				$blockchain = new Blockchain($this, $db_game['blockchain_id']);
-				$game = new Game($blockchain, $db_game['game_id']);
-				$round_coins_created = $game->coins_in_existence(false, true)*$db_game['exponential_inflation_rate'];
-			}
-			return floor((1-$db_game['exponential_inflation_minershare'])*$round_coins_created);
-		}
-		else {
-			$info = $this->run_query("SELECT SUM(:payout_weight_score), SUM(:unconfirmed_payout_weight_score) FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.game_id=:game_id;", [
-				'payout_weight_score' => $db_game['payout_weight']."_score",
-				'unconfirmed_payout_weight_score' => "unconfirmed_".$db_game['payout_weight']."_score",
-				'game_id' => $db_game['game_id']
-			])->fetch();
-			$score = $info['SUM('.$db_game['payout_weight'].'_score)']+$info['SUM(unconfirmed_'.$db_game['payout_weight'].'_score)'];
-			
-			return $score/$this->votes_per_coin($db_game);
-		}
-	}
-	
-	public function votes_per_coin($db_game) {
-		if ($db_game['inflation'] == "exponential") {
-			if ($db_game['exponential_inflation_rate'] == 0) return 0;
-			else {
-				if ($db_game['payout_weight'] == "coin_round") $votes_per_coin = 1/$db_game['exponential_inflation_rate'];
-				else $votes_per_coin = $db_game['round_length']/$db_game['exponential_inflation_rate'];
-				return $votes_per_coin;
-			}
-		}
-		else return 0;
 	}
 	
 	public function coins_per_vote($db_game) {
@@ -1802,7 +1706,6 @@ class App {
 			['int', 'events_per_round', true],
 			['string', 'inflation', true],
 			['float', 'exponential_inflation_rate', true],
-			['int', 'pos_reward', true],
 			['int', 'round_length', true],
 			['string', 'payout_weight', true],
 			['int', 'final_round', true],

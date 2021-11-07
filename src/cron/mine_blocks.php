@@ -17,27 +17,6 @@ if ($app->running_as_admin()) {
 	if (!$process_locked) {
 		$app->set_site_constant($process_lock_name, getmypid());
 		
-		$unstarted_games = $app->run_query("SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE g.game_status='published' AND g.start_condition='players_joined' AND g.start_condition_players > 0 AND b.online=1;");
-		
-		while ($db_unstarted_game = $unstarted_games->fetch()) {
-			if (!$blockchains[$db_unstarted_game['blockchain_id']]) $blockchains[$db_unstarted_game['blockchain_id']] = new Blockchain($app, $db_unstarted_game['blockchain_id']);
-			$unstarted_game = new Game($blockchains[$db_unstarted_game['blockchain_id']], $db_unstarted_game['game_id']);
-			$num_players = $unstarted_game->paid_players_in_game();
-			if ($num_players >= $unstarted_game->db_game['start_condition_players']) {
-				$unstarted_game->start_game();
-			}
-		}
-
-		$unstarted_games = $app->run_query("SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE b.online=1 AND g.game_status='published' AND g.start_condition='fixed_time' AND g.start_datetime <= ".AppSettings::sqlNow()." AND g.start_datetime IS NOT NULL;");
-		
-		while ($db_unstarted_game = $unstarted_games->fetch()) {
-			if (time() >= strtotime($db_unstarted_game['start_datetime'])) {
-				if (!$blockchains[$db_unstarted_game['blockchain_id']]) $blockchains[$db_unstarted_game['blockchain_id']] = new Blockchain($app, $db_unstarted_game['blockchain_id']);
-				$unstarted_game = new Game($blockchains[$db_unstarted_game['blockchain_id']], $db_unstarted_game['game_id']);
-				$unstarted_game->start_game();
-			}
-		}
-		
 		$loop_target_time = 5;
 		do {
 			$loop_start_time = microtime(true);

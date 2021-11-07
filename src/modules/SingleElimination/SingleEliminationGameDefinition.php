@@ -60,7 +60,6 @@ class SingleEliminationGameDefinition {
 			"events_per_round": 0,
 			"inflation": "exponential",
 			"exponential_inflation_rate": 0.001,
-			"pos_reward": 0,
 			"round_length": 20,
 			"payout_weight": "coin_block",
 			"final_round": false,

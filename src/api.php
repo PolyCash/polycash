@@ -329,7 +329,7 @@ if ($uri_parts[1] == "api") {
 	else if (!empty($uri_parts[2])) {
 		$game_identifier = $uri_parts[2];
 		
-		$db_game = $app->run_query("SELECT game_id, blockchain_id, pos_reward, pow_reward, round_length, payout_weight, name FROM games WHERE url_identifier=:url_identifier;", ['url_identifier'=>$game_identifier])->fetch();
+		$db_game = $app->run_query("SELECT game_id, blockchain_id, round_length, payout_weight, name FROM games WHERE url_identifier=:url_identifier;", ['url_identifier'=>$game_identifier])->fetch();
 		
 		if ($db_game) {
 			$blockchain = new Blockchain($app, $db_game['blockchain_id']);

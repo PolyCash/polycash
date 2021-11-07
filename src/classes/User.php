@@ -119,12 +119,6 @@ class User {
 				'notification_preference' => 'email',
 				'betting_mode' => 'principal'
 			];
-			if (!empty($this->db_user['payout_address_id'])) {
-				$new_user_game_params['payout_address_id'] = $this->db_user['payout_address_id'];
-			}
-			if ($game->db_game['giveaway_status'] == "public_pay" || $game->db_game['giveaway_status'] == "invite_pay") {
-				$new_user_game_params['payment_required'] = 1;
-			}
 			$this->app->run_insert_query("user_games", $new_user_game_params);
 			$user_game_id = $this->app->last_insert_id();
 			
@@ -176,13 +170,6 @@ class User {
 			]);
 			
 			$user_game['strategy_id'] = $strategy_id;
-		}
-		
-		if ($game->db_game['game_status'] == "published" && $game->db_game['start_condition'] == "num_players") {
-			$num_players = $game->paid_players_in_game();
-			if ($num_players >= $game->db_game['start_condition_players']) {
-				$game->start_game();
-			}
 		}
 		
 		return $user_game;

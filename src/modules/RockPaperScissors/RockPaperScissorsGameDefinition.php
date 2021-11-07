@@ -27,7 +27,6 @@ class RockPaperScissorsGameDefinition {
 			"events_per_round": 1,
 			"inflation": "exponential",
 			"exponential_inflation_rate": 0,
-			"pos_reward": 0,
 			"round_length": 1,
 			"payout_weight": "coin_round",
 			"final_round": null,

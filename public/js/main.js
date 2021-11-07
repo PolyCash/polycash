@@ -486,7 +486,7 @@ var PageManager = function() {
 	this.last_event_index_shown = false;
 	this.event_outcome_sections_shown = 1;
 
-	this.game_form_vars = ['blockchain_id', 'module', 'event_rule', 'option_group_id', 'event_entity_type_id', 'events_per_round', 'event_type_name', 'name', 'payout_weight', 'round_length', 'pos_reward', 'pow_reward', 'inflation', 'exponential_inflation_rate', 'exponential_inflation_minershare', 'final_round', 'coin_name', 'coin_name_plural', 'coin_abbreviation', 'start_condition', 'buyin_policy', 'game_buyin_cap', 'default_vote_effectiveness_function', 'default_effectiveness_param1', 'default_max_voting_fraction', 'game_starting_block', 'escrow_address', 'genesis_tx_hash', 'genesis_amount', 'default_betting_mode', 'finite_events'];
+	this.game_form_vars = ['blockchain_id', 'module', 'event_rule', 'option_group_id', 'event_entity_type_id', 'events_per_round', 'event_type_name', 'name', 'payout_weight', 'round_length', 'inflation', 'exponential_inflation_rate', 'final_round', 'coin_name', 'coin_name_plural', 'coin_abbreviation', 'start_condition', 'buyin_policy', 'game_buyin_cap', 'default_vote_effectiveness_function', 'default_effectiveness_param1', 'default_max_voting_fraction', 'game_starting_block', 'escrow_address', 'genesis_tx_hash', 'genesis_amount', 'default_betting_mode', 'finite_events'];
 	this.event_verbatim_vars = ['event_index', 'next_event_index', 'event_starting_block', 'event_final_block', 'event_payout_block', 'event_starting_time', 'event_final_time', 'event_payout_time', 'event_name', 'option_block_rule', 'option_name', 'option_name_plural', 'outcome_index', 'payout_rule', 'payout_rate', 'track_max_price', 'track_min_price', 'track_payout_price', 'track_name_short'];
 
 	this.transaction_in_progress = false;
@@ -1263,23 +1263,14 @@ var PageManager = function() {
 						$('#publish_game_btn').hide();
 					}
 					
-					if (manage_game_response.giveaway_status == "invite_free" || manage_game_response.giveaway_status == "invite_pay") {
-						if (manage_game_response.my_game) {
-							$('#game_invitations_game_btn').show();
-						}
-						else $('#game_invitations_game_btn').hide();
-					}
-					else if (manage_game_response.giveaway_status == "public_pay" || manage_game_response.giveaway_status == "public_free") $('#game_invitations_game_btn').show();
-					else $('#game_invitations_game_btn').hide();
-					
 					$('#game_form').modal('show');
 					$('#game_form_name_disp').html("Settings: "+manage_game_response.name_disp);
 					
 					this.game_form_vars.forEach(function(var_name) {
-						if (["pos_reward", "pow_reward", "giveaway_amount", "genesis_amount"].indexOf(var_name) != -1) {
+						if (["genesis_amount"].indexOf(var_name) != -1) {
 							manage_game_response[var_name] = parseInt(manage_game_response[var_name])/Math.pow(10,games[0].decimal_places);
 						}
-						else if (["exponential_inflation_minershare", "exponential_inflation_rate", "default_max_voting_fraction"].indexOf(var_name) != -1) {
+						else if (["exponential_inflation_rate", "default_max_voting_fraction"].indexOf(var_name) != -1) {
 							manage_game_response[var_name] = parseFloat(manage_game_response[var_name]);
 						}
 						else if (["per_user_buyin_cap", "game_buyin_cap"].indexOf(var_name) != -1) {
@@ -1323,13 +1314,6 @@ var PageManager = function() {
 						$('#game_form_has_final_round').val(0);
 					}
 
-					if (manage_game_response.giveaway_status == "invite_pay" || manage_game_response.giveaway_status == "public_pay") {
-						$('#game_form_giveaway_status_pay').show();
-					}
-					else {
-						$('#game_form_giveaway_status_pay').hide();
-					}
-
 					this.game_form_start_condition_changed();
 				}
 				else {
@@ -1364,20 +1348,10 @@ var PageManager = function() {
 			$('#game_form_inflation_linear').slideDown('fast');
 		}
 	}
-	this.game_form_giveaway_status_changed = function() {
-		var giveaway_status = $('#game_form_giveaway_status').val();
-		if (giveaway_status == "invite_pay" || giveaway_status == "public_pay") {
-			$('#game_form_giveaway_status_pay').slideDown('fast');
-		}
-		else {
-			$('#game_form_giveaway_status_pay').hide();
-		}
-	}
 	this.game_form_start_condition_changed = function() {
 		var start_condition = $('#game_form_start_condition').val();
 
 		$('#game_form_start_condition_fixed_time').hide();
-		$('#game_form_start_condition_players_joined').hide();
 
 		$('#game_form_start_condition_'+start_condition).show();
 	}

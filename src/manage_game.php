@@ -636,12 +636,6 @@ else {
 												<input class="form-control" style="text-align: right;" type="text" id="game_form_exponential_inflation_rate" placeholder="100" />
 											</div>
 										</div>
-										<div id="game_form_inflation_linear">
-											<div class="form-group">
-												<label for="game_form_pos_reward">Voting payout reward:</label>
-												<input class="form-control" style="text-align: right;" type="text" id="game_form_pos_reward" />
-											</div>
-										</div>
 										<div class="form-group">
 											<label for="game_form_event_rule">Event rule:</label>
 											<select id="game_form_event_rule" class="form-control">
