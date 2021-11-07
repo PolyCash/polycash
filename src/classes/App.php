@@ -1193,6 +1193,10 @@ class App {
 		return $this->run_query("SELECT * FROM images WHERE image_id=:image_id;", ['image_id'=>$image_id])->fetch();
 	}
 	
+	public function fetch_image_by_identifier($image_identifier) {
+		return $this->run_query("SELECT * FROM images WHERE image_identifier=:image_identifier;", ['image_identifier'=>$image_identifier])->fetch();
+	}
+	
 	public function image_url(&$db_image) {
 		$url = '/images/custom/'.$db_image['image_id'];
 		if ($db_image['access_key'] != "") $url .= '_'.$db_image['access_key'];
@@ -1742,7 +1746,7 @@ class App {
 			['int', 'decimal_places'],
 			['int', 'initial_pow_reward'],
 			['int', 'default_rpc_port'],
-			['int', 'online'],
+			['string', 'default_image_identifier'],
 		];
 	}
 	
@@ -1759,12 +1763,6 @@ class App {
 			}
 			$blockchain_definition['peer'] = $peer['base_url'];
 		}
-		else $blockchain_definition['peer'] = "none";
-		
-		if (in_array($blockchain->db_blockchain['p2p_mode'], array("none","web_api"))) {
-			$blockchain_definition['p2p_mode'] = "web";
-		}
-		else $blockchain_definition['p2p_mode'] = "rpc";
 		
 		for ($i=0; $i<count($verbatim_vars); $i++) {
 			$var_type = $verbatim_vars[$i][0];
@@ -1925,10 +1923,16 @@ class App {
 					$var_type = $verbatim_vars[$var_i][0];
 					$var_name = $verbatim_vars[$var_i][1];
 					
-					$import_params[$var_name] = $blockchain_def->$var_name;
+					if (property_exists($blockchain_def, $var_name)) {
+						$import_params[$var_name] = $blockchain_def->$var_name;
+					}
 				}
 				
 				if ($import_params['p2p_mode'] != "rpc") $import_params['first_required_block'] = 1;
+				
+				if (property_exists($blockchain_def, 'online')) {
+					$import_params['online'] = $blockchain_def->online;
+				}
 				
 				$peer = false;
 				$import_params['authoritative_peer_id'] = null;
@@ -1936,6 +1940,13 @@ class App {
 					$peer = $this->get_peer_by_server_name($blockchain_def->peer, true);
 					if ($peer) {
 						$import_params['authoritative_peer_id'] = $peer['peer_id'];
+					}
+				}
+				
+				if (!empty($import_params['default_image_identifier'])) {
+					$default_image = $this->fetch_image_by_identifier($import_params['default_image_identifier']);
+					if ($default_image) {
+						$import_params['default_image_id'] = $default_image['image_id'];
 					}
 				}
 				
