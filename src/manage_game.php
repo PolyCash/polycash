@@ -610,10 +610,6 @@ else {
 											</select>
 										</div>
 										<div class="form-group">
-											<label for="game_form_maturity">Transaction lock time (blocks):</label>
-											<input class="form-control" style="text-align: right;" type="text" id="game_form_maturity" />
-										</div>
-										<div class="form-group">
 											<label for="game_form_buyin_policy">Buy-in policy:</label>
 											<select class="form-control" id="game_form_buyin_policy" onchange="thisPageManager.game_form_buyin_policy_changed();">
 												<option value="none">No additional buy-ins</option>

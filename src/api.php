@@ -329,7 +329,7 @@ if ($uri_parts[1] == "api") {
 	else if (!empty($uri_parts[2])) {
 		$game_identifier = $uri_parts[2];
 		
-		$db_game = $app->run_query("SELECT game_id, blockchain_id, maturity, pos_reward, pow_reward, round_length, payout_weight, name FROM games WHERE url_identifier=:url_identifier;", ['url_identifier'=>$game_identifier])->fetch();
+		$db_game = $app->run_query("SELECT game_id, blockchain_id, pos_reward, pow_reward, round_length, payout_weight, name FROM games WHERE url_identifier=:url_identifier;", ['url_identifier'=>$game_identifier])->fetch();
 		
 		if ($db_game) {
 			$blockchain = new Blockchain($app, $db_game['blockchain_id']);
@@ -370,7 +370,7 @@ if ($uri_parts[1] == "api") {
 					$btc_currency = $app->get_currency_by_abbreviation("BTC");
 				}
 				
-				$intval_vars = ['game_id','round_length','maturity'];
+				$intval_vars = ['game_id','round_length'];
 				for ($i=0; $i<count($intval_vars); $i++) {
 					$game->db_game[$intval_vars[$i]] = (int) $game->db_game[$intval_vars[$i]];
 				}
@@ -399,7 +399,7 @@ if ($uri_parts[1] == "api") {
 						$mature_utxo_r = $app->run_query("SELECT io.*, ak.pub_key AS address FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id JOIN address_keys ak ON io.address_id=ak.address_id WHERE io.spend_status='unspent' AND io.spend_transaction_id IS NULL AND ak.account_id=:account_id AND gio.game_id=:game_id AND io.create_block_id <= :ref_block GROUP BY io.io_id ORDER BY io.io_id ASC;", [
 							'account_id' => $user_game['account_id'],
 							'game_id' => $game->db_game['game_id'],
-							'ref_block' => ($last_block_id-$game->db_game['maturity'])
+							'ref_block' => $last_block_id
 						]);
 						
 						$utxo_i = 0;

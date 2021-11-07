@@ -41,7 +41,6 @@ class CryptoDuelsGameDefinition {
 			"exponential_inflation_rate": 0.0005,
 			"pos_reward": 0,
 			"round_length": 50,
-			"maturity": 0,
 			"payout_weight": "coin_round",
 			"final_round": null,
 			"buyin_policy": "none",

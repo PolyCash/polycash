@@ -122,10 +122,6 @@ class Game {
 					'blockchain_id' => $this->blockchain->db_blockchain['blockchain_id']
 				];
 				$tx_inputs_q = "SELECT *, io.address_id AS address_id, io.amount AS amount FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE io.spend_status IN ('unspent','unconfirmed') AND io.blockchain_id=:blockchain_id";
-				if ($this->db_game['maturity'] > 0) {
-					$tx_inputs_q .= " AND io.create_block_id <= :ref_block_id";
-					$tx_inputs_params['ref_block_id'] = $this->blockchain->last_block_id()-$this->db_game['maturity'];
-				}
 				if ($io_ids) {
 					$tx_inputs_q .= " AND io.io_id IN (".implode(",", array_map("intval", $io_ids)).")";
 				}
@@ -1450,12 +1446,6 @@ class Game {
 		else if ($this->db_game['inflation'] == "fixed_exponential") $html .= "This currency grows by ".(100*$this->db_game['exponential_inflation_rate'])."% per round. ".(100 - 100*$this->db_game['exponential_inflation_minershare'])."% is given to voters and ".(100*$this->db_game['exponential_inflation_minershare'])."% is given to miners every ".$this->blockchain->app->format_seconds($seconds_per_round).". ";
 		
 		$html .= "Each round consists of ".$this->db_game['round_length'].", ".str_replace(" ", "-", rtrim($this->blockchain->app->format_seconds($this->blockchain->db_blockchain['seconds_per_block']), 's'))." blocks. ";
-		if ($this->db_game['maturity'] > 0) {
-			$html .= ucwords($this->db_game['coin_name_plural'])." are locked for ";
-			$html .= $this->db_game['maturity']." block";
-			if ($this->db_game['maturity'] != 1) $html .= "s";
-			$html .= " when spent. ";
-		}
 		
 		return $html;
 	}

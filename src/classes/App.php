@@ -1442,12 +1442,6 @@ class App {
 		if ($db_game['min_payout_rate'] != $db_game['max_payout_rate']) $html .= " to ".$this->format_percentage((1-$db_game['min_payout_rate'])*100)."%";
 		$html .= "</div></div>\n";
 		
-		if ($db_game['maturity'] != 0) {
-			$html .= '<div class="row"><div class="col-sm-5">Transaction maturity:</div><div class="col-sm-7">'.$db_game['maturity']." block";
-			if ($db_game['maturity'] != 1) $html .= "s";
-			$html .= "</div></div>\n";
-		}
-		
 		if ($game) {
 			$escrow_amounts = EscrowAmount::fetch_escrow_amounts_in_game($game, "actual")->fetchAll();
 			
@@ -1810,7 +1804,6 @@ class App {
 			['float', 'exponential_inflation_rate', true],
 			['int', 'pos_reward', true],
 			['int', 'round_length', true],
-			['int', 'maturity', true],
 			['string', 'payout_weight', true],
 			['int', 'final_round', true],
 			['string', 'buyin_policy', true],

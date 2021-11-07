@@ -30,7 +30,6 @@ class CoinBattlesGameDefinition {
 			"exponential_inflation_rate": 0.01,
 			"pos_reward": 0,
 			"round_length": 1000,
-			"maturity": 0,
 			"payout_weight": "coin_block",
 			"final_round": null,
 			"buyin_policy": "none",

@@ -62,7 +62,6 @@ class SingleEliminationGameDefinition {
 			"exponential_inflation_rate": 0.001,
 			"pos_reward": 0,
 			"round_length": 20,
-			"maturity": 0,
 			"payout_weight": "coin_block",
 			"final_round": false,
 			"buyin_policy": "unlimited",

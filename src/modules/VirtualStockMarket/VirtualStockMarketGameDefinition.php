@@ -47,7 +47,6 @@ class VirtualStockMarketGameDefinition {
 			"exponential_inflation_rate": 0,
 			"pos_reward": 0,
 			"round_length": 100,
-			"maturity": 0,
 			"payout_weight": "coin_round",
 			"final_round": null,
 			"buyin_policy": "for_sale",
