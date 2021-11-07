@@ -116,14 +116,6 @@ CREATE TABLE `blockchains` (
   `genesis_address` varchar(50) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
---
--- Dumping data for table `blockchains`
---
-
-INSERT INTO `blockchains` (`blockchain_id`, `creator_id`, `only_game_id`, `default_image_id`, `authoritative_peer_id`, `blockchain_name`, `url_identifier`, `online`, `p2p_mode`, `coin_name`, `coin_name_plural`, `seconds_per_block`, `average_seconds_per_block`, `decimal_places`, `rpc_host`, `rpc_username`, `rpc_password`, `rpc_port`, `default_rpc_port`, `first_required_block`, `last_complete_block`, `load_unconfirmed_transactions`, `initial_pow_reward`, `supports_getblockheader`, `last_hash_time`, `rpc_last_time_connected`, `block_height`, `genesis_address`) VALUES
-(1, NULL, NULL, 35, NULL, 'Bitcoin', 'bitcoin', 1, 'rpc', 'bitcoin', 'bitcoins', 600, NULL, 8, '127.0.0.1', NULL, NULL, NULL, 8332, NULL, NULL, 0, 5000000000, 1, NULL, NULL, NULL, NULL),
-(2, NULL, NULL, 73, NULL, 'Litecoin', 'litecoin', 1, 'rpc', 'litecoin', 'litecoins', 150, NULL, 8, '127.0.0.1', NULL, NULL, NULL, 9332, NULL, NULL, 1, 5000000000, 0, NULL, NULL, NULL, NULL);
-
 -- --------------------------------------------------------
 
 --
@@ -472,35 +464,7 @@ CREATE TABLE `currencies` (
 --
 
 INSERT INTO `currencies` (`currency_id`, `oracle_url_id`, `blockchain_id`, `entity_id`, `default_design_image_id`, `default_design_text_color`, `name`, `short_name`, `short_name_plural`, `abbreviation`, `symbol`) VALUES
-(1, 3, NULL, NULL, NULL, NULL, 'US Dollar', 'dollar', 'dollars', 'USD', '$'),
-(2, NULL, NULL, NULL, NULL, NULL, 'Euro', 'euro', 'euros', 'EUR', '&euro;'),
-(3, NULL, NULL, NULL, NULL, NULL, 'Renminbi', 'renminbi', 'renminbi', 'CNY', '&yen;'),
-(4, NULL, NULL, NULL, NULL, NULL, 'Pound sterling', 'pound', 'pounds', 'GBP', '&pound;'),
-(5, NULL, NULL, NULL, NULL, NULL, 'Japanese yen', 'yen', 'yen', 'JPY', '&yen;'),
-(6, NULL, 1, NULL, 80, NULL, 'Bitcoin', 'bitcoin', 'bitcoins', 'BTC', '&#3647;'),
-(7, NULL, 2, NULL, NULL, NULL, 'Litecoin', 'litecoin', 'litecoins', 'LTC', 'L'),
-(8, NULL, NULL, NULL, NULL, NULL, 'Bitcoin Cash', 'bcash', 'bitcoins', 'BCH', ''),
-(9, NULL, NULL, NULL, NULL, NULL, 'Dash', 'dash', 'dash', 'DASH', ''),
-(10, NULL, NULL, NULL, NULL, NULL, 'Ethereum', 'ether', 'ether', 'ETH', ''),
-(11, NULL, NULL, NULL, NULL, NULL, 'Ethereum Classic', 'ether', 'ether', 'ETC', ''),
-(12, NULL, NULL, NULL, NULL, NULL, 'Monero', 'monero', 'monero', 'XMR', ''),
-(13, NULL, NULL, NULL, NULL, NULL, 'NEM', 'xem', 'xem', 'XEM', ''),
-(14, NULL, NULL, NULL, NULL, NULL, 'NEO', 'neo', 'neo', 'NEO', ''),
-(15, NULL, NULL, NULL, NULL, NULL, 'Ripple', 'ripple', 'ripples', 'XRP', ''),
-(16, NULL, NULL, NULL, NULL, NULL, 'EOS', 'EOS', 'EOS', 'EOS', ''),
-(17, NULL, NULL, NULL, NULL, NULL, 'Amazon', 'AMZN', 'AMZN', 'AMZN', ''),
-(18, NULL, NULL, NULL, NULL, NULL, 'Apple', 'AAPL', 'AAPL', 'AAPL', ''),
-(19, NULL, NULL, NULL, NULL, NULL, 'Facebook', 'FB', 'FB', 'FB', ''),
-(20, NULL, NULL, NULL, NULL, NULL, 'Google', 'GOOG', 'GOOG', 'GOOG', ''),
-(21, NULL, NULL, NULL, NULL, NULL, 'HP', 'HP', 'HP', 'HP', ''),
-(22, NULL, NULL, NULL, NULL, NULL, 'IBM', 'IBM', 'IBM', 'IBM', ''),
-(23, NULL, NULL, NULL, NULL, NULL, 'Intel', 'INTC', 'INTC', 'INTC', ''),
-(24, NULL, NULL, NULL, NULL, NULL, 'Microsoft', 'MSFT', 'MSFT', 'MSFT', ''),
-(25, NULL, NULL, NULL, NULL, NULL, 'Netflix', 'NFLX', 'NFLX', 'NFLX', ''),
-(26, NULL, NULL, NULL, NULL, NULL, 'Salesforce', 'CRM', 'CRM', 'CRM', ''),
-(27, NULL, NULL, NULL, NULL, NULL, 'Twitter', 'TWTR', 'TWTR', 'TWTR', ''),
-(28, NULL, NULL, NULL, NULL, NULL, 'Uber', 'UBER', 'UBER', 'UBER', ''),
-(29, NULL, 3, NULL, NULL, NULL, 'StakeChain', 'stake', 'stakes', 'stakes', '');
+(1, 3, NULL, NULL, NULL, NULL, 'US Dollar', 'dollar', 'dollars', 'USD', '$');
 
 -- --------------------------------------------------------
 

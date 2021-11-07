@@ -228,20 +228,50 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 											<div class="modal-content">
 												<form method="post" action="/manage_blockchains/">
 													<div class="modal-body">
-														<p>Please enter the RPC username and password for connecting to the <b><?php echo $db_blockchain['blockchain_name']; ?></b> daemon:</p>
+														<p>Please set up the connection to <b><?php echo $db_blockchain['blockchain_name']; ?></b> by entering the parameters below:</p>
 														<input type="hidden" name="action" value="save_blockchain_params" />
 														<input type="hidden" name="blockchain_id" value="<?php echo $blockchain->db_blockchain['blockchain_id']; ?>" />
 														<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
-														<input class="form-control" name="rpc_host" placeholder="RPC hostname (default 127.0.0.1)" />
-														<input class="form-control" name="rpc_username" placeholder="RPC username" />
-														<input class="form-control" name="rpc_password" placeholder="RPC password" autocomplete="off" />
-														<input class="form-control" name="rpc_port" value="<?php echo $blockchain->db_blockchain['default_rpc_port']; ?>" placeholder="RPC port" />
-														<input class="form-control" name="first_required_block" value="" placeholder="First required block" />
+														
+														<div class="form-group">
+															<label for="rpc_host_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>">
+																RPC hostname
+															</label>
+															<input class="form-control input-sm" name="rpc_host" id="rpc_host_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>" placeholder="127.0.0.1" />
+														</div>
+														
+														<div class="form-group">
+															<label for="rpc_username_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>">
+																RPC username
+															</label>
+															<input class="form-control input-sm" name="rpc_username" id="rpc_username_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>" />
+														</div>
+														
+														<div class="form-group">
+															<label for="rpc_password_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>">
+																RPC password
+															</label>
+															<input class="form-control input-sm" name="rpc_password" id="rpc_password_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>" autocomplete="off" />
+														</div>
+														
+														<div class="form-group">
+															<label for="rpc_port_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>">
+																RPC port
+															</label>
+															<input class="form-control input-sm" name="rpc_port" id="rpc_port_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>" placeholder="<?php echo $blockchain->db_blockchain['default_rpc_port']; ?>" />
+														</div>
+														
+														<div class="form-group">
+															<label for="first_required_block_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>">
+																Sync from block
+															</label>
+															<input class="form-control input-sm" name="first_required_block" id="first_required_block_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>" placeholder="1" />
+														</div>
 													</div>
 													<div class="modal-footer">
 														<button type="button" class="btn btn-warning" data-dismiss="modal">Cancel</button>
 														 &nbsp;&nbsp; or &nbsp; 
-														<input type="submit" class="btn btn-success" value="Save RPC Credentials" />
+														<input type="submit" class="btn btn-success" value="Save RPC Connection" />
 													</div>
 												</form>
 											</div>
@@ -415,6 +445,15 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 		
 		window.onload = function() {
 			thisBlockchainManager = new BlockchainManager('<?php echo $thisuser->get_synchronizer_token(); ?>');
+			<?php
+			if (!empty($_REQUEST['prompt_action']) && $_REQUEST['prompt_action'] == "set_rpc_credentials") {
+				if (!empty($_REQUEST['blockchain_id'])) {
+					?>
+					$('#set_rpc_<?php echo (int) $_REQUEST['blockchain_id']; ?>').modal('show');
+					<?php
+				}
+			}
+			?>
 		};
 		</script>
 		<?php

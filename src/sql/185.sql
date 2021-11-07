@@ -1,1 +1,0 @@
-UPDATE `blockchains` SET supports_getblockheader=1 WHERE url_identifier='litecoin';

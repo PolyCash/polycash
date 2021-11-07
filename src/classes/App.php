@@ -1735,11 +1735,14 @@ class App {
 		return [
 			['string', 'blockchain_name'],
 			['string', 'url_identifier'],
+			['string', 'p2p_mode'],
 			['string', 'coin_name'],
 			['string', 'coin_name_plural'],
 			['int', 'seconds_per_block'],
 			['int', 'decimal_places'],
-			['int', 'initial_pow_reward']
+			['int', 'initial_pow_reward'],
+			['int', 'default_rpc_port'],
+			['int', 'online'],
 		];
 	}
 	
@@ -1912,25 +1915,9 @@ class App {
 			$db_blockchain = $this->fetch_blockchain_by_identifier($blockchain_def->url_identifier);
 			
 			if (!$db_blockchain) {
-				if (empty($blockchain_def->p2p_mode) || !in_array($blockchain_def->p2p_mode, ['rpc', 'none', 'web_api'])) $p2p_mode = "web_api";
-				else $p2p_mode = $blockchain_def->p2p_mode;
-				
 				$import_params = [
-					'p2p_mode' => $p2p_mode,
 					'creator_id' => $thisuser->db_user['user_id'],
-					'online' => 1
 				];
-				
-				if ($p2p_mode != "rpc") $import_params['first_required_block'] = 1;
-				
-				$peer = false;
-				$import_params['authoritative_peer_id'] = null;
-				if ($blockchain_def->peer != "none") {
-					$peer = $this->get_peer_by_server_name($blockchain_def->peer, true);
-					if ($peer) {
-						$import_params['authoritative_peer_id'] = $peer['peer_id'];
-					}
-				}
 				
 				$verbatim_vars = $this->blockchain_verbatim_vars();
 				
@@ -1941,10 +1928,24 @@ class App {
 					$import_params[$var_name] = $blockchain_def->$var_name;
 				}
 				
+				if ($import_params['p2p_mode'] != "rpc") $import_params['first_required_block'] = 1;
+				
+				$peer = false;
+				$import_params['authoritative_peer_id'] = null;
+				if (!empty($blockchain_def->peer) && $blockchain_def->peer != "none") {
+					$peer = $this->get_peer_by_server_name($blockchain_def->peer, true);
+					if ($peer) {
+						$import_params['authoritative_peer_id'] = $peer['peer_id'];
+					}
+				}
+				
 				$this->run_insert_query("blockchains", $import_params);
 				$blockchain_id = $this->last_insert_id();
+				$blockchain = new Blockchain($this, $blockchain_id);
 				
-				$error_message = "Successfully imported the ".$blockchain_def->blockchain_name." blockchain. Next please <a href=\"/scripts/sync_blockchain_initial.php?key=".AppSettings::getParam('operator_key')."&blockchain_id=".$blockchain_id."\">reset and synchronize ".$blockchain_def->blockchain_name."</a>";
+				$error_message = "Successfully imported the ".$blockchain_def->blockchain_name." blockchain. ";
+				if ($blockchain->db_blockchain['p2p_mode'] == "rpc") $error_message .= "Next please <a href=\"/manage_blockchains/?prompt_action=set_rpc_credentials&blockchain_id=".$blockchain->db_blockchain['blockchain_id']."\">set RPC credentials for ".$blockchain_def->blockchain_name."</a>";
+				else $error_message .= "Next please <a href=\"/scripts/sync_blockchain_initial.php?key=".AppSettings::getParam('operator_key')."&blockchain_id=".$blockchain_id."\">initialize ".$blockchain_def->blockchain_name."</a>";
 				
 				return $blockchain_id;
 			}

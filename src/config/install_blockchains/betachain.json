@@ -1,0 +1,13 @@
+{
+    "blockchain_name": "Betachain",
+    "url_identifier": "betachain",
+    "p2p_mode": "web_api",
+    "coin_name": "betacoin",
+    "coin_name_plural": "betacoins",
+    "seconds_per_block": 150,
+    "decimal_places": 8,
+    "initial_pow_reward": 5000000000,
+    "default_rpc_port": null,
+    "online": 1,
+    "peer": "https:\/\/poly.cash"
+}
