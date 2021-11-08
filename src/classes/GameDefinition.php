@@ -38,7 +38,9 @@ class GameDefinition {
 				if ($game->db_game[$var_name] == "0" || $game->db_game[$var_name] > 0) $var_val = (int) $game->db_game[$var_name];
 				else $var_val = null;
 			}
-			else if ($var_type == "float") $var_val = (float) $game->db_game[$var_name];
+			else if ($var_type == "float") {
+				$var_val = $game->db_game[$var_name] == "" ? null : (float) $game->db_game[$var_name];
+			}
 			else if ($var_type == "bool") {
 				if ($game->db_game[$var_name]) $var_val = true;
 				else $var_val = false;

@@ -1778,6 +1778,7 @@ class Blockchain {
 		]);
 		
 		if ((string) $this->db_blockchain['first_required_block'] != "") $this->set_last_complete_block($block_height-1);
+		$this->set_processed_my_addresses_to_block($block_height > 1 ? $block_height-1 : null);
 		
 		$associated_games = $this->associated_games([]);
 		
@@ -1900,6 +1901,8 @@ class Blockchain {
 			
 			if ($print_debug) $this->app->print_debug($del_i."/".$delete_queries." at ".round(microtime(true)-$ref_time, 4));
 		}
+		
+		$this->set_processed_my_addresses_to_block(null);
 		
 		$this->app->dbh->commit();
 	}
@@ -2956,6 +2959,30 @@ class Blockchain {
 		}
 		
 		return $this->app->run_limited_query($coinbase_io_q, $coinbase_io_params)->fetchAll();
+	}
+	
+	public function set_processed_my_addresses_to_block($block_id) {
+		$this->app->run_query("UPDATE blockchains SET processed_my_addresses_to_block=:processed_my_addresses_to_block WHERE blockchain_id=:blockchain_id;", [
+			'processed_my_addresses_to_block' => $block_id,
+			'blockchain_id' => $this->db_blockchain['blockchain_id']
+		]);
+		
+		$this->db_blockchain['processed_my_addresses_to_block'] = $block_id;
+	}
+	
+	public function fetch_tx_by_position_in_block($block_height, $position_in_block) {
+		return $this->app->run_query("SELECT * FROM transactions WHERE blockchain_id=:blockchain_id AND block_id=:block_id AND position_in_block=:position_in_block;", [
+			'blockchain_id' => $this->db_blockchain['blockchain_id'],
+			'block_id' => $block_height,
+			'position_in_block' => $position_in_block
+		])->fetch();
+	}
+	
+	public function fetch_io_by_position_in_tx($transaction, $position) {
+		return $this->app->run_query("SELECT * FROM transaction_ios WHERE create_transaction_id=:transaction_id AND out_index=:out_index;", [
+			'transaction_id' => $transaction['transaction_id'],
+			'out_index' => $position
+		])->fetch();
 	}
 }
 ?>

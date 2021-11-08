@@ -43,6 +43,7 @@ class Game {
 	
 	public static function create_game(&$blockchain, $params) {
 		$params['blockchain_id'] = $blockchain->db_blockchain['blockchain_id'];
+		if (!empty($params['pow_reward_type']) && $params['pow_reward_type'] != "none") $params['bulk_add_blocks'] = 0;
 		$blockchain->app->run_insert_query("games", $params);
 		$game_id = $blockchain->app->last_insert_id();
 		
@@ -2253,6 +2254,27 @@ class Game {
 				}
 			}
 			
+			if ($this->db_game['pow_reward_type'] == "fixed" && $this->db_game['pow_fixed_reward'] > 0) {
+				$pow_reward_int = (int)($this->db_game['pow_fixed_reward']*pow(10, $this->db_game['decimal_places']));
+				$coinbase_tx = $this->blockchain->fetch_tx_by_position_in_block($db_block['block_id'], 0);
+				$coinbase_io = $this->blockchain->fetch_io_by_position_in_tx($coinbase_tx, 0);
+				$game_io_index++;
+				$this->blockchain->app->run_insert_query("transaction_game_ios", [
+					'io_id' => $coinbase_io['io_id'],
+					'address_id' => $coinbase_io['address_id'],
+					'game_id' => $this->db_game['game_id'],
+					'game_out_index' => 0,
+					'game_io_index' => $game_io_index,
+					'colored_amount' => $pow_reward_int,
+					'is_coinbase' => 0,
+					'is_resolved' => 1,
+					'resolved_before_spent' => 1,
+					'votes' => 0,
+					'create_block_id' => $db_block['block_id'],
+					'create_round_id' => $round_id,
+				]);
+			}
+			
 			$keep_looping = true;
 			$relevant_tx_count = 0;
 			$events_by_option_id = [];
@@ -2588,7 +2610,7 @@ class Game {
 			$this->set_block_stats($game_block);
 			
 			// If nothing was added this block & it's allowed, add game blocks in bulk
-			if ($this->db_game['bulk_add_blocks'] && $relevant_tx_count == 0 && in_array($this->db_game['buyin_policy'], ["none", "for_sale"])) {
+			if ($this->db_game['bulk_add_blocks'] && $relevant_tx_count == 0 && in_array($this->db_game['buyin_policy'], ["none", "for_sale"]) && $this->db_game['pow_reward_type'] == "none") {
 				$last_block_id = $this->blockchain->last_block_id();
 				
 				if ($last_block_id > $block_height+5) {

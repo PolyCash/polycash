@@ -72,12 +72,7 @@ if ($app->running_as_admin()) {
 									}
 								}
 								
-								$app->run_query("UPDATE blockchains SET processed_my_addresses_to_block=:processed_my_addresses_to_block WHERE blockchain_id=:blockchain_id;", [
-									'processed_my_addresses_to_block' => $last_block_id,
-									'blockchain_id' => $blockchain->db_blockchain['blockchain_id']
-								]);
-								
-								$blockchain->db_blockchain['processed_my_addresses_to_block'] = $last_block_id;
+								$blockchain->set_processed_my_addresses_to_block($last_block_id);
 								
 								if ($print_debug) $app->print_debug("Checked ".count($listsinceblock['transactions'])." transactions from block #".$process_from_block['block_id'].", set ".$add_count." addresses as mine");
 							}
