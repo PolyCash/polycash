@@ -1061,22 +1061,21 @@ class Game {
 				echo "Error, failed to load RPC connection for ".$this->blockchain->db_blockchain['blockchain_name'].".<br/>\n";
 			}
 		}
-		$this->blockchain->app->run_query("UPDATE games SET initial_coins=:initial_coins, game_status='running', start_time=:start_time, start_datetime=:start_datetime WHERE game_id=:game_id;", [
-			'initial_coins' => $this->coins_in_existence(false, false),
+		$this->blockchain->app->run_query("UPDATE games SET game_status='running', start_time=:start_time, start_datetime=:start_datetime WHERE game_id=:game_id;", [
 			'start_time' => $start_block['time_mined'],
 			'start_datetime' => date("Y-m-d g:ia", $start_block['time_mined']),
 			'game_id' => $this->db_game['game_id']
 		]);
 		
-		$this->db_game['seconds_per_block'] = $this->blockchain->db_blockchain['seconds_per_block'];
-		
 		$this->set_loaded_until_block(null);
 		
-		$this->sync_with_definitive_peer(true);
+		if (!empty($this->db_game['definitive_game_peer_id'])) $this->sync_with_definitive_peer(true);
 	}
 	
 	public function max_game_io_index() {
-		return (int)($this->blockchain->app->run_query("SELECT MAX(game_io_index) FROM transaction_game_ios WHERE game_id=:game_id;", ['game_id'=>$this->db_game['game_id']])->fetch()['MAX(game_io_index)']);
+		$info = $this->blockchain->app->run_query("SELECT MAX(game_io_index) FROM transaction_game_ios WHERE game_id=:game_id;", ['game_id'=>$this->db_game['game_id']])->fetch();
+		if ($info && $info['MAX(game_io_index)'] != "") return (int)$info['MAX(game_io_index)'];
+		else return null;
 	}
 	
 	public function process_buyin_transaction($transaction) {
@@ -1106,7 +1105,6 @@ class Game {
 				
 				if ($transaction['tx_hash'] == $this->db_game['genesis_tx_hash']) {
 					$colored_coins_generated = $this->db_game['genesis_amount'];
-					$game_io_index = 0;
 				}
 				else {
 					$escrow_value = $this->escrow_value($transaction['block_id']-1);
@@ -1114,9 +1112,9 @@ class Game {
 					
 					$exchange_rate = $coins_in_existence/$escrow_value;
 					$colored_coins_generated = floor($exchange_rate*$escrowed_coins);
-					
-					$game_io_index = $this->max_game_io_index()+1;
 				}
+				$game_io_index = $this->max_game_io_index();
+				if ($game_io_index === null) $game_io_index = -1;
 				$game_out_index = 0;
 				
 				$sum_colored_coins = 0;
@@ -1132,6 +1130,8 @@ class Game {
 					$colored_coins = floor($colored_coins_generated*$non_escrow_io['amount']/$non_escrowed_coins);
 					$sum_colored_coins += $colored_coins;
 					
+					$game_io_index++;
+					
 					$this->blockchain->app->run_insert_query("transaction_game_ios", [
 						'io_id' => $non_escrow_io['io_id'],
 						'address_id' => $non_escrow_io['address_id'],
@@ -1146,8 +1146,6 @@ class Game {
 						'coin_rounds_destroyed' => 0,
 						'is_resolved' => 1
 					]);
-					
-					$game_io_index++;
 					$game_out_index++;
 				}
 			}
@@ -2145,7 +2143,7 @@ class Game {
 		if ($to_block_height >= $load_block_height) {
 			if ($print_debug) $this->blockchain->app->print_debug($this->db_game['name'].".. loading blocks ".$load_block_height." to ".$to_block_height);
 			
-			if ($load_block_height == $this->db_game['game_starting_block']) $game_io_index = 0;
+			if ($load_block_height == $this->db_game['game_starting_block']) $game_io_index = $this->max_game_io_index();
 			else {
 				$prev_block = $this->fetch_game_block_by_height($load_block_height-1);
 				$game_io_index = $prev_block['max_game_io_index'];
@@ -2288,9 +2286,14 @@ class Game {
 				])->fetchAll();
 				
 				if (count($relevant_transactions) > 0) {
-					$relevant_tx_count += count($relevant_transactions);
+					$thisloop_genesis_tx_count = 0;
 					
 					foreach ($relevant_transactions as $db_transaction) {
+						if ($db_transaction['tx_hash'] == $this->db_game['genesis_tx_hash']) {
+							$thisloop_genesis_tx_count++;
+							continue;
+						}
+						
 						$tx_game_input_sum = 0;
 						$crd_in = 0;
 						$cbd_in = 0;
@@ -2551,6 +2554,11 @@ class Game {
 						
 						$this->blockchain->app->dbh->commit();
 					}
+					
+					$thisloop_relevant_tx_count = count($relevant_transactions) - $thisloop_genesis_tx_count;
+					
+					if ($thisloop_relevant_tx_count > 0) $relevant_tx_count += $thisloop_relevant_tx_count;
+					else $keep_looping = false;
 				}
 				else $keep_looping = false;
 			}

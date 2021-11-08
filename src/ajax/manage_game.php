@@ -102,7 +102,6 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 					$new_game_params = [
 						'creator_id' => $thisuser->db_user['user_id'],
 						'game_status' => 'editable',
-						'featured' => 0,
 						'option_group_id' => $db_group ? $db_group['group_id'] : null,
 					];
 					
