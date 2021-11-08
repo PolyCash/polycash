@@ -356,28 +356,32 @@ class User {
 		}
 	}
 	
+	public function ensure_currency_account(&$currency) {
+		$user_blockchain_account = $this->app->user_blockchain_account($this->db_user['user_id'], $currency['currency_id']);
+		
+		if (empty($user_blockchain_account)) {
+			$account = $this->app->create_new_account([
+				'user_id' => $this->db_user['user_id'],
+				'currency_id' => $currency['currency_id'],
+				'account_name' => "Primary ".$currency['name']." Account"
+			]);
+			
+			$address_key = $this->app->new_normal_address_key($currency['currency_id'], $account);
+			
+			if ($address_key) {
+				$this->app->run_query("UPDATE currency_accounts SET current_address_id=:address_id WHERE account_id=:account_id;", [
+					'address_id' => $address_key['address_id'],
+					'account_id' => $account['account_id']
+				]);
+			}
+		}
+	}
+	
 	public function ensure_currency_accounts() {
 		$required_currencies = $this->app->run_query("SELECT * FROM currencies c JOIN blockchains b ON c.blockchain_id=b.blockchain_id WHERE b.online=1;");
 		
 		while ($currency = $required_currencies->fetch()) {
-			$user_blockchain_account = $this->app->user_blockchain_account($this->db_user['user_id'], $currency['currency_id']);
-			
-			if (empty($user_blockchain_account)) {
-				$account = $this->app->create_new_account([
-					'user_id' => $this->db_user['user_id'],
-					'currency_id' => $currency['currency_id'],
-					'account_name' => "Primary ".$currency['name']." Account"
-				]);
-				
-				$address_key = $this->app->new_address_key($currency['currency_id'], $account);
-				
-				if ($address_key) {
-					$this->app->run_query("UPDATE currency_accounts SET current_address_id=:address_id WHERE account_id=:account_id;", [
-						'address_id' => $address_key['address_id'],
-						'account_id' => $account['account_id']
-					]);
-				}
-			}
+			$this->ensure_currency_account($currency);
 		}
 	}
 	

@@ -967,12 +967,15 @@ class App {
 	}
 	
 	public function new_normal_address_key($currency_id, &$account) {
+		$failed_gen_address = false;
 		do {
 			$address_key = $this->new_address_key($currency_id, $account);
+			if (!$address_key) $failed_gen_address = true;
 		}
-		while ($address_key['is_separator_address'] == 1 || $address_key['is_destroy_address'] == 1 || $address_key['is_passthrough_address'] == 1);
+		while (!$failed_gen_address && ($address_key['is_separator_address'] == 1 || $address_key['is_destroy_address'] == 1 || $address_key['is_passthrough_address'] == 1));
 		
-		return $address_key;
+		if ($address_key) return $address_key;
+		else return false;
 	}
 	
 	public function insert_address_key($new_key_params) {
@@ -2118,9 +2121,9 @@ class App {
 		}
 		else {
 			$blockchain = new Blockchain($this, $db_address['primary_blockchain_id']);
-			$currency_id = $blockchain->currency_id();
-			
-			$account = $this->user_blockchain_account($user->db_user['user_id'], $currency_id);
+			$currency = $this->fetch_currency_by_id($blockchain->currency_id());
+			$user->ensure_currency_account($currency);
+			$account = $this->user_blockchain_account($user->db_user['user_id'], $currency['currency_id']);
 			
 			if ($account) {
 				$address_key = $this->fetch_address_key_by_address_id($db_address['address_id']);
@@ -2133,7 +2136,7 @@ class App {
 				}
 				else {
 					$address_key = $this->insert_address_key([
-						'currency_id' => $currency_id,
+						'currency_id' => $currency['currency_id'],
 						'address_id' => $db_address['address_id'],
 						'account_id' => $account['account_id'],
 						'pub_key' => $db_address['address'],
@@ -3760,7 +3763,14 @@ class App {
 								if (!$existing_blockchain) {
 									$import_blockchain_message = null;
 									$new_blockchain_id = $this->create_blockchain_from_definition($blockchain_def, $thisuser, $import_blockchain_message);
-									$this->blockchain_ensure_currencies();
+									
+									if ($new_blockchain_id) {
+										$new_blockchain = new Blockchain($this, $new_blockchain_id);
+										$this->blockchain_ensure_currencies();
+										$currency = $this->fetch_currency_by_id($new_blockchain->currency_id());
+										$thisuser->ensure_currency_account($currency);
+									}
+									
 									array_push($messages, $import_blockchain_message);
 								}
 							}
