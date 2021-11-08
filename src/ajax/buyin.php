@@ -25,7 +25,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 		}
 		else {
 			$buyin_currency = $app->fetch_currency_by_id($game->blockchain->currency_id());
-			$escrow_address = $game->blockchain->create_or_fetch_address($game->db_game['escrow_address'], true, false, false, false, false);
+			$escrow_address = $game->blockchain->create_or_fetch_address($game->db_game['escrow_address'], false, null);
 			$escrow_value = $game->escrow_value(false)/pow(10, $game->db_game['decimal_places']);
 			$pay_to_account = $thisuser->fetch_currency_account($buyin_currency['currency_id']);
 		}

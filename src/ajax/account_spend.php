@@ -25,7 +25,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 						if ($amount+$fee <= $account_balance) {
 							$amount_sum = 0;
 							
-							$db_address = $blockchain->create_or_fetch_address($address, true, false, false, false, false);
+							$db_address = $blockchain->create_or_fetch_address($address, false, null);
 							
 							$spendable_ios = $app->run_query("SELECT io.* FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE io.blockchain_id=:blockchain_id AND io.spend_status IN ('unspent','unconfirmed') AND k.account_id=:account_id;", [
 								'blockchain_id' => $blockchain->db_blockchain['blockchain_id'],
@@ -106,7 +106,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 						$address_text = $_REQUEST['address'];
 						
 						$user_game = $thisuser->ensure_user_in_game($game, false);
-						$escrow_address = $game->blockchain->create_or_fetch_address($game->db_game['escrow_address'], true, false, false, false, false);
+						$escrow_address = $game->blockchain->create_or_fetch_address($game->db_game['escrow_address'], false, null);
 						
 						if ($address_text == "new") {
 							$game_currency_account = $app->fetch_account_by_id($user_game['account_id']);
@@ -114,7 +114,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 						}
 						else {
 							$game->blockchain->load_coin_rpc();
-							$color_address = $game->blockchain->create_or_fetch_address($address_text, true, false, false, false, false);
+							$color_address = $game->blockchain->create_or_fetch_address($address_text, false, null);
 						}
 						
 						$error_message = false;
@@ -262,7 +262,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 					if ($db_io['amount'] >= $amount+$fee_amount) {
 						$remainder_amount = $db_io['amount']-$amount-$fee_amount;
 						
-						$db_address = $blockchain->create_or_fetch_address($address, true, false, false, false, false);
+						$db_address = $blockchain->create_or_fetch_address($address, false, null);
 						
 						$amounts = array($amount);
 						$address_ids = array($db_address['address_id']);
@@ -295,7 +295,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 						$amount = $amount*pow(10, $game->db_game['decimal_places']);
 						$fee_amount = $fee*pow(10, $blockchain->db_blockchain['decimal_places']);
 						
-						$db_address = $blockchain->create_or_fetch_address($address, true, false, false, false, false);
+						$db_address = $blockchain->create_or_fetch_address($address, false, null);
 						
 						$coloredcoins_per_coin = $io_game['SUM(gio.colored_amount)']/($db_io['amount']-$fee_amount);
 						$io_amount = round($amount/$coloredcoins_per_coin);
@@ -507,7 +507,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 										
 										if (count($passthrough_address) > 0) {
 											$passthrough_address = $passthrough_address[0];
-											$spend_to_address = $blockchain->create_or_fetch_address($address_text, true, false, false, false, false);
+											$spend_to_address = $blockchain->create_or_fetch_address($address_text, false, null);
 											
 											if ($spend_to_address['is_destroy_address'] == 0 && $spend_to_address['is_separator_address'] == 0 && $spend_to_address['is_passthrough_address'] == 0) {
 												$output_amounts = [];

@@ -7,6 +7,7 @@
     "seconds_per_block": 150,
     "decimal_places": 8,
     "initial_pow_reward": 5000000000,
+    "coinbase_maturity": 50,
     "default_rpc_port": "9023",
     "online": 1,
     "default_image_identifier": "cccc42bf198f0aeee390a642bfb691a80343592bbf4e7a3e628b696a0b419659"

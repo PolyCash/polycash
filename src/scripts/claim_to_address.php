@@ -11,7 +11,7 @@ if ($app->running_as_admin()) {
 	
 	if (in_array($blockchain->db_blockchain['p2p_mode'], ['none','web_api'])) {
 		$coinbase_quantity = (int) $_REQUEST['coinbase_quantity'];
-		$db_address = $blockchain->create_or_fetch_address($_REQUEST['address'], true, false, true, false, false);
+		$db_address = $blockchain->create_or_fetch_address($_REQUEST['address'], false, null);
 		
 		$coinbase_ios = $app->run_query("SELECT * FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id JOIN address_keys ak ON io.address_id=ak.address_id WHERE t.blockchain_id=".$blockchain->db_blockchain['blockchain_id']." AND t.transaction_desc='coinbase' AND io.spend_status='unspent' AND ak.account_id IS NULL ORDER BY t.block_id ASC LIMIT ".$coinbase_quantity.";")->fetchAll();
 		

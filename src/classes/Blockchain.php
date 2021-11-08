@@ -1001,7 +1001,7 @@ class Blockchain {
 				
 				$outputs[$out_index] = array("value"=>$out_io['amount']/pow(10,$this->db_blockchain['decimal_places']));
 				
-				$output_address = $this->create_or_fetch_address($out_io['address'], true, false, true, false, false);
+				$output_address = $this->create_or_fetch_address($out_io['address'], false, null);
 				$output_io_indices[$out_index] = $output_address['option_index'];
 				
 				$output_io_ids[$out_index] = $out_io['io_id'];
@@ -1041,7 +1041,7 @@ class Blockchain {
 				list($address_text, $script_type, $address_error) = $this->vout_to_address_info($outputs[$out_index]);
 				
 				if (!$address_error) {
-					$output_address = $this->create_or_fetch_address($address_text, true, false, true, false, false);
+					$output_address = $this->create_or_fetch_address($address_text, false, null);
 					
 					if ($first_passthrough_index === false && $output_address['is_passthrough_address'] == 1) $first_passthrough_index = $out_index;
 					
@@ -2181,57 +2181,53 @@ class Blockchain {
 		return $this->app->run_query($balance_q, $balance_params)->fetch()['SUM(amount)'];
 	}
 	
-	public function create_or_fetch_address($address, $check_existing, $delete_optionless, $claimable, $force_is_mine, $account_id) {
-		if ($check_existing) {
-			$db_address = $this->app->fetch_address($address);
-			if ($db_address) return $db_address;
-		}
+	public function create_or_fetch_address($address, $force_is_mine, $account_id) {
+		$db_address = $this->app->fetch_address($address);
+		if ($db_address) return $db_address;
+		
 		$vote_identifier = $this->app->addr_text_to_vote_identifier($address);
 		$option_index = $this->app->vote_identifier_to_option_index($vote_identifier);
 		
-		if ($option_index !== false || !$delete_optionless) {
-			if ($force_is_mine) $is_mine=1;
-			else {
-				$this->load_coin_rpc();
+		if ($force_is_mine) $is_mine=1;
+		else {
+			$this->load_coin_rpc();
+			
+			if ($this->coin_rpc) {
+				$address_info = $this->coin_rpc->getaddressinfo($address);
 				
-				if ($this->coin_rpc) {
-					$validate_address = $this->coin_rpc->validateaddress($address);
-					
-					if (!empty($validate_address['ismine'])) $is_mine = 1;
-					else $is_mine=0;
-				}
+				if (!empty($address_info['ismine'])) $is_mine = 1;
 				else $is_mine=0;
 			}
-			
-			list($is_destroy_address, $is_separator_address, $is_passthrough_address) = $this->app->option_index_to_special_address_types($option_index);
-			
-			$this->app->run_insert_query("addresses", [
-				'primary_blockchain_id' => $this->db_blockchain['blockchain_id'],
-				'address' => $address,
-				'time_created' => time(),
-				'is_mine' => $is_mine,
-				'vote_identifier' => $vote_identifier,
-				'option_index' => $option_index,
-				'is_destroy_address' => $is_destroy_address,
-				'is_separator_address' => $is_separator_address,
-				'is_passthrough_address' => $is_passthrough_address
-			]);
-			$output_address_id = $this->app->last_insert_id();
-			
-			if ($is_mine == 1) {
-				$this->app->insert_address_key([
-					'currency_id' => $this->currency_id(),
-					'address_id' => $output_address_id,
-					'account_id' => null,
-					'pub_key' => $address,
-					'option_index' => $option_index,
-					'primary_blockchain_id' => $this->db_blockchain['blockchain_id']
-				]);
-			}
-			
-			return $this->app->fetch_address_by_id($output_address_id);
+			else $is_mine=0;
 		}
-		else return false;
+		
+		list($is_destroy_address, $is_separator_address, $is_passthrough_address) = $this->app->option_index_to_special_address_types($option_index);
+		
+		$this->app->run_insert_query("addresses", [
+			'primary_blockchain_id' => $this->db_blockchain['blockchain_id'],
+			'address' => $address,
+			'time_created' => time(),
+			'is_mine' => $is_mine,
+			'vote_identifier' => $vote_identifier,
+			'option_index' => $option_index,
+			'is_destroy_address' => $is_destroy_address,
+			'is_separator_address' => $is_separator_address,
+			'is_passthrough_address' => $is_passthrough_address
+		]);
+		$output_address_id = $this->app->last_insert_id();
+		
+		if ($is_mine == 1) {
+			$this->app->insert_address_key([
+				'currency_id' => $this->currency_id(),
+				'address_id' => $output_address_id,
+				'account_id' => null,
+				'pub_key' => $address,
+				'option_index' => $option_index,
+				'primary_blockchain_id' => $this->db_blockchain['blockchain_id']
+			]);
+		}
+		
+		return $this->app->fetch_address_by_id($output_address_id);
 	}
 	
 	public function account_balance($account_id, $include_unconfirmed=false) {
@@ -2544,7 +2540,7 @@ class Blockchain {
 		
 		$ref_account = false;
 		$mined_address_str = $this->app->random_string(34);
-		$mined_address = $this->create_or_fetch_address($mined_address_str, false, false, false, true, false);
+		$mined_address = $this->create_or_fetch_address($mined_address_str, true, null);
 		
 		$mined_error = false;
 		$mined_transaction_id = $this->create_transaction('coinbase', array($this->db_blockchain['initial_pow_reward']), $created_block_id, false, array($mined_address['address_id']), 0, $mined_error);
@@ -2750,7 +2746,7 @@ class Blockchain {
 		
 		for ($out_index=0; $out_index<count($tx['outputs']); $out_index++) {
 			$tx_output = get_object_vars($tx['outputs'][$out_index]);
-			$db_address = $this->create_or_fetch_address($tx_output['address'], true, false, false, false, false);
+			$db_address = $this->create_or_fetch_address($tx_output['address'], false, null);
 			
 			if ($first_passthrough_index === false && $db_address['is_passthrough_address'] == 1) $first_passthrough_index = $out_index;
 			
@@ -2803,7 +2799,7 @@ class Blockchain {
 		
 		do {
 			$new_addr_txt = $this->coin_rpc->getnewaddress("", "legacy");
-			$new_addr_db = $this->create_or_fetch_address($new_addr_txt, false, false, false, true, false);
+			$new_addr_db = $this->create_or_fetch_address($new_addr_txt, true, null);
 			$new_addr_count++;
 		}
 		while (microtime(true) <= $start_time+$time_limit_seconds);
@@ -2930,6 +2926,36 @@ class Blockchain {
 		];
 		$spendable_io_q = "SELECT * FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id WHERE io.spend_status IN ('unspent') AND k.account_id=:account_id ORDER BY io.io_id ASC;";
 		return $this->app->run_query($spendable_io_q, $spendable_io_params);
+	}
+	
+	public function fetch_coinbase_ios($unclaimed_only, $unspent_only, $mature_only, $limit) {
+		$coinbase_io_q = "SELECT io.* FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id JOIN address_keys ak ON io.address_id=ak.address_id WHERE t.blockchain_id=:blockchain_id AND t.transaction_desc='coinbase'";
+		
+		$coinbase_io_params = [
+			'blockchain_id' => $this->db_blockchain['blockchain_id']
+		];
+		
+		if ($unspent_only) {
+			$coinbase_io_q .= " AND io.spend_status='unspent'";
+		}
+		
+		if ($unclaimed_only) {
+			$coinbase_io_q .= " AND ak.account_id IS NULL";
+		}
+		
+		if ($mature_only) {
+			$coinbase_io_q .= " AND io.create_block_id <= :mature_at_block_height";
+			$coinbase_io_params['mature_at_block_height'] = $this->last_block_id()-$this->db_blockchain['coinbase_maturity']+1;
+		}
+		
+		$coinbase_io_q .= " ORDER BY t.block_id ASC";
+		
+		if ($limit) {
+			$coinbase_io_q .= " LIMIT :limit";
+			$coinbase_io_params['limit'] = $limit;
+		}
+		
+		return $this->app->run_limited_query($coinbase_io_q, $coinbase_io_params)->fetchAll();
 	}
 }
 ?>

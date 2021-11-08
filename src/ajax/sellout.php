@@ -148,7 +148,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 						$user_game_account = $app->fetch_account_by_id($user_game['account_id']);
 						
 						$receive_address = $_REQUEST['address'];
-						$db_receive_address = $sellout_blockchain->create_or_fetch_address($receive_address, true, false, true, false, false);
+						$db_receive_address = $sellout_blockchain->create_or_fetch_address($receive_address, false, null);
 						
 						$app->run_query("UPDATE currency_invoices SET receive_address_id=:receive_address_id, buyin_amount=:buyin_amount, fee_amount=:fee_amount WHERE invoice_id=:invoice_id;", [
 							'receive_address_id' => $db_receive_address['address_id'],

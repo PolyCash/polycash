@@ -59,11 +59,11 @@ if ($game && $thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 						$validate_address = $game->blockchain->coin_rpc->validateaddress($address_text);
 						$address_ok = $validate_address['isvalid'];
 						if ($address_ok) {
-							$db_address = $game->blockchain->create_or_fetch_address($address_text, true, false, false, false, false);
+							$db_address = $game->blockchain->create_or_fetch_address($address_text, false, null);
 						}
 					}
 					else {
-						$db_address = $game->blockchain->create_or_fetch_address($address_text, true, false, false, false, false);
+						$db_address = $game->blockchain->create_or_fetch_address($address_text, false, null);
 						$address_ok = true;
 					}
 					

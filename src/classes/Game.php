@@ -1080,7 +1080,7 @@ class Game {
 	
 	public function process_buyin_transaction($transaction) {
 		if ((string)$this->db_game['game_starting_block'] !== "" && !empty($this->db_game['escrow_address'])) {
-			$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false);
+			$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], false, null);
 			
 			$io_out_count = $this->blockchain->app->run_query("SELECT COUNT(*) FROM transaction_ios WHERE create_transaction_id=:create_transaction_id AND address_id=:address_id;", [
 				'create_transaction_id' => $transaction['transaction_id'],
@@ -1156,7 +1156,7 @@ class Game {
 	public function escrow_value($block_id) {
 		if (!$block_id) $block_id = $this->blockchain->last_block_id();
 		
-		$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false);
+		$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], false, null);
 		
 		$value = $this->blockchain->address_balance_at_block($escrow_address, $block_id);
 		
@@ -2220,7 +2220,7 @@ class Game {
 			}
 			
 			if (!in_array($this->db_game['buyin_policy'], ["none","for_sale"])) {
-				$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false);
+				$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], false, null);
 				
 				$buyin_transactions = $this->blockchain->app->run_query("SELECT * FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE io.create_block_id=:block_height AND io.address_id=:escrow_address_id GROUP BY t.transaction_id;", [
 					'block_height' => $block_height,
@@ -3117,7 +3117,7 @@ class Game {
 	
 	public function process_sellouts_in_block($block_id) {
 		if ($this->db_game['sellout_policy'] == "on" && !in_array($this->db_game['buyin_policy'], ['for_sale', 'none', ''])) {
-			$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false);
+			$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], false, null);
 			
 			// Identify sellout transactions paid into escrow & create records in game_sellouts table
 			$sellout_transactions = $this->blockchain->app->run_query("SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id WHERE io.blockchain_id=:blockchain_id AND t.block_id = :block_id AND io.address_id=:address_id GROUP BY t.transaction_id;", [

@@ -2449,7 +2449,7 @@ ALTER TABLE `async_email_deliveries`
 -- AUTO_INCREMENT for table `blockchains`
 --
 ALTER TABLE `blockchains`
-  MODIFY `blockchain_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `blockchain_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `blocks`

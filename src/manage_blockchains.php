@@ -190,10 +190,11 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 											<option value="enable">Enable</option>
 											<?php
 										}
-										if ($blockchain->db_blockchain['p2p_mode'] == "none") { ?>
-											<option value="claim_coinbase">Transfer mined coins to address</option>
-											<?php
-										}
+										
+										?>
+										<option value="manage_coinbase">Manage mined coins</option>
+										<?php
+										
 										if ($blockchain->db_blockchain['p2p_mode'] == "rpc") {
 											if ($blockchain->db_blockchain['is_rpc_mining']) {
 												?>
@@ -309,6 +310,8 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 					</tbody>
 				</table>
 				
+				<div style="display: none;" class="modal fade" id="manage_coinbase_modal"></div>
+				
 				<div class="modal fade" id="new_blockchain_modal" style="display: none;">
 					<div class="modal-dialog">
 						<div class="modal-content">
@@ -391,11 +394,10 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 				
 				var confirm_ok = false;
 				
-				if (action == "set_rpc_credentials" || action == "see_definition") confirm_ok = true;
+				if (action == "set_rpc_credentials" || action == "see_definition" || action == "manage_coinbase") confirm_ok = true;
 				else {
 					var confirm_message = "Are you sure you want to ";
 					if (action == "reset_synchronize") confirm_message += "reset & synchronize "+blockchain_name+"?";
-					else if (action == "claim_coinbase") confirm_message += "move mined coins to an address?";
 					else if (action == "start_mining") confirm_message += "start mining?";
 					else if (action == "stop_mining") confirm_message += "stop mining?";
 					else confirm_message += action+" "+blockchain_name+"?";
@@ -411,6 +413,19 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 					}
 					else if (action == "see_definition") {
 						window.open('/explorer/blockchains/'+blockchain_identifier+'/definition/', '_blank');
+					}
+					else if (action == "manage_coinbase") {
+						$.ajax({
+							url: "/ajax/manage_coinbase.php",
+							data: {
+								blockchain_id: blockchain_id,
+								action: 'view'
+							},
+							success: function(manage_response) {
+								$('#manage_coinbase_modal').html(manage_response);
+								$('#manage_coinbase_modal').modal('show');
+							}
+						});
 					}
 					else if (action == "claim_coinbase") {
 						var coinbase_quantity = prompt("How many "+blockchain_name+" coinbase outputs do you want to claim?");

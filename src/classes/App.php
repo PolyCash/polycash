@@ -327,6 +327,14 @@ class App {
 			$block_loading_process = $this->run_shell_command($cmd, $print_debug);
 			if (is_resource($block_loading_process)) $process_count++;
 			else $html .= "Failed to start a process for syncing ".$sync_blockchain['blockchain_name'].".\n";
+			
+			if ($sync_blockchain['p2p_mode'] == "rpc") {
+				$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/process_my_addresses.php" blockchain_id='.$sync_blockchain['blockchain_id'];
+				$my_addresses_process = $this->run_shell_command($cmd, $print_debug);
+				if (is_resource($my_addresses_process)) $process_count++;
+				else $html .= "Failed to start processing my addresses for ".$sync_blockchain['blockchain_name'].".\n";
+			}
+			
 			sleep(0.02);
 		}
 		
@@ -1018,7 +1026,7 @@ class App {
 			
 			if ($failed) return false;
 			else {
-				$db_address = $blockchain->create_or_fetch_address($address_text, true, false, false, true, false);
+				$db_address = $blockchain->create_or_fetch_address($address_text, true, null);
 				
 				if ($reject_destroy_addresses && $db_address['is_destroy_address'] == 1) return $this->new_address_key($currency_id, $account, $reject_destroy_addresses);
 				else {
@@ -1745,6 +1753,7 @@ class App {
 			['int', 'seconds_per_block'],
 			['int', 'decimal_places'],
 			['int', 'initial_pow_reward'],
+			['int', 'coinbase_maturity'],
 			['int', 'default_rpc_port'],
 			['string', 'default_image_identifier'],
 		];
@@ -2602,7 +2611,7 @@ class App {
 			])->fetch();
 			
 			if ($io) {
-				$db_address = $blockchain->create_or_fetch_address($address, true, false, false, false, false);
+				$db_address = $blockchain->create_or_fetch_address($address, false, null);
 				
 				$fee_amount = $fee*pow(10, $blockchain->db_blockchain['decimal_places']);
 				$amounts = array($io['amount']-$fee_amount);

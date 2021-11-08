@@ -137,7 +137,7 @@ if ($app->running_as_admin()) {
 									while (!empty($spendable_ios[$spendable_io_pos]['amount']) && $io_inputs_sum < $fee_amount+$sell_amount_int);
 									
 									if ($io_inputs_sum >= $fee_amount+$sell_amount_int) {
-										$deposit_address = $blockchains_by_id[$sale_account['blockchain_id']]->create_or_fetch_address($deposit_address_by_currency[$sale_account['abbreviation']], true, false, false, false, false);
+										$deposit_address = $blockchains_by_id[$sale_account['blockchain_id']]->create_or_fetch_address($deposit_address_by_currency[$sale_account['abbreviation']], false, null);
 										
 										if ($deposit_address) {
 											$deposit_address_ids = [$deposit_address['address_id']];

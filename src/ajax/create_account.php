@@ -37,7 +37,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 								]);
 								
 								for ($i=0; $i<count($account_addresses); $i++) {
-									$blockchain->create_or_fetch_address($account_addresses[$i], true, $blockchain->coin_rpc, false, false, false, $account['account_id']);
+									$blockchain->create_or_fetch_address($account_addresses[$i], false, $account['account_id']);
 								}
 								$app->output_message(1, '/accounts/?account_id='.$account['account_id'], false);
 							}
