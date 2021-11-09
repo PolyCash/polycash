@@ -415,9 +415,9 @@ class Game {
 	public function apply_user_strategy(&$log_text, &$user_game, $mining_block_id, $current_round_id, &$api_response, $force_now) {
 		$strategy_user = new User($this->blockchain->app, $user_game['user_id']);
 		
-		$unmature_balance = $this->blockchain->account_balance($user_game['account_id'], true);
+		$unconfirmed_balance = $this->blockchain->account_balance($user_game['account_id'], true);
 		$immature_amount = $this->blockchain->account_balance($user_game['account_id'], false, true);
-		$spendable_balance = $unmature_balance - $immature_amount;
+		$spendable_balance = $unconfirmed_balance - $immature_amount;
 		
 		$last_block_id = $this->blockchain->last_block_id();
 		

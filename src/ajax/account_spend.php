@@ -22,9 +22,9 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 						
 						$address = $_REQUEST['address'];
 						
-						$unmature_balance = $blockchain->account_balance($db_account['account_id'], true);
-						$immature_balance = $blockchain->account_balance($db_account['account_id'], false, true);
-						$spendable_balance = $unmature_balance - $immature_balance;
+						$unconfirmed_balance = $blockchain->account_balance($db_account['account_id'], true);
+						$immature_amount = $blockchain->account_balance($db_account['account_id'], false, true);
+						$spendable_balance = $unconfirmed_balance - $immature_amount;
 						
 						if ($amount+$fee <= $spendable_balance) {
 							$amount_sum = 0;

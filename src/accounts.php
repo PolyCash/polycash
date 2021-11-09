@@ -352,7 +352,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 					
 					if ($show_balances) {
 						$mature_balance = $blockchain->account_balance($account['account_id']);
-						$unmature_balance = $blockchain->account_balance($account['account_id'], true);
+						$immature_balance = $blockchain->account_balance($account['account_id'], true);
 						$immature_amount = $blockchain->account_balance($account['account_id'], false, true);
 					}
 					
@@ -373,7 +373,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 					echo '<div class="col-sm-2" style="text-align: right">';
 					if ($show_balances) {
 						$ready_balance = $mature_balance - $immature_amount;
-						$unready_balance = $unmature_balance - $ready_balance;
+						$unready_balance = $immature_balance - $ready_balance;
 						
 						echo '<font class="text-success">'.$app->format_bignum($ready_balance/pow(10,$blockchain->db_blockchain['decimal_places'])).' '.$account['short_name_plural'].'</font>';
 						
