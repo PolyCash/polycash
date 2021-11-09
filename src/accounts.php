@@ -325,10 +325,14 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 				
 				foreach ($accounts as $account) {
 					$blockchain = new Blockchain($app, $account['blockchain_id']);
+					$last_block_id = $blockchain->last_block_id();
 					
 					if ($account['game_id'] > 0) {
 						$account_game = new Game($blockchain, $account['game_id']);
-						if ($show_balances) $account_value = $account_game->account_balance($account['account_id']);
+						if ($show_balances) {
+							$game_mature_balance = $account_game->account_balance($account['account_id']);
+							$game_immature_balance = $account_game->account_balance($account['account_id'], ['include_immature' => 1]);
+						}
 					}
 					else $account_game = false;
 					
@@ -347,24 +351,34 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 					echo '</div>';
 					
 					if ($show_balances) {
-						$balance = $blockchain->account_balance($account['account_id']);
-						$unconfirmed_balance = $blockchain->account_balance($account['account_id'], true);
+						$mature_balance = $blockchain->account_balance($account['account_id']);
+						$unmature_balance = $blockchain->account_balance($account['account_id'], true);
+						$immature_amount = $blockchain->account_balance($account['account_id'], false, true);
 					}
 					
-					echo '<div class="col-sm-2 greentext" style="text-align: right">';
+					echo '<div class="col-sm-2" style="text-align: right">';
 					if ($account['game_id'] > 0) {
-						if ($show_balances) echo $app->format_bignum($account_value/pow(10,$account_game->db_game['decimal_places'])).' ';
-						echo $account_game->db_game['coin_name_plural'];
+						if ($show_balances) {
+							echo '<font class="text-success">'.$app->format_bignum($game_mature_balance/pow(10,$account_game->db_game['decimal_places'])).' '.$account_game->db_game['coin_name_plural'].'</font>';
+							
+							if ($game_immature_balance != $game_mature_balance) {
+								$game_immature_amount = $game_immature_balance - $game_mature_balance;
+								echo ' &nbsp; <font class="text-warning">(+'.$app->format_bignum($game_immature_amount/pow(10,$account_game->db_game['decimal_places'])).')</font>';
+							}
+						}
 					}
 					else echo "&nbsp;";
 					echo '</div>';
 					
 					echo '<div class="col-sm-2" style="text-align: right">';
 					if ($show_balances) {
-						echo '<font class="text-success">'.$app->format_bignum($balance/pow(10,$blockchain->db_blockchain['decimal_places'])).' '.$account['short_name_plural'].'</font>';
+						$ready_balance = $mature_balance - $immature_amount;
+						$unready_balance = $unmature_balance - $ready_balance;
 						
-						if ($unconfirmed_balance != $balance) {
-							echo ' &nbsp; <font class="text-warning">('.$app->format_bignum($unconfirmed_balance/pow(10,$blockchain->db_blockchain['decimal_places'])).')</font>';
+						echo '<font class="text-success">'.$app->format_bignum($ready_balance/pow(10,$blockchain->db_blockchain['decimal_places'])).' '.$account['short_name_plural'].'</font>';
+						
+						if ($unready_balance > 0) {
+							echo ' &nbsp; <font class="text-warning">(+'.$app->format_bignum($unready_balance/pow(10,$blockchain->db_blockchain['decimal_places'])).')</font>';
 						}
 					}
 					echo '</div>';
@@ -476,12 +490,16 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 							echo $transaction['pub_key'];
 							echo '</a></div>';
 							
+							if ($transaction['is_mature'] == 0 || $transaction['create_block_id'] == "") $io_render_class = "text-warning";
+							else $io_render_class = "text-success";
+							
 							if ($account_game) {
-								echo '<div class="col-sm-2" style="text-align: right;"><a class="greentext" target="_blank" href="/explorer/games/'.$account_game->db_game['url_identifier'].'/transactions/'.$transaction['tx_hash'].'/">';
+								echo '<div class="col-sm-2" style="text-align: right;"><a class="'.$io_render_class.'" target="_blank" href="/explorer/games/'.$account_game->db_game['url_identifier'].'/transactions/'.$transaction['tx_hash'].'/">';
 								echo "+".$app->format_bignum($colored_coin_amount/pow(10,$account_game->db_game['decimal_places']))."&nbsp;".$account_game->db_game['coin_name_plural'];
 								echo '</a></div>';
 							}
-							echo '<div class="col-sm-2" style="text-align: right;"><a class="greentext" target="_blank" href="/explorer/blockchains/'.$account['blockchain_url_identifier'].'/utxo/'.$transaction['tx_hash'].'/'.$transaction['out_index'].'">';
+							
+							echo '<div class="col-sm-2" style="text-align: right;"><a class="'.$io_render_class.'" target="_blank" href="/explorer/blockchains/'.$account['blockchain_url_identifier'].'/utxo/'.$transaction['tx_hash'].'/'.$transaction['out_index'].'">';
 							echo "+".$app->format_bignum($transaction['amount']/pow(10,$blockchain->db_blockchain['decimal_places']))."&nbsp;".$account['short_name_plural'];
 							echo '</a></div>';
 							
@@ -490,8 +508,16 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 							else echo "<a target=\"_blank\" href=\"/explorer/blockchains/".$account['blockchain_url_identifier']."/blocks/".$transaction['block_id']."\">Block&nbsp;#".$transaction['block_id']."</a>";
 							echo "</div>\n";
 							
-							echo '<div class="col-sm-2">'.ucwords($transaction['spend_status']);
-							if ($transaction['spend_status'] != "spent" && $transaction['block_id'] !== "") {
+							echo '<div class="col-sm-2">';
+							
+							if ($transaction['is_mature'] == 0) {
+								$mature_on_block = $transaction['create_block_id'] + $blockchain->db_blockchain['coinbase_maturity'] - 1;
+								$blocks_til_maturity = $mature_on_block - $last_block_id;
+								echo 'Immature ('.$blocks_til_maturity.' block'.($blocks_til_maturity == 1 ? '' : 's').' left)';
+							}
+							else echo ucwords($transaction['spend_status']);
+							
+							if ($transaction['spend_status'] != "spent" && $transaction['is_mature']) {
 								echo "&nbsp;&nbsp;<a href=\"\" onclick=\"thisPageManager.account_start_spend_io(";
 								if ($account_game) echo $account_game->db_game['game_id'];
 								else echo 'false';

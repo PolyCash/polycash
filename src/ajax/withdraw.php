@@ -19,7 +19,7 @@ if ($game && $thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 		$mining_block_id = $last_block_id+1;
 		$round_id = $game->block_to_round($mining_block_id);
 		
-		$blockchain_mature_balance = $game->blockchain->user_mature_balance($user_game);
+		$blockchain_mature_balance = $game->blockchain->account_balance($user_game['account_id']);
 		$game_mature_balance = $thisuser->mature_balance($game, $user_game);
 		
 		$remainder_address = $app->any_normal_address_in_account($user_game['account_id']);

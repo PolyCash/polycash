@@ -16,7 +16,6 @@ class transaction {
 	public $raw;
 	public $json_obj;
 	public $block_id;
-	public $is_coinbase;
 	public $db_id;
 	public $output_sum;
 	
@@ -25,7 +24,6 @@ class transaction {
 		$this->raw = $raw;
 		$this->json_obj = $json_obj;
 		$this->block_id = $block_id;
-		$this->is_coinbase = false;
 		$this->db_id = false;
 		$this->output_sum = 0;
 	}

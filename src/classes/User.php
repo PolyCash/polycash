@@ -24,7 +24,7 @@ class User {
 		return "We just sent you a verification email. Please open your inbox and click the link to log in.";
 	}
 	
-	public function immature_balance(&$game, &$user_game) {
+	public function unconfirmed_amount(&$game, &$user_game) {
 		$query_params = [
 			'game_id' => $game->db_game['game_id'],
 			'account_id' => $user_game['account_id']
@@ -32,6 +32,13 @@ class User {
 		return (int)($this->app->run_query("SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.game_id=:game_id AND k.account_id=:account_id AND io.spend_status != 'spent' AND gio.is_resolved=0;", $query_params)->fetch(PDO::FETCH_NUM)[0]);
 	}
 
+	public function immature_amount(&$game, &$user_game) {
+		return (int)($this->app->run_query("SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.game_id=:game_id AND k.account_id=:account_id AND io.is_mature=0;", [
+			'game_id' => $game->db_game['game_id'],
+			'account_id' => $user_game['account_id']
+		])->fetch(PDO::FETCH_NUM)[0]);
+	}
+	
 	public function mature_balance(&$game, &$user_game) {
 		$spendable_ios_in_account = $game->blockchain->app->spendable_ios_in_account($user_game['account_id'], $game->db_game['game_id'], false, false);
 		
@@ -63,14 +70,14 @@ class User {
 		return [$votes, $votes_value];
 	}
 	
-	public function wallet_text_stats(&$game, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance, $user_votes, $votes_value, $pending_bets, &$user_game) {
+	public function wallet_text_stats(&$game, $current_round, $last_block_id, $block_within_round, $mature_balance, $locked_amount, $user_votes, $votes_value, $pending_bets, &$user_game) {
 		$html = '<div class="row"><div class="col-sm-4">Available&nbsp;funds:</div>';
 		$html .= '<div class="col-sm-6 text-right"><font class="greentext">';
 		$html .= $this->app->format_bignum($mature_balance/pow(10,$game->db_game['decimal_places']));
 		$html .= "</font> ".$game->db_game['coin_name_plural']."</div></div>\n";
 		
 		$html .= '<div class="row"><div class="col-sm-4">Locked&nbsp;funds:</div>';
-		$html .= '<div class="col-sm-6 text-right"><font class="redtext">'.$this->app->format_bignum($immature_balance/pow(10,$game->db_game['decimal_places'])).'</font> '.$game->db_game['coin_name_plural'].'</div>';
+		$html .= '<div class="col-sm-6 text-right"><font class="redtext">'.$this->app->format_bignum($locked_amount/pow(10,$game->db_game['decimal_places'])).'</font> '.$game->db_game['coin_name_plural'].'</div>';
 		$html .= "</div>\n";
 		
 		$html .= '<div class="row"><div class="col-sm-4">Pending bets:</div><div class="col-sm-6 text-right"><font class="greentext">'.$this->app->format_bignum($pending_bets/pow(10,$game->db_game['decimal_places'])).'</font> '.$game->db_game['coin_name_plural'].'</div></div>'."\n";

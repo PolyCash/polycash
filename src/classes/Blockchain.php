@@ -419,8 +419,9 @@ class Blockchain {
 			$db_existing_addresses_by_address = (array) (AppSettings::arrayToMapOnKey($db_existing_addresses, "address"));
 			
 			// Process all outputs
-			$insert_outputs_q = "INSERT INTO transaction_ios (blockchain_id, address_id, option_index, spend_status, out_index, is_destroy, is_separator, is_passthrough, is_receiver, create_transaction_id, script_type, amount, create_block_id) VALUES ";
+			$insert_outputs_q = "INSERT INTO transaction_ios (blockchain_id, address_id, option_index, spend_status, out_index, is_coinbase, is_mature, is_destroy, is_separator, is_passthrough, is_receiver, create_transaction_id, script_type, amount, create_block_id) VALUES ";
 			$block_num_outputs = 0;
+			$tx_position_in_block = 0;
 			
 			foreach ($rpc_transactions as &$rpc_transaction) {
 				$out_index = 0;
@@ -453,12 +454,16 @@ class Blockchain {
 					
 					$this_transaction_id = $db_transactions_by_hash[$tx_hash]->transaction_id;
 					
-					$insert_outputs_q .= "(".$this->db_blockchain['blockchain_id'].", ".$this_addr['address_id'].", '".$this_addr['option_index']."', 'unspent', '".$out_index."', '".$this_addr['is_destroy_address']."', '".$this_addr['is_separator_address']."', '".$this_addr['is_passthrough_address']."', '".$is_receiver."', ".$this_transaction_id.", '".$script_type."', '".$output_value_int."', ".$block_height."), ";
+					$is_coinbase = $tx_position_in_block == 0 ? 1 : 0;
+					$is_mature = $is_coinbase ? 0 : 1;
+					
+					$insert_outputs_q .= "(".$this->db_blockchain['blockchain_id'].", ".$this_addr['address_id'].", '".$this_addr['option_index']."', 'unspent', '".$out_index."', '".$is_coinbase."', '".$is_mature."', '".$this_addr['is_destroy_address']."', '".$this_addr['is_separator_address']."', '".$this_addr['is_passthrough_address']."', '".$is_receiver."', ".$this_transaction_id.", '".$script_type."', '".$output_value_int."', ".$block_height."), ";
 					
 					$out_index++;
 				}
 				
 				$block_num_outputs += count($vouts);
+				$tx_position_in_block++;
 			}
 			
 			if ($block_num_outputs > 0) {
@@ -979,6 +984,8 @@ class Blockchain {
 		$output_destroy_sum = 0;
 		$last_regular_output_index = false;
 		$first_passthrough_index = false;
+		$is_coinbase = $position_in_block === 0 ? 1 : 0;
+		$is_mature = $is_coinbase ? 0 : 1;
 		
 		if ($this->db_blockchain['p2p_mode'] != "rpc") {
 			$outputs = [];
@@ -1052,6 +1059,8 @@ class Blockchain {
 						'blockchain_id' => $this->db_blockchain['blockchain_id'],
 						'script_type' => $script_type,
 						'out_index' => $out_index,
+						'is_coinbase' => $is_coinbase,
+						'is_mature' => $is_mature,
 						'address_id' => $output_address['address_id'],
 						'create_transaction_id' => $db_transaction_id,
 						'amount' => $new_io_amount,
@@ -1137,7 +1146,7 @@ class Blockchain {
 				foreach ($input_ios as $input_io) {
 					$crd_in += $input_io['colored_amount']*($ref_round_id-$input_io['create_round_id']);
 					
-					if ($input_io['is_coinbase'] == 1) {
+					if ($input_io['is_game_coinbase'] == 1) {
 						if (empty($events_by_option_id[$input_io['option_id']])) {
 							$db_event = $this->app->run_query("SELECT * FROM events WHERE event_id=:event_id;", [
 								'event_id' => $input_io['event_id']
@@ -1188,7 +1197,7 @@ class Blockchain {
 				$game_out_index = 0;
 				$next_separator_i = 0;
 				
-				$insert_q = "INSERT INTO transaction_game_ios (game_id, is_coinbase, io_id, address_id, game_out_index, ref_block_id, ref_coin_blocks, ref_round_id, ref_coin_rounds, colored_amount, destroy_amount, option_id, contract_parts, event_id, effectiveness_factor, effective_destroy_amount, is_resolved, resolved_before_spent) VALUES ";
+				$insert_q = "INSERT INTO transaction_game_ios (game_id, is_game_coinbase, io_id, address_id, game_out_index, ref_block_id, ref_coin_blocks, ref_round_id, ref_coin_rounds, colored_amount, destroy_amount, option_id, contract_parts, event_id, effectiveness_factor, effective_destroy_amount, is_resolved, resolved_before_spent) VALUES ";
 				$num_gios_added = 0;
 				
 				for ($out_index=0; $out_index<count($outputs); $out_index++) {
@@ -1263,28 +1272,28 @@ class Blockchain {
 					$insert_q = substr($insert_q, 0, -2).";";
 					$this->app->run_query($insert_q);
 					if (empty(AppSettings::getParam('sqlite_db'))) {
-						$this->app->run_query("UPDATE transaction_ios io JOIN transaction_game_ios gio ON gio.io_id=io.io_id SET gio.parent_io_id=gio.game_io_id-1 WHERE io.create_transaction_id=:create_transaction_id AND gio.game_id=:game_id AND gio.is_coinbase=1;", [
+						$this->app->run_query("UPDATE transaction_ios io JOIN transaction_game_ios gio ON gio.io_id=io.io_id SET gio.parent_io_id=gio.game_io_id-1 WHERE io.create_transaction_id=:create_transaction_id AND gio.game_id=:game_id AND gio.is_game_coinbase=1;", [
 							'create_transaction_id' => $db_transaction_id,
 							'game_id' => $color_game->db_game['game_id']
 						]);
-						$this->app->run_query("UPDATE transaction_ios io JOIN transaction_game_ios gio ON gio.io_id=io.io_id SET gio.payout_io_id=gio.game_io_id+1 WHERE gio.event_id IS NOT NULL AND io.create_transaction_id=:create_transaction_id AND gio.game_id=:game_id AND gio.is_coinbase=0;", [
+						$this->app->run_query("UPDATE transaction_ios io JOIN transaction_game_ios gio ON gio.io_id=io.io_id SET gio.payout_io_id=gio.game_io_id+1 WHERE gio.event_id IS NOT NULL AND io.create_transaction_id=:create_transaction_id AND gio.game_id=:game_id AND gio.is_game_coinbase=0;", [
 							'create_transaction_id' => $db_transaction_id,
 							'game_id' => $color_game->db_game['game_id']
 						]);
 					}
 					else {
-						$this->app->run_query("UPDATE transaction_game_ios SET parent_io_id=game_io_id-1 WHERE io_id IN (SELECT io_id FROM transaction_ios WHERE create_transaction_id=:create_transaction_id) AND game_id=:game_id AND is_coinbase=1;", [
+						$this->app->run_query("UPDATE transaction_game_ios SET parent_io_id=game_io_id-1 WHERE io_id IN (SELECT io_id FROM transaction_ios WHERE create_transaction_id=:create_transaction_id) AND game_id=:game_id AND is_game_coinbase=1;", [
 							'create_transaction_id' => $db_transaction_id,
 							'game_id' => $color_game->db_game['game_id']
 						]);
-						$this->app->run_query("UPDATE transaction_game_ios SET payout_io_id=game_io_id+1 WHERE event_id IS NOT NULL AND io_id IN (SELECT io_id FROM transaction_ios WHERE create_transaction_id=:create_transaction_id) AND game_id=:game_id AND is_coinbase=0;", [
+						$this->app->run_query("UPDATE transaction_game_ios SET payout_io_id=game_io_id+1 WHERE event_id IS NOT NULL AND io_id IN (SELECT io_id FROM transaction_ios WHERE create_transaction_id=:create_transaction_id) AND game_id=:game_id AND is_game_coinbase=0;", [
 							'create_transaction_id' => $db_transaction_id,
 							'game_id' => $color_game->db_game['game_id']
 						]);
 					}
 				}
 				
-				$unresolved_inputs = $this->app->run_query("SELECT * FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE io.spend_transaction_id=:transaction_id AND gio.game_id=:game_id AND gio.is_coinbase=1 AND gio.resolved_before_spent=0 ORDER BY io.in_index ASC;", [
+				$unresolved_inputs = $this->app->run_query("SELECT * FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE io.spend_transaction_id=:transaction_id AND gio.game_id=:game_id AND gio.is_game_coinbase=1 AND gio.resolved_before_spent=0 ORDER BY io.in_index ASC;", [
 					'transaction_id' => $db_transaction_id,
 					'game_id' => $color_game->db_game['game_id']
 				])->fetchAll();
@@ -1292,7 +1301,7 @@ class Blockchain {
 				$receiver_outputs = $this->app->run_query("SELECT io.*, a.* FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id=:transaction_id AND io.is_receiver=1 ORDER BY io.out_index ASC;", ['transaction_id'=>$db_transaction_id])->fetchAll();
 				
 				if (count($unresolved_inputs) > 0 && count($receiver_outputs) > 0) {
-					$insert_q = "INSERT INTO transaction_game_ios (parent_io_id, game_id, io_id, address_id, game_out_index, is_coinbase, colored_amount, destroy_amount, coin_blocks_destroyed, coin_rounds_destroyed, option_id, contract_parts, event_id, is_resolved, resolved_before_spent) VALUES ";
+					$insert_q = "INSERT INTO transaction_game_ios (parent_io_id, game_id, io_id, address_id, game_out_index, is_game_coinbase, colored_amount, destroy_amount, coin_blocks_destroyed, coin_rounds_destroyed, option_id, contract_parts, event_id, is_resolved, resolved_before_spent) VALUES ";
 					
 					if (count($receiver_outputs)%count($unresolved_inputs) == 0) {
 						$outputs_per_unresolved_input = count($receiver_outputs)/count($unresolved_inputs);
@@ -1599,7 +1608,13 @@ class Blockchain {
 				$load_block_pos++;
 			}
 			
-			if ($print_debug) $this->app->print_debug("Loaded ".number_format($blocks_loaded)." (to block ".$this->db_blockchain['last_complete_block'].") in ".round(microtime(true)-$ref_time, 6)." sec");
+			$ref_time_x = microtime(true);
+			$this->app->run_query("UPDATE transaction_ios SET is_mature=1 WHERE blockchain_id=:blockchain_id AND is_mature=0 AND create_block_id <= :mature_block;", [
+				'blockchain_id' => $this->db_blockchain['blockchain_id'],
+				'mature_block' => $this->db_blockchain['last_complete_block'] - $this->db_blockchain['coinbase_maturity'] + 1
+			]);
+			
+			if ($print_debug) $this->app->print_debug("Loaded ".number_format($blocks_loaded)." (to block ".$this->db_blockchain['last_complete_block'].") in ".round(microtime(true)-$ref_time, 6)." sec, set mature took ".round(microtime(true)-$ref_time_x, 8)." sec");
 			
 			if ($this_loop_blocks_to_load < $load_at_once) $keep_looping = false;
 		}
@@ -2233,8 +2248,14 @@ class Blockchain {
 		return $this->app->fetch_address_by_id($output_address_id);
 	}
 	
-	public function account_balance($account_id, $include_unconfirmed=false) {
-		if ($include_unconfirmed) {
+	public function account_balance($account_id, $include_unconfirmed=false, $immature_only=false) {
+		if ($immature_only) {
+			return (int)($this->app->run_query("SELECT SUM(io.amount) FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id WHERE io.blockchain_id=:blockchain_id AND io.is_mature=0 AND k.account_id=:account_id;", [
+				'blockchain_id' => $this->db_blockchain['blockchain_id'],
+				'account_id' => $account_id
+			])->fetch(PDO::FETCH_NUM)[0]);
+		}
+		else if ($include_unconfirmed) {
 			return (int)($this->app->run_query("SELECT SUM(io.amount) FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id WHERE io.blockchain_id=:blockchain_id AND io.spend_status IN ('unspent','unconfirmed') AND k.account_id=:account_id;", [
 				'blockchain_id' => $this->db_blockchain['blockchain_id'],
 				'account_id' => $account_id
@@ -2247,23 +2268,7 @@ class Blockchain {
 			])->fetch(PDO::FETCH_NUM)[0]);
 		}
 	}
-	
-	public function user_immature_balance(&$user_game) {
-		return (int)($this->app->run_query("SELECT SUM(io.amount) FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id WHERE io.blockchain_id=:blockchain_id AND k.account_id=:account_id AND (io.create_block_id > :block_id OR io.create_block_id IS NULL);", [
-			'blockchain_id' => $this->db_blockchain['blockchain_id'],
-			'account_id' => $user_game['account_id'],
-			'block_id' => $this->last_block_id()
-		])->fetch(PDO::FETCH_NUM)[0]);
-	}
 
-	public function user_mature_balance(&$user_game) {
-		return (int)($this->app->run_query("SELECT SUM(io.amount) FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id WHERE io.spend_status='unspent' AND io.spend_transaction_id IS NULL AND io.blockchain_id=:blockchain_id AND k.account_id=:account_id AND io.create_block_id <= :block_id;", [
-			'blockchain_id' => $this->db_blockchain['blockchain_id'],
-			'account_id' => $user_game['account_id'],
-			'block_id' => $this->last_block_id()
-		])->fetch(PDO::FETCH_NUM)[0]);
-	}
-	
 	public function set_blockchain_creator(&$user) {
 		$this->app->run_query("UPDATE blockchains SET creator_id=:user_id WHERE blockchain_id=:blockchain_id;", [
 			'user_id' => $user->db_user['user_id'],
