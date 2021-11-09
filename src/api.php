@@ -384,7 +384,7 @@ if ($uri_parts[1] == "api") {
 					if ($user_game && $user_game['game_id'] == $game->db_game['game_id']) {
 						$api_user = new User($app, $user_game['user_id']);
 						$account_value = $game->account_balance($user_game['account_id']);
-						$immature_balance = $api_user->immature_balance($game, $user_game);
+						$unconfirmed_amount = $api_user->unconfirmed_amount($game, $user_game);
 						$mature_balance = $api_user->mature_balance($game, $user_game);
 						list($votes_available, $votes_value) = $api_user->user_current_votes($game, $last_block_id, $current_round, $user_game);
 						
@@ -392,7 +392,7 @@ if ($uri_parts[1] == "api") {
 						$api_user_info['account_id'] = intval($user_game['account_id']);
 						$api_user_info['balance'] = $account_value;
 						$api_user_info['mature_balance'] = $mature_balance;
-						$api_user_info['immature_balance'] = $immature_balance;
+						$api_user_info['unconfirmed_amount'] = $unconfirmed_amount;
 						$api_user_info['votes_available'] = $votes_available;
 						
 						$mature_utxos = [];
@@ -419,8 +419,7 @@ if ($uri_parts[1] == "api") {
 							while ($game_io = $db_game_ios->fetch()) {
 								array_push($game_utxos, [
 									'game_io_id' => (int) $game_io['game_io_id'],
-									'coins' => (int) $game_io['colored_amount'],
-									'is_coinbase' => (int) $game_io['is_coinbase']
+									'coins' => (int) $game_io['colored_amount']
 								]);
 							}
 							$mature_utxo['game_utxos'] = $game_utxos;

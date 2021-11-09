@@ -438,7 +438,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						</div>
 						<?php
 						if (!empty($db_event)) {
-							$payout_amount = (int)($app->run_query("SELECT SUM(colored_amount) FROM transaction_game_ios WHERE event_id=:event_id AND is_coinbase=1;", [
+							$payout_amount = (int)($app->run_query("SELECT SUM(colored_amount) FROM transaction_game_ios WHERE event_id=:event_id AND is_game_coinbase=1;", [
 								'event_id' => $event->db_event['event_id']
 							])->fetch()['SUM(colored_amount)']);
 							$payout_disp = $app->format_bignum($payout_amount/pow(10,$game->db_game['decimal_places']));
@@ -1114,7 +1114,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						if ($account) {
 							echo '<p>This UTXO is in your account <a href="/accounts/?account_id='.$account['account_id'].'">'.$account['account_name']."</a><br/>\n";
 							
-							if (!empty($io['is_coinbase'])) {
+							if (!empty($io['is_game_coinbase'])) {
 								$user_game = $app->fetch_user_game_by_account_id($account['account_id']);
 								
 								echo 'This is <a href="/explorer/games/'.$game->db_game['url_identifier'].'/my_bets/?user_game_id='.$user_game['user_game_id'].'&selected_io_id='.$io['io_id'].'">one of your bets</a>. ';
@@ -1406,7 +1406,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						];
 						
 						$ref_time = microtime(true);
-						$my_bets_base_q = "SELECT gio.game_io_id, gio.colored_amount, gio.option_id, gio.is_coinbase, gio.is_resolved, gio.game_out_index, gio.contract_parts, p.contract_parts AS total_contract_parts, p.ref_block_id, p.ref_round_id, p.ref_coin_blocks, p.ref_coin_rounds, p.effectiveness_factor, p.effective_destroy_amount, p.destroy_amount, p.votes, p.".$game->db_game['payout_weight']."s_destroyed, p.game_io_id AS parent_game_io_id, io.io_id, io.spend_transaction_id, io.spend_status, ev.*, ev.effective_destroy_score AS sum_effective_destroy_score, ev.vote_effectiveness_function, ev.effectiveness_param1, o.effective_destroy_score AS option_effective_destroy_score, o.unconfirmed_effective_destroy_score, o.unconfirmed_votes, o.name AS option_name, o.event_option_index, o.entity_id, ev.destroy_score AS sum_destroy_score, p.votes, o.votes AS option_votes, t.tx_hash FROM transaction_game_ios gio JOIN address_keys ak ON gio.address_id=ak.address_id JOIN transaction_ios io ON io.io_id=gio.io_id JOIN transactions t ON t.transaction_id=io.create_transaction_id JOIN options o ON gio.option_id=o.option_id JOIN events ev ON o.event_id=ev.event_id LEFT JOIN transaction_game_ios p ON gio.parent_io_id=p.game_io_id WHERE gio.game_id=:game_id AND ak.account_id=:account_id AND gio.is_coinbase=1 AND gio.resolved_before_spent=1";
+						$my_bets_base_q = "SELECT gio.game_io_id, gio.colored_amount, gio.option_id, gio.is_game_coinbase, gio.is_resolved, gio.game_out_index, gio.contract_parts, p.contract_parts AS total_contract_parts, p.ref_block_id, p.ref_round_id, p.ref_coin_blocks, p.ref_coin_rounds, p.effectiveness_factor, p.effective_destroy_amount, p.destroy_amount, p.votes, p.".$game->db_game['payout_weight']."s_destroyed, p.game_io_id AS parent_game_io_id, io.io_id, io.spend_transaction_id, io.spend_status, ev.*, ev.effective_destroy_score AS sum_effective_destroy_score, ev.vote_effectiveness_function, ev.effectiveness_param1, o.effective_destroy_score AS option_effective_destroy_score, o.unconfirmed_effective_destroy_score, o.unconfirmed_votes, o.name AS option_name, o.event_option_index, o.entity_id, ev.destroy_score AS sum_destroy_score, p.votes, o.votes AS option_votes, t.tx_hash FROM transaction_game_ios gio JOIN address_keys ak ON gio.address_id=ak.address_id JOIN transaction_ios io ON io.io_id=gio.io_id JOIN transactions t ON t.transaction_id=io.create_transaction_id JOIN options o ON gio.option_id=o.option_id JOIN events ev ON o.event_id=ev.event_id LEFT JOIN transaction_game_ios p ON gio.parent_io_id=p.game_io_id WHERE gio.game_id=:game_id AND ak.account_id=:account_id AND gio.is_game_coinbase=1 AND gio.resolved_before_spent=1";
 						
 						$my_bet_records = $app->run_query($my_bets_base_q." ORDER BY ev.event_index DESC, o.option_index DESC;", [
 							'game_id' => $game->db_game['game_id'],

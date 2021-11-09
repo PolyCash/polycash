@@ -11,8 +11,10 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 			$db_account = $app->fetch_account_by_id($_REQUEST['account_id']);
 			
 			if ($db_account) {
-				if (!empty($db_account['blockchain_id'])) {
-					$blockchain = new Blockchain($app, $db_account['blockchain_id']);
+				$currency = $app->fetch_currency_by_id($db_account['currency_id']);
+				
+				if (!empty($currency['blockchain_id'])) {
+					$blockchain = new Blockchain($app, $currency['blockchain_id']);
 					
 					if ($thisuser->db_user['user_id'] == $db_account['user_id'] || ($db_account['user_id'] == "" && $app->user_is_admin($thisuser))) {
 						$amount = round(pow(10,$blockchain->db_blockchain['decimal_places'])*floatval($_REQUEST['amount']));
@@ -20,14 +22,16 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 						
 						$address = $_REQUEST['address'];
 						
-						$account_balance = $blockchain->account_balance($db_account['account_id']);
+						$unconfirmed_balance = $blockchain->account_balance($db_account['account_id'], true);
+						$immature_amount = $blockchain->account_balance($db_account['account_id'], false, true);
+						$spendable_balance = $unconfirmed_balance - $immature_amount;
 						
-						if ($amount+$fee <= $account_balance) {
+						if ($amount+$fee <= $spendable_balance) {
 							$amount_sum = 0;
 							
 							$db_address = $blockchain->create_or_fetch_address($address, false, null);
 							
-							$spendable_ios = $app->run_query("SELECT io.* FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE io.blockchain_id=:blockchain_id AND io.spend_status IN ('unspent','unconfirmed') AND k.account_id=:account_id;", [
+							$spendable_ios = $app->run_query("SELECT io.* FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE io.blockchain_id=:blockchain_id AND io.spend_status IN ('unspent','unconfirmed') AND io.is_mature=1 AND k.account_id=:account_id;", [
 								'blockchain_id' => $blockchain->db_blockchain['blockchain_id'],
 								'account_id' => $db_account['account_id']
 							]);
@@ -483,7 +487,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 							$game = new Game($blockchain, $db_game['game_id']);
 							$db_event = $app->fetch_event_by_id($game_io['event_id']);
 							
-							if ($db_event && $game_io['is_coinbase'] == 1) {
+							if ($db_event && $game_io['is_game_coinbase'] == 1) {
 								if ($game_io['is_resolved'] == 0 && $db_event['event_payout_block'] > $blockchain->last_block_id() && $game_io['spend_status'] != "spent") {
 									$fee_int = (int)($fee_float*pow(10, $blockchain->db_blockchain['decimal_places']));
 									
