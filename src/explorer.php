@@ -830,7 +830,14 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 								echo "<p>".$blockchain->db_blockchain['blockchain_name']." is running in light mode.</p>\n";
 							}
 							else {
-								echo "<p>".$blockchain->db_blockchain['blockchain_name']." is synced from block <a href=\"/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/blocks/".$blockchain->db_blockchain['first_required_block']."\">#".$blockchain->db_blockchain['first_required_block']."</a> to block <a href=\"/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/blocks/".$complete_block_id."\">#".$complete_block_id."</a></p>\n";
+								echo "<p>";
+								if ($complete_block_id <= $blockchain->db_blockchain['first_required_block']) {
+									echo $blockchain->db_blockchain['blockchain_name']." will sync from block <a href=\"/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/blocks/".$blockchain->db_blockchain['first_required_block']."\">#".$blockchain->db_blockchain['first_required_block']."</a>";
+								}
+								else {
+									echo $blockchain->db_blockchain['blockchain_name']." is synced from block <a href=\"/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/blocks/".$blockchain->db_blockchain['first_required_block']."\">#".$blockchain->db_blockchain['first_required_block']."</a> to block <a href=\"/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/blocks/".$complete_block_id."\">#".$complete_block_id."</a>";
+								}
+								echo "</p>\n";
 							
 								if (!empty($recent_block)) {
 									echo "<p>Last block loaded was <a href=\"/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/blocks/".$recent_block['block_id']."\">#".$recent_block['block_id']."</a> (loaded ".$app->format_seconds(time()-$recent_block['time_loaded'])." ago)</p>\n";

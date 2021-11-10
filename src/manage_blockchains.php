@@ -245,14 +245,14 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 															<label for="rpc_username_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>">
 																RPC username
 															</label>
-															<input class="form-control input-sm" name="rpc_username" id="rpc_username_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>" />
+															<input class="form-control input-sm" name="rpc_username" id="rpc_username_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>" autocomplete="off" />
 														</div>
 														
 														<div class="form-group">
 															<label for="rpc_password_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>">
 																RPC password
 															</label>
-															<input class="form-control input-sm" name="rpc_password" id="rpc_password_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>" autocomplete="off" />
+															<input class="form-control input-sm" type="password" name="rpc_password" id="rpc_password_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>" autocomplete="off" />
 														</div>
 														
 														<div class="form-group">

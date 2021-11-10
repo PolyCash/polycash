@@ -1769,6 +1769,7 @@ class App {
 			['string', 'p2p_mode'],
 			['string', 'coin_name'],
 			['string', 'coin_name_plural'],
+			['string', 'abbreviation'],
 			['int', 'seconds_per_block'],
 			['int', 'decimal_places'],
 			['int', 'initial_pow_reward'],
@@ -2181,7 +2182,7 @@ class App {
 				'name' => $db_blockchain['blockchain_name'],
 				'short_name' => $db_blockchain['coin_name'],
 				'short_name_plural' => $db_blockchain['coin_name_plural'],
-				'abbreviation' => $db_blockchain['coin_name_plural']
+				'abbreviation' => $db_blockchain['abbreviation']
 			]);
 		}
 	}

@@ -1448,39 +1448,41 @@ class Blockchain {
 		if ($this->db_blockchain['p2p_mode'] == "none") {}
 		else {
 			$last_block_id = $this->last_block_id();
-			$last_block = $this->fetch_block_by_id($last_block_id);
-			$block_height = $last_block['block_id'];
-			
-			if ($this->db_blockchain['p2p_mode'] == "rpc") {
-				$this->load_coin_rpc();
-				$info = $this->coin_rpc->getblockchaininfo();
-				$actual_block_height = (int) $info['headers'];
-			}
-			else {
-				$info = $this->web_api_fetch_blockchain();
-				$actual_block_height = $info['last_block_id'];
-			}
-			
-			if ($actual_block_height && $last_block_id < $actual_block_height) {
-				if ($print_debug) echo "Quick adding blocks ".$last_block_id.":".$actual_block_height."\n";
+			if ($last_block_id !== false) {
+				$last_block = $this->fetch_block_by_id($last_block_id);
+				$block_height = $last_block['block_id'];
 				
-				$start_q = "INSERT INTO blocks (blockchain_id, block_id, time_created) VALUES ";
-				$modulo = 0;
-				$new_blocks_q = $start_q;
-				for ($block_id = $last_block_id+1; $block_id <= $actual_block_height; $block_id++) {
-					if ($modulo == 1000) {
+				if ($this->db_blockchain['p2p_mode'] == "rpc") {
+					$this->load_coin_rpc();
+					$info = $this->coin_rpc->getblockchaininfo();
+					$actual_block_height = (int) $info['headers'];
+				}
+				else {
+					$info = $this->web_api_fetch_blockchain();
+					$actual_block_height = $info['last_block_id'];
+				}
+				
+				if ($actual_block_height && $last_block_id < $actual_block_height) {
+					if ($print_debug) $this->app->print_debug("Quick adding blocks ".$last_block_id.":".$actual_block_height);
+					
+					$start_q = "INSERT INTO blocks (blockchain_id, block_id, time_created) VALUES ";
+					$modulo = 0;
+					$new_blocks_q = $start_q;
+					for ($block_id = $last_block_id+1; $block_id <= $actual_block_height; $block_id++) {
+						if ($modulo == 1000) {
+							$new_blocks_q = substr($new_blocks_q, 0, -2).";";
+							$this->app->run_query($new_blocks_q);
+							$modulo = 0;
+							$new_blocks_q = $start_q;
+						}
+						else $modulo++;
+						
+						$new_blocks_q .= "('".$this->db_blockchain['blockchain_id']."', '".$block_id."', '".time()."'), ";
+					}
+					if ($modulo > 0) {
 						$new_blocks_q = substr($new_blocks_q, 0, -2).";";
 						$this->app->run_query($new_blocks_q);
-						$modulo = 0;
-						$new_blocks_q = $start_q;
 					}
-					else $modulo++;
-					
-					$new_blocks_q .= "('".$this->db_blockchain['blockchain_id']."', '".$block_id."', '".time()."'), ";
-				}
-				if ($modulo > 0) {
-					$new_blocks_q = substr($new_blocks_q, 0, -2).";";
-					$this->app->run_query($new_blocks_q);
 				}
 			}
 		}
@@ -1697,38 +1699,59 @@ class Blockchain {
 		}
 		else $from_block_height = $from_block_height+1;
 		
+		$info_ok = null;
+		
 		if ($this->db_blockchain['p2p_mode'] == "rpc") {
 			$info = $this->coin_rpc->getblockchaininfo();
-			$block_height = (int) $info['headers'];
+			if ($info && array_key_exists('headers', $info)) {
+				$block_height = (int) $info['headers'];
+				$info_ok = true;
+			}
+			else $info_ok = false;
 		}
 		else if ($this->db_blockchain['p2p_mode'] == "web_api") {
 			$info = $this->web_api_fetch_blockchain();
-			$block_height = (int) $info['last_block_id'];
+			if ($info && array_key_exists('last_block_id', $info)) {
+				$block_height = (int) $info['last_block_id'];
+				$info_ok = true;
+			}
+			else $info_ok = false;
 		}
-		else $block_height = 1;
+		else {
+			$block_height = 1;
+			$info_ok = true;
+		}
 		
-		$log_text = "Inserting blocks ".$from_block_height." to ".$block_height."<br/>\n";
-		
-		$start_insert = "INSERT INTO blocks (blockchain_id, block_id, time_created) VALUES ";
-		$modulo = 0;
-		$new_blocks_q = $start_insert;
-		for ($block_i=$from_block_height; $block_i<$block_height; $block_i++) {
-			if ($modulo == 1000) {
+		if ($info_ok) {
+			$log_text = "Inserting blocks ".$from_block_height." to ".$block_height."<br/>\n";
+			
+			$start_insert = "INSERT INTO blocks (blockchain_id, block_id, time_created) VALUES ";
+			$modulo = 0;
+			$new_blocks_q = $start_insert;
+			for ($block_i=$from_block_height; $block_i<$block_height; $block_i++) {
+				if ($modulo == 1000) {
+					$new_blocks_q = substr($new_blocks_q, 0, -2).";";
+					$this->app->run_query($new_blocks_q);
+					$modulo = 0;
+					$new_blocks_q = $start_insert;
+					$log_text .= ". ";
+				}
+				else $modulo++;
+			
+				$new_blocks_q .= "('".$this->db_blockchain['blockchain_id']."', '".$block_i."', '".time()."'), ";
+			}
+			if ($modulo > 0) {
 				$new_blocks_q = substr($new_blocks_q, 0, -2).";";
 				$this->app->run_query($new_blocks_q);
-				$modulo = 0;
-				$new_blocks_q = $start_insert;
 				$log_text .= ". ";
 			}
-			else $modulo++;
+		}
+		else {
+			$log_text = "Skipped inserting initial blocks, ";
+			if ($this->db_blockchain['p2p_mode'] == "rpc") $log_text .= "RPC connection failed";
+			else $log_text .= "failed to fetch blockchain height from remote peer";
+		}
 		
-			$new_blocks_q .= "('".$this->db_blockchain['blockchain_id']."', '".$block_i."', '".time()."'), ";
-		}
-		if ($modulo > 0) {
-			$new_blocks_q = substr($new_blocks_q, 0, -2).";";
-			$this->app->run_query($new_blocks_q);
-			$log_text .= ". ";
-		}
 		return $log_text;
 	}
 	
@@ -1792,7 +1815,7 @@ class Blockchain {
 			'block_id' => $block_height
 		]);
 		
-		if ((string) $this->db_blockchain['first_required_block'] != "") $this->set_last_complete_block($block_height-1);
+		if ((string) $this->db_blockchain['first_required_block'] != "") $this->set_last_complete_block($block_height == 1 ? null : $block_height-1);
 		$this->set_processed_my_addresses_to_block($block_height > 1 ? $block_height-1 : null);
 		
 		$associated_games = $this->associated_games([]);

@@ -43,8 +43,16 @@ class Game {
 	
 	public static function create_game(&$blockchain, $params) {
 		$params['blockchain_id'] = $blockchain->db_blockchain['blockchain_id'];
+		
 		if (!empty($params['pow_reward_type']) && $params['pow_reward_type'] != "none") $params['bulk_add_blocks'] = 0;
+		
+		if (empty($params['default_buyin_currency_id'])) {
+			$btc_currency = $blockchain->app->fetch_currency_by_abbreviation("BTC");
+			if ($btc_currency) $params['default_buyin_currency_id'] = $btc_currency['currency_id'];
+		}
+		
 		$blockchain->app->run_insert_query("games", $params);
+		
 		$game_id = $blockchain->app->last_insert_id();
 		
 		return new Game($blockchain, $game_id);
