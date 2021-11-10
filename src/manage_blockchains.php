@@ -171,15 +171,7 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 										echo ','.json_encode($blockchain->db_blockchain['url_identifier']);
 										?>, this);'>
 										<option value="">-- Please Select --</option>
-										<option value="see_definition">See Definition</option>
-										<?php if ($blockchain->db_blockchain['p2p_mode'] != "none") { ?>
-											<option value="reset_synchronize">Reset &amp; Synchronize</option>
-											<?php
-										}
-										if ($blockchain->db_blockchain['p2p_mode'] == "rpc") { ?>
-											<option value="set_rpc_credentials"><?php echo empty($blockchain->db_blockchain['rpc_username'].$blockchain->db_blockchain['rpc_password']) ? "Set" : "Change"; ?> RPC Credentials</option>
-											<?php
-										}
+										<?php
 										if ($blockchain->db_blockchain['online']) {
 											?>
 											<option value="disable">Disable</option>
@@ -190,20 +182,30 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 											<option value="enable">Enable</option>
 											<?php
 										}
-										
 										?>
 										<option value="manage_coinbase">Manage mined coins</option>
 										<?php
+										if ($blockchain->db_blockchain['p2p_mode'] != "none") { ?>
+											<option value="reset">Reset blockchain</option>
+											<?php
+										}
+										?>
+										<option value="see_definition">See definition</option>
+										<?php
+										if ($blockchain->db_blockchain['p2p_mode'] == "rpc") { ?>
+											<option value="set_rpc_credentials">Set RPC credentials</option>
+											<?php
+										}
 										
 										if ($blockchain->db_blockchain['p2p_mode'] == "rpc") {
 											if ($blockchain->db_blockchain['is_rpc_mining']) {
 												?>
-												<option value="stop_mining">Stop Mining</option>
+												<option value="stop_mining">Stop mining</option>
 												<?php
 											}
 											else {
 												?>
-												<option value="start_mining">Start Mining</option>
+												<option value="start_mining">Start mining</option>
 												<?php
 											}
 										}
@@ -397,7 +399,7 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 				if (action == "set_rpc_credentials" || action == "see_definition" || action == "manage_coinbase") confirm_ok = true;
 				else {
 					var confirm_message = "Are you sure you want to ";
-					if (action == "reset_synchronize") confirm_message += "reset & synchronize "+blockchain_name+"?";
+					if (action == "reset") confirm_message += "reset "+blockchain_name+"?";
 					else if (action == "start_mining") confirm_message += "start mining?";
 					else if (action == "stop_mining") confirm_message += "stop mining?";
 					else confirm_message += action+" "+blockchain_name+"?";
@@ -405,8 +407,8 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 				}
 				
 				if (confirm_ok) {
-					if (action == "reset_synchronize") {
-						window.open('/scripts/sync_blockchain_initial.php?&blockchain_id='+blockchain_id, '_blank');
+					if (action == "reset") {
+						window.open('/scripts/reset_blockchain.php?blockchain_id='+blockchain_id, '_blank');
 					}
 					else if (action == "set_rpc_credentials") {
 						$('#set_rpc_'+blockchain_id).modal('show');

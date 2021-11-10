@@ -7,34 +7,34 @@ $app->safe_merge_argv_to_request($argv, $allowed_params);
 
 if ($app->running_as_admin() || $app->user_is_admin($thisuser)) {
 	set_time_limit(0);
+	$start_time = microtime(true);
 	
-	$print_debug = (bool) ($_REQUEST['print_debug'] ?? false);
+	if (!AppSettings::runningFromCommandLine()) echo "<pre>";
 	
 	if (empty($_REQUEST['blockchain_id'])) die("Please specify a blockchain_id.\n");
 	else $blockchain_id = (int) $_REQUEST['blockchain_id'];
 	
 	$blockchain = new Blockchain($app, $blockchain_id);
 	
-	if (!empty($_REQUEST['block_id'])) $from_block_id = (int) $_REQUEST['block_id'];
-	else $from_block_id = false;
-	
 	$process_lock_name = "load_blocks_".$blockchain_id;
 	
-	echo "Waiting for block loading script to finish";
+	$app->print_debug("Waiting for block loading script to finish");
+	
 	do {
-		echo ". ";
+		$app->print_debug(". ");
 		$app->flush_buffers();
 		sleep(1);
 		$process_locked = $app->check_process_running($process_lock_name);
 	}
 	while ($process_locked);
 	
-	$app->print_debug("now inserting empty blocks");
+	$app->print_debug("Now resetting ".$blockchain->db_blockchain['blockchain_name']);
 	
 	$app->set_site_constant($process_lock_name, getmypid());
-	echo $blockchain->sync_initial($from_block_id, $print_debug);
+	$blockchain->reset_blockchain(true);
 	$app->set_site_constant($process_lock_name, 0);
-	echo '<br/><a href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/blocks/">See Blocks</a>';
+	
+	$app->print_debug("Completed in ".round(microtime(true)-$start_time, 6)." sec");
 }
 else {
 	echo "You need admin privileges to run this script.\n";
