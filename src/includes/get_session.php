@@ -1,4 +1,6 @@
 <?php
+if ($app->needs_schema_update()) die("Schema is out of date. Please visit <a href='/install.php'>install.php</a>");
+
 if (isset($_COOKIE['my_session_global'])) {
 	$session_key = $_COOKIE['my_session_global'];
 }

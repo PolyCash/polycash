@@ -485,6 +485,10 @@ class GameDefinition {
 		
 		if (!$decode_error) {
 			$module_ok = true;
+			if (!empty($game_def->module)) {
+				$db_module = $app->check_module($game_def->module);
+				if (!$db_module) $module_ok = false;
+			}
 			
 			if ($module_ok) {
 				if (!empty($game_def->blockchain_identifier)) {
@@ -655,7 +659,7 @@ class GameDefinition {
 				}
 				else $error_message .= "Error, blockchain url identifier was empty.\n";
 			}
-			else $error_message .= "Error, invalid module.\n";
+			else $error_message .= "Failed to import game, you don't have the ".$game_def->module." module installed.\n";
 		}
 		
 		return $game;

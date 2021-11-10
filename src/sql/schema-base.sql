@@ -6,6 +6,32 @@ SET time_zone = "+00:00";
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `site_constants`
+--
+
+CREATE TABLE `site_constants` (
+  `constant_id` int(20) NOT NULL,
+  `constant_name` varchar(100) NOT NULL DEFAULT '',
+  `constant_value` varchar(100) NOT NULL DEFAULT ''
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+--
+-- Dumping data for table `site_constants`
+--
+
+INSERT INTO `site_constants` (`constant_id`, `constant_name`, `constant_value`) VALUES
+(1, 'last_migration_id', '165');
+
+--
+-- Indexes for table `site_constants`
+--
+ALTER TABLE `site_constants`
+  ADD PRIMARY KEY (`constant_id`),
+  ADD UNIQUE KEY `constant_name` (`constant_name`);
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `addresses`
 --
 
@@ -1465,25 +1491,6 @@ CREATE TABLE `redirect_urls` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `site_constants`
---
-
-CREATE TABLE `site_constants` (
-  `constant_id` int(20) NOT NULL,
-  `constant_name` varchar(100) NOT NULL DEFAULT '',
-  `constant_value` varchar(100) NOT NULL DEFAULT ''
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-
---
--- Dumping data for table `site_constants`
---
-
-INSERT INTO `site_constants` (`constant_id`, `constant_name`, `constant_value`) VALUES
-(1, 'last_migration_id', '165');
-
--- --------------------------------------------------------
-
---
 -- Table structure for table `strategy_round_allocations`
 --
 
@@ -2269,13 +2276,6 @@ ALTER TABLE `redirect_urls`
   ADD PRIMARY KEY (`redirect_url_id`),
   ADD UNIQUE KEY `url` (`url`),
   ADD UNIQUE KEY `redirect_key` (`redirect_key`);
-
---
--- Indexes for table `site_constants`
---
-ALTER TABLE `site_constants`
-  ADD PRIMARY KEY (`constant_id`),
-  ADD UNIQUE KEY `constant_name` (`constant_name`);
 
 --
 -- Indexes for table `strategy_round_allocations`

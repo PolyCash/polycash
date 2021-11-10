@@ -2238,7 +2238,7 @@ class Blockchain {
 			$this->app->insert_address_key([
 				'currency_id' => $this->currency_id(),
 				'address_id' => $output_address_id,
-				'account_id' => null,
+				'account_id' => $account_id,
 				'pub_key' => $address,
 				'option_index' => $option_index,
 				'primary_blockchain_id' => $this->db_blockchain['blockchain_id']

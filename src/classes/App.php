@@ -204,6 +204,20 @@ class App {
 		return $this->run_query("SELECT * FROM transactions WHERE transaction_id=:transaction_id;", ['transaction_id'=>$transaction_id])->fetch();
 	}
 	
+	public function needs_schema_update() {
+		try {
+			$last_migration_id = (int)$this->get_site_constant("last_migration_id");
+		}
+		catch (Exception $e) {
+			return true;
+		}
+		
+		$migrations_path = AppSettings::srcPath()."/sql";
+		$next_migration_fname = $migrations_path."/".($last_migration_id+1).".sql";
+		if (is_file($next_migration_fname)) return true;
+		else return false;
+	}
+	
 	public function update_schema() {
 		$migrations_path = AppSettings::srcPath()."/sql";
 		
@@ -2887,6 +2901,12 @@ class App {
 		])->fetch();
 	}
 	
+	public function fetch_address_key_by_id($address_key_id) {
+		return $this->run_query("SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.address_key_id=:address_key_id;", [
+			'address_key_id' => $address_key_id
+		])->fetch();
+	}
+	
 	public function calculate_effectiveness_factor($vote_effectiveness_function, $effectiveness_param1, $event_starting_block, $event_final_block, $block_id) {
 		if ($vote_effectiveness_function == "linear_decrease") {
 			$slope = -1*$effectiveness_param1;
@@ -3305,7 +3325,7 @@ class App {
 						$has_option_indices_until = $option_index;
 					}
 					else {
-						$address_key = $this->run_query("SELECT * FROM address_keys WHERE primary_blockchain_id=:blockchain_id AND option_index=:option_index AND account_id IS NULL AND address_set_id IS NULL LIMIT 1;", [
+						$address_key = $this->run_query("SELECT * FROM address_keys WHERE primary_blockchain_id=:blockchain_id AND option_index=:option_index AND account_id IS NULL AND address_set_id IS NULL AND used_in_my_tx=0 LIMIT 1;", [
 							'blockchain_id' => $game->blockchain->db_blockchain['blockchain_id'],
 							'option_index' => $option_index
 						])->fetch();

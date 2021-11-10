@@ -293,7 +293,7 @@ class User {
 						$has_option_indices_until = $option_index;
 					}
 					else {
-						$address = $this->app->run_query("SELECT * FROM address_keys WHERE primary_blockchain_id=:blockchain_id AND option_index=:option_index AND account_id IS NULL AND address_set_id IS NULL;", [
+						$address = $this->app->run_query("SELECT * FROM address_keys WHERE primary_blockchain_id=:blockchain_id AND option_index=:option_index AND account_id IS NULL AND address_set_id IS NULL AND used_in_my_tx=0;", [
 							'blockchain_id' => $game->blockchain->db_blockchain['blockchain_id'],
 							'option_index' => $option_index
 						])->fetch();
