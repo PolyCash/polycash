@@ -29,6 +29,9 @@ if ($app->running_as_admin()) {
 		
 		if ($print_debug) $app->print_debug("Processing my addresses for ".$blockchain->db_blockchain['blockchain_name']);
 		
+		$total_add_count = 0;
+		$total_add_privkey_count = 0;
+		
 		$loop_target_time = 8;
 		do {
 			$loop_start_time = microtime(true);
@@ -51,8 +54,11 @@ if ($app->running_as_admin()) {
 							$listsinceblock = $blockchain->coin_rpc->listsinceblock($process_from_block['block_hash']);
 							
 							if (!empty($listsinceblock['transactions']) && count($listsinceblock['transactions']) > 0) {
+								if ($print_debug) $app->print_debug("Checking ".count($listsinceblock['transactions'])." transactions from block ".$process_from_block['block_id']);
+								
 								$currency_id = $blockchain->currency_id();
 								$add_count = 0;
+								$add_privkey_count = 0;
 								
 								foreach ($listsinceblock['transactions'] as $my_transaction) {
 									$db_address = $blockchain->create_or_fetch_address($my_transaction['address'], false, null);
@@ -72,7 +78,7 @@ if ($app->running_as_admin()) {
 										}
 									}
 									else {
-										$app->insert_address_key([
+										$address_key = $app->insert_address_key([
 											'currency_id' => $currency_id,
 											'address_id' => $db_address['address_id'],
 											'account_id' => null,
@@ -82,13 +88,28 @@ if ($app->running_as_admin()) {
 											'used_in_my_tx' => 1,
 										]);
 									}
+									
+									if ($address_key && empty($address_key['priv_key'])) {
+										$priv_key = $blockchain->coin_rpc->dumpprivkey($address_key['pub_key']);
+										
+										if ($priv_key && is_string($priv_key)) {
+											$app->run_query("UPDATE address_keys SET priv_key=:priv_key WHERE address_key_id=:address_key_id;", [
+												'priv_key' => $priv_key,
+												'address_key_id' => $address_key['address_key_id']
+											]);
+											$add_privkey_count++;
+										}
+									}
 								}
 								
 								$blockchain->set_processed_my_addresses_to_block($last_block_id);
 								
-								if ($print_debug) $app->print_debug("Checked ".count($listsinceblock['transactions'])." transactions from block #".$process_from_block['block_id'].", set ".$add_count." addresses as mine");
+								$total_add_count += $add_count;
+								$total_add_privkey_count += $add_privkey_count;
+								
+								if ($print_debug) $app->print_debug("Set ".$add_count." addresses as mine, backed up ".$add_privkey_count." private keys");
 							}
-							else if ($print_debug) $app->print_debug("listsinceblock returned 0 transactions.");
+							else if ($print_debug) $app->print_debug("listsinceblock ".$process_from_block['block_id']." returned 0 transactions.");
 						}
 						else if ($print_debug) $app->print_debug("Block hash not yet set for block #".$process_from_block['block_id']);
 					}
@@ -108,6 +129,8 @@ if ($app->running_as_admin()) {
 			usleep($sleep_usec);
 		}
 		while (microtime(true) < $script_start_time + ($script_target_time-$loop_target_time));
+		
+		if ($print_debug) $app->print_debug("Set ".$total_add_count." addresses as mine, backed up ".$total_add_privkey_count." private keys.");
 		
 		$runtime_sec = microtime(true)-$script_start_time;
 		$sec_until_refresh = round($script_target_time-$runtime_sec);
