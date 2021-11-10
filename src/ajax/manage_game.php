@@ -243,7 +243,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 		}
 		else if ($app->user_can_edit_game($thisuser, $game)) {
 			if ($action == "fetch") {
-				$switch_game = $app->run_query("SELECT game_id, blockchain_id, module, creator_id, event_rule, option_group_id, events_per_round, event_type_name, game_status, block_timing, name, payout_weight, round_length, inflation, exponential_inflation_rate, final_round, invite_cost, invite_currency, coin_name, coin_name_plural, coin_abbreviation, start_condition, start_datetime, buyin_policy, game_buyin_cap, default_vote_effectiveness_function, default_effectiveness_param1, default_max_voting_fraction, game_starting_block, escrow_address, genesis_tx_hash, genesis_amount, default_betting_mode, finite_events FROM games WHERE game_id=:game_id;", [
+				$switch_game = $app->run_query("SELECT game_id, blockchain_id, module, creator_id, event_rule, option_group_id, events_per_round, event_type_name, game_status, block_timing, name, payout_weight, round_length, inflation, exponential_inflation_rate, final_round, invite_cost, invite_currency, coin_name, coin_name_plural, coin_abbreviation, start_condition, buyin_policy, game_buyin_cap, default_vote_effectiveness_function, default_effectiveness_param1, default_max_voting_fraction, game_starting_block, escrow_address, genesis_tx_hash, genesis_amount, default_betting_mode, finite_events FROM games WHERE game_id=:game_id;", [
 					'game_id' => $game->db_game['game_id']
 				])->fetch(PDO::FETCH_ASSOC);
 				
@@ -258,9 +258,6 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 
 						$switch_game['name_disp'] = '<a target="_blank" href="/'.$game->db_game['url_identifier'].'">'.$switch_game['name'].'</a>';
 
-						$switch_game['start_date'] = date("n/j/Y", strtotime($switch_game['start_datetime']));
-						$switch_game['start_time'] = date("G", strtotime($switch_game['start_datetime']));
-						
 						$app->output_message(1, "", $switch_game);
 					}
 					else $app->output_message(2, "Access denied", false);
@@ -507,8 +504,14 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 					$app->output_message(2, "Game reset has been scheduled and will be applied shortly.", false);
 				}
 				else if ($action == "start") {
-					$game->start_game();
-					$app->output_message(2, "Successfully started the game.", false);
+					list($start_error, $start_error_message) = $game->start_game();
+					
+					if ($start_error) {
+						$app->output_message(2, $start_error_message, false);
+					}
+					else {
+						$app->output_message(1, "Successfully started the game.", ['redirect_url' => '/manage/'.$game->db_game['url_identifier'].'/?next=internal_settings']);
+					}
 				}
 				else {
 					if ($action == "unpublish") $new_status = "editable";
@@ -518,7 +521,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 					$error_message = $game->set_game_status($new_status);
 					if (empty($error_message)) $error_message = "Game status was successfully changed.";
 					
-					$app->output_message(2, $error_message, false);
+					$app->output_message(1, $error_message, ['redirect_url' => '/manage/'.$game->db_game['url_identifier'].'/?next=internal_settings']);
 				}
 			}
 		}

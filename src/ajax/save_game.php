@@ -90,15 +90,6 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 					if ($action == "publish") {
 						$game->set_game_status('published');
 						
-						$ensure_block_id = $game->blockchain->last_block_id()+1;
-						if ($game->db_game['finite_events'] == 1) $ensure_block_id = max($ensure_block_id, $game->max_gde_starting_block());
-						
-						$game->ensure_events_until_block($ensure_block_id, false);
-						
-						$user_game = false;
-						$game->add_genesis_transaction($user_game);
-						$game->blockchain->try_start_games($game->blockchain->last_block_id());
-						
 						$app->output_message(1, "The game has been published.", $game_info);
 					}
 					else {

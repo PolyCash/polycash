@@ -743,7 +743,7 @@ class Blockchain {
 		
 		while ($db_start_game = $db_start_games->fetch()) {
 			$start_game = new Game($this, $db_start_game['game_id']);
-			$start_game->start_game();
+			list($start_game_error, $start_game_error_message) = $start_game->start_game();
 		}
 	}
 	

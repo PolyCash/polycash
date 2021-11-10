@@ -473,6 +473,7 @@ class GameDefinition {
 	public static function set_game_from_definition(&$app, &$game_definition, &$thisuser, &$error_message, &$db_game, $permission_override) {
 		$game = false;
 		$decode_error = false;
+		$is_new_game = false;
 		
 		if (is_object($game_definition)) $game_def = $game_definition;
 		else {
@@ -591,6 +592,8 @@ class GameDefinition {
 									
 									$game = Game::create_game($blockchain, $new_game_params);
 									
+									$is_new_game = true;
+									
 									if (!empty($game_def->module)) {
 										$app->run_query("UPDATE modules SET primary_game_id=:primary_game_id WHERE module_name=:module_name AND primary_game_id IS NULL;", [
 											'primary_game_id' => $game->db_game['game_id'],
@@ -662,6 +665,6 @@ class GameDefinition {
 			else $error_message .= "Failed to import game, you don't have the ".$game_def->module." module installed.\n";
 		}
 		
-		return $game;
+		return [$game, $is_new_game];
 	}
 }

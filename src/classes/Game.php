@@ -727,7 +727,8 @@ class Game {
 		]);
 		
 		$user_game = false;
-		$this->add_genesis_transaction($user_game);
+		
+		list($genesis_error, $genesis_error_message) = $this->ensure_genesis_transaction();
 		
 		$this->blockchain->app->dbh->commit();
 	}
@@ -825,8 +826,7 @@ class Game {
 		if ($delete_or_reset == "reset") {
 			$this->blockchain->app->run_query("UPDATE games SET coins_in_existence=0, cached_pending_bets=NULL, cached_vote_supply=NULL, cached_definition_hash=NULL, defined_cached_definition_hash=NULL, cached_definition_time=NULL WHERE game_id=:game_id;", ['game_id'=>$this->db_game['game_id']]);
 			
-			$user_game = false;
-			$this->add_genesis_transaction($user_game);
+			list($genesis_error, $genesis_error_message) = $this->ensure_genesis_transaction();
 		}
 		else {
 			$this->blockchain->app->run_query("DELETE g.*, ug.* FROM games g, user_games ug WHERE g.game_id=:game_id AND ug.game_id=g.game_id;", ['game_id'=>$this->db_game['game_id']]);
@@ -1057,28 +1057,32 @@ class Game {
 	}
 	
 	public function start_game() {
+		$any_error = null;
+		$error_message = null;
+		
 		$start_block = $this->blockchain->fetch_block_by_id($this->db_game['game_starting_block']);
 		
-		if ($this->blockchain->db_blockchain['p2p_mode'] == "rpc") {
-			try {
-				$this->blockchain->load_coin_rpc();
-				$last_block_hash = $this->blockchain->coin_rpc->getblockhash((int) $this->db_game['game_starting_block']);
-				$rpc_block = $this->blockchain->coin_rpc->getblock($last_block_hash);
-				$game_start_time = $rpc_block['time'];
+		if ($start_block && $start_block['locally_saved']) {
+			list($genesis_error, $genesis_error_message) = $this->ensure_genesis_transaction();
+			
+			if ($genesis_error) {
+				$any_error = true;
+				$error_message = $genesis_error_message;
 			}
-			catch (Exception $e) {
-				echo "Error, failed to load RPC connection for ".$this->blockchain->db_blockchain['blockchain_name'].".<br/>\n";
+			else {
+				$this->set_game_status('running');
+				$this->set_loaded_until_block(null);
+				if (!empty($this->db_game['definitive_game_peer_id'])) $this->sync_with_definitive_peer(true);
+				
+				$any_error = false;
 			}
 		}
-		$this->blockchain->app->run_query("UPDATE games SET game_status='running', start_time=:start_time, start_datetime=:start_datetime WHERE game_id=:game_id;", [
-			'start_time' => $start_block['time_mined'],
-			'start_datetime' => date("Y-m-d g:ia", $start_block['time_mined']),
-			'game_id' => $this->db_game['game_id']
-		]);
+		else {
+			$any_error = true;
+			$error_message = "Blockchain hasn't yet loaded block #".$this->db_game['game_starting_block'];
+		}
 		
-		$this->set_loaded_until_block(null);
-		
-		if (!empty($this->db_game['definitive_game_peer_id'])) $this->sync_with_definitive_peer(true);
+		return [$any_error, $error_message];
 	}
 	
 	public function max_game_io_index() {
@@ -1249,8 +1253,6 @@ class Game {
 				if ($this->db_game['game_starting_block'] > $this->blockchain->last_block_id()) $html .= " in ".($this->db_game['game_starting_block']-$this->blockchain->last_block_id())." blocks. ";
 				else $html .= " on block #".$this->db_game['game_starting_block'].". ";
 			}
-			else if (!empty($this->db_game['start_datetime'])) $html .= "This game starts in ".$this->blockchain->app->format_seconds(strtotime($this->db_game['start_datetime'])-time())." at ".$this->db_game['start_datetime'].". ";
-			else $html .= "This game hasn't started yet. ";
 		}
 		else if ($this->db_game['game_status'] == "completed") $html .= "This game is over. ";
 		
@@ -1367,15 +1369,10 @@ class Game {
 		$html = "";
 		
 		if ($this->db_game['game_status'] == "running") {
-			$html .= "This game started ".$this->blockchain->app->format_seconds(time()-$this->db_game['start_time'])." ago; ".$this->blockchain->app->format_bignum($this->coins_in_existence(false, true)/pow(10,$this->db_game['decimal_places']))." ".$this->db_game['coin_name_plural']."  are already in circulation. ";
+			$html .= "This game started on block ".$this->db_game['game_starting_block']." ago; ".$this->blockchain->app->format_bignum($this->coins_in_existence(false, true)/pow(10,$this->db_game['decimal_places']))." ".$this->db_game['coin_name_plural']."  are already in circulation. ";
 		}
 		else {
-			if ($this->db_game['start_condition'] == "fixed_time") {
-				$unix_starttime = strtotime($this->db_game['start_datetime']);
-				
-				$html .= "This game starts in ".$this->blockchain->app->format_seconds($unix_starttime-time())." at ".date("M j, Y g:ia", $unix_starttime).". ";
-			}
-			else if ($this->db_game['start_condition'] == "fixed_block") {
+			if ($this->db_game['start_condition'] == "fixed_block") {
 				$html .= "This game starts in ".($this->db_game['game_starting_block']-$this->blockchain->last_block_id())." blocks.";
 			}
 		}
@@ -3501,14 +3498,22 @@ class Game {
 		else return false;
 	}
 	
-	public function add_genesis_transaction(&$user_game) {
+	public function ensure_genesis_transaction() {
+		$any_error = null;
+		$error_message = null;
+		
 		$genesis_tx = $this->blockchain->fetch_transaction_by_hash($this->db_game['genesis_tx_hash']);
 		
 		if ($genesis_tx) {
 			$this->process_buyin_transaction($genesis_tx);
-			return true;
+			$any_error = false;
 		}
-		else return false;
+		else {
+			$any_error = true;
+			$error_message = "Tried to process genesis tx when not present in blockchain.";
+		}
+		
+		return [$any_error, $error_message];
 	}
 	
 	public function time_to_block_in_game($time) {

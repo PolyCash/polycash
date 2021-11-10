@@ -109,10 +109,9 @@ if ($app->running_as_admin()) {
 									
 									$error_message = "";
 									$db_game = false;
-									$new_game = GameDefinition::set_game_from_definition($app, $new_game_def_txt, $thisuser, $error_message, $db_game, false);
+									list($new_game, $is_new_game) = GameDefinition::set_game_from_definition($app, $new_game_def_txt, $thisuser, $error_message, $db_game, false);
 									
-									if (!empty($new_game)) {
-										$new_game->start_game();
+									if ($new_game) {
 										$error_message = "Import was successful. Next please <a href=\"/manage/".$new_game->db_game['url_identifier']."/?next=internal_settings\">visit this page and start the game</a>.";
 									}
 									else if (empty($error_message)) $error_message = "Error: failed to create the game.";
@@ -120,6 +119,12 @@ if ($app->running_as_admin()) {
 									if (!empty($error_message)) {
 										if (is_string($error_message)) echo $error_message."<br/>\n";
 										else echo "<pre>".json_encode($error_message, JSON_PRETTY_PRINT)."</pre>\n";
+									}
+									
+									if ($is_new_game) {
+										list($new_game_start_error, $new_game_start_error_message) = $new_game->start_game();
+										
+										if ($new_game_start_error) echo $new_game_start_error_message."<br/>\n";
 									}
 								}
 								else echo "<p>Failed to find the blockchain.</p>\n";

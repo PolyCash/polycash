@@ -18,6 +18,11 @@ if (!$game) {
 	}
 	else die("Invalid game ID supplied.\n");
 }
+
+if ($thisuser && $game->db_game['game_status'] == "published" && $app->user_can_edit_game($thisuser, $game) && $game->db_game['game_starting_block'] <= $game->blockchain->db_blockchain['last_complete_block']) {
+	list($start_game_error, $start_game_error_message) = $game->start_game();
+}
+
 $game->load_current_events();
 
 $net_risk_view_changed = false;
