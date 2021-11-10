@@ -1,7 +1,11 @@
 <?php
 ini_set('memory_limit', '1024M');
+
+$src_path = realpath(dirname(dirname(__FILE__)))."/src";
+require_once($src_path."/classes/AppSettings.php");
+
 $skip_select_db = TRUE;
-require(AppSettings::srcPath()."/includes/connect.php");
+require($src_path."/includes/connect.php");
 
 if ($app->running_as_admin()) {
 	set_time_limit(0);
@@ -15,9 +19,10 @@ if ($app->running_as_admin()) {
 
 			if (!empty(AppSettings::getParam('sqlite_db'))) {}
 			else {
-				$list_of_dbs = $app->run_query("SHOW DATABASES;");
-				while ($dbname = $list_of_dbs->fetch()) {
-					if ($dbname['Database'] == AppSettings::getParam('database_name')) $db_exists = true;
+				$list_of_dbs = $app->run_query("SHOW DATABASES;")->fetchAll();
+				
+				foreach ($list_of_dbs as $db_info) {
+					if ($db_info['Database'] == AppSettings::getParam('database_name')) $db_exists = true;
 				}
 				
 				if (strpos(AppSettings::getParam('mysql_password'), "'") !== false) {
@@ -29,9 +34,10 @@ if ($app->running_as_admin()) {
 				}
 				else {
 					$app->run_query("CREATE DATABASE ".AppSettings::getParam('database_name'));
-					$app->dbh->query("USE ".AppSettings::getParam('database_name').";") or die("Failed to create database '".AppSettings::getParam('database_name')."'");
 					$app->select_db(AppSettings::getParam('database_name'));
 				}
+				
+				$app->flush_buffers();
 				
 				$table_exists = count($app->run_query("SHOW TABLES;")->fetchAll()) > 0;
 				
@@ -43,7 +49,7 @@ if ($app->running_as_admin()) {
 					else $base_schema_path = AppSettings::srcPath()."/sql/schema-initial.sql";
 					
 					$cmd .= " ".AppSettings::getParam('database_name')." < ".$base_schema_path;
-					echo exec($cmd);
+					exec($cmd);
 				}
 				
 				$table_exists = count($app->run_query("SHOW TABLES;")->fetchAll()) > 0;

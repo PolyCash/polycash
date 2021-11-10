@@ -235,6 +235,7 @@ class App {
 								fwrite($error_fh, $cmd_response);
 								fclose($error_fh);
 							}
+							$this->set_site_constant("last_migration_id", $migration_id-1);
 							echo "Error on migration #".$migration_id.": ".$cmd_response."<br/>\n";
 							die();
 						}
