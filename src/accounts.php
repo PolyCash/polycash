@@ -766,13 +766,14 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 								</div>
 							</form>
 						</div>
+						<?php if ($account_game) { ?>
 						<div id="account_spend_split" style="display: none;" onsubmit="thisPageManager.account_spend_split(); return false;">
 							<form action="/accounts/" method="get">
 								<input type="hidden" name="action" value="split" />
 								<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
 								
 								<div class="form-group">
-									<label for="split_amount_each">How many coins should be in each UTXO?</label>
+									<label for="split_amount_each">How many <?php echo $account_game->db_game['coin_name_plural']; ?> should be in each UTXO?</label>
 									<input type="text" class="form-control" name="split_amount_each" id="split_amount_each" />
 								</div>
 								<div class="form-group">
@@ -795,6 +796,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 								</div>
 							</form>
 						</div>
+						<?php } ?>
 						<div id="account_spend_buyin" style="display: none;">
 							<br/>
 							<p>

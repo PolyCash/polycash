@@ -79,7 +79,7 @@ class RockPaperScissorsFastGameDefinition {
 				"option_name" => "hand",
 				"option_name_plural" => "hands",
 				"payout_rule" => "binary",
-				"payout_rate" => 0.999,
+				"payout_rate" => $game->db_game['default_payout_rate'],
 				"outcome_index" => null,
 				"possible_outcomes" => [
 					[
