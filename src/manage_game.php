@@ -562,19 +562,6 @@ else {
 											<input class="form-control" type="text" id="game_form_coin_abbreviation" />
 										</div>
 										<div class="form-group">
-											<label for="game_form_has_final_round">Game ends?</label>
-											<select class="form-control" id="game_form_has_final_round" onchange="thisPageManager.game_form_final_round_changed();">
-												<option value="0">No</option>
-												<option value="1">Yes</option>
-											</select>
-										</div>
-										<div id="game_form_final_round_disp">
-											<div class="form-group">
-												<label for="game_form_final_round">Number of rounds in the game:</label>
-												<input type="text" class="form-control" id="game_form_final_round" placeholder="0" />
-											</div>
-										</div>
-										<div class="form-group">
 											<label for="game_form_game_starting_block">Game starts on block:</label>
 											<input class="form-control" type="text" style="text-align: right;" id="game_form_game_starting_block" />
 										</div>
@@ -593,6 +580,31 @@ else {
 										<div class="form-group">
 											<label for="game_form_genesis_amount">Coins created by genesis tx:</label>
 											<input class="form-control" type="text" id="game_form_genesis_amount" style="text-align: right;" />
+										</div>
+										<div class="form-group">
+											<label for="game_form_inflation">Proof of stake reward type:</label>
+											<select id="game_form_inflation" class="form-control" onchange="thisPageManager.game_form_inflation_changed();">
+												<option value="exponential">Exponential</option>
+											</select>
+										</div>
+										<div id="game_form_inflation_exponential">
+											<div class="form-group">
+												<label for="game_form_exponential_inflation_rate">Proof of stake inflation per round:</label>
+												<input class="form-control" style="text-align: right;" type="text" id="game_form_exponential_inflation_rate" placeholder="0" />
+											</div>
+										</div>
+										<div class="form-group">
+											<label for="game_form_pow_reward_type">Proof of work reward type:</label>
+											<select id="game_form_pow_reward_type" class="form-control" onchange="thisPageManager.game_form_pow_reward_type_changed(this);">
+												<option value="none">No POW rewards</option>
+												<option value="fixed">Fixed reward per block</option>
+											</select>
+										</div>
+										<div id="game_form_pow_fixed">
+											<div class="form-group">
+												<label for="game_form_pow_fixed_reward">Proof of work reward per block:</label>
+												<input class="form-control" style="text-align: right;" type="text" id="game_form_pow_fixed_reward" placeholder="100" />
+											</div>
 										</div>
 										<div class="form-group">
 											<label for="game_form_payout_weight">Definition of a vote:</label>
@@ -621,20 +633,6 @@ else {
 										<div id="game_form_game_buyin_cap_disp">
 											<label for="game_form_game_buyin_cap">Game-wide buy-in cap:</label>
 											<input class="form-control" style="text-align: right;" type="text" id="game_form_game_buyin_cap" />
-										</div>
-										<div class="form-group">
-											<label for="game_form_inflation">Inflation:</label>
-											<select id="game_form_inflation" class="form-control" onchange="thisPageManager.game_form_inflation_changed();">
-												<option value="linear">Linear</option>
-												<option value="fixed_exponential">Fixed Exponential</option>
-												<option value="exponential">Exponential</option>
-											</select>
-										</div>
-										<div id="game_form_inflation_exponential">
-											<div class="form-group">
-												<label for="game_form_exponential_inflation_rate">Inflation per round:</label>
-												<input class="form-control" style="text-align: right;" type="text" id="game_form_exponential_inflation_rate" placeholder="100" />
-											</div>
 										</div>
 										<div class="form-group">
 											<label for="game_form_event_rule">Event rule:</label>
