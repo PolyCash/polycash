@@ -11,8 +11,9 @@
 				foreach ($events as $event) {
 					?>
 					<div class="col-sm-6">
-						<div style="width: 100%; padding: 5px 8px; border: 1px solid #aaa;">
+						<div style="width: 100%; padding: 0px 8px; border: 1px solid #aaa;">
 							<?php echo $event->event_html($thisuser, false, true, null, $render_event_i); ?>
+							<?php echo $event->my_votes_table($round_id, $user_game); ?>
 						</div>
 					</div>
 					<?php
