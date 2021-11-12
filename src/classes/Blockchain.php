@@ -2464,7 +2464,7 @@ class Blockchain {
 			'time_created' => time(),
 			'time_loaded' => time(),
 			'time_mined' => time(),
-			'sec_since_prev_block' => $prev_block['time_mined'] ? time()-$prev_block['time_mined'] : null,
+			'sec_since_prev_block' => empty($prev_block) ? null : time()-$prev_block['time_mined'],
 			'locally_saved' => 0
 		]);
 		$internal_block_id = $this->app->last_insert_id();

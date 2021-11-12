@@ -1788,11 +1788,10 @@ class Game {
 	}
 	
 	public function ensure_events_until_block($block_id, $print_debug) {
-		$msg = "";
-		$ensured_block = max((int)$this->db_game['events_until_block'], $this->db_game['game_starting_block']);
-		
-		if ($block_id > $ensured_block) {
+		if ((string)$this->db_game['events_until_block'] === "" || $block_id > $this->db_game['events_until_block']) {
 			$this->blockchain->app->dbh->beginTransaction();
+			
+			$ensure_from_block = (string)$this->db_game['events_until_block'] === "" ? $this->db_game['game_starting_block'] : $this->db_game['events_until_block']+1;
 			
 			$options_begin_at_index = AppSettings::getParam('options_begin_at_index');
 			
@@ -1818,9 +1817,9 @@ class Game {
 			if (!empty($this->db_game['module']) && !$this->get_definitive_peer() && !empty($this->module)) {
 				$event_verbatim_vars = $this->blockchain->app->event_verbatim_vars();
 				
-				$gdes_to_add = $this->module->events_starting_between_blocks($this, $ensured_block, $block_id);
+				$gdes_to_add = $this->module->events_starting_between_blocks($this, $ensure_from_block, $block_id);
 				
-				if ($print_debug) $this->blockchain->app->print_debug("Resetting ".count($gdes_to_add)." game defined events by module for blocks ".$ensured_block.":".$block_id);
+				if ($print_debug) $this->blockchain->app->print_debug("Resetting ".count($gdes_to_add)." game defined events by module for blocks ".$ensure_from_block.":".$block_id);
 				
 				$sports_entity_type = $this->blockchain->app->check_set_entity_type("sports");
 				$leagues_entity_type = $this->blockchain->app->check_set_entity_type("leagues");
