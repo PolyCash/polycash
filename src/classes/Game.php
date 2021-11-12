@@ -3122,13 +3122,16 @@ class Game {
 	}
 	
 	public function account_balance($account_id, $extra_params=[]) {
-		$balance_q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE (io.spend_status='unspent' || io.spend_status='unconfirmed') AND k.account_id=:account_id";
+		$balance_q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE (io.spend_status='unspent' || io.spend_status='unconfirmed') AND k.account_id=:account_id AND gio.game_id=:game_id";
 		
 		if (empty($extra_params['include_immature'])) {
 			$balance_q .= " AND io.is_mature=1";
 		}
 		
-		$balance_params = ['account_id'=>$account_id];
+		$balance_params = [
+			'account_id' => $account_id,
+			'game_id' => $this->db_game['game_id']
+		];
 		
 		return (int)($this->blockchain->app->run_query($balance_q, $balance_params)->fetch(PDO::FETCH_NUM)[0]);
 	}
