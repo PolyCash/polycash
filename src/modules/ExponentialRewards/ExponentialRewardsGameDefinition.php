@@ -20,7 +20,7 @@ class ExponentialRewardsGameDefinition {
 				"event_index" => $round,
 				"event_starting_block" => $starting_block,
 				"event_final_block" => $final_block,
-				"event_outcome_block" => $final_block,
+				"event_determined_to_block" => $final_block,
 				"event_payout_block" => $final_block+1,
 				"event_name" => "Staking Event #".$round,
 				"option_name" => "pool",

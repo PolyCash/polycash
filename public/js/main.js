@@ -140,38 +140,6 @@ var GameEvent = function(game, game_event_index, event_id, real_event_index, num
 			this.details_shown = true;
 		}
 	};
-	this.refresh_time_estimate = function() {
-		if (this.deleted == false) {
-			if (this.option_block_rule == "football_match") {
-				var blocks_into_game = this.game.last_block_id > 0 ? Math.max(0, this.game.last_block_id - this.event_starting_block) : 0;
-				var event_sim_time_sec = 90*60;
-				var sec_into_game = 0;
-				
-				if (this.game.last_block_id >= this.event_final_block) {
-					sec_into_game = event_sim_time_sec;
-				}
-				else {
-					var block_sim_time_sec = Math.round(event_sim_time_sec/(this.event_final_block-this.event_starting_block));
-					sec_into_game = blocks_into_game*block_sim_time_sec;
-					
-					var sec_since_block_loaded;
-					if (this.game.time_last_block_loaded > 0) sec_since_block_loaded = ((new Date().getTime())/1000 - this.game.time_last_block_loaded);
-					else sec_since_block_loaded = 0;
-					
-					var expected_sec_this_block = sec_since_block_loaded + this.game.seconds_per_block;
-					var sim_sec_into_block = Math.round((sec_since_block_loaded/expected_sec_this_block)*block_sim_time_sec);
-					sec_into_game += sim_sec_into_block;
-				}
-				
-				var min_disp = Math.floor(sec_into_game/60);
-				var sec_disp = leftpad(sec_into_game - min_disp*60, 2, "0");
-				if (document.getElementById('game'+this.game.instance_id+'_event'+this.game_event_index+'_timer')) {
-					document.getElementById('game'+this.game.instance_id+'_event'+this.game_event_index+'_timer').innerHTML = min_disp+":"+sec_disp;
-				}
-			}
-			setTimeout(function() {this.refresh_time_estimate()}.bind(this), 1000);
-		}
-	};
 	this.block_id_to_effectiveness_factor = function(block_id) {
 		if (this.vote_effectiveness_function == "linear_decrease") {
 			var slope = -1*this.effectiveness_param1;
@@ -218,6 +186,7 @@ var Game = function(pageManager, game_id, last_block_id, last_transaction_id, ma
 	this.filter_date = filter_date;
 	this.default_betting_mode = default_betting_mode;
 	this.render_events = render_events;
+	this.being_determined_hash = null;
 	
 	if (filter_date) {
 		document.getElementById('filter_by_date').value(filter_date);
@@ -353,6 +322,7 @@ var Game = function(pageManager, game_id, last_block_id, last_transaction_id, ma
 					mature_io_ids_hash: this.mature_io_ids_hash,
 					game_loop_index: this.game_loop_index,
 					event_hashes: _.map(this.events, 'rendered_event_hash').join(","),
+					being_determined_hash: this.being_determined_hash,
 					filter_date: this.filter_date ? this.filter_date : "",
 					filter_term: document.getElementById('filter_by_term').value ? encodeURIComponent(document.getElementById('filter_by_term').value) : "",
 					net_risk_view: document.getElementById('net_risk_view').value,
@@ -455,6 +425,12 @@ var Game = function(pageManager, game_id, last_block_id, last_transaction_id, ma
 							eval(check_activity_response.set_options_js);
 							
 							this.pageManager.refresh_output_amounts();
+						}
+						
+						if (check_activity_response.being_determined_hash != this.being_determined_hash) {
+							$('#events_being_determined').show();
+							$('#events_being_determined').html(check_activity_response.being_determined_content);
+							this.being_determined_hash = check_activity_response.being_determined_hash;
 						}
 						
 						this.last_game_loop_index_applied = check_activity_response.game_loop_index;

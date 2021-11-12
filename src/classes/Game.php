@@ -1544,7 +1544,7 @@ class Game {
 	
 	public function events_by_outcome_block($block_id) {
 		$events = [];
-		$db_events = $this->blockchain->app->run_query("SELECT * FROM events WHERE game_id=:game_id AND event_outcome_block=:block_id ORDER BY event_index ASC;", [
+		$db_events = $this->blockchain->app->run_query("SELECT * FROM events WHERE game_id=:game_id AND event_determined_to_block=:block_id ORDER BY event_index ASC;", [
 			'game_id' => $this->db_game['game_id'],
 			'block_id' => $block_id
 		]);
@@ -1572,6 +1572,20 @@ class Game {
 		$events = [];
 		
 		$db_events = $this->blockchain->app->run_query("SELECT * FROM events WHERE game_id=:game_id AND event_final_block=:block_id AND event_final_block != event_payout_block ORDER BY event_index ASC;", [
+			'game_id' => $this->db_game['game_id'],
+			'block_id' => $block_id
+		]);
+		
+		while ($db_event = $db_events->fetch()) {
+			array_push($events, new Event($this, $db_event, false));
+		}
+		return $events;
+	}
+	
+	
+	public function events_being_determined_in_block($block_id) {
+		$events = [];
+		$db_events = $this->blockchain->app->run_query("SELECT * FROM events WHERE game_id=:game_id AND event_determined_from_block <= :block_id AND event_determined_to_block >= :block_id ORDER BY event_index ASC;", [
 			'game_id' => $this->db_game['game_id'],
 			'block_id' => $block_id
 		]);
@@ -1638,8 +1652,6 @@ class Game {
 			$html .= "</div><div id='game".$game_index."_event".$i."_my_current_votes'>";
 			if ($user) $html .= $these_events[$i]->my_votes_table($current_round, $user_game);
 			$html .= '</div></div>';
-			
-			if ($event->db_event['option_block_rule'] == "football_match") $js .= 'games['.$game_index.'].events['.$i.'].refresh_time_estimate();'."\n";
 		}
 		if ($event_ids != "") $event_ids = substr($event_ids, 0, -1);
 		
@@ -1832,7 +1844,7 @@ class Game {
 					
 					$i = 0;
 					for ($event_index=$init_event_index; $event_index<$init_event_index+count($gdes_to_add); $event_index++) {
-						if ((string)$gdes_to_add[$i]['event_outcome_block'] == "") $gdes_to_add[$i]['event_outcome_block'] = $gdes_to_add[$i]['event_payout_block'];
+						if ((string)$gdes_to_add[$i]['event_determined_to_block'] == "") $gdes_to_add[$i]['event_determined_to_block'] = $gdes_to_add[$i]['event_payout_block'];
 						$this->blockchain->app->check_set_gde($this, $gdes_to_add[$i], $event_verbatim_vars, $sports_entity_type['entity_type_id'], $leagues_entity_type['entity_type_id'], $general_entity_type['entity_type_id']);
 						$i++;
 					}
@@ -1884,14 +1896,15 @@ class Game {
 						if (!empty($game_defined_event['league_entity_id'])) $event_searchtext .= $searchtext_leagues_by_id[$game_defined_event['league_entity_id']]->entity_name;
 						$event_searchtext = strtolower($this->blockchain->app->make_alphanumeric($event_searchtext, ""));
 						
-						$event_outcome_block = $game_defined_event['event_outcome_block'] ? $game_defined_event['event_outcome_block'] : $game_defined_event['event_payout_block'];
+						$event_determined_to_block = $game_defined_event['event_determined_to_block'] ? $game_defined_event['event_determined_to_block'] : $game_defined_event['event_payout_block'];
 						
 						$new_event_params = [
 							'game_id' => $this->db_game['game_id'],
 							'event_index' => $game_defined_event['event_index'],
 							'event_starting_block' => $game_defined_event['event_starting_block'],
 							'event_final_block' => $game_defined_event['event_final_block'],
-							'event_outcome_block' => $event_outcome_block,
+							'event_determined_from_block' => $game_defined_event['event_determined_from_block'],
+							'event_determined_to_block' => $event_determined_to_block,
 							'event_payout_block' => $game_defined_event['event_payout_block'],
 							'payout_rule' => $game_defined_event['payout_rule'],
 							'payout_rate' => $game_defined_event['payout_rate'],
@@ -2572,11 +2585,12 @@ class Game {
 			
 			if (!in_array($this->db_game['buyin_policy'], ["none","for_sale",""])) $this->process_sellouts_in_block($block_height);
 			
-			$filter_arr = ['require_option_block_rule'=>true];
-			$events = $this->events_by_block($block_height, $filter_arr);
+			$in_progress_events = $this->events_being_determined_in_block($block_height);
 			
-			for ($i=0; $i<count($events); $i++) {
-				$events[$i]->process_option_blocks($game_block, count($events), $events[0]->db_event['event_index']);
+			foreach ($in_progress_events as $in_progress_event) {
+				if (!empty($in_progress_event->db_event['option_block_rule'])) {
+					$in_progress_event->process_option_blocks($game_block, count($in_progress_events), $in_progress_event->db_event['event_index']);
+				}
 			}
 			
 			$finalblock_events = $this->events_by_final_block($block_height);
@@ -3551,11 +3565,11 @@ class Game {
 			if ($gde['event_payout_time'] == "" || $gde['event_payout_time'] == $gde['event_final_time']) $payout_block = $final_block;
 			else $payout_block = $this->time_to_block_in_game(strtotime($gde['event_payout_time']));
 			
-			$this->blockchain->app->run_query("UPDATE game_defined_events SET event_starting_block=:event_starting_block, event_final_block=:event_final_block, event_payout_block=:event_payout_block, event_outcome_block=:event_outcome_block WHERE game_id=:game_id AND event_index=:event_index;", [
+			$this->blockchain->app->run_query("UPDATE game_defined_events SET event_starting_block=:event_starting_block, event_final_block=:event_final_block, event_payout_block=:event_payout_block, event_determined_to_block=:event_determined_to_block WHERE game_id=:game_id AND event_index=:event_index;", [
 				'event_starting_block' => $start_block,
 				'event_final_block' => $final_block,
 				'event_payout_block' => $payout_block,
-				'event_outcome_block' => $payout_block,
+				'event_determined_to_block' => $payout_block,
 				'game_id' => $this->db_game['game_id'],
 				'event_index' => $gde['event_index']
 			]);

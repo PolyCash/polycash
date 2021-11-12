@@ -290,13 +290,13 @@ class GameDefinition {
 					$ref_from_event = $from_def->events[$event_pos];
 					$ref_from_event->event_starting_block = null;
 					$ref_from_event->event_final_block = null;
-					$ref_from_event->event_outcome_block = null;
+					$ref_from_event->event_determined_to_block = null;
 					$ref_from_event->event_payout_block = null;
 					
 					$ref_to_event = $to_def->events[$event_pos];
 					$ref_to_event->event_starting_block = null;
 					$ref_to_event->event_final_block = null;
-					$ref_to_event->event_outcome_block = null;
+					$ref_to_event->event_determined_to_block = null;
 					$ref_to_event->event_payout_block = null;
 					
 					if (json_encode($ref_from_event) == json_encode($ref_to_event)) $event_differences['block_changed_events']++;
