@@ -115,51 +115,45 @@ if ($event->db_event['payout_rate'] != 1) {
 <a style="color: #000; text-decoration: underline; display: inline-block;" target="_blank" href="/explorer/games/<?php echo $game->db_game['url_identifier']."/events/".$event->db_event['event_index']; ?>"><?php echo $event->db_event['event_name']; ?></a></strong>
 
 <?php
-if (!empty($event->db_event['option_block_rule']) && $game->last_block_id()+1 >= $event->db_event['event_determined_from_block']) {
+if (!empty($event->db_event['option_block_rule'])) {
 	$option_ids = [];
 	$scores = [];
 	
 	if ($display_mode == "default") {
-		?>
-		<div class="event_score_box">
-			Current Scores:<br/>
-			<?php
-			for ($i=0; $i<count($round_stats); $i++) {
-				?>
-				<div class="row">
-					<div class="col-sm-6 boldtext"><?php echo $round_stats[$i]['entity_name']; ?></div>
-					<div class="col-sm-6"><?php echo $round_stats[$i]['option_block_score']; ?></div>
-				</div>
-				<?php
-			}
+		if ($game->last_block_id()+1 >= $event->db_event['event_determined_from_block']) {
 			?>
-		</div>
-		<?php
+			<div class="event_score_box">
+				Current Scores:<br/>
+				<?php
+				for ($i=0; $i<count($round_stats); $i++) {
+					?>
+					<div class="row">
+						<div class="col-sm-6 boldtext"><?php echo $round_stats[$i]['entity_name']; ?></div>
+						<div class="col-sm-6"><?php echo $round_stats[$i]['option_block_score']; ?></div>
+					</div>
+					<?php
+				}
+				?>
+			</div>
+			<?php
+		}
 	}
 	else {
-		$option_block_info = $app->run_query("SELECT *, SUM(ob.score) AS option_block_score FROM options o LEFT JOIN option_blocks ob ON o.option_id=ob.option_id LEFT JOIN entities e ON o.entity_id=e.entity_id WHERE o.event_id=:event_id GROUP BY o.option_id ORDER BY o.option_index ASC;", [
-			'event_id' => $event->db_event['event_id']
-		]);
-		
-		$first_option = false;
-		$second_option = false;
-		
-		$score_disp = "";
-		while ($option = $option_block_info->fetch()) {
-			$score_disp .= ((int)$option['option_block_score'])."-";
-			if (empty($first_option)) $first_option = $option;
-			else if (empty($second_option)) $second_option = $option;
+		if ($game->last_block_id()+1 >= $event->db_event['event_determined_from_block']) {
+			list($option_info_arr, $is_tie) = $event->option_block_info();
+			
+			$score_disp = "";
+			foreach ($option_info_arr as $option) {
+				$score_disp .= ((int)$option['option_block_score'])."-";
+			}
+			$score_disp = substr($score_disp, 0, strlen($score_disp)-1);
+			$score_disp .= " &nbsp; ";
+			
+			if ($is_tie) $score_disp .= "Tied";
+			else $score_disp .= $option_info_arr[0]['name']." is winning";
+			
+			echo " &nbsp;&nbsp; ".$score_disp;
 		}
-		$score_disp = substr($score_disp, 0, strlen($score_disp)-1);
-		$score_disp .= " &nbsp; ";
-		
-		if ($first_option['option_block_score'] == $second_option['option_block_score']) $score_disp .= "Tied";
-		else {
-			if ($first_option['option_block_score'] > $second_option['option_block_score']) $score_disp .= $first_option['entity_name']." is winning";
-			else $score_disp .= $second_option['entity_name']." is winning";
-		}
-		
-		echo " &nbsp;&nbsp; ".$score_disp;
 	}
 }
 ?>
@@ -195,6 +189,32 @@ else if ($expected_winner || $game_defined_winner) {
 		?>
 	</p>
 	<?php
+}
+
+if (!empty($event->db_event['option_block_rule'])) {
+	$target_score_disp = "";
+	$is_tie = true;
+	$last_target_score = null;
+	$best_target_score = null;
+	$predicted_winner = null;
+	foreach ($round_stats as $option) {
+		if ((string)$option['target_score'] !== "") {
+			$rounded_score = round($option['target_score']);
+			if ($last_target_score === null) $last_target_score = $rounded_score;
+			if ($rounded_score !== $last_target_score) $is_tie = false;
+			if ($best_target_score === null || $rounded_score > $best_target_score) {
+				$best_target_score = $rounded_score;
+				$predicted_winner = $option;
+			}
+			$target_score_disp .= $rounded_score."-";
+		}
+	}
+	if ($target_score_disp !== "") {
+		echo "<p>";
+		if ($is_tie) echo "A tie is predicted";
+		else echo $predicted_winner['name']." is predicted to win ".substr($target_score_disp, 0, strlen($target_score_disp)-1);
+		echo "</p>\n";
+	}
 }
 
 if ($game->db_game['inflation'] == "exponential") {

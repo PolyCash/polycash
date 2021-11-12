@@ -1514,7 +1514,7 @@ class Game {
 		}
 	}
 	
-	public function events_by_block($block_id, &$filter_arr) {
+	public function events_by_block($block_id, $filter_arr) {
 		$events = [];
 		$events_params = [
 			'game_id' => $this->db_game['game_id'],
@@ -1565,6 +1565,21 @@ class Game {
 		while ($db_event = $db_events->fetch()) {
 			array_push($events, new Event($this, $db_event, false));
 		}
+		return $events;
+	}
+	
+	public function events_by_starting_block($block_id) {
+		$events = [];
+		
+		$db_events = $this->blockchain->app->run_query("SELECT * FROM events WHERE game_id=:game_id AND event_starting_block=:block_id ORDER BY event_index ASC;", [
+			'game_id' => $this->db_game['game_id'],
+			'block_id' => $block_id
+		]);
+		
+		while ($db_event = $db_events->fetch()) {
+			array_push($events, new Event($this, $db_event, false));
+		}
+		
 		return $events;
 	}
 	
@@ -1900,6 +1915,7 @@ class Game {
 						$new_event_params = [
 							'game_id' => $this->db_game['game_id'],
 							'event_index' => $game_defined_event['event_index'],
+							'season_index' => $game_defined_event['season_index'],
 							'event_starting_block' => $game_defined_event['event_starting_block'],
 							'event_final_block' => $game_defined_event['event_final_block'],
 							'event_determined_from_block' => $game_defined_event['event_determined_from_block'],
@@ -2589,6 +2605,14 @@ class Game {
 			foreach ($in_progress_events as $in_progress_event) {
 				if (!empty($in_progress_event->db_event['option_block_rule'])) {
 					$in_progress_event->process_option_blocks($game_block, count($in_progress_events), $in_progress_event->db_event['event_index']);
+				}
+			}
+			
+			$starting_events = $this->events_by_starting_block($block_height-1);
+			
+			foreach ($starting_events as $starting_event) {
+				if ($starting_event->db_event['option_block_rule'] == "basketball_game") {
+					$starting_event->set_target_scores($block_height);
 				}
 			}
 			

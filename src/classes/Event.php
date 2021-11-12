@@ -674,5 +674,42 @@ class Event {
 		
 		return [$option_info_arr, $is_tie];
 	}
+	
+	public function set_target_scores($last_block_id) {
+		$options = $this->game->blockchain->app->fetch_options_by_event($this->db_event['event_id'], true)->fetchAll();
+		
+		$info_arr = $this->game->blockchain->app->run_query("SELECT o.entity_id, COUNT(*), SUM(score) FROM option_blocks ob JOIN options o ON ob.option_id=o.option_id JOIN events ev ON o.event_id=ev.event_id WHERE ev.game_id=:game_id AND o.entity_id IN (".implode(",", array_column($options, 'entity_id')).") AND ev.event_determined_to_block<=:last_block_id AND ev.season_index=:season_index GROUP BY o.entity_id;", [
+			'game_id' => $this->game->db_game['game_id'],
+			'last_block_id' => $last_block_id,
+			'season_index' => $this->db_event['season_index'],
+		])->fetchAll();
+		
+		$past_avg_by_entity_id = [];
+		
+		foreach ($options as $option) {
+			$past_avg_by_entity_id[$option['entity_id']] = $this->game->db_game['target_option_block_score'];
+		}
+		
+		foreach ($info_arr as $info) {
+			$avg_points_per_block = round($info['SUM(score)']/$info['COUNT(*)'], 8);
+			$past_avg = round($avg_points_per_block*($this->db_event['event_determined_to_block']-$this->db_event['event_determined_from_block']+1), 8);
+			$past_avg_by_entity_id[$info['entity_id']] = $past_avg;
+		}
+		
+		$event_past_avg = round(array_sum($past_avg_by_entity_id)/count($options), 8);
+		$event_score_boost = $this->game->db_game['target_option_block_score']-$event_past_avg;
+		
+		echo "setting target scores for #".$this->db_event['event_index']." (".$this->db_event['event_name'].")\n";
+		
+		foreach ($options as $option) {
+			$target_score = round($past_avg_by_entity_id[$option['entity_id']]+$event_score_boost, 4);
+			echo $option['name'].": ".$target_score."\n";
+			
+			$this->game->blockchain->app->run_query("UPDATE options SET target_score=:target_score WHERE option_id=:option_id;", [
+				'target_score' => $target_score,
+				'option_id' => $option['option_id'],
+			]);
+		}
+	}
 }
 ?>

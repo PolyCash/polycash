@@ -518,7 +518,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							
 							list($option_info_arr, $is_tie) = $event->option_block_info();
 							
-							if ($is_tie) {
+							if ((string)$event->db_event['winning_option_id'] !== "" && $is_tie) {
 								$winning_option = $app->fetch_option_by_id($event->db_event['winning_option_id']);
 								
 								echo "<p>".$winning_option['name']." won in overtime.</p>\n";

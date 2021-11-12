@@ -1707,6 +1707,7 @@ class App {
 	public function event_verbatim_vars() {
 		return [
 			['int', 'event_index', true],
+			['int', 'season_index', true],
 			['int', 'next_event_index', true],
 			['int', 'event_starting_block', true],
 			['int', 'event_final_block', true],
