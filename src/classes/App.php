@@ -104,6 +104,18 @@ class App {
 		return iconv('UTF-8', 'UTF-8//IGNORE', $str);
 	}
 
+	public function render_view($view_path, $view_data=[]) {
+		foreach ($view_data as $name => &$value) {
+			eval('$'.$name.' = $view_data["'.$name.'"];');
+		}
+		$view_fname = dirname(dirname(__FILE__)).'/views/'.$view_path.".php";
+		if (!is_file($view_fname)) die("Failed to open view: ".$view_fname);
+		
+		ob_start();
+		include($view_fname);
+		return ob_get_clean();
+	}
+	
 	public function min_excluding_false($some_array) {
 		$min_value = false;
 		for ($i=0; $i<count($some_array); $i++) {
@@ -1698,7 +1710,8 @@ class App {
 			['int', 'next_event_index', true],
 			['int', 'event_starting_block', true],
 			['int', 'event_final_block', true],
-			['int', 'event_outcome_block', true],
+			['int', 'event_determined_from_block', true],
+			['int', 'event_determined_to_block', true],
 			['int', 'event_payout_block', true],
 			['string', 'payout_rule', true],
 			['float', 'payout_rate', true],

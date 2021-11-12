@@ -89,7 +89,7 @@ class eSportsGameDefinition {
 					"event_index" => $db_gde['event_index'],
 					"event_starting_block" => $db_gde['event_starting_block'],
 					"event_final_block" => $db_gde['event_final_block'],
-					"event_outcome_block" => $db_gde['event_outcome_block'],
+					"event_determined_to_block" => $db_gde['event_determined_to_block'],
 					"event_payout_block" => $db_gde['event_payout_block'],
 					"event_starting_time" => $db_gde['event_starting_time'],
 					"event_final_time" => $db_gde['event_final_time'],

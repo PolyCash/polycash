@@ -595,6 +595,8 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 	</div>
 	
 	<div id="tabcontent0" class="tabcontent">
+		<div id="events_being_determined" style="display: none;"></div>
+		
 		<div class="panel panel-default">
 			<div class="panel-heading">
 				<div class="panel-title" style="overflow: hidden; line-height: 200%;">

@@ -139,7 +139,7 @@ class SingleEliminationGameDefinition {
 					"next_event_index" => $this->event_index_to_next_event_index($event_index),
 					"event_starting_block" => $game->db_game['game_starting_block']+($round-1)*$game->db_game['round_length'],
 					"event_final_block" => $game->db_game['game_starting_block']+$round*$game->db_game['round_length']-1,
-					"event_outcome_block" => $payout_block,
+					"event_determined_to_block" => $payout_block,
 					"event_payout_block" => $payout_block,
 					"option_block_rule" => "football_match",
 					"event_name" => $event_name,

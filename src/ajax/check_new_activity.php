@@ -221,5 +221,20 @@ if ($thisuser && $refresh_page == "wallet") {
 }
 else $output['new_messages'] = 0;
 
+
+$being_determined_events = $game->events_being_determined_in_block($blockchain_last_block_id+1);
+$being_determined_content = $app->render_view('being_determined_events', [
+	'thisuser' => $thisuser ? $thisuser : null,
+	'game' => $game,
+	'events' => $being_determined_events
+]);
+$being_determined_hash = empty($being_determined_content) ? null : hash("sha256", $being_determined_content);
+
+$output['being_determined_hash'] = $being_determined_hash;
+
+if (!isset($_REQUEST['being_determined_hash']) || $_REQUEST['being_determined_hash'] != $being_determined_hash) {
+	$output['being_determined_content'] = $being_determined_content;
+}
+
 echo json_encode($output);
 ?>
