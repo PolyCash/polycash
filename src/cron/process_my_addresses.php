@@ -61,43 +61,47 @@ if ($app->running_as_admin()) {
 								$add_privkey_count = 0;
 								
 								foreach ($listsinceblock['transactions'] as $my_transaction) {
-									$db_address = $blockchain->create_or_fetch_address($my_transaction['address'], false, null);
+									$address_info = $blockchain->coin_rpc->getaddressinfo($my_transaction['address']);
 									
-									if (!$db_address['is_mine']) {
-										$app->run_query("UPDATE addresses SET is_mine=1 WHERE address_id=:address_id;", ['address_id' => $db_address['address_id']]);
-										$add_count++;
-									}
-									
-									$address_key = $app->fetch_address_key_by_address_id($db_address['address_id']);
-									
-									if ($address_key) {
-										if (empty($address_key['used_in_my_tx'])) {
-											$app->run_query("UPDATE address_keys SET used_in_my_tx=1 WHERE address_key_id=:address_key_id;", [
-												'address_key_id' => $address_key['address_key_id']
+									if ($address_info && array_key_exists('ismine', $address_info) && $address_info['ismine']) {
+										$db_address = $blockchain->create_or_fetch_address($my_transaction['address'], false, null);
+										
+										if (!$db_address['is_mine']) {
+											$app->run_query("UPDATE addresses SET is_mine=1 WHERE address_id=:address_id;", ['address_id' => $db_address['address_id']]);
+											$add_count++;
+										}
+										
+										$address_key = $app->fetch_address_key_by_address_id($db_address['address_id']);
+										
+										if ($address_key) {
+											if (empty($address_key['used_in_my_tx'])) {
+												$app->run_query("UPDATE address_keys SET used_in_my_tx=1 WHERE address_key_id=:address_key_id;", [
+													'address_key_id' => $address_key['address_key_id']
+												]);
+											}
+										}
+										else {
+											$address_key = $app->insert_address_key([
+												'currency_id' => $currency_id,
+												'address_id' => $db_address['address_id'],
+												'account_id' => null,
+												'pub_key' => $db_address['address'],
+												'option_index' => $db_address['option_index'],
+												'primary_blockchain_id' => $db_address['primary_blockchain_id'],
+												'used_in_my_tx' => 1,
 											]);
 										}
-									}
-									else {
-										$address_key = $app->insert_address_key([
-											'currency_id' => $currency_id,
-											'address_id' => $db_address['address_id'],
-											'account_id' => null,
-											'pub_key' => $db_address['address'],
-											'option_index' => $db_address['option_index'],
-											'primary_blockchain_id' => $db_address['primary_blockchain_id'],
-											'used_in_my_tx' => 1,
-										]);
-									}
-									
-									if ($address_key && empty($address_key['priv_key'])) {
-										$priv_key = $blockchain->coin_rpc->dumpprivkey($address_key['pub_key']);
 										
-										if ($priv_key && is_string($priv_key)) {
-											$app->run_query("UPDATE address_keys SET priv_key=:priv_key WHERE address_key_id=:address_key_id;", [
-												'priv_key' => $priv_key,
-												'address_key_id' => $address_key['address_key_id']
-											]);
-											$add_privkey_count++;
+										if ($address_key && empty($address_key['priv_key'])) {
+											$priv_key = $blockchain->coin_rpc->dumpprivkey($address_key['pub_key']);
+											
+											if ($priv_key && is_string($priv_key)) {
+												$app->run_query("UPDATE address_keys SET priv_key=:priv_key WHERE address_key_id=:address_key_id;", [
+													'priv_key' => $priv_key,
+													'address_key_id' => $address_key['address_key_id']
+												]);
+												$add_privkey_count++;
+											}
 										}
 									}
 								}
@@ -138,6 +142,6 @@ if ($app->running_as_admin()) {
 		
 		if ($print_debug) $app->print_debug("Script ran for ".round($runtime_sec, 2)." seconds.");
 	}
-	else echo "A block mining process is already running.\n";
+	else echo "Address processing is already running.\n";
 }
 else echo "Please run this script as administrator\n";
