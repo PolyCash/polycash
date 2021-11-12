@@ -3505,8 +3505,14 @@ class Game {
 		$genesis_tx = $this->blockchain->fetch_transaction_by_hash($this->db_game['genesis_tx_hash']);
 		
 		if ($genesis_tx) {
-			$this->process_buyin_transaction($genesis_tx);
-			$any_error = false;
+			if ((string) $genesis_tx['block_id'] != "") {
+				$this->process_buyin_transaction($genesis_tx);
+				$any_error = false;
+			}
+			else {
+				$any_error = true;
+				$error_message = "Genesis transaction must be confirmed for the game to start.";
+			}
 		}
 		else {
 			$any_error = true;

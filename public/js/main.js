@@ -40,8 +40,12 @@ var ChainIO = function(chain_io_index, io_id, amount, create_block_id) {
 		
 		for (var i=0; i<this.game_ios.length; i++) {
 			if (games[0].payout_weight == "coin") votes += this.game_ios[i].amount;
-			else if (games[0].payout_weight == "coin_round") votes += (games[0].block_to_round(block_id) - games[0].block_to_round(this.game_ios[i].create_block_id))*this.game_ios[i].amount;
-			else votes += (block_id - this.game_ios[i].create_block_id)*this.game_ios[i].amount;
+			else {
+				if (this.game_ios[i].create_block_id) {
+					if (games[0].payout_weight == "coin_round") votes += (games[0].block_to_round(block_id) - games[0].block_to_round(this.game_ios[i].create_block_id))*this.game_ios[i].amount;
+					else votes += (block_id - this.game_ios[i].create_block_id)*this.game_ios[i].amount;
+				}
+			}
 		}
 		return votes;
 	};
