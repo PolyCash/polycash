@@ -448,9 +448,11 @@ class Event {
 		$block = $this->game->blockchain->fetch_block_by_id($game_block['block_id']);
 		$random_data = hash("sha256", $block['block_hash']);
 		
-		if ($this->db_event['option_block_rule'] == "football_match") {
-			$rand_chars_per_option = 2;
-			$rand_chars_per_event = $rand_chars_per_option*2;
+		if ($this->db_event['option_block_rule'] == "basketball_game") {
+			$rands_needed_per_option = 2;
+			$chars_per_rand = 6;
+			$rand_chars_per_option = $rands_needed_per_option*$chars_per_rand;
+			$rand_chars_per_event = $rand_chars_per_option*$this->db_event['num_options'];
 			$event_offset = $this->db_event['event_index'] - $round_first_event_index;
 			
 			$total_rand_chars_needed = $rand_chars_per_event*$events_in_round;
@@ -461,37 +463,50 @@ class Event {
 				$random_data .= $last_rand_hash;
 			}
 			
-			$event_blocks = $this->db_event['event_final_block'] - $this->db_event['event_starting_block'] + 1;
-			$team_avg_goals_per_game = 1.35;
+			$event_blocks = $this->db_event['event_determined_to_block'] - $this->db_event['event_determined_from_block'] + 1;
+			$team_avg_points_per_game = 90;
 			
 			$rand_i = 0;
 			$these_options = $this->game->blockchain->app->fetch_options_by_event($this->db_event['event_id']);
 			
 			while ($db_option = $these_options->fetch()) {
-				$score_prob = min(1, $team_avg_goals_per_game/$event_blocks);
-				$rand_offset_start = $rand_chars_per_event*$event_offset + ($rand_i*$rand_chars_per_option);
-				$rand_chars = substr($random_data, $rand_offset_start, $rand_chars_per_option);
-				$rand_prob = hexdec($rand_chars)/pow(2, 4*strlen($rand_chars));
+				$option_target_points = 90;
+				$avg_points_per_block = round($option_target_points/$event_blocks, 6);
+				$max_points_per_block = $avg_points_per_block*2;
 				
-				if ($rand_prob <= $score_prob) $score = 1;
-				else $score = 0;
+				$rand1_offset_start = $rand_chars_per_event*$event_offset + ($rand_i*$chars_per_rand);
+				$rand1_chars = substr($random_data, $rand1_offset_start, $chars_per_rand);
+				$rand1_num = hexdec($rand1_chars);
+				$rand1_prob = ($rand1_num%pow(10, 5))/pow(10, 5);
+				$rand_i++;
+				
+				$rand2_offset_start = $rand_chars_per_event*$event_offset + ($rand_i*$chars_per_rand);
+				$rand2_chars = substr($random_data, $rand2_offset_start, $chars_per_rand);
+				$rand2_num = hexdec($rand2_chars);
+				$rand2_prob = ($rand2_num%pow(10, 5))/pow(10, 5);
+				$rand_i++;
+				
+				$points_scored_float = round($max_points_per_block*$rand1_prob, 6);
+				
+				if ($points_scored_float == round($points_scored_float)) $points_scored_int = $points_scored_float;
+				else {
+					$points_scored_int = floor($points_scored_float);
+					$points_scored_remainder = $points_scored_float - $points_scored_int;
+					if ($points_scored_remainder >= $rand2_prob) $points_scored_int++;
+				}
 				
 				$this->game->blockchain->app->run_insert_query("option_blocks", [
-					'rand_chars' => $rand_chars,
-					'rand_prob' => $rand_prob,
-					'score' => $score,
+					'score' => $points_scored_int,
 					'option_id' => $db_option['option_id'],
 					'block_height' => $game_block['block_id']
 				]);
 				
-				if ($score > 0) {
+				if ($points_scored_int > 0) {
 					$this->game->blockchain->app->run_query("UPDATE options SET option_block_score=option_block_score+:score WHERE option_id=:option_id;", [
-						'score' => $score,
+						'score' => $points_scored_int,
 						'option_id' => $db_option['option_id']
 					]);
 				}
-				
-				$rand_i++;
 			}
 		}
 	}
@@ -640,6 +655,24 @@ class Event {
 				'event_id' => $this->db_event['event_id']
 			]);
 		}
+	}
+	
+	public function fetch_option_blocks() {
+		return $this->game->blockchain->app->run_query("SELECT * FROM option_blocks ob JOIN options o ON ob.option_id=o.option_id JOIN entities e ON o.entity_id=e.entity_id WHERE o.event_id=:event_id AND ob.score > 0 ORDER BY ob.option_block_id ASC;", ['event_id' => $this->db_event['event_id']])->fetchAll();
+	}
+	
+	public function option_block_info() {
+		$option_info_arr = $this->game->blockchain->app->run_query("SELECT SUM(ob.score) AS total_score, o.* FROM option_blocks ob JOIN options o ON ob.option_id=o.option_id WHERE o.event_id=:event_id GROUP BY o.option_id ORDER BY total_score DESC;", ['event_id' => $this->db_event['event_id']])->fetchAll();
+		
+		$is_tie = true;
+		$last_total_score = null;
+		
+		foreach ($option_info_arr as $option_info) {
+			if ($last_total_score === null) $last_total_score = $option_info['total_score'];
+			if ($option_info['total_score'] != $last_total_score) $is_tie = false;
+		}
+		
+		return [$option_info_arr, $is_tie];
 	}
 }
 ?>

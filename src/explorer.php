@@ -488,10 +488,10 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$event_html = $event->event_html($thisuser, false, false, 0, 0);
 						echo $event_html;
 						
-						if ($event->db_event['option_block_rule'] == "football_match") {
-							echo "<br/><h2>Match Summary</h2>\n";
+						if ($event->db_event['option_block_rule'] == "basketball_game") {
+							echo "<br/><h2>".ucfirst($game->db_game['event_type_name'])." Summary</h2>\n";
 							
-							$option_blocks = $app->run_query("SELECT * FROM option_blocks ob JOIN options o ON ob.option_id=o.option_id JOIN entities e ON o.entity_id=e.entity_id WHERE o.event_id=:event_id AND ob.score > 0 ORDER BY ob.option_block_id ASC;", ['event_id' => $event->db_event['event_id']])->fetchAll();
+							$option_blocks = $event->fetch_option_blocks();
 							$scores_by_entity_id = [];
 							$entities_by_id = [];
 							
@@ -503,7 +503,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 									}
 									else $scores_by_entity_id[$option_block['entity_id']] += $option_block['score'];
 									
-									echo $option_block['entity_name']." scored in block #".$option_block['block_height']."<br/>\n";
+									echo $option_block['entity_name']." scored ".$option_block['score']." in block #".$option_block['block_height']."<br/>\n";
 								}
 							}
 							else echo "No one has scored.<br/>\n";
@@ -516,26 +516,12 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 								}
 							}
 							
-							$options_by_event = $app->run_query("SELECT *, SUM(ob.score) AS score FROM option_blocks ob JOIN options o ON ob.option_id=o.option_id LEFT JOIN entities e ON o.entity_id=e.entity_id WHERE o.event_id=:event_id GROUP BY o.option_id ORDER BY o.option_index ASC;", ['event_id' => $event->db_event['event_id']])->fetchAll();
+							list($option_info_arr, $is_tie) = $event->option_block_info();
 							
-							if (count($options_by_event) > 0) {
-								$first_option = $options_by_event[0];
-								$second_option = $options_by_event[1];
-								$winning_option = false;
+							if ($is_tie) {
+								$winning_option = $app->fetch_option_by_id($event->db_event['winning_option_id']);
 								
-								if ($first_option['score'] == $second_option['score']) {
-									$tiebreaker = $game->module->break_tie($game, $event->db_event, $first_option, $second_option);
-									
-									if ($tiebreaker) {
-										list($winning_option, $pk_shootout_data) = $tiebreaker;
-										
-										for ($i=0; $i<count($pk_shootout_data); $i++) {
-											echo "<br/><b>PK Shootout #".($i+1)."</b><br/>\n";
-											echo $first_option['entity_name'].": ".$pk_shootout_data[$i][0]."<br/>\n";
-											echo $second_option['entity_name'].": ".$pk_shootout_data[$i][1]."<br/>\n";
-										}
-									}
-								}
+								echo "<p>".$winning_option['name']." won in overtime.</p>\n";
 							}
 						}
 						

@@ -141,7 +141,7 @@ class SingleEliminationGameDefinition {
 					"event_final_block" => $game->db_game['game_starting_block']+$round*$game->db_game['round_length']-1,
 					"event_determined_to_block" => $payout_block,
 					"event_payout_block" => $payout_block,
-					"option_block_rule" => "football_match",
+					"option_block_rule" => "basketball_game",
 					"event_name" => $event_name,
 					"option_name" => "outcome",
 					"option_name_plural" => "outcomes",
