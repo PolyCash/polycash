@@ -116,7 +116,7 @@ else {
 										echo "<b>Already imported</b> &nbsp;&nbsp; $import_file";
 									}
 									else {
-										echo "<a href=\"/groups/?action=import_from_file&group=".urlencode($import_group_name)."\">Import</a> &nbsp;&nbsp; $import_file";
+										echo "<a href=\"/groups/?action=import_from_file&group=".urlencode($import_group_name)."&synchronizer_token=".$thisuser->get_synchronizer_token()."\">Import</a> &nbsp;&nbsp; $import_file";
 									}
 									
 									echo "<br/>\n";
