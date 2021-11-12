@@ -1627,7 +1627,7 @@ class Game {
 			$js .= "games[".$game_index."].events = [];\n";
 		}
 		
-		$these_events = $this->events_by_block($last_block_id, $filter_arr);
+		$these_events = $this->events_by_block($mining_block_id, $filter_arr);
 		$event_ids = "";
 		
 		for ($i=0; $i<count($these_events); $i++) {

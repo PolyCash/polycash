@@ -88,7 +88,7 @@ if (!empty($_REQUEST['filter_term'])) {
 if (isset($_REQUEST['event_hashes'])) $event_hashes = explode(",", $_REQUEST['event_hashes']);
 else $event_hashes = [];
 
-$these_events = $game->events_by_block($blockchain_last_block_id, $filter_arr);
+$these_events = $game->events_by_block($blockchain_last_block_id+1, $filter_arr);
 $show_intro_text = false;
 
 $set_options_js = "";

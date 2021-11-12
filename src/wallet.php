@@ -600,7 +600,7 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 		<div class="panel panel-default">
 			<div class="panel-heading">
 				<div class="panel-title" style="overflow: hidden; line-height: 200%;">
-					Play Now
+					Bet on upcoming <?php echo $game->db_game['event_type_name_plural']; ?>
 					
 					<div style="display: inline-block; float: right;">
 						<div id="change_user_game">

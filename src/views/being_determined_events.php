@@ -11,7 +11,7 @@
 				foreach ($events as $event) {
 					?>
 					<div class="col-sm-6">
-						<div style="width: 100%; padding: 10px; border: 1px solid #aaa; min-height: 250px;">
+						<div style="width: 100%; padding: 5px 8px; border: 1px solid #aaa;">
 							<?php echo $event->event_html($thisuser, false, true, null, $render_event_i); ?>
 						</div>
 					</div>
