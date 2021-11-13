@@ -1247,10 +1247,7 @@ var PageManager = function() {
 					$('#game_form_name_disp').html("Settings: "+manage_game_response.name_disp);
 					
 					this.game_form_vars.forEach(function(var_name) {
-						if (["genesis_amount"].indexOf(var_name) != -1) {
-							manage_game_response[var_name] = parseInt(manage_game_response[var_name])/Math.pow(10,games[0].decimal_places);
-						}
-						else if (["exponential_inflation_rate", "default_max_voting_fraction"].indexOf(var_name) != -1) {
+						if (["genesis_amount","exponential_inflation_rate", "default_max_voting_fraction"].indexOf(var_name) != -1) {
 							manage_game_response[var_name] = parseFloat(manage_game_response[var_name]);
 						}
 						else if (["per_user_buyin_cap", "game_buyin_cap"].indexOf(var_name) != -1) {

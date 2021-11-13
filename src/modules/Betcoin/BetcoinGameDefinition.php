@@ -9,7 +9,7 @@ class BetcoinGameDefinition {
 		
 		$this->game_def_base_txt = '{
 			"blockchain_identifier": "datachain",
-			"option_group": "16 largest modern empires",
+			"option_group": "32 most populous countries",
 			"protocol_version": 1.001,
 			"name": "Betcoin",
 			"url_identifier": "betcoin",
@@ -39,7 +39,7 @@ class BetcoinGameDefinition {
 			"coin_abbreviation": "BET",
 			"escrow_address": "",
 			"genesis_tx_hash": "",
-			"genesis_amount": 200000000000,
+			"genesis_amount": 50000000,
 			"game_starting_block": 301,
 			"default_payout_rate": 1,
 			"default_vote_effectiveness_function": "constant",

@@ -6,7 +6,7 @@ if ($app->running_as_admin()) {
 	echo "Setting image identifiers for ".count($relevant_images)." images.<br/>\n";
 	
 	foreach ($relevant_images as $db_image) {
-		$image_fname = AppSettings::srcPath().$app->image_url($db_image);
+		$image_fname = dirname(AppSettings::srcPath())."/public/".$app->image_url($db_image);
 		$fh = fopen($image_fname, 'r');
 		$raw_image = fread($fh, filesize($image_fname));
 		fclose($fh);

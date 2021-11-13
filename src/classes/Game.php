@@ -1117,14 +1117,14 @@ class Game {
 				])->fetch()['SUM(amount)'];
 				
 				if ($transaction['tx_hash'] == $this->db_game['genesis_tx_hash']) {
-					$colored_coins_generated = $this->db_game['genesis_amount'];
+					$coins_generated = $this->db_game['genesis_amount']*pow(10, $this->db_game['decimal_places']);
 				}
 				else {
 					$escrow_value = $this->escrow_value($transaction['block_id']-1);
 					$coins_in_existence = $this->coins_in_existence($transaction['block_id']-1, false);
 					
 					$exchange_rate = $coins_in_existence/$escrow_value;
-					$colored_coins_generated = floor($exchange_rate*$escrowed_coins);
+					$coins_generated = floor($exchange_rate*$escrowed_coins)*pow(10, $this->db_game['decimal_places']);
 				}
 				$game_io_index = $this->max_game_io_index();
 				if ($game_io_index === null) $game_io_index = -1;
@@ -1140,7 +1140,7 @@ class Game {
 				]);
 				
 				while ($non_escrow_io = $non_escrow_ios->fetch()) {
-					$colored_coins = floor($colored_coins_generated*$non_escrow_io['amount']/$non_escrowed_coins);
+					$colored_coins = floor($coins_generated*$non_escrow_io['amount']/$non_escrowed_coins);
 					$sum_colored_coins += $colored_coins;
 					
 					$game_io_index++;

@@ -1380,7 +1380,7 @@ class App {
 		else $html .= '<a href="/explorer/games/'.$db_game['url_identifier'].'/addresses/'.$db_game['escrow_address'].'">'.$db_game['escrow_address'].'</a>';
 		$html .= "</div></div>\n";
 		
-		$genesis_amount_disp = $this->format_bignum($db_game['genesis_amount']/pow(10,$db_game['decimal_places']));
+		$genesis_amount_disp = $this->format_bignum($db_game['genesis_amount']);
 		$html .= '<div class="row"><div class="col-sm-5">Genesis transaction:</div><div class="col-sm-7">';
 		$html .= '<a href="/explorer/games/'.$db_game['url_identifier'].'/transactions/'.$db_game['genesis_tx_hash'].'">';
 		$html .= $genesis_amount_disp.' ';
@@ -1772,7 +1772,7 @@ class App {
 			['string', 'coin_abbreviation', true],
 			['string', 'escrow_address', true],
 			['string', 'genesis_tx_hash', true],
-			['int', 'genesis_amount', true],
+			['float', 'genesis_amount', true],
 			['int', 'game_starting_block', true],
 			['float', 'default_payout_rate', true],
 			['string', 'default_vote_effectiveness_function', true],
@@ -3799,30 +3799,8 @@ class App {
 		$messages = [];
 		
 		if ($this->user_is_admin($thisuser)) {
-			$modules_dir = dirname(__DIR__).'/modules';
-
-			if (is_dir($modules_dir)) {
-				foreach (scandir($modules_dir) as $module_name) {
-					if (!in_array($module_name, ['.', '..'])) {
-						$module_path = $modules_dir."/".$module_name;
-						if (is_dir($module_path)) {
-							$module_def_fname = $module_path."/".$module_name."GameDefinition.php";
-							
-							if (is_file($module_def_fname)) {
-								$db_module = $this->check_module($module_name);
-								if (!$db_module) {
-									$db_module = $this->create_module($module_name);
-									array_push($messages, 'Created module '.$module_name);
-									include($module_def_fname);
-								}
-							}
-						}
-					}
-				}
-			}
-			
 			$blockchains_dir = dirname(__DIR__).'/config/install_blockchains';
-
+			
 			if (is_dir($blockchains_dir)) {
 				foreach (scandir($blockchains_dir) as $blockchain_fname) {
 					if (!in_array($blockchain_fname, ['.', '..'])) {
@@ -3853,8 +3831,30 @@ class App {
 				}
 			}
 			
+			$modules_dir = dirname(__DIR__).'/modules';
+			
+			if (is_dir($modules_dir)) {
+				foreach (scandir($modules_dir) as $module_name) {
+					if (!in_array($module_name, ['.', '..'])) {
+						$module_path = $modules_dir."/".$module_name;
+						if (is_dir($module_path)) {
+							$module_def_fname = $module_path."/".$module_name."GameDefinition.php";
+							
+							if (is_file($module_def_fname)) {
+								$db_module = $this->check_module($module_name);
+								if (!$db_module) {
+									$db_module = $this->create_module($module_name);
+									array_push($messages, 'Created module '.$module_name);
+									include($module_def_fname);
+								}
+							}
+						}
+					}
+				}
+			}
+			
 			$games_dir = dirname(__DIR__).'/config/install_games';
-
+			
 			if (is_dir($games_dir)) {
 				foreach (scandir($games_dir) as $game_fname) {
 					if (!in_array($game_fname, ['.', '..'])) {

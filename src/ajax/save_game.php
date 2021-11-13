@@ -40,11 +40,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 					$game_var = $game_form_vars[$i];
 					$game_val = empty($_REQUEST[$game_form_vars[$i]]) ? "" : $_REQUEST[$game_form_vars[$i]];
 					
-					if (in_array($game_var, ['genesis_amount'])) {
-						if (empty($game_val)) $game_val = 0;
-						else $game_val = (int) ($game_val*pow(10,$game->db_game['decimal_places']));
-					}
-					else if (in_array($game_var, ["exponential_inflation_rate", "default_max_voting_fraction"])) $game_val = (float) $game_val;
+					if (in_array($game_var, ["genesis_amount","exponential_inflation_rate", "default_max_voting_fraction"])) $game_val = (float) $game_val;
 					else if (in_array($game_var, ['round_length', 'blockchain_id'])) $game_val = intval($game_val);
 					else $game_val = $app->strong_strip_tags($game_val);
 					
