@@ -697,7 +697,7 @@ class Event {
 		}
 		
 		$event_past_avg = round(array_sum($past_avg_by_entity_id)/count($options), 8);
-		$event_score_boost = $this->game->db_game['target_option_block_score']-$event_past_avg;
+		$event_score_boost = round(($this->game->db_game['target_option_block_score']-$event_past_avg)/2, 8);
 		
 		echo "setting target scores for #".$this->db_event['event_index']." (".$this->db_event['event_name'].")\n";
 		

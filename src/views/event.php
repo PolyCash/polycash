@@ -156,10 +156,12 @@ if (!empty($event->db_event['option_block_rule'])) {
 			$score_disp = substr($score_disp, 0, strlen($score_disp)-1);
 			$score_disp .= " &nbsp; ";
 			
-			if ($first_option['option_block_score'] == $second_option['option_block_score']) $score_disp .= "Tied";
-			else {
-				if ($first_option['option_block_score'] > $second_option['option_block_score']) $score_disp .= $first_option['entity_name']." is winning";
-				else $score_disp .= $second_option['entity_name']." is winning";
+			if ((string)$event->db_event['outcome_index'] === "") {
+				if ($first_option['option_block_score'] == $second_option['option_block_score']) $score_disp .= "Tied";
+				else {
+					if ($first_option['option_block_score'] > $second_option['option_block_score']) $score_disp .= $first_option['entity_name']." is winning";
+					else $score_disp .= $second_option['entity_name']." is winning";
+				}
 			}
 			
 			echo " &nbsp;&nbsp; ".$score_disp;
@@ -220,9 +222,10 @@ if (!empty($event->db_event['option_block_rule'])) {
 		}
 	}
 	if ($target_score_disp !== "") {
+		$was_is = $game->last_block_id() >= $event->db_event['event_determined_to_block'] ? "was" : "is";
 		echo "<p>";
-		if ($is_tie) echo "A tie is predicted";
-		else echo $predicted_winner['name']." is predicted to win ".substr($target_score_disp, 0, strlen($target_score_disp)-1);
+		if ($is_tie) echo "A tie ".$was_is." predicted";
+		else echo $predicted_winner['name']." ".$was_is." predicted to win ".substr($target_score_disp, 0, strlen($target_score_disp)-1);
 		echo "</p>\n";
 	}
 }
