@@ -1756,7 +1756,6 @@ class App {
 			['string', 'event_type_name_plural', true],
 			['string', 'event_rule', true],
 			['string', 'event_winning_rule', true],
-			['int', 'events_per_round', true],
 			['string', 'inflation', true],
 			['float', 'exponential_inflation_rate', true],
 			['string', 'pow_reward_type', true],
