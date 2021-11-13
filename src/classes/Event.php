@@ -248,19 +248,6 @@ class Event {
 		]);
 	}
 	
-	public function my_votes_html($color, &$coins_per_vote, &$user_game, &$last_block_id, &$betinfo_by_option_id) {
-		return $this->game->blockchain->app->render_view('my_votes', [
-			'app' => $this->game->blockchain->app,
-			'game' => $this->game,
-			'event' => $this,
-			'color' => $color,
-			'coins_per_vote' => $coins_per_vote,
-			'user_game' => $user_game,
-			'last_block_id' => $last_block_id,
-			'betinfo_by_option_id' => $betinfo_by_option_id,
-		]);
-	}
-	
 	public function set_event_completed() {
 		$this->game->blockchain->app->run_query("UPDATE events SET completion_datetime=".AppSettings::sqlNow()." WHERE event_id=:event_id;", ['event_id'=>$this->db_event['event_id']]);
 	}

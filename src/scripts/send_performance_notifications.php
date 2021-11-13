@@ -178,8 +178,7 @@ if ($app->running_as_admin()) {
 				finish_reading_bet_rows("linear", $app, $game, $bet, $prev_user_game_id, $betcount_by_user_game, $num_wins, $num_losses, $num_unresolved, $ref_user_game, $prev_account_id, $unresolved_net_delta, $prev_last_notified_account_value, $html_by_user_game, $linear_table_header_html, $net_delta, $net_stake, $pending_stake, $resolved_fees_paid, $num_refunded);
 			}
 			
-			$ref_html = "";
-			list($track_entity, $track_price_usd, $track_pay_price, $asset_price_usd, $bought_price_usd, $fair_io_value, $inflation_stake, $effective_stake, $unconfirmed_votes, $max_payout, $odds, $effective_paid, $equivalent_contracts, $event_equivalent_contracts, $track_position_price, $bought_leverage, $current_leverage, $borrow_delta, $bet_net_delta, $payout_fees) = $game->get_payout_info($bet, $coins_per_vote, $last_block_id, $ref_html);
+			list($track_entity, $track_price_usd, $track_pay_price, $asset_price_usd, $bought_price_usd, $fair_io_value, $inflation_stake, $effective_stake, $unconfirmed_votes, $max_payout, $odds, $effective_paid, $equivalent_contracts, $event_equivalent_contracts, $track_position_price, $bought_leverage, $current_leverage, $borrow_delta, $bet_net_delta, $payout_fees, $coin_stake) = $game->get_payout_info($bet, $coins_per_vote, $last_block_id);
 			
 			$this_bet_html = $app->render_linear_bet('td', $bet, $game, $inflation_stake, $effective_paid, $current_leverage, $equivalent_contracts, $borrow_delta, $track_pay_price, $bought_price_usd, $fair_io_value, $bet_net_delta, $net_delta, $net_stake, $pending_stake, $resolved_fees_paid, $num_wins, $num_losses, $num_unresolved, $num_refunded, $unresolved_net_delta);
 			$this_bet_html  = str_replace('<font class="greentext">', '<font style="color: #0a0;">', $this_bet_html);

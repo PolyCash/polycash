@@ -625,7 +625,7 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 						<div style="display: inline-block; float: right;">
 							<select class="form-control input-sm" id="net_risk_view">
 								<option value="0">Show each bet</option>
-								<option value="1"<?php if ($user_game['net_risk_view']) echo ' selected="selected"'; ?>>Show net risk by option</option>
+								<option value="1"<?php if ($user_game['net_risk_view']) echo ' selected="selected"'; ?>>Show net win by option</option>
 							</select>
 						</div>
 					</div>

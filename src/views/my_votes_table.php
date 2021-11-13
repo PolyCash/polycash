@@ -4,13 +4,31 @@ $html = "";
 $confirmed_html = "";
 $unconfirmed_html = "";
 
-$betinfo_by_option_id = [];
 $coins_per_vote = $app->coins_per_vote($game->db_game);
-$unconfirmed_html = $event->my_votes_html("yellow", $coins_per_vote, $user_game, $last_block_id, $betinfo_by_option_id);
-$confirmed_html = $event->my_votes_html("green", $coins_per_vote, $user_game, $last_block_id, $betinfo_by_option_id);
 
-if (strlen($unconfirmed_html.$confirmed_html) > 0) {
+$unconfirmed_bets = $game->my_bets_in_event($event->db_event['event_id'], $user_game['account_id'], false);
+$confirmed_bets = $game->my_bets_in_event($event->db_event['event_id'], $user_game['account_id'], true);
+
+if (count($confirmed_bets)+count($unconfirmed_bets) > 0) {
 	if ($user_game['net_risk_view'] && $event->db_event['payout_rule'] == "binary") {
+		$betinfo_by_option_id = [];
+		
+		foreach ($unconfirmed_bets as $my_bet) {
+			list($track_entity, $track_price_usd, $track_pay_price, $asset_price_usd, $bought_price_usd, $fair_io_value, $inflation_stake, $effective_stake, $unconfirmed_votes, $max_payout, $odds, $effective_paid, $equivalent_contracts, $event_equivalent_contracts, $track_position_price, $bought_leverage, $current_leverage, $borrow_delta, $net_delta, $payout_fees, $coin_stake) = $game->get_payout_info($my_bet, $coins_per_vote, $last_block_id);
+			
+			if (empty($betinfo_by_option_id[$my_bet['option_id']])) $betinfo_by_option_id[$my_bet['option_id']] = ['spent' => 0, 'payout' => 0];
+			$betinfo_by_option_id[$my_bet['option_id']]['spent'] += $coin_stake;
+			$betinfo_by_option_id[$my_bet['option_id']]['payout'] += $max_payout;
+		}
+		
+		foreach ($confirmed_bets as $my_bet) {
+			list($track_entity, $track_price_usd, $track_pay_price, $asset_price_usd, $bought_price_usd, $fair_io_value, $inflation_stake, $effective_stake, $unconfirmed_votes, $max_payout, $odds, $effective_paid, $equivalent_contracts, $event_equivalent_contracts, $track_position_price, $bought_leverage, $current_leverage, $borrow_delta, $net_delta, $payout_fees, $coin_stake) = $game->get_payout_info($my_bet, $coins_per_vote, $last_block_id);
+			
+			if (empty($betinfo_by_option_id[$my_bet['option_id']])) $betinfo_by_option_id[$my_bet['option_id']] = ['spent' => 0, 'payout' => 0];
+			$betinfo_by_option_id[$my_bet['option_id']]['spent'] += $coin_stake;
+			$betinfo_by_option_id[$my_bet['option_id']]['payout'] += $max_payout;
+		}
+		
 		$options = $app->fetch_options_by_event($event->db_event['event_id'], $require_entities=false)->fetchAll(PDO::FETCH_ASSOC);
 		$options = AppSettings::arrayToMapOnKey($options, "option_id");
 		$sum_spent = 0;
@@ -55,7 +73,29 @@ if (strlen($unconfirmed_html.$confirmed_html) > 0) {
 				<div class="col-sm-6">Amount Bet</div>
 				<div class="col-sm-6">To Win</div>
 			</div>
-			<?php echo $unconfirmed_html.$confirmed_html; ?>
+			<?php
+			echo $app->render_view('my_votes', [
+				'app' => $app,
+				'game' => $game,
+				'event' => $event,
+				'my_bets' => $unconfirmed_bets,
+				'color' => 'yellow',
+				'coins_per_vote' => $coins_per_vote,
+				'user_game' => $user_game,
+				'last_block_id' => $last_block_id,
+			]);
+			
+			echo $app->render_view('my_votes', [
+				'app' => $app,
+				'game' => $game,
+				'event' => $event,
+				'my_bets' => $confirmed_bets,
+				'color' => 'green',
+				'coins_per_vote' => $coins_per_vote,
+				'user_game' => $user_game,
+				'last_block_id' => $last_block_id,
+			]);
+			?>
 		</div>
 		<?php
 	}

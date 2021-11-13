@@ -2846,7 +2846,7 @@ class Game {
 			$html .= " &nbsp; ".ucwords($io['spend_status']);
 			$html .= "<br/>\n";
 			
-			list($track_entity, $track_price_usd, $track_pay_price, $asset_price_usd, $bought_price_usd, $fair_io_value, $inflation_stake, $effective_stake, $unconfirmed_votes, $max_payout, $odds, $effective_paid, $equivalent_contracts, $event_equivalent_contracts, $track_position_price, $bought_leverage, $current_leverage, $borrow_delta, $net_delta, $payout_fees) = $this->get_payout_info($io, $coins_per_vote, $last_block_id, $html);
+			list($track_entity, $track_price_usd, $track_pay_price, $asset_price_usd, $bought_price_usd, $fair_io_value, $inflation_stake, $effective_stake, $unconfirmed_votes, $max_payout, $odds, $effective_paid, $equivalent_contracts, $event_equivalent_contracts, $track_position_price, $bought_leverage, $current_leverage, $borrow_delta, $net_delta, $payout_fees, $coin_stake) = $this->get_payout_info($io, $coins_per_vote, $last_block_id);
 			
 			if (empty($io['option_id']) && $io['destroy_amount']+$inflation_stake > 0) {
 				$destroy_amount_disp = $this->blockchain->app->format_bignum(($io['destroy_amount']+$inflation_stake)/pow(10,$this->db_game['decimal_places']));
@@ -2953,7 +2953,7 @@ class Game {
 		return $html;
 	}
 	
-	public function get_payout_info(&$io, &$coins_per_vote, &$last_block_id, &$html) {
+	public function get_payout_info(&$io, &$coins_per_vote, &$last_block_id) {
 		$track_entity = false;
 		$track_price_usd = false;
 		$track_pay_price = false;
@@ -2970,6 +2970,7 @@ class Game {
 		$borrow_delta = false;
 		$net_delta = false;
 		$payout_fees = 0;
+		$coin_stake = 0;
 		
 		$effective_paid = 0;
 		$equivalent_contracts = 0;
@@ -2993,6 +2994,8 @@ class Game {
 					$inflation_stake = $io[$this->db_game['payout_weight']."s_destroyed"]*$coins_per_vote;
 				}
 			}
+			
+			$coin_stake = (($io['contract_parts']/$io['total_contract_parts'])*$io['destroy_amount']) + $inflation_stake;
 			
 			$frac_of_contract = $io['contract_parts']/$io['total_contract_parts'];
 			
@@ -3083,7 +3086,7 @@ class Game {
 			}
 		}
 		
-		return array($track_entity, $track_price_usd, $track_pay_price, $position_price, $bought_price_usd, $fair_io_value, $inflation_stake, $effective_stake, $unconfirmed_votes, $max_payout, $odds, $effective_paid, $equivalent_contracts, $event_equivalent_contracts, $track_position_price, $bought_leverage, $current_leverage, $borrow_delta, $net_delta, $payout_fees);
+		return array($track_entity, $track_price_usd, $track_pay_price, $position_price, $bought_price_usd, $fair_io_value, $inflation_stake, $effective_stake, $unconfirmed_votes, $max_payout, $odds, $effective_paid, $equivalent_contracts, $event_equivalent_contracts, $track_position_price, $bought_leverage, $current_leverage, $borrow_delta, $net_delta, $payout_fees, $coin_stake);
 	}
 	
 	public function explorer_block_list($from_block_id, $to_block_id) {
@@ -4009,6 +4012,20 @@ class Game {
 				$starting_event->set_target_scores($block_id);
 			}
 		}
+	}
+	
+	public function my_bets_in_event($event_id, $account_id, $confirmed) {
+		$my_bets_q = "SELECT p.*, p.contract_parts AS total_contract_parts, gio.contract_parts, gio.is_game_coinbase, gio.game_out_index AS game_out_index, op.*, ev.*, p.votes, op.votes AS option_votes, op.effective_destroy_score AS option_effective_destroy_score, ev.destroy_score AS sum_destroy_score, ev.effective_destroy_score AS sum_effective_destroy_score, t.transaction_id, t.tx_hash, t.fee_amount, io.spend_status FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN transaction_game_ios p ON gio.parent_io_id=p.game_io_id JOIN transactions t ON io.create_transaction_id=t.transaction_id JOIN options op ON gio.option_id=op.option_id JOIN events ev ON op.event_id=ev.event_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.event_id=:event_id AND k.account_id=:account_id AND gio.resolved_before_spent=1";
+		
+		if ($confirmed) $my_bets_q .= " AND io.create_block_id IS NOT NULL";
+		else $my_bets_q .= " AND io.create_block_id IS NULL";
+		
+		$my_bets_q .= " ORDER BY op.event_option_index ASC;";
+		
+		return $this->blockchain->app->run_query($my_bets_q, [
+			'event_id' => $event_id,
+			'account_id' => $account_id
+		])->fetchAll();
 	}
 }
 ?>
