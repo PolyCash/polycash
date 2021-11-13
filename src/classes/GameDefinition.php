@@ -74,55 +74,58 @@ class GameDefinition {
 		$event_verbatim_vars = $app->event_verbatim_vars();
 		$events_obj = [];
 		
-		if ($definition_mode == "defined") {
-			$events_q = "SELECT ev.*, sp.entity_name AS sport_name, lg.entity_name AS league_name FROM game_defined_events ev LEFT JOIN entities sp ON ev.sport_entity_id=sp.entity_id LEFT JOIN entities lg ON ev.league_entity_id=lg.entity_id WHERE ev.game_id=:game_id ORDER BY ev.event_index ASC;";
-			$options_q = "SELECT event_index, name, entity_id, target_probability FROM game_defined_options WHERE game_id=:game_id ORDER BY event_index ASC, option_index ASC;";
-		}
-		else {
-			$events_q = "SELECT ev.*, sp.entity_name AS sport_name, lg.entity_name AS league_name FROM events ev LEFT JOIN entities sp ON ev.sport_entity_id=sp.entity_id LEFT JOIN entities lg ON ev.league_entity_id=lg.entity_id WHERE ev.game_id=:game_id ORDER BY ev.event_index ASC;";
-			$options_q = "SELECT ev.event_index, op.name, op.entity_id, op.target_probability FROM events ev JOIN options op ON ev.event_id=op.event_id WHERE ev.game_id=:game_id ORDER BY ev.event_index ASC, op.event_option_index ASC;";
-		}
-		$db_events = $app->run_query($events_q, ['game_id'=>$game->db_game['game_id']]);
-		$db_options = $app->run_query($options_q, ['game_id'=>$game->db_game['game_id']])->fetchAll(PDO::FETCH_ASSOC);
-		$options_by_event_index = AppSettings::arrayToMapOnKey($db_options, "event_index", true);
-		
-		$i=0;
-		while ($db_event = $db_events->fetch()) {
-			$temp_event = [];
+		if ($game->db_game['finite_events']) {
+			if ($definition_mode == "defined") {
+				$events_q = "SELECT ev.*, sp.entity_name AS sport_name, lg.entity_name AS league_name FROM game_defined_events ev LEFT JOIN entities sp ON ev.sport_entity_id=sp.entity_id LEFT JOIN entities lg ON ev.league_entity_id=lg.entity_id WHERE ev.game_id=:game_id ORDER BY ev.event_index ASC;";
+				$options_q = "SELECT event_index, name, entity_id, target_probability FROM game_defined_options WHERE game_id=:game_id ORDER BY event_index ASC, option_index ASC;";
+			}
+			else {
+				$events_q = "SELECT ev.*, sp.entity_name AS sport_name, lg.entity_name AS league_name FROM events ev LEFT JOIN entities sp ON ev.sport_entity_id=sp.entity_id LEFT JOIN entities lg ON ev.league_entity_id=lg.entity_id WHERE ev.game_id=:game_id ORDER BY ev.event_index ASC;";
+				$options_q = "SELECT ev.event_index, op.name, op.entity_id, op.target_probability FROM events ev JOIN options op ON ev.event_id=op.event_id WHERE ev.game_id=:game_id ORDER BY ev.event_index ASC, op.event_option_index ASC;";
+			}
+			$db_events = $app->run_query($events_q, ['game_id'=>$game->db_game['game_id']]);
+			$db_options = $app->run_query($options_q, ['game_id'=>$game->db_game['game_id']])->fetchAll(PDO::FETCH_ASSOC);
+			$options_by_event_index = AppSettings::arrayToMapOnKey($db_options, "event_index", true);
 			
-			for ($j=0; $j<count($event_verbatim_vars); $j++) {
-				$var_type = $event_verbatim_vars[$j][0];
-				$var_name = $event_verbatim_vars[$j][1];
+			$i=0;
+			while ($db_event = $db_events->fetch()) {
+				$temp_event = [];
 				
-				if ($db_event['payout_rule'] != "linear" && in_array($var_name, ['track_max_price','track_min_price','track_payout_price','track_name_short'])) {}
-				else {
-					$var_val = $db_event[$var_name];
+				for ($j=0; $j<count($event_verbatim_vars); $j++) {
+					$var_type = $event_verbatim_vars[$j][0];
+					$var_name = $event_verbatim_vars[$j][1];
 					
-					if ($var_type == "int" && $var_val != "") $var_val = (int) $var_val;
-					else if ($var_type == "float" && $var_val != "") $var_val = (float) $var_val;
-					
-					$temp_event[$var_name] = $var_val;
+					if ($db_event['payout_rule'] != "linear" && in_array($var_name, ['track_max_price','track_min_price','track_payout_price','track_name_short'])) {}
+					else {
+						$var_val = $db_event[$var_name];
+						
+						if ($var_type == "int" && $var_val != "") $var_val = (int) $var_val;
+						else if ($var_type == "float" && $var_val != "") $var_val = (float) $var_val;
+						
+						$temp_event[$var_name] = $var_val;
+					}
 				}
+				
+				if (!empty($db_event['sport_name'])) $temp_event['sport'] = $db_event['sport_name'];
+				if (!empty($db_event['league_name'])) $temp_event['league'] = $db_event['league_name'];
+				if (!empty($db_event['external_identifier']) && $show_internal_params) $temp_event['external_identifier'] = $db_event['external_identifier'];
+				
+				$j = 0;
+				foreach ($options_by_event_index[$db_event['event_index']] as $option) {
+					$possible_outcome = ["title"=>$option->name];
+					if ($show_internal_params) {
+						if (!empty($option->target_probability)) $possible_outcome['target_probability'] = $option->target_probability;
+						if (!empty($option->entity_id)) $possible_outcome['entity_id'] = $option->entity_id;
+					}
+					$temp_event['possible_outcomes'][$j] = $possible_outcome;
+					$j++;
+				}
+				$events_obj[$i] = $temp_event;
+				$i++;
 			}
 			
-			if (!empty($db_event['sport_name'])) $temp_event['sport'] = $db_event['sport_name'];
-			if (!empty($db_event['league_name'])) $temp_event['league'] = $db_event['league_name'];
-			if (!empty($db_event['external_identifier']) && $show_internal_params) $temp_event['external_identifier'] = $db_event['external_identifier'];
-			
-			$j = 0;
-			foreach ($options_by_event_index[$db_event['event_index']] as $option) {
-				$possible_outcome = ["title"=>$option->name];
-				if ($show_internal_params) {
-					if (!empty($option->target_probability)) $possible_outcome['target_probability'] = $option->target_probability;
-					if (!empty($option->entity_id)) $possible_outcome['entity_id'] = $option->entity_id;
-				}
-				$temp_event['possible_outcomes'][$j] = $possible_outcome;
-				$j++;
-			}
-			$events_obj[$i] = $temp_event;
-			$i++;
+			$game_definition['events'] = $events_obj;
 		}
-		$game_definition['events'] = $events_obj;
 		
 		$game_def_str = self::game_def_to_text($game_definition);
 		$game_def_hash = self::game_def_to_hash($game_def_str);
