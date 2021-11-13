@@ -330,7 +330,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 					if ($account['game_id'] > 0) {
 						$account_game = new Game($blockchain, $account['game_id']);
 						if ($show_balances) {
-							$game_mature_balance = $account_game->account_balance($account['account_id']);
+							$game_confirmed_balance = $account_game->account_balance($account['account_id'], ['confirmed_only' => true]);
 							$game_immature_balance = $account_game->account_balance($account['account_id'], ['include_immature' => 1]);
 						}
 					}
@@ -359,10 +359,10 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 					echo '<div class="col-sm-2" style="text-align: right">';
 					if ($account['game_id'] > 0) {
 						if ($show_balances) {
-							echo '<font class="text-success">'.$app->format_bignum($game_mature_balance/pow(10,$account_game->db_game['decimal_places'])).' '.$account_game->db_game['coin_name_plural'].'</font>';
+							echo '<font class="text-success">'.$app->format_bignum($game_confirmed_balance/pow(10,$account_game->db_game['decimal_places'])).' '.$account_game->db_game['coin_name_plural'].'</font>';
 							
-							if ($game_immature_balance != $game_mature_balance) {
-								$game_immature_amount = $game_immature_balance - $game_mature_balance;
+							if ($game_immature_balance != $game_confirmed_balance) {
+								$game_immature_amount = $game_immature_balance - $game_confirmed_balance;
 								echo ' &nbsp; <font class="text-warning">(+'.$app->format_bignum($game_immature_amount/pow(10,$account_game->db_game['decimal_places'])).')</font>';
 							}
 						}
