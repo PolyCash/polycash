@@ -64,9 +64,16 @@ if ($app->running_as_admin()) {
 			
 			if (empty(AppSettings::getParam('identifier_case_sensitive'))) die('Please set the variable "identifier_case_sensitive" in your config file.');
 			if (empty(AppSettings::getParam('identifier_first_char'))) die('Please set the variable "identifier_first_char" in your config file.');
-			if (empty($app->get_site_constant("reference_currency_id"))) $app->set_reference_currency(6);
 			
 			$app->blockchain_ensure_currencies();
+			
+			if (empty($app->get_site_constant("reference_currency_id"))) {
+				$btc_currency = $app->fetch_currency_by_abbreviation("BTC");
+				if ($btc_currency) {
+					$app->set_reference_currency($btc_currency['currency_id']);
+				}
+			}
+			
 			$general_entity_type = $app->check_set_entity_type("general entity");
 			
 			require(AppSettings::srcPath()."/includes/get_session.php");

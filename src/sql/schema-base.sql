@@ -1311,20 +1311,6 @@ CREATE TABLE `modules` (
   `primary_game_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
---
--- Dumping data for table `modules`
---
-
-INSERT INTO `modules` (`module_id`, `module_name`, `primary_game_id`) VALUES
-(1, 'CoinBattles', NULL),
-(2, 'SingleElimination', NULL),
-(4, 'EmpirecoinClassic', NULL),
-(6, 'ImageTournament', NULL),
-(7, 'CryptoDuels', NULL),
-(8, 'DailyCryptoMarkets', NULL),
-(9, 'eSports', NULL),
-(10, 'VirtualStockMarket', NULL);
-
 -- --------------------------------------------------------
 
 --
@@ -2689,7 +2675,7 @@ ALTER TABLE `mobile_payments`
 -- AUTO_INCREMENT for table `modules`
 --
 ALTER TABLE `modules`
-  MODIFY `module_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `module_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `newsletter_subscribers`

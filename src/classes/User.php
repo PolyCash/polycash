@@ -140,10 +140,13 @@ class User {
 			
 			$address_key = $this->app->new_normal_address_key($currency_id, $account);
 			
-			$this->app->run_query("UPDATE currency_accounts SET current_address_id=:current_address_id WHERE account_id=:account_id;", [
-				'current_address_id' => $address_key['address_id'],
-				'account_id' => $account['account_id']
-			]);
+			if ($address_key) {
+				$this->app->run_query("UPDATE currency_accounts SET current_address_id=:current_address_id WHERE account_id=:account_id;", [
+					'current_address_id' => $address_key['address_id'],
+					'account_id' => $account['account_id']
+				]);
+			}
+			
 			$this->app->run_query("UPDATE user_games SET account_id=:account_id WHERE user_game_id=:user_game_id;", [
 				'account_id' => $account['account_id'],
 				'user_game_id' => $user_game_id

@@ -240,35 +240,35 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 															<label for="rpc_host_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>">
 																RPC hostname
 															</label>
-															<input class="form-control input-sm" name="rpc_host" id="rpc_host_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>" placeholder="127.0.0.1" />
+															<input class="form-control input-sm" name="rpc_host" id="rpc_host_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>" placeholder="127.0.0.1" required />
 														</div>
 														
 														<div class="form-group">
 															<label for="rpc_username_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>">
 																RPC username
 															</label>
-															<input class="form-control input-sm" name="rpc_username" id="rpc_username_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>" autocomplete="off" />
+															<input class="form-control input-sm" name="rpc_username" id="rpc_username_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>" autocomplete="off" required />
 														</div>
 														
 														<div class="form-group">
 															<label for="rpc_password_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>">
 																RPC password
 															</label>
-															<input class="form-control input-sm" type="password" name="rpc_password" id="rpc_password_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>" autocomplete="off" />
+															<input class="form-control input-sm" type="password" name="rpc_password" id="rpc_password_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>" autocomplete="off" required />
 														</div>
 														
 														<div class="form-group">
 															<label for="rpc_port_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>">
 																RPC port
 															</label>
-															<input class="form-control input-sm" name="rpc_port" id="rpc_port_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>" placeholder="<?php echo $blockchain->db_blockchain['default_rpc_port']; ?>" />
+															<input class="form-control input-sm" name="rpc_port" id="rpc_port_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>" placeholder="<?php echo $blockchain->db_blockchain['default_rpc_port']; ?>" required />
 														</div>
 														
 														<div class="form-group">
 															<label for="first_required_block_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>">
 																Sync from block
 															</label>
-															<input class="form-control input-sm" name="first_required_block" id="first_required_block_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>" placeholder="1" />
+															<input class="form-control input-sm" name="first_required_block" id="first_required_block_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>" placeholder="1" required />
 														</div>
 													</div>
 													<div class="modal-footer">

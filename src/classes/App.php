@@ -803,8 +803,12 @@ class App {
 		}
 		else {
 			$rate_ref_per_numerator_record = $this->currency_price_at_time($numerator_currency_id, $ref_currency_id, $ref_time);
-			$rate_ref_per_numerator = $rate_ref_per_numerator_record['price'];
-			$price_time = min($price_time, $rate_ref_per_numerator_record['time_added']);
+			
+			if ($rate_ref_per_numerator_record) {
+				$rate_ref_per_numerator = $rate_ref_per_numerator_record['price'];
+				$price_time = min($price_time, $rate_ref_per_numerator_record['time_added']);
+			}
+			else $rate_ref_per_numerator = null;
 		}
 		
 		if ($denominator_currency_id == $ref_currency_id) {
@@ -812,12 +816,18 @@ class App {
 		}
 		else {
 			$rate_ref_per_denominator_record = $this->currency_price_at_time($denominator_currency_id, $ref_currency_id, $ref_time);
-			$rate_ref_per_denominator = $rate_ref_per_denominator_record['price'];
-			$price_time = min($price_time, $rate_ref_per_denominator_record['time_added']);
+			if ($rate_ref_per_denominator_record) {
+				$rate_ref_per_denominator = $rate_ref_per_denominator_record['price'];
+				$price_time = min($price_time, $rate_ref_per_denominator_record['time_added']);
+			}
+			else $rate_ref_per_denominator = null;
 		}
 		
+		$exchange_rate = null;
+		if ($rate_ref_per_numerator !== null && $rate_ref_per_denominator !== null && $rate_ref_per_numerator > 0) $exchange_rate = $rate_ref_per_denominator/$rate_ref_per_numerator;
+		
 		return [
-			'exchange_rate' => $rate_ref_per_numerator > 0 ? $rate_ref_per_denominator/$rate_ref_per_numerator : 0,
+			'exchange_rate' => $exchange_rate,
 			'time' => $price_time
 		];
 	}
@@ -857,7 +867,7 @@ class App {
 	public function set_reference_currency($reference_currency_id) {
 		$has_ref_price = count($this->run_query("SELECT * FROM currency_prices WHERE currency_id=:currency_id AND reference_currency_id=:currency_id;", ['currency_id' => $reference_currency_id])->fetchAll()) > 0;
 		if (!$has_ref_price) {
-			$app->run_insert_query("currency_prices", [
+			$this->run_insert_query("currency_prices", [
 				'reference_currency_id' => $reference_currency_id,
 				'currency_id' => $reference_currency_id,
 				'price' => 1,
@@ -1772,7 +1782,8 @@ class App {
 			['int', 'default_option_max_width', false],
 			['int', 'default_payout_block_delay', true],
 			['string', 'view_mode', true],
-			['string', 'order_options_by', true]
+			['string', 'order_options_by', true],
+			['float', 'target_option_block_score', true],
 		];
 	}
 	
@@ -1949,6 +1960,11 @@ class App {
 	
 	public function check_module($module_name) {
 		return $this->run_query("SELECT * FROM modules WHERE module_name=:module_name;", ['module_name'=>$module_name])->fetch();
+	}
+	
+	public function create_module($module_name) {
+		$this->run_insert_query("modules", ['module_name' => $module_name]);
+		return $this->check_module($module_name);
 	}
 	
 	public function create_blockchain_from_definition(&$definition, &$thisuser, &$error_message) {
@@ -3784,6 +3800,28 @@ class App {
 		$messages = [];
 		
 		if ($this->user_is_admin($thisuser)) {
+			$modules_dir = dirname(__DIR__).'/modules';
+
+			if (is_dir($modules_dir)) {
+				foreach (scandir($modules_dir) as $module_name) {
+					if (!in_array($module_name, ['.', '..'])) {
+						$module_path = $modules_dir."/".$module_name;
+						if (is_dir($module_path)) {
+							$module_def_fname = $module_path."/".$module_name."GameDefinition.php";
+							
+							if (is_file($module_def_fname)) {
+								$db_module = $this->check_module($module_name);
+								if (!$db_module) {
+									$db_module = $this->create_module($module_name);
+									array_push($messages, 'Created module '.$module_name);
+									include($module_def_fname);
+								}
+							}
+						}
+					}
+				}
+			}
+			
 			$blockchains_dir = dirname(__DIR__).'/config/install_blockchains';
 
 			if (is_dir($blockchains_dir)) {
