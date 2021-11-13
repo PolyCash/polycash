@@ -714,6 +714,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 								</div>
 							</form>
 						</div>
+						<?php if ($account_game) { ?>
 						<div id="account_spend_faucet" style="display: none;">
 							<form action="/accounts/" method="get">
 								<input type="hidden" name="action" value="donate_to_faucet" />
@@ -766,7 +767,6 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 								</div>
 							</form>
 						</div>
-						<?php if ($account_game) { ?>
 						<div id="account_spend_split" style="display: none;" onsubmit="thisPageManager.account_spend_split(); return false;">
 							<form action="/accounts/" method="get">
 								<input type="hidden" name="action" value="split" />

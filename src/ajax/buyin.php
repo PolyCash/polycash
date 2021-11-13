@@ -38,10 +38,9 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 		else $exchange_rate = 0;
 		
 		$output_obj = [];
+		$content_html = "";
 		
 		if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "check_amount") {
-			$content_html = "";
-			
 			if (!empty($_REQUEST['invoice_id'])) {
 				$invoice_id = (int) $_REQUEST['invoice_id'];
 				

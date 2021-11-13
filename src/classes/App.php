@@ -1502,7 +1502,7 @@ class App {
 			}
 			
 			$latest_event = $game->latest_event();
-			$html .= '<div class="row"><div class="col-sm-5">Events:</div><div class="col-sm-7">'.number_format($latest_event['event_index'])."</div></div>\n";
+			$html .= '<div class="row"><div class="col-sm-5">Events:</div><div class="col-sm-7">'.(empty($latest_event['event_index']) ? "None" : number_format($latest_event['event_index']))."</div></div>\n";
 		}
 		
 		$html .= "</div>\n";
