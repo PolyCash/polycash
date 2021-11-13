@@ -1977,6 +1977,8 @@ class Game {
 			
 			$this->set_events_until_block($block_id);
 			
+			if ($ensure_from_block == $this->db_game['game_starting_block']) $this->set_target_scores_at_block($this->db_game['game_starting_block']);
+			
 			$this->blockchain->app->dbh->commit();
 		}
 	}
@@ -2608,13 +2610,7 @@ class Game {
 				}
 			}
 			
-			$starting_events = $this->events_by_starting_block($block_height+1);
-			
-			foreach ($starting_events as $starting_event) {
-				if ($starting_event->db_event['option_block_rule'] == "basketball_game") {
-					$starting_event->set_target_scores($block_height);
-				}
-			}
+			$this->set_target_scores_at_block($block_height+1);
 			
 			$finalblock_events = $this->events_by_final_block($block_height);
 			
@@ -4003,6 +3999,16 @@ class Game {
 		while ($keep_claiming);
 		
 		return $claim_count;
+	}
+	
+	public function set_target_scores_at_block($block_id) {
+		$starting_events = $this->events_by_starting_block($block_id);
+		
+		foreach ($starting_events as $starting_event) {
+			if ($starting_event->db_event['option_block_rule'] == "basketball_game") {
+				$starting_event->set_target_scores($block_id);
+			}
+		}
 	}
 }
 ?>

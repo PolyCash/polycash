@@ -222,7 +222,7 @@ if (!empty($event->db_event['option_block_rule'])) {
 		}
 	}
 	if ($target_score_disp !== "") {
-		$was_is = $game->last_block_id() >= $event->db_event['event_determined_to_block'] ? "was" : "is";
+		$was_is = $game->last_block_id() >= $event->db_event['event_final_block'] ? "was" : "is";
 		echo "<p>";
 		if ($is_tie) echo "A tie ".$was_is." predicted";
 		else echo $predicted_winner['name']." ".$was_is." predicted to win ".substr($target_score_disp, 0, strlen($target_score_disp)-1);
@@ -324,7 +324,7 @@ for ($i=0; $i<count($round_stats); $i++) {
 	
 	if ($event->db_event['event_winning_rule'] == "max_below_cap" && !$winning_option_id && $option_votes <= $max_sum_votes && $option_votes > 0) $winning_option_id = $round_stats[$i]['option_id'];
 	
-	if ($option_effective_coins > 0) {
+	if ($option_effective_coins > 0 && $event_effective_coins > 0) {
 		$pct_votes = 100*(floor(1000*$option_effective_coins/$event_effective_coins)/1000);
 		$odds = $event->db_event['payout_rate']*$event_effective_coins/$option_effective_coins;
 		$odds_disp = "x".$app->round_to($odds, 2, 4, true);

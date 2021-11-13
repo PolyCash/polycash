@@ -464,14 +464,12 @@ class Event {
 			}
 			
 			$event_blocks = $this->db_event['event_determined_to_block'] - $this->db_event['event_determined_from_block'] + 1;
-			$team_avg_points_per_game = 90;
 			
 			$rand_i = 0;
 			$these_options = $this->game->blockchain->app->fetch_options_by_event($this->db_event['event_id']);
 			
 			while ($db_option = $these_options->fetch()) {
-				$option_target_points = 90;
-				$avg_points_per_block = round($option_target_points/$event_blocks, 6);
+				$avg_points_per_block = round($db_option['target_score']/$event_blocks, 6);
 				$max_points_per_block = $avg_points_per_block*2;
 				
 				$rand1_offset_start = $rand_chars_per_event*$event_offset + ($rand_i*$chars_per_rand);
@@ -699,11 +697,8 @@ class Event {
 		$event_past_avg = round(array_sum($past_avg_by_entity_id)/count($options), 8);
 		$event_score_boost = round(($this->game->db_game['target_option_block_score']-$event_past_avg)/2, 8);
 		
-		echo "setting target scores for #".$this->db_event['event_index']." (".$this->db_event['event_name'].")\n";
-		
 		foreach ($options as $option) {
 			$target_score = round($past_avg_by_entity_id[$option['entity_id']]+$event_score_boost, 4);
-			echo $option['name'].": ".$target_score."\n";
 			
 			$this->game->blockchain->app->run_query("UPDATE options SET target_score=:target_score WHERE option_id=:option_id;", [
 				'target_score' => $target_score,
