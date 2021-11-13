@@ -2608,7 +2608,7 @@ class Game {
 				}
 			}
 			
-			$starting_events = $this->events_by_starting_block($block_height-1);
+			$starting_events = $this->events_by_starting_block($block_height+1);
 			
 			foreach ($starting_events as $starting_event) {
 				if ($starting_event->db_event['option_block_rule'] == "basketball_game") {
