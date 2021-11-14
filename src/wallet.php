@@ -582,7 +582,7 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 		<div class="modal-dialog">
 			<div class="modal-content">
 				<div class="modal-header">
-					<b class="modal-title">Check the faucet for <?php echo $game->db_game['name']; ?></b>
+					<b class="modal-title">Check the faucet for <?php echo $game->db_game['coin_name_plural']; ?></b>
 					
 					<button type="button" class="close" data-dismiss="modal" aria-label="Close">
 						<span aria-hidden="true">&times;</span>
@@ -615,7 +615,7 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 									echo "<option ";
 									if ($db_user_game['user_game_id'] == $user_game['user_game_id']) echo "selected=\"selected\" ";
 									echo "value=\"".$db_user_game['user_game_id']."\">Account #".$db_user_game['account_id'];
-									if ($user_game_show_balances) echo " &nbsp;&nbsp; ".$app->format_bignum(($game->account_balance($db_user_game['account_id'])+$game->user_pending_bets($db_user_game))/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_abbreviation'];
+									if ($user_game_show_balances) echo " &nbsp;&nbsp; ".$game->display_coins($game->account_balance($db_user_game['account_id'])+$game->user_pending_bets($db_user_game), true);
 									echo "</option>\n";
 								}
 								?>
@@ -634,7 +634,7 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 			<div class="panel-body">
 				<?php
 				if ($faucet_io) {
-					echo '<p><button id="faucet_btn" class="btn btn-success" onclick="thisPageManager.claim_from_faucet();"><i class="fas fa-hand-paper"></i> &nbsp; Claim '.$app->format_bignum($faucet_io['colored_amount_sum']/pow(10,$game->db_game['decimal_places'])).' '.$game->db_game['coin_name_plural'].'</button></p>'."\n";
+					echo '<p><button id="faucet_btn" class="btn btn-success" onclick="thisPageManager.claim_from_faucet();"><i class="fas fa-hand-paper"></i> &nbsp; Claim '.$game->display_coins($faucet_io['colored_amount_sum']).'</button></p>'."\n";
 				}
 				
 				$game_status_explanation = $game->game_status_explanation($thisuser, $user_game);

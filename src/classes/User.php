@@ -71,23 +71,27 @@ class User {
 	}
 	
 	public function wallet_text_stats(&$game, $current_round, $last_block_id, $block_within_round, $mature_balance, $locked_amount, $user_votes, $votes_value, $pending_bets, &$user_game) {
+		$available_disp = $game->display_coins($mature_balance, false, true);
 		$html = '<div class="row"><div class="col-sm-4">Available&nbsp;funds:</div>';
 		$html .= '<div class="col-sm-6 text-right"><font class="greentext">';
-		$html .= $this->app->format_bignum($mature_balance/pow(10,$game->db_game['decimal_places']));
-		$html .= "</font> ".$game->db_game['coin_name_plural']."</div></div>\n";
+		$html .= $available_disp;
+		$html .= "</font> ".($available_disp==1 ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural'])."</div></div>\n";
 		
+		$locked_disp = $game->display_coins($locked_amount, false, true);
 		$html .= '<div class="row"><div class="col-sm-4">Locked&nbsp;funds:</div>';
-		$html .= '<div class="col-sm-6 text-right"><font class="redtext">'.$this->app->format_bignum($locked_amount/pow(10,$game->db_game['decimal_places'])).'</font> '.$game->db_game['coin_name_plural'].'</div>';
+		$html .= '<div class="col-sm-6 text-right"><font class="redtext">'.$locked_disp.'</font> '.($locked_disp==1 ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']).'</div>';
 		$html .= "</div>\n";
 		
-		$html .= '<div class="row"><div class="col-sm-4">Pending bets:</div><div class="col-sm-6 text-right"><font class="greentext">'.$this->app->format_bignum($pending_bets/pow(10,$game->db_game['decimal_places'])).'</font> '.$game->db_game['coin_name_plural'].'</div></div>'."\n";
+		$pending_disp = $game->display_coins($pending_bets, false, true);
+		$html .= '<div class="row"><div class="col-sm-4">Pending bets:</div><div class="col-sm-6 text-right"><font class="greentext">'.$pending_disp.'</font> '.($pending_disp==1 ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']).'</div></div>'."\n";
 		
 		if ($game->db_game['payout_weight'] != "coin") {
 			if ($game->db_game['inflation'] == "exponential") {
-				$html .= '<div class="row"><div class="col-sm-4">Unrealized gains:</div><div class="col-sm-6 text-right"><font class="greentext">'.$this->app->format_bignum($votes_value/pow(10,$game->db_game['decimal_places'])).'</font> '.$game->db_game['coin_name_plural'].'</div></div>'."\n";
+				$unrealized_disp = $game->display_coins($votes_value, false, true);
+				$html .= '<div class="row"><div class="col-sm-4">Unrealized gains:</div><div class="col-sm-6 text-right"><font class="greentext">'.$unrealized_disp.'</font> '.($unrealized_disp==1 ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']).'</div></div>'."\n";
 			}
 			else {
-				$html .= '<div class="row"><div class="col-sm-4">Votes:</div><div class="col-sm-6 text-right"><font class="greentext">'.$this->app->format_bignum($user_votes/pow(10,$game->db_game['decimal_places'])).'</font> votes available</div></div>'."\n";
+				$html .= '<div class="row"><div class="col-sm-4">Votes:</div><div class="col-sm-6 text-right"><font class="greentext">'.$game->display_coins($user_votes, false, true).'</font> votes available</div></div>'."\n";
 			}
 		}
 		

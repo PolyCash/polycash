@@ -9,11 +9,12 @@ if ($thisuser && $app->user_is_admin($thisuser)) {
 	$mature_unclaimed_coinbase_sum = array_sum(array_column($mature_unclaimed_coinbase_ios, 'amount'));
 	
 	if ($_REQUEST['action'] == "view") {
+		$display_coinbase_amt = $app->format_bignum($mature_unclaimed_coinbase_sum/pow(10, $blockchain->db_blockchain['decimal_places']));
 		?>
 		<div class="modal-dialog">
 			<div class="modal-content">
 				<div class="modal-body">
-					There are <?php echo count($mature_unclaimed_coinbase_ios); ?> mature coinbase outputs available totalling <?php echo $app->format_bignum($mature_unclaimed_coinbase_sum/pow(10, $blockchain->db_blockchain['decimal_places']))." ".$blockchain->db_blockchain['coin_name_plural']; ?>
+					There are <?php echo count($mature_unclaimed_coinbase_ios); ?> mature coinbase outputs available totalling <?php echo $display_coinbase_amt." ".($display_coinbase_amt==1 ? $blockchain->db_blockchain['coin_name'] : $blockchain->db_blockchain['coin_name_plural']); ?>
 				</div>
 				<div class="modal-footer">
 					<button type="button" class="btn btn-primary">Save changes</button>

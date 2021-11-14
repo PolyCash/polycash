@@ -1912,7 +1912,8 @@ class Blockchain {
 			else $html .= "#".(int)$transaction['position_in_block'];
 			$html .= " in block <a href=\"/explorer/blockchains/".$this->db_blockchain['url_identifier']."/blocks/".$transaction['block_id']."\">#".$transaction['block_id']."</a>, ";
 		}
-		$html .= (int)$transaction['num_inputs']." inputs, ".(int)$transaction['num_outputs']." outputs, ".$this->app->format_bignum($transaction['amount']/pow(10,$this->db_blockchain['decimal_places']))." ".$this->db_blockchain['coin_name_plural'];
+		$amount_disp = $this->app->format_bignum($transaction['amount']/pow(10,$this->db_blockchain['decimal_places']));
+		$html .= (int)$transaction['num_inputs']." input".($transaction['num_inputs']==1 ? "" : "s").", ".(int)$transaction['num_outputs']." output".($transaction['num_outputs']==1 ? "" : "s").", ".$amount_disp." ".($amount_disp==1 ? $this->db_blockchain['coin_name'] : $this->db_blockchain['coin_name_plural']);
 		
 		$transaction_fee = $transaction['fee_amount'];
 		if ($transaction['transaction_desc'] != "coinbase") {
@@ -2013,8 +2014,8 @@ class Blockchain {
 		$blocks = $this->app->run_query($block_q, $block_params);
 		
 		while ($block = $blocks->fetch()) {
-			if ($game) $block_sum_disp = $block['sum_coins_out']/pow(10,$game->db_game['decimal_places']);
-			else $block_sum_disp = $block['sum_coins_out']/pow(10,$this->db_blockchain['decimal_places']);
+			if ($game) $block_sum_disp = $this->app->format_bignum($block['sum_coins_out']/pow(10,$game->db_game['decimal_places']));
+			else $block_sum_disp = $this->app->format_bignum($block['sum_coins_out']/pow(10,$this->db_blockchain['decimal_places']));
 			
 			$html .= "<div class=\"row\">";
 			$html .= "<div class=\"col-sm-3\">";
@@ -2027,9 +2028,9 @@ class Blockchain {
 			$html .= "<div class=\"col-sm-2";
 			$html .= "\" style=\"text-align: right;\">".number_format($block['num_transactions']);
 			$html .= "&nbsp;transactions</div>\n";
-			$html .= "<div class=\"col-sm-2\" style=\"text-align: right;\">".$this->app->format_bignum($block_sum_disp)."&nbsp;";
-			if ($game) $html .= $game->db_game['coin_name_plural'];
-			else $html .= $this->db_blockchain['coin_name_plural'];
+			$html .= "<div class=\"col-sm-2\" style=\"text-align: right;\">".$block_sum_disp."&nbsp;";
+			if ($game) $html .= $block_sum_disp==1 ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural'];
+			else $html .= $block_sum_disp==1 ? $this->db_blockchain['coin_name'] : $this->db_blockchain['coin_name_plural'];
 			$html .= "</div>\n";
 			$html .= "</div>\n";
 		}

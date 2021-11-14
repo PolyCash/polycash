@@ -1192,8 +1192,7 @@ class App {
 				
 				echo '<p><a href="'.$play_now_url.'" class="btn btn-sm btn-success"><i class="fas fa-play-circle"></i> &nbsp; ';
 				if ($faucet_io) {
-					$faucet_amount_disp = $this->format_bignum($faucet_io['colored_amount_sum']/pow(10,$featured_game->db_game['decimal_places']));
-					echo 'Join now & receive '.$faucet_amount_disp.' '.($faucet_amount_disp == 1 ? $featured_game->db_game['coin_name'] : $featured_game->db_game['coin_name_plural']);
+					echo 'Join now & receive '.$featured_game->display_coins($faucet_io['colored_amount_sum']);
 				}
 				else echo 'Play Now';
 				echo "</a>";
@@ -1216,8 +1215,7 @@ class App {
 				echo "<br/>\n";
 				echo '<a href="/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-sm btn-success"><i class="fas fa-play-circle"></i> &nbsp; ';
 				if ($faucet_io) {
-					$faucet_amount_disp = $this->format_bignum($faucet_io['colored_amount_sum']/pow(10,$featured_game->db_game['decimal_places']));
-					echo 'Join now & receive '.$faucet_amount_disp.' '.($faucet_amount_disp == 1 ? $featured_game->db_game['coin_name'] : $featured_game->db_game['coin_name_plural']);
+					echo 'Join now & receive '.$featured_game->display_coins($faucet_io['colored_amount_sum']);
 				}
 				else echo 'Play Now';
 				echo '</a>';
@@ -3205,16 +3203,17 @@ class App {
 		
 		$adjusted_net_delta = $net_delta+$resolved_fees_paid;
 		
-		$html = number_format($num_bets)." bets totalling <font class=\"greentext\">".$this->format_bignum($net_stake)."</font> ".$game->db_game['coin_name_plural'].".<br/>\n";
+		$html = number_format($num_bets)." bets totalling <font class=\"greentext\">".$this->format_bignum($net_stake)."</font> ".($this->format_bignum($net_stake)==1 ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']).".<br/>\n";
 		$html .= "You've won ".number_format($num_wins)." of your ".number_format($num_wins+$num_losses)." resolved bets (".round($win_rate*100, 1)."%). ";
 		if ($resolved_fees_paid != 0) {
+			$resolved_fees_disp = $this->format_bignum(abs($resolved_fees_paid));
 			if ($resolved_fees_paid > 0) {
-				$html .= "You paid <font class=\"redtext\">".$this->format_bignum($resolved_fees_paid)."</font> ";
+				$html .= "You paid <font class=\"redtext\">".$resolved_fees_disp."</font> ";
 			}
 			else {
-				$html .= "You earned <font class=\"greentext\">".$this->format_bignum(abs($resolved_fees_paid))."</font> ";
+				$html .= "You earned <font class=\"greentext\">".$resolved_fees_disp."</font> ";
 			}
-			$html .= $game->db_game['coin_name_plural']." in fees and made ";
+			$html .= ($resolved_fees_disp==1 ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural'])." in fees and made ";
 		}
 		else $html .= "You made ";
 		$html .= " a net ";
@@ -3223,13 +3222,17 @@ class App {
 		$html .= " of <font class=\"";
 		if ($adjusted_net_delta >= 0) $html .= "greentext";
 		else $html .= "redtext";
-		$html .= "\">".$this->format_bignum(abs($adjusted_net_delta))."</font> ".$game->db_game['coin_name_plural']." on your bets.";
+		$adjusted_net_delta_disp = $this->format_bignum(abs($adjusted_net_delta));
+		$html .= "\">".$adjusted_net_delta_disp."</font> ".($adjusted_net_delta_disp==1 ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural'])." on your bets.";
 		if ($num_unresolved > 0 || $num_refunded > 0) {
 			$html .= "\n<br/>";
 			if ($num_refunded > 0) $html .= number_format($num_refunded)." of your bets were refunded";
 			if ($num_unresolved > 0 && $num_refunded > 0) $html .= " and you have ";
 			else if ($num_unresolved > 0) $html .= "You have ";
-			if ($num_unresolved > 0) $html .= number_format($num_unresolved)." pending bets totalling <font class=\"greentext\">".$this->format_bignum($pending_stake)."</font> ".$game->db_game['coin_name_plural'];
+			if ($num_unresolved > 0) {
+				$pending_stake_disp = $this->format_bignum($pending_stake);
+				$html .= number_format($num_unresolved)." pending bets totalling <font class=\"greentext\">".$pending_stake_disp."</font> ".($pending_stake_disp==1 ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']);
+			}
 			$html .= ".";
 		}
 		return $html;

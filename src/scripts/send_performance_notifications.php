@@ -11,7 +11,7 @@ function finish_reading_bet_rows($linear_or_binary, $app, $game, &$bet, &$prev_u
 		
 		if ($linear_or_binary == "binary") {
 			$bet_summary = "In ".$game->db_game['name']." you placed ".$app->bets_summary($game, $net_stake, $num_wins, $num_losses, $num_unresolved, $num_refunded, $pending_stake, $net_delta, $resolved_fees_paid).".<br/>\n";
-			$bet_summary .= "Your account is now worth <a href=\"".AppSettings::getParam('base_url')."/wallet/".$game->db_game['url_identifier']."/?action=change_user_game&user_game_id=".$prev_user_game_id."\">".$app->format_bignum($account_value/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']."</a>";
+			$bet_summary .= "Your account is now worth <a href=\"".AppSettings::getParam('base_url')."/wallet/".$game->db_game['url_identifier']."/?action=change_user_game&user_game_id=".$prev_user_game_id."\">".$game->display_coins($account_value)."</a>";
 			$estimated_account_value = $account_value/pow(10, $game->db_game['decimal_places']);
 		}
 		else {
@@ -19,13 +19,15 @@ function finish_reading_bet_rows($linear_or_binary, $app, $game, &$bet, &$prev_u
 				$bet_summary .= "You're ";
 				if ($unresolved_net_delta >= 0) $bet_summary .= 'up <font style="color: #0a0;">';
 				else $bet_summary .= 'down <font style="color: #f00;">';
-				$bet_summary .= $app->format_bignum(abs($unresolved_net_delta)).' '.$game->db_game['coin_name_plural'];
+				$unresolved_net_delta_disp = $app->format_bignum(abs($unresolved_net_delta));
+				$bet_summary .= $unresolved_net_delta_disp.' '.($unresolved_net_delta_disp==1 ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']);
 				$bet_summary .= '</font> on your outstanding positions.<br/>';
 			}
 			
 			$estimated_account_value = $unresolved_net_delta+($account_value/pow(10, $game->db_game['decimal_places']));
+			$est_val_disp = $app->format_bignum($estimated_account_value);
 			
-			$bet_summary .= "Your account is now worth <a href=\"".AppSettings::getParam('base_url')."/explorer/games/".$game->db_game['url_identifier']."/my_bets/?user_game_id=".$prev_user_game_id."\">".$app->format_bignum($estimated_account_value)." ".$game->db_game['coin_name_plural']."</a>";
+			$bet_summary .= "Your account is now worth <a href=\"".AppSettings::getParam('base_url')."/explorer/games/".$game->db_game['url_identifier']."/my_bets/?user_game_id=".$prev_user_game_id."\">".$est_val_disp." ".($est_val_disp==1 ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural'])."</a>";
 		}
 		
 		if ($prev_last_notified_account_value !== false) {
@@ -33,7 +35,8 @@ function finish_reading_bet_rows($linear_or_binary, $app, $game, &$bet, &$prev_u
 			$bet_summary .= ".<br/>You're";
 			if ($delta_since_last_notification >= 0) $bet_summary .= ' up <font style="color: #0a0;">';
 			else $bet_summary .= ' down <font style="color: #f00;">';
-			$bet_summary .= $app->format_bignum(abs($delta_since_last_notification)).' '.$game->db_game['coin_name_plural'];
+			$delta_disp = $app->format_bignum(abs($delta_since_last_notification));
+			$bet_summary .= $delta_disp.' '.($delta_disp==1 ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']);
 			$bet_summary .= '</font> since yesterday.';
 		}
 		$app->set_last_account_notified_value($prev_account_id, $estimated_account_value);

@@ -55,7 +55,7 @@ if (count($confirmed_bets)+count($unconfirmed_bets) > 0) {
 							<?php
 							if ($potential_delta >= 0) echo '+';
 							else echo '-';
-							echo $app->format_bignum(abs($potential_delta)/pow(10, $game->db_game['decimal_places'])).' '.$game->db_game['coin_name_plural'];
+							echo $game->display_coins(abs($potential_delta));
 							?>
 						</div>
 					</div>

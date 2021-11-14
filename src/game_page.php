@@ -52,8 +52,7 @@ else $exchange_rate = 0;
 				$faucet_io = $game->check_faucet($ref_user_game);
 				
 				if ($faucet_io) {
-					$faucet_amount_disp = $app->format_bignum($faucet_io['colored_amount_sum']/pow(10,$game->db_game['decimal_places']));
-					echo 'Join now & receive '.$faucet_amount_disp.' '.($faucet_amount_disp == 1 ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']);
+					echo 'Join now & receive '.$game->display_coins($faucet_io['colored_amount_sum']);
 				}
 				else echo 'Play Now';
 				?>

@@ -174,7 +174,8 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 						while ($db_io = $joinable_ios->fetch()) {
 							$html .= '<option value="'.$db_io['io_id'].'">';
 							if ($key_account['game_id'] > 0) $html .= $app->format_bignum($db_io['colored_amount_sum']/pow(10,$db_game['decimal_places'])).' '.$db_game['coin_abbreviation'].' (';
-							$html .= $app->format_bignum($db_io['amount']/pow(10,$blockchain->db_blockchain['decimal_places'])).' '.$blockchain->db_blockchain['coin_name_plural'];
+							$io_amount_disp = $app->format_bignum($db_io['amount']/pow(10,$blockchain->db_blockchain['decimal_places']));
+							$html .= $io_amount_disp." ".($io_amount_disp==1 ? $blockchain->db_blockchain['coin_name'] : $blockchain->db_blockchain['coin_name_plural']);
 							if ($key_account['game_id'] > 0) $html .= ')';
 							$html .= ' '.$db_io['address'].'</option>'."\n";
 						}
@@ -449,7 +450,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 									else $app->output_message(11, "TX Error: ".$error_message, false);
 								}
 								else {
-									$app->output_message(10, "UTXO is only ".$app->format_bignum($colored_coin_sum/pow(10,$game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']." but you tried to spend ".$app->format_bignum($total_cost_satoshis/pow(10,$game->db_game['decimal_places'])), false);
+									$app->output_message(10, "UTXO is only ".$game->display_coins($colored_coin_sum)." but you tried to spend ".$app->format_bignum($total_cost_satoshis/pow(10,$game->db_game['decimal_places'])), false);
 								}
 							}
 							else $app->output_message(9, "You don't own this UTXO.", false);

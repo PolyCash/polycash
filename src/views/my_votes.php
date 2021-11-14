@@ -7,7 +7,6 @@ foreach ($my_bets as $my_bet) {
 	<div class="row">
 		<?php
 		if ($event->db_event['payout_rule'] == "binary") {
-			$payout_disp = $app->format_bignum(($max_payout-$coin_stake)/pow(10,$game->db_game['decimal_places']));
 			?>
 			<div class="col-sm-6">
 				<font class="<?php echo $color ;?>text">
@@ -21,10 +20,8 @@ foreach ($my_bets as $my_bet) {
 			<div class="col-sm-6">
 				<font class="<?php echo $color; ?>text">
 					<?php
-					if ($max_payout-$coin_stake > 0) echo '+'.$payout_disp;
-					else echo $payout_disp;
-					
-					echo ' '.$game->db_game['coin_name_plural']." &nbsp; (x".$app->format_bignum($odds).")";
+					if ($max_payout-$coin_stake > 0) echo '+';
+					echo $game->display_coins($max_payout-$coin_stake)." &nbsp; (x".$app->format_bignum($odds).")";
 					?>
 				</font>
 			</div>
@@ -35,7 +32,7 @@ foreach ($my_bets as $my_bet) {
 			<div class="col-sm-6">
 				<font class="<?php echo $color; ?>text"><?php echo $my_bet['name']; ?></font><br/>
 				<a target="_blank" href="/explorer/games/<?php echo $game->db_game['url_identifier'].'/utxo/'.$my_bet['tx_hash'].'/'.$my_bet['game_out_index']; ?>">
-					Paid <?php echo $app->format_bignum($coin_stake/pow(10,$game->db_game['decimal_places'])).' '.$game->db_game['coin_name_plural']; ?>
+					Paid <?php echo $game->display_coins($coin_stake); ?>
 				</a> @ $<?php echo $app->format_bignum($asset_price_usd); ?>
 				<br/>
 				<?php
@@ -47,7 +44,7 @@ foreach ($my_bets as $my_bet) {
 			<div class="col-sm-6">
 				<font class="<?php echo $color; ?>text">
 					<?php
-					echo $app->format_bignum(($fair_io_value-$payout_fees)/pow(10,$game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']; ?>
+					echo $game->display_coins($fair_io_value-$payout_fees); ?>
 				</font>
 				@ $<?php echo $app->format_bignum($track_pay_price);
 				if ($track_pay_price != $track_price_usd) echo " ($".$app->format_bignum($track_price_usd).")";
@@ -69,7 +66,7 @@ foreach ($my_bets as $my_bet) {
 				<?php
 				if ($net_delta < 0) echo '<font class="redtext">Net loss of ';
 				else echo '<font class="greentext">Net gain of ';
-				echo $app->format_bignum(abs($net_delta)/pow(10, $game->db_game['decimal_places'])).' '.$game->db_game['coin_name_plural'];
+				echo $game->display_coins(abs($net_delta));
 				$html .= '</font>';
 				?>
 			</div>

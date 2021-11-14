@@ -93,22 +93,22 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 					$max_buyin_amount = $game_sale_amount/pow(10, $game->db_game['decimal_places'])/$exchange_rate;
 					if ($buyin_amount > $max_buyin_amount) {
 						$buyin_amount_ok = false;
-						$content_html .= '<p class="text-danger">Don\'t send that many '.$buyin_blockchain->db_blockchain['coin_name_plural'].'. There are only '.$app->format_bignum($game_sale_amount/pow(10, $game->db_game['decimal_places'])).' '.$game->db_game['coin_name_plural'].' available ('.$app->format_bignum($max_buyin_amount)." ".$buyin_currency['abbreviation'].")</p>\n";
+						$content_html .= '<p class="text-danger">Don\'t send that many '.$buyin_blockchain->db_blockchain['coin_name_plural'].'. There are only '.$game->display_coins($game_sale_amount).' available ('.$app->format_bignum($max_buyin_amount)." ".$buyin_currency['abbreviation'].")</p>\n";
 					}
 				}
 				
 				if ($game->db_game['min_buyin_amount'] && $receive_amount < $game->db_game['min_buyin_amount']) {
-					$content_html .= '<p class="text-danger">Please deposit at least '.$game->db_game['min_buyin_amount']." ".$game->db_game['coin_name_plural'].".</p>\n";
+					$content_html .= '<p class="text-danger">Please deposit at least '.$game->db_game['min_buyin_amount']." ".($game->db_game['min_buyin_amount']==1 ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']).".</p>\n";
 					$buyin_amount_ok = false;
 				}
 				
 				if ($buyin_amount_ok) {
 					$content_html .= '<p>';
 					if ($user_enters_game_amount) {
-						$content_html .= 'To get '.$receive_amount.' '.$game->db_game['coin_name_plural'].', please deposit '.$app->to_significant_digits($pay_amount, 8).' '.$buyin_currency['short_name_plural'].'. ';
+						$content_html .= 'To get '.$receive_amount.' '.($receive_amount==1 ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']).', please deposit '.$app->to_significant_digits($pay_amount, 8).' '.($app->to_significant_digits($pay_amount, 8)==1 ? $buyin_currency['short_name'] : $buyin_currency['short_name_plural']).'. ';
 					}
 					else {
-						$content_html .= 'For '.$buyin_amount.' '.$buyin_currency['short_name_plural'].', you\'ll receive approximately '.$app->format_bignum($receive_amount).' '.$game->db_game['coin_name_plural'].'. ';
+						$content_html .= 'For '.$buyin_amount.' '.($buyin_amount==1 ? $buyin_currency['short_name'] : $buyin_currency['short_name_plural']).', you\'ll receive approximately '.$app->format_bignum($receive_amount).' '.($app->format_bignum($receive_amount)==1 ? $game->db_game['coin_name_plural'] : $game->db_game['coin_name_plural']).'. ';
 					}
 					$content_html .= 'Send '.$buyin_currency['short_name_plural'].' to '.$invoice_address['address'].'
 					</p>
@@ -156,7 +156,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 				$content_html .= "This game has a game-wide buy-in cap of ".$app->format_bignum($game->db_game['game_buyin_cap'])." ".$game->blockchain->db_blockchain['coin_name_plural'].". ";
 			}
 			else if ($game->db_game['buyin_policy'] == "for_sale") {
-				$content_html .= "There are ".$app->format_bignum($game_sale_amount/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']." for sale. ";
+				$content_html .= "There are ".$game->display_coins($game_sale_amount)." for sale. ";
 			}
 			else $content_html .= "Invalid buy-in policy.";
 			

@@ -1082,12 +1082,13 @@ else {
 											if ($currency_conversion['invoice_type'] == "sale_buyin") {
 												$game_amount = $game->game_amount_by_io($io['io_id']);
 												
-												$received_utxo_html .= '<a href="/explorer/games/'.$game->db_game['url_identifier']."/utxo/".$invoice_io['tx_hash']."/".$invoice_io['game_out_index'].'/">'.$app->format_bignum($game_amount/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']."</a> ";
+												$received_utxo_html .= '<a href="/explorer/games/'.$game->db_game['url_identifier']."/utxo/".$invoice_io['tx_hash']."/".$invoice_io['game_out_index'].'/">'.$game->display_coins($game_amount)."</a> ";
 												
 												$conversion_game_amount_float += $game_amount/pow(10, $game->db_game['decimal_places']);
 											}
 											else {
-												$received_utxo_html .= '<a href="/explorer/blockchains/'.$currency_conversion['url_identifier']."/utxo/".$invoice_io['tx_hash']."/".$invoice_io['out_index'].'/">'.$app->format_bignum($io['amount']/pow(10, $currency_conversion['decimal_places']))." ".$currency_conversion['coin_name_plural']."</a><br/>\n";
+												$received_amt_disp = $app->format_bignum($io['amount']/pow(10, $currency_conversion['decimal_places']));
+												$received_utxo_html .= '<a href="/explorer/blockchains/'.$currency_conversion['url_identifier']."/utxo/".$invoice_io['tx_hash']."/".$invoice_io['out_index'].'/">'.$receive_amt_disp." ".($receive_amt_disp==1 ? $currency_conversion['coin_name'] : $currency_conversion['coin_name_plural'])."</a><br/>\n";
 												
 												$conversion_blockchain_amount_float += $io['amount']/pow(10, $currency_conversion['decimal_places']);
 											}

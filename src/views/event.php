@@ -235,7 +235,7 @@ if ($game->db_game['inflation'] == "exponential") {
 	$unconfirmed_coins = $total_reward - $confirmed_coins;
 	
 	if ($event->db_event['payout_rule'] == "binary") {
-		echo "<p>".$app->format_bignum($confirmed_coins/pow(10,$game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']." in confirmed bets";
+		echo "<p>".$game->display_coins($confirmed_coins)." in confirmed bets";
 		if ($unconfirmed_coins > 0) echo ", ".$app->format_bignum($unconfirmed_coins/pow(10,$game->db_game['decimal_places']))." unconfirmed";
 		echo "</p>\n";
 	}
@@ -246,7 +246,7 @@ if ($game->db_game['inflation'] == "exponential") {
 		
 		echo "<p>".$app->format_bignum($confirmed_equivalent_contracts)." ".$event->db_event['track_name_short']." issued at $".$app->format_bignum($two_sided_contract_price)." per contract";
 		if ($unconfirmed_coins > 0) echo " +&nbsp;".$app->format_bignum($unconfirmed_equivalent_contracts)."&nbsp;unconfirmed&nbsp;".$event->db_event['track_name_short']."<br/>\n";
-		echo " (".$app->format_bignum(($confirmed_coins+$unconfirmed_coins)/pow(10,$game->db_game['decimal_places']))."&nbsp;".$game->db_game['coin_name_plural'].")";
+		echo " (".str_replace(" ", "&nbsp;", $game->display_coins($confirmed_coins+$unconfirmed_coins)).")";
 		echo "</p>\n";
 	}
 }
