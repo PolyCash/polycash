@@ -740,12 +740,7 @@ class App {
 			return $str;
 		}
 		else if ($minutes > 0) {
-			$remainder_sec = $seconds-$minutes*60;
-			$str = "";
-			if ($minutes != 1) $str .= $minutes." minutes";
-			else $str .= $minutes." minute";
-			if ($remainder_sec > 0 && $minutes < 10) $str .= " and ".$remainder_sec." seconds";
-			return $str;
+			return $minutes." minute".($minutes==1 ? "" : "s");
 		}
 		else {
 			if ($seconds != 1) return $seconds." seconds";
