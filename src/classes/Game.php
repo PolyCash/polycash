@@ -2846,26 +2846,24 @@ class Game {
 				else $html .= $db_transaction['tx_hash'];
 				$html .= "/".$io['game_out_index']."\">";
 			}
-			$amount_disp = $this->display_coins($io['colored_amount']);
+			$html .= $this->display_coins($io['colored_amount']);
 			if ($selected_game_io_id == $io['game_io_id']) $html .= "</b>";
 			else $html .= "</a>\n";
 			
-			$html .= $amount_disp." &nbsp; ".ucwords($io['spend_status']);
-			$html .= "<br/>\n";
+			$html .= " &nbsp; ".ucwords($io['spend_status'])."<br/>\n";
 			
 			list($track_entity, $track_price_usd, $track_pay_price, $asset_price_usd, $bought_price_usd, $fair_io_value, $inflation_stake, $effective_stake, $unconfirmed_votes, $max_payout, $odds, $effective_paid, $equivalent_contracts, $event_equivalent_contracts, $track_position_price, $bought_leverage, $current_leverage, $borrow_delta, $net_delta, $payout_fees, $coin_stake) = $this->get_payout_info($io, $coins_per_vote, $last_block_id);
 			
 			if (empty($io['option_id']) && $io['destroy_amount']+$inflation_stake > 0) {
-				$destroy_amount_disp = $this->display_coins($io['destroy_amount']+$inflation_stake);
+				$html .= $this->display_coins($io['destroy_amount']+$inflation_stake);
 			}
 			
 			if ($io['is_game_coinbase'] == 1) {
 				$frac_of_contract = $io['contract_parts']/$io['total_contract_parts'];
 				
 				if ($io['payout_rule'] == "binary") {
-					$destroy_amount_disp = $this->display_coins($frac_of_contract*($io['destroy_amount']+$inflation_stake));
+					$html .= $this->display_coins($frac_of_contract*($io['destroy_amount']+$inflation_stake));
 					
-					$this_payout_disp = $max_payout;
 					$html .= " &nbsp;&nbsp; x".$this->blockchain->app->round_to($odds, 2, 4, true)." ";
 					
 					$html .= '&nbsp;&nbsp;';
@@ -2879,14 +2877,12 @@ class Game {
 						$html .= '">';
 					}
 					if ($io['payout_rule'] == "binary") $html .= '+';
-					$html .= $this->blockchain->app->format_bignum($this_payout_disp/pow(10,$this->db_game['decimal_places']));
+					$html .= $this->blockchain->app->format_bignum($max_payout/pow(10,$this->db_game['decimal_places']));
 					if ($io['outcome_index'] != -1) $html .= "</font>";
 				}
 				else {
 					if ($io['event_option_index'] != 0) $html .= '-';
 					$html .= $this->blockchain->app->format_bignum($equivalent_contracts/pow(10, $this->db_game['decimal_places'])).' '.$io['track_name_short'].' ';
-					
-					$this_payout_disp = $fair_io_value;
 					
 					if ($borrow_delta != 0) {
 						if ($borrow_delta > 0) $html .= '<font class="greentext">+ ';
