@@ -1132,101 +1132,18 @@ class App {
 		$display_games = $this->run_query($display_games_q, $display_games_params)->fetchAll();
 		
 		if (count($display_games) > 0) {
-			$cell_width = 12;
-			
 			$counter = 0;
-			echo '<div class="row">';
 			
 			foreach ($display_games as $db_game) {
 				$blockchain = new Blockchain($this, $db_game['blockchain_id']);
 				$featured_game = new Game($blockchain, $db_game['game_id']);
-				$last_block_id = $blockchain->last_block_id();
-				$mining_block_id = $last_block_id+1;
-				$db_last_block = $blockchain->fetch_block_by_id($last_block_id);
-				$current_round_id = $featured_game->block_to_round($mining_block_id);
-				
-				$filter_arr = false;
-				$event_ids = "";
-				list($new_event_js, $new_event_html) = $featured_game->new_event_js($counter, $user, $filter_arr, $event_ids, true);
-				?>
-				<script type="text/javascript">
-				games.push(new Game(thisPageManager, <?php
-					echo $db_game['game_id'];
-					echo ', '.$featured_game->last_block_id();
-					echo ', false';
-					echo ', ""';
-					echo ', "'.$db_game['payout_weight'].'"';
-					echo ', '.$db_game['round_length'];
-					echo ', 0';
-					echo ', "'.$db_game['url_identifier'].'"';
-					echo ', "'.$db_game['coin_name'].'"';
-					echo ', "'.$db_game['coin_name_plural'].'"';
-					echo ', "'.$blockchain->db_blockchain['coin_name'].'"';
-					echo ', "'.$blockchain->db_blockchain['coin_name_plural'].'"';
-					echo ', "home", "'.$event_ids.'"';
-					echo ', "'.$featured_game->logo_image_url().'"';
-					echo ', "'.$featured_game->vote_effectiveness_function().'"';
-					echo ', "'.$featured_game->effectiveness_param1().'"';
-					echo ', "'.$featured_game->blockchain->db_blockchain['seconds_per_block'].'"';
-					echo ', "'.$featured_game->db_game['inflation'].'"';
-					echo ', "'.$featured_game->db_game['exponential_inflation_rate'].'"';
-					echo ', "'.$db_last_block['time_mined'].'"';
-					echo ', "'.$featured_game->db_game['decimal_places'].'"';
-					echo ', "'.$featured_game->blockchain->db_blockchain['decimal_places'].'"';
-					echo ', "'.$db_game['view_mode'].'"';
-					echo ', 0';
-					echo ', false';
-					echo ', "'.$featured_game->db_game['default_betting_mode'].'"';
-					echo ', false';
-				?>));
-				</script>
-				<?php
-				echo '<div class="col-md-'.$cell_width.'">';
-				echo '<center><h2 style="display: inline-block">'.$featured_game->db_game['name'].'</h2>';
-				if ($featured_game->db_game['short_description'] != "") echo "<p>".$featured_game->db_game['short_description']."</p>";
-				
-				$ref_user_game = false;
-				$faucet_io = $featured_game->check_faucet($ref_user_game);
-				
-				$play_now_url = '/wallet/'.$featured_game->db_game['url_identifier'].'/';
-				
-				echo '<p><a href="'.$play_now_url.'" class="btn btn-sm btn-success"><i class="fas fa-play-circle"></i> &nbsp; ';
-				if ($faucet_io) {
-					echo 'Join now & receive '.$featured_game->display_coins($faucet_io['colored_amount_sum']);
-				}
-				else echo 'Play Now';
-				echo "</a>";
-				echo ' <a href="/explorer/games/'.$featured_game->db_game['url_identifier'].'/events/" class="btn btn-sm btn-primary"><i class="fas fa-list"></i> &nbsp; '.ucwords($featured_game->db_game['event_type_name']).' Results</a>';
-				echo "</p>\n";
-				
-				if ($featured_game->db_game['module'] == "CoinBattles") {
-					$featured_game->load_current_events();
-					$event = $featured_game->current_events[0];
-					list($html, $js) = $featured_game->module->currency_chart($featured_game, $event->db_event['event_starting_block'], false);
-					echo '<div style="margin-bottom: 15px;" id="game'.$counter.'_chart_html">'.$html."</div>\n";
-					echo '<div id="game'.$counter.'_chart_js"><script type="text/javascript">'.$js.'</script></div>'."\n";
-				}
-				
-				echo '<div id="game'.$counter.'_events" class="game_events game_events_short">'.$new_event_html.'</div>'."\n";
-				echo '<script type="text/javascript" id="game'.$counter.'_new_event_js">'."\n";
-				echo $new_event_js;
-				echo '</script>';
-				
-				echo "<br/>\n";
-				echo '<a href="/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-sm btn-success"><i class="fas fa-play-circle"></i> &nbsp; ';
-				if ($faucet_io) {
-					echo 'Join now & receive '.$featured_game->display_coins($faucet_io['colored_amount_sum']);
-				}
-				else echo 'Play Now';
-				echo '</a>';
-				echo ' <a href="/explorer/games/'.$featured_game->db_game['url_identifier'].'/events/" class="btn btn-sm btn-primary"><i class="fas fa-list"></i> &nbsp; '.ucwords($featured_game->db_game['event_type_name']).' Results</a>';
-				echo "</center><br/>\n";
-				
-				if ($counter%(12/$cell_width) == 1) echo '</div><div class="row">';
+				echo $this->render_view('featured_game', [
+					'game' => $featured_game,
+					'blockchain' => $blockchain,
+					'counter' => $counter,
+				]);
 				$counter++;
-				echo "</div>\n";
 			}
-			echo "</div>\n";
 		}
 		else {
 			echo "No public games are running right now.<br/>\n";

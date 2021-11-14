@@ -471,7 +471,7 @@ else {
 					echo ', 0';
 					echo ', false';
 					echo ', "'.$game->db_game['default_betting_mode'].'"';
-					echo ', false';
+					echo ', false, false, false';
 				?>));
 				
 				<?php

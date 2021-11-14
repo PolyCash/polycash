@@ -404,7 +404,7 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 		echo ', '.$user_game['event_index'];
 		echo ', false';
 		echo ', "'.$game->db_game['default_betting_mode'].'"';
-		echo ', true';
+		echo ', true, true, true';
 	?>));
 	
 	<?php
@@ -773,7 +773,7 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 			</div>
 		</div>
 		
-		<div id="events_being_determined" style="display: none;"></div>
+		<div id="game0_events_being_determined" style="display: none;"></div>
 	</div>
 	<?php if ($game->db_game['public_players'] == 1) { ?>
 	<div class="tabcontent" style="display: none;" id="tabcontent1">

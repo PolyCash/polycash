@@ -322,7 +322,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					echo ', 0';
 					echo ', false';
 					echo ', "'.$game->db_game['default_betting_mode'].'"';
-					echo ', false';
+					echo ', false, false, false';
 				?>));
 				</script>
 				<?php
@@ -1290,7 +1290,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							$utxo_params['account_id'] = $account['account_id'];
 						}
 						else {
-							$utxo_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON gio.io_id=io.io_id JOIN addresses a ON a.address_id=io.address_id WHERE gio.game_id=:game_id AND gio.colored_amount > 0 AND io.spend_status IN ('unspent','unconfirmed') ORDER BY gio.colored_amount DESC;";
+							$utxo_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON gio.io_id=io.io_id JOIN addresses a ON a.address_id=io.address_id WHERE gio.game_id=:game_id AND gio.colored_amount > 0 AND io.spend_status IN ('unspent','unconfirmed') ORDER BY gio.colored_amount DESC, io.create_block_id ASC;";
 						}
 						$utxo_r = $app->run_query($utxo_q, $utxo_params);
 						

@@ -152,7 +152,7 @@ var GameEvent = function(game, game_event_index, event_id, real_event_index, num
 		else return 1;
 	};
 };
-var Game = function(pageManager, game_id, last_block_id, last_transaction_id, mature_io_ids_csv, payout_weight, game_round_length, fee_amount, game_url_identifier, coin_name, coin_name_plural, chain_coin_name, chain_coin_name_plural, refresh_page, event_ids, logo_image_url, vote_effectiveness_function, effectiveness_param1, seconds_per_block, inflation, exponential_inflation_rate, time_last_block_loaded, decimal_places, blockchain_decimal_places, view_mode, initial_event_index, filter_date, default_betting_mode, render_events) {
+var Game = function(pageManager, game_id, last_block_id, last_transaction_id, mature_io_ids_csv, payout_weight, game_round_length, fee_amount, game_url_identifier, coin_name, coin_name_plural, chain_coin_name, chain_coin_name_plural, refresh_page, event_ids, logo_image_url, vote_effectiveness_function, effectiveness_param1, seconds_per_block, inflation, exponential_inflation_rate, time_last_block_loaded, decimal_places, blockchain_decimal_places, view_mode, initial_event_index, filter_date, default_betting_mode, render_events, include_betting_events, include_being_determined_events) {
 	Game.numInstances = (Game.numInstances || 0) + 1;
 	this.instance_id = Game.numInstances-1;
 	
@@ -186,6 +186,8 @@ var Game = function(pageManager, game_id, last_block_id, last_transaction_id, ma
 	this.filter_date = filter_date;
 	this.default_betting_mode = default_betting_mode;
 	this.render_events = render_events;
+	this.include_betting_events = include_betting_events;
+	this.include_being_determined_events = include_being_determined_events;
 	this.being_determined_hash = null;
 	
 	if (filter_date) {
@@ -324,8 +326,10 @@ var Game = function(pageManager, game_id, last_block_id, last_transaction_id, ma
 					event_hashes: _.map(this.events, 'rendered_event_hash').join(","),
 					being_determined_hash: this.being_determined_hash,
 					filter_date: this.filter_date ? this.filter_date : "",
-					filter_term: document.getElementById('filter_by_term').value ? encodeURIComponent(document.getElementById('filter_by_term').value) : "",
-					net_risk_view: document.getElementById('net_risk_view').value,
+					filter_term: document.getElementById('filter_by_term') ? encodeURIComponent(document.getElementById('filter_by_term').value) : "",
+					net_risk_view: document.getElementById('net_risk_view') ? document.getElementById('net_risk_view').value : "",
+					include_betting_events: this.include_betting_events,
+					include_being_determined_events: this.include_being_determined_events,
 					synchronizer_token: this.pageManager.synchronizer_token
 				},
 				context: this,
@@ -336,51 +340,85 @@ var Game = function(pageManager, game_id, last_block_id, last_transaction_id, ma
 						if (check_activity_response.new_block == 1) {
 							this.last_block_id = parseInt(check_activity_response.last_block_id);
 							this.time_last_block_loaded = parseInt(check_activity_response.time_last_block_loaded);
+						}
+						
+						if (this.include_betting_events) {
+							if (parseInt(check_activity_response.new_event_ids) == 1) {
+								eval(check_activity_response.new_event_js);
+								
+								this.event_ids = check_activity_response.event_ids;
+								this.event_ids_hash = Sha256.hash(check_activity_response.event_ids);
+								
+								this.pageManager.set_select_add_output();
+								
+								if (this.view_mode == "simple") {
+									this.hide_selected_event();
+									this.selected_event_index = 0;
+									this.show_selected_event(false);
+								}
+							}
 							
 							if (this.refresh_page == "wallet") {
-								if (parseInt(check_activity_response.new_performance_history) == 1) {
-									$('#performance_history_new').html(check_activity_response.performance_history);
+								$('#game_status_explanation').html(check_activity_response.game_status_explanation);
+								if (check_activity_response.game_status_explanation == '') $('#game_status_explanation').hide();
+								else $('#game_status_explanation').show();
+								
+								if (parseInt(check_activity_response.new_mature_ios) == 1 || parseInt(check_activity_response.new_transaction) == 1 || check_activity_response.new_block == 1) {
+									if (typeof check_activity_response.mature_io_ids_csv == "undefined") this.mature_io_ids_csv = "";
+									else this.mature_io_ids_csv = check_activity_response.mature_io_ids_csv;
+									this.mature_io_ids_hash = Sha256.hash(this.mature_io_ids_csv);
+									$('#select_input_buttons').html(check_activity_response.select_input_buttons);
+									this.pageManager.reload_compose_bets();
+									this.pageManager.utxo_spend_offset = 0;
+								}
+								
+								this.pageManager.set_input_amount_sums();
+								this.pageManager.refresh_mature_io_btns();
+								
+								if (parseInt(check_activity_response.new_messages) == 1) {
+									var new_message_user_ids = check_activity_response.new_message_user_ids.split(",");
+									for (var i=0; i<new_message_user_ids.length; i++) {
+										this.pageManager.openChatWindow(new_message_user_ids[i]);
+									}
 								}
 							}
-						}
-						
-						if (parseInt(check_activity_response.new_event_ids) == 1) {
-							eval(check_activity_response.new_event_js);
 							
-							this.event_ids = check_activity_response.event_ids;
-							this.event_ids_hash = Sha256.hash(check_activity_response.event_ids);
-							
-							this.pageManager.set_select_add_output();
-							
-							if (this.view_mode == "simple") {
-								this.hide_selected_event();
-								this.selected_event_index = 0;
-								this.show_selected_event(false);
-							}
-						}
-						
-						if (this.refresh_page == "wallet") {
-							$('#game_status_explanation').html(check_activity_response.game_status_explanation);
-							if (check_activity_response.game_status_explanation == '') $('#game_status_explanation').hide();
-							else $('#game_status_explanation').show();
-							
-							if (parseInt(check_activity_response.new_mature_ios) == 1 || parseInt(check_activity_response.new_transaction) == 1 || check_activity_response.new_block == 1) {
-								if (typeof check_activity_response.mature_io_ids_csv == "undefined") this.mature_io_ids_csv = "";
-								else this.mature_io_ids_csv = check_activity_response.mature_io_ids_csv;
-								this.mature_io_ids_hash = Sha256.hash(this.mature_io_ids_csv);
-								$('#select_input_buttons').html(check_activity_response.select_input_buttons);
-								this.pageManager.reload_compose_bets();
-								this.pageManager.utxo_spend_offset = 0;
+							if (parseInt(check_activity_response.new_mature_ios) == 1) {
+								$('#account_value').html(check_activity_response.account_value);
+								$('#account_value').hide();
+								$('#account_value').fadeIn('medium');
+								
+								$('#wallet_text_stats').html(check_activity_response.wallet_text_stats);
+								$('#wallet_text_stats').hide();
+								$('#wallet_text_stats').fadeIn('fast');
 							}
 							
-							this.pageManager.set_input_amount_sums();
-							this.pageManager.refresh_mature_io_btns();
-							
-							if (parseInt(check_activity_response.new_messages) == 1) {
-								var new_message_user_ids = check_activity_response.new_message_user_ids.split(",");
-								for (var i=0; i<new_message_user_ids.length; i++) {
-									this.pageManager.openChatWindow(new_message_user_ids[i]);
+							for (var game_event_index=0; game_event_index<this.events.length; game_event_index++) {
+								if (check_activity_response.rendered_events[game_event_index].hash != false) {
+									this.events[game_event_index].rendered_event_hash = check_activity_response.rendered_events[game_event_index].hash;
+									$('#game'+this.instance_id+'_event'+game_event_index+'_display').html(check_activity_response.rendered_events[game_event_index].html);
+									$('#game'+this.instance_id+'_event'+game_event_index+'_display').hide();
+									$('#game'+this.instance_id+'_event'+game_event_index+'_display').show();
+									
+									this.render_event_images(game_event_index);
+									
+									if (this.events[game_event_index].details_shown) {
+										$('#game'+this.instance_id+'_event'+game_event_index+'_details').show();
+									}
+									else {
+										$('#game'+this.instance_id+'_event'+game_event_index+'_details').hide();
+									}
+									
+									if (typeof check_activity_response.my_current_votes != "undefined" && typeof check_activity_response.my_current_votes[game_event_index] != "undefined") {
+										$('#game'+this.instance_id+'_event'+game_event_index+'_my_current_votes').html(check_activity_response.my_current_votes[game_event_index]);
+									}
 								}
+							}
+							
+							if (check_activity_response.set_options_js != "") {
+								eval(check_activity_response.set_options_js);
+								
+								this.pageManager.refresh_output_amounts();
 							}
 						}
 						
@@ -389,47 +427,9 @@ var Game = function(pageManager, game_id, last_block_id, last_transaction_id, ma
 							$('#game'+this.instance_id+'_chart_js').html('<script type="text/javascript">'+check_activity_response.chart_js+'</script>');
 						}
 						
-						if (parseInt(check_activity_response.new_mature_ios) == 1) {
-							$('#account_value').html(check_activity_response.account_value);
-							$('#account_value').hide();
-							$('#account_value').fadeIn('medium');
-							
-							$('#wallet_text_stats').html(check_activity_response.wallet_text_stats);
-							$('#wallet_text_stats').hide();
-							$('#wallet_text_stats').fadeIn('fast');
-						}
-						
-						for (var game_event_index=0; game_event_index<this.events.length; game_event_index++) {
-							if (check_activity_response.rendered_events[game_event_index].hash != false) {
-								this.events[game_event_index].rendered_event_hash = check_activity_response.rendered_events[game_event_index].hash;
-								$('#game'+this.instance_id+'_event'+game_event_index+'_display').html(check_activity_response.rendered_events[game_event_index].html);
-								$('#game'+this.instance_id+'_event'+game_event_index+'_display').hide();
-								$('#game'+this.instance_id+'_event'+game_event_index+'_display').show();
-								
-								this.render_event_images(game_event_index);
-								
-								if (this.events[game_event_index].details_shown) {
-									$('#game'+this.instance_id+'_event'+game_event_index+'_details').show();
-								}
-								else {
-									$('#game'+this.instance_id+'_event'+game_event_index+'_details').hide();
-								}
-								
-								if (typeof check_activity_response.my_current_votes != "undefined" && typeof check_activity_response.my_current_votes[game_event_index] != "undefined") {
-									$('#game'+this.instance_id+'_event'+game_event_index+'_my_current_votes').html(check_activity_response.my_current_votes[game_event_index]);
-								}
-							}
-						}
-						
-						if (check_activity_response.set_options_js != "") {
-							eval(check_activity_response.set_options_js);
-							
-							this.pageManager.refresh_output_amounts();
-						}
-						
 						if (check_activity_response.being_determined_hash != this.being_determined_hash) {
-							$('#events_being_determined').show();
-							$('#events_being_determined').html(check_activity_response.being_determined_content);
+							$('#game'+this.instance_id+'_events_being_determined').show();
+							$('#game'+this.instance_id+'_events_being_determined').html(check_activity_response.being_determined_content);
 							this.being_determined_hash = check_activity_response.being_determined_hash;
 						}
 						

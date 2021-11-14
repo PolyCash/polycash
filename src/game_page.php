@@ -122,7 +122,7 @@ games.push(new Game(thisPageManager, <?php
 	else echo "0";
 	echo ', false';
 	echo ', "'.$game->db_game['default_betting_mode'].'"';
-	echo ', false';
+	echo ', false, true, false';
 ?>));
 
 <?php
