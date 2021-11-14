@@ -2160,11 +2160,6 @@ var PageManager = function() {
 		}
 		else if (step == 2) {
 			$('#create_account_submit').show('fast');
-			
-			if (create_account_action == "by_rpc_account") {
-				$('#create_account_step3').show('fast');
-				$('#create_account_rpc_name').focus();
-			}
 		}
 		else if (step == "submit") {
 			$.ajax({

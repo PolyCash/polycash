@@ -645,7 +645,6 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 						<select class="form-control" id="create_account_action" onchange="thisPageManager.create_account_step(1);">
 							<option value="">-- Please Select --</option>
 							<option value="for_blockchain">Create a new blockchain account</option>
-							<option value="by_rpc_account">Import an existing account by RPC</option>
 						</select>
 					</div>
 					<div class="form-group" id="create_account_step2" style="display: none;">
