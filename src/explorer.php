@@ -451,32 +451,36 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							echo " paid out to the winners.<br/>\n";
 						}
 						
-						echo "Blocks in this event: ";
+						echo "<p>Blocks in this event: ";
 						echo "<a href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$db_event['event_starting_block']."\">".$db_event['event_starting_block']."</a> ... <a href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$db_event['event_final_block']."\">".$db_event['event_final_block']."</a>";
 						if ($db_event['event_payout_block'] != $db_event['event_final_block']) echo " ... <a href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$db_event['event_payout_block']."\">".$db_event['event_payout_block']."</a>";
-						?>
-						<br/>
-						<?php
+						echo "</p>\n";
+						
 						$event_next_prev_links = $game->event_next_prev_links($event);
-						echo $event_next_prev_links;
+						
+						echo '<p>'.$event_next_prev_links."</p>\n";
 						?>
-						<br/>
-						<a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/events/">See all events</a><br/>
-						<br/>
+						<p>
+							<a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/events/">See all events</a><br/>
+						</p>
 						
 						<?php
 						if ($app->user_can_edit_game($thisuser, $game)) {
-							echo "<p>\n";
-							
 							if ($game->db_game['module'] == "CryptoDuels") {
 								?>
-								<button class="btn btn-sm btn-success" onclick="thisPageManager.refresh_prices_by_event(<?php echo $game->db_game['game_id'].", ".$event->db_event['event_id']; ?>);">Reset pricing info</button>
+								<p>
+									<button class="btn btn-sm btn-success" onclick="thisPageManager.refresh_prices_by_event(<?php echo $game->db_game['game_id'].", ".$event->db_event['event_id']; ?>);">Reset pricing info</button>
+								</p>
 								<?php
 							}
-							?>
-							<button class="btn btn-sm btn-primary" onclick="thisPageManager.set_event_outcome(<?php echo $game->db_game['game_id'].", ".$event->db_event['event_id']; ?>);">Set Outcome</button>
-							<?php
-							echo "</p>\n";
+							
+							if ($game->allow_game_def_changes()) {
+								?>
+								<p>
+									<button class="btn btn-sm btn-primary" onclick="thisPageManager.set_event_outcome(<?php echo $game->db_game['game_id'].", ".$event->db_event['event_id']; ?>);">Set Outcome</button>
+								</p>
+								<?php
+							}
 						}
 						
 						if ($game->db_game['module'] == "CoinBattles") {

@@ -4025,5 +4025,10 @@ class Game {
 			'account_id' => $account_id
 		])->fetchAll();
 	}
+	
+	public function allow_game_def_changes() {
+		if ($this->db_game['finite_events']) return true;
+		else return false;
+	}
 }
 ?>
