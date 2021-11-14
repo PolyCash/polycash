@@ -1223,7 +1223,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 								$game_ios = $associated_game->fetch_game_ios_by_io($io['io_id']);
 								
 								while ($game_io = $game_ios->fetch()) {
-									echo '<p><a href="/explorer/games/'.$db_game['url_identifier'].'/utxo/'.$io['tx_hash'].'/'.$game_io['game_out_index'].'">'.$game->display_coins($game_io['colored_amount'])." in ".$db_game['name']."</a></p>\n";
+									echo '<p><a href="/explorer/games/'.$db_game['url_identifier'].'/utxo/'.$io['tx_hash'].'/'.$game_io['game_out_index'].'">'.$associated_game->display_coins($game_io['colored_amount'])." in ".$db_game['name']."</a></p>\n";
 								}
 							}
 						}
@@ -1296,9 +1296,13 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						
 						while ($utxo = $utxo_r->fetch()) {
 							if ($game->db_game['payout_weight'] == "coin") $votes = $utxo['colored_amount'];
-							else if ($game->db_game['payout_weight'] == "coin_block") $votes = $utxo['colored_amount']*($mining_block_id-$utxo['create_block_id']);
-							else if ($game->db_game['payout_weight'] == "coin_round") $votes = $utxo['colored_amount']*($mining_round-$utxo['create_round_id']);
-							else $votes = 0;
+							else {
+								if ($utxo['spend_status'] == "unconfirmed") $votes = 0;
+								else {
+									if ($game->db_game['payout_weight'] == "coin_block") $votes = $utxo['colored_amount']*($mining_block_id-$utxo['create_block_id']);
+									else $votes = $utxo['colored_amount']*($mining_round-$utxo['create_round_id']);
+								}
+							}
 							
 							echo '<div class="row">';
 							echo '<div class="col-sm-3"><a href="/explorer/games/'.$game->db_game['url_identifier'].'/utxo/'.$utxo['tx_hash']."/".$utxo['game_out_index'].'">'.$game->display_coins($utxo['colored_amount']).'</a></div>';

@@ -2850,7 +2850,7 @@ class Game {
 			if ($selected_game_io_id == $io['game_io_id']) $html .= "</b>";
 			else $html .= "</a>\n";
 			
-			$html .= " &nbsp; ".ucwords($io['spend_status']);
+			$html .= $amount_disp." &nbsp; ".ucwords($io['spend_status']);
 			$html .= "<br/>\n";
 			
 			list($track_entity, $track_price_usd, $track_pay_price, $asset_price_usd, $bought_price_usd, $fair_io_value, $inflation_stake, $effective_stake, $unconfirmed_votes, $max_payout, $odds, $effective_paid, $equivalent_contracts, $event_equivalent_contracts, $track_position_price, $bought_leverage, $current_leverage, $borrow_delta, $net_delta, $payout_fees, $coin_stake) = $this->get_payout_info($io, $coins_per_vote, $last_block_id);
