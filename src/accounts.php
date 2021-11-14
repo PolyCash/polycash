@@ -565,6 +565,8 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 						])->fetchAll();
 						echo "<p>This account has ".count($addr_arr)." addresses.</p>";
 						
+						echo '<div style="max-height: 400px; overflow-x: hidden; overflow-y: scroll;">';
+						
 						foreach ($addr_arr as $address) {
 							$address_balance = $blockchain->address_balance_at_block($address, false);
 							if ($account_game) $game_balance = $account_game->address_balance_at_block($address, false);
@@ -594,6 +596,8 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 							
 							echo "</div>\n";
 						}
+						
+						echo "</div>\n";
 						
 						echo '<br/><p><button class="btn btn-sm btn-primary" onclick="thisPageManager.manage_addresses('.$account['account_id'].', \'new\', false);">New Address</button></p>';
 						echo '

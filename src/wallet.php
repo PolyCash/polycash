@@ -495,18 +495,41 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 				else if ($game->db_game['game_status'] == "completed") echo " (Completed)";
 				?>
 				<div style="float: right; display: inline-block; margin-top: -3px;">
-					<select class="form-control input-sm" onchange="thisPageManager.change_game(this);">
-						<option value="">-- Switch Games --</option>
-						<?php
-						$my_games = $app->my_games($thisuser->db_user['user_id'], true);
-						
-						while ($my_game = $my_games->fetch()) {
-							echo "<option ";
-							if ($game->db_game['game_id'] == $my_game['game_id']) echo 'selected="selected" ';
-							echo "value=\"".$my_game['url_identifier']."\">".$my_game['name']."</option>\n";
-						}
-						?>
-					</select>
+					<div id="change_user_game">
+						<select id="select_user_game" class="form-control input-sm" onchange="thisPageManager.change_user_game();">
+							<?php
+							$user_games_by_game = $app->run_query("SELECT * FROM user_games WHERE user_id=:user_id AND game_id=:game_id ORDER BY account_id ASC;", [
+								'user_id' => $thisuser->db_user['user_id'],
+								'game_id' => $game->db_game['game_id']
+							])->fetchAll();
+							if (count($user_games_by_game) <= 5) $user_game_show_balances = true;
+							else $user_game_show_balances = false;
+							
+							foreach ($user_games_by_game as $db_user_game) {
+								echo "<option ";
+								if ($db_user_game['user_game_id'] == $user_game['user_game_id']) echo "selected=\"selected\" ";
+								echo "value=\"".$db_user_game['user_game_id']."\">Account #".$db_user_game['account_id'];
+								if ($user_game_show_balances) echo " &nbsp;&nbsp; ".$game->display_coins($game->account_balance($db_user_game['account_id'])+$game->user_pending_bets($db_user_game), true);
+								echo "</option>\n";
+							}
+							?>
+							<option value="new">Create a new account</option>
+						</select>
+					</div>
+					<div style="float: right;">
+						<select class="form-control input-sm" onchange="thisPageManager.change_game(this);">
+							<option value="">-- Switch Games --</option>
+							<?php
+							$my_games = $app->my_games($thisuser->db_user['user_id'], true);
+							
+							while ($my_game = $my_games->fetch()) {
+								echo "<option ";
+								if ($game->db_game['game_id'] == $my_game['game_id']) echo 'selected="selected" ';
+								echo "value=\"".$my_game['url_identifier']."\">".$my_game['name']."</option>\n";
+							}
+							?>
+						</select>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -601,27 +624,6 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 					Bet on upcoming <?php echo $game->db_game['event_type_name_plural']; ?>
 					
 					<div style="display: inline-block; float: right;">
-						<div id="change_user_game">
-							<select id="select_user_game" class="form-control input-sm" onchange="thisPageManager.change_user_game();">
-								<?php
-								$user_games_by_game = $app->run_query("SELECT * FROM user_games WHERE user_id=:user_id AND game_id=:game_id ORDER BY account_id ASC;", [
-									'user_id' => $thisuser->db_user['user_id'],
-									'game_id' => $game->db_game['game_id']
-								])->fetchAll();
-								if (count($user_games_by_game) <= 5) $user_game_show_balances = true;
-								else $user_game_show_balances = false;
-								
-								foreach ($user_games_by_game as $db_user_game) {
-									echo "<option ";
-									if ($db_user_game['user_game_id'] == $user_game['user_game_id']) echo "selected=\"selected\" ";
-									echo "value=\"".$db_user_game['user_game_id']."\">Account #".$db_user_game['account_id'];
-									if ($user_game_show_balances) echo " &nbsp;&nbsp; ".$game->display_coins($game->account_balance($db_user_game['account_id'])+$game->user_pending_bets($db_user_game), true);
-									echo "</option>\n";
-								}
-								?>
-								<option value="new">Create a new account</option>
-							</select>
-						</div>
 						<div style="display: inline-block; float: right;">
 							<select class="form-control input-sm" id="net_risk_view">
 								<option value="0">Show each bet</option>
