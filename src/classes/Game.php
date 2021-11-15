@@ -32,7 +32,7 @@ class Game {
 		if (!$skip_name) {
 			$str .= " ";
 			if ($as_abbreviation) $str .= $this->db_game['coin_abbreviation'];
-			else $str .= $display_amount == 1 ? $this->db_game['coin_name'] : $this->db_game['coin_name_plural'];
+			else $str .= $display_amount=="1" ? $this->db_game['coin_name'] : $this->db_game['coin_name_plural'];
 		}
 		return $str;
 	}
@@ -412,7 +412,7 @@ class Game {
 					$this_log_text = "";
 					$this->apply_user_strategy($this_log_text, $user_game, $mining_block_id, $current_round_id, $api_response, false);
 					
-					if (!$api_response || $api_response->status_code > 3) {
+					if (!$api_response) {
 						$this->blockchain->app->set_strategy_time_next_apply($user_game['strategy_id'], time()+60*60);
 					}
 					
@@ -1195,7 +1195,7 @@ class Game {
 	
 	public function account_value_html($account_value, &$user_game, $game_pending_bets, $vote_supply_value) {
 		$value_disp = $this->display_coins($account_value, false, true);
-		$html = '<font class="greentext"><a href="/accounts/?account_id='.$user_game['account_id'].'">'.$value_disp.'</a></font> '.($value_disp==1 ? $this->db_game['coin_name'] : $this->db_game['coin_name_plural']);
+		$html = '<font class="greentext"><a href="/accounts/?account_id='.$user_game['account_id'].'">'.$value_disp.'</a></font> '.($value_disp=="1" ? $this->db_game['coin_name'] : $this->db_game['coin_name_plural']);
 		
 		$html .= ' <font style="font-size: 12px;">(';
 		
@@ -2925,7 +2925,7 @@ class Game {
 					
 					if ($payout_fees > 0) {
 						$payout_fees_disp = $this->display_coins($payout_fees, false, true);
-						$html .= "<font class=\"redtext\">".$payout_fees_disp."</font> ".($payout_fees_disp==1 ? $this->db_game['coin_name'] : $this->db_game['coin_name_plural'])." in fees<br/>\n";
+						$html .= "<font class=\"redtext\">".$payout_fees_disp."</font> ".($payout_fees_disp=="1" ? $this->db_game['coin_name'] : $this->db_game['coin_name_plural'])." in fees<br/>\n";
 					}
 					
 					if ($io['destroy_amount']+$inflation_stake > 0) $pct_gain = 100*($net_delta/($io['destroy_amount']+$inflation_stake));
@@ -3892,7 +3892,7 @@ class Game {
 				$html .= '<div class="row content_row">';
 				if ($invoice['confirmed_amount_paid'] == 0) $display_amount_sold = $this->blockchain->app->format_bignum($invoice['buyin_amount']);
 				else $display_amount_sold = $this->blockchain->app->format_bignum($invoice['confirmed_amount_paid']);
-				$html .= '<div class="col-sm-3">'.$display_amount_sold.' '.($display_amount_sold==1 ? $this->db_game['coin_name'] : $this->db_game['coin_name_plural']).' sold</div>';
+				$html .= '<div class="col-sm-3">'.$display_amount_sold.' '.($display_amount_sold=="1" ? $this->db_game['coin_name'] : $this->db_game['coin_name_plural']).' sold</div>';
 				
 				$invoice_ios = $this->blockchain->app->invoice_ios_by_invoice($invoice['invoice_id']);
 				
@@ -3905,7 +3905,7 @@ class Game {
 					foreach ($invoice_ios as $invoice_io) {
 						$io = $this->blockchain->app->fetch_io_by_hash_out_index($invoice['blockchain_id'], $invoice_io['tx_hash'], $invoice_io['out_index']);
 						$invoice_io_disp = $this->blockchain->app->format_bignum($io['amount']/pow(10, $invoice['decimal_places']));
-						$html .= '<a target="_blank" href="/explorer/blockchains/'.$invoice['url_identifier']."/utxo/".$invoice_io['tx_hash']."/".$invoice_io['out_index'].'/">'.$invoice_io_disp." ".($invoice_io_disp==1 ? $invoice['coin_name'] : $invoice['coin_name_plural'])."</a><br/>\n";
+						$html .= '<a target="_blank" href="/explorer/blockchains/'.$invoice['url_identifier']."/utxo/".$invoice_io['tx_hash']."/".$invoice_io['out_index'].'/">'.$invoice_io_disp." ".($invoice_io_disp=="1" ? $invoice['coin_name'] : $invoice['coin_name_plural'])."</a><br/>\n";
 					}
 				}
 				$html .= '</div>';

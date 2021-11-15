@@ -20,14 +20,14 @@ function finish_reading_bet_rows($linear_or_binary, $app, $game, &$bet, &$prev_u
 				if ($unresolved_net_delta >= 0) $bet_summary .= 'up <font style="color: #0a0;">';
 				else $bet_summary .= 'down <font style="color: #f00;">';
 				$unresolved_net_delta_disp = $app->format_bignum(abs($unresolved_net_delta));
-				$bet_summary .= $unresolved_net_delta_disp.' '.($unresolved_net_delta_disp==1 ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']);
+				$bet_summary .= $unresolved_net_delta_disp.' '.($unresolved_net_delta_disp=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']);
 				$bet_summary .= '</font> on your outstanding positions.<br/>';
 			}
 			
 			$estimated_account_value = $unresolved_net_delta+($account_value/pow(10, $game->db_game['decimal_places']));
 			$est_val_disp = $app->format_bignum($estimated_account_value);
 			
-			$bet_summary .= "Your account is now worth <a href=\"".AppSettings::getParam('base_url')."/explorer/games/".$game->db_game['url_identifier']."/my_bets/?user_game_id=".$prev_user_game_id."\">".$est_val_disp." ".($est_val_disp==1 ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural'])."</a>";
+			$bet_summary .= "Your account is now worth <a href=\"".AppSettings::getParam('base_url')."/explorer/games/".$game->db_game['url_identifier']."/my_bets/?user_game_id=".$prev_user_game_id."\">".$est_val_disp." ".($est_val_disp=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural'])."</a>";
 		}
 		
 		if ($prev_last_notified_account_value !== false) {
@@ -36,7 +36,7 @@ function finish_reading_bet_rows($linear_or_binary, $app, $game, &$bet, &$prev_u
 			if ($delta_since_last_notification >= 0) $bet_summary .= ' up <font style="color: #0a0;">';
 			else $bet_summary .= ' down <font style="color: #f00;">';
 			$delta_disp = $app->format_bignum(abs($delta_since_last_notification));
-			$bet_summary .= $delta_disp.' '.($delta_disp==1 ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']);
+			$bet_summary .= $delta_disp.' '.($delta_disp=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']);
 			$bet_summary .= '</font> since yesterday.';
 		}
 		$app->set_last_account_notified_value($prev_account_id, $estimated_account_value);

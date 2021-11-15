@@ -175,7 +175,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 							$html .= '<option value="'.$db_io['io_id'].'">';
 							if ($key_account['game_id'] > 0) $html .= $app->format_bignum($db_io['colored_amount_sum']/pow(10,$db_game['decimal_places'])).' '.$db_game['coin_abbreviation'].' (';
 							$io_amount_disp = $app->format_bignum($db_io['amount']/pow(10,$blockchain->db_blockchain['decimal_places']));
-							$html .= $io_amount_disp." ".($io_amount_disp==1 ? $blockchain->db_blockchain['coin_name'] : $blockchain->db_blockchain['coin_name_plural']);
+							$html .= $io_amount_disp." ".($io_amount_disp=="1" ? $blockchain->db_blockchain['coin_name'] : $blockchain->db_blockchain['coin_name_plural']);
 							if ($key_account['game_id'] > 0) $html .= ')';
 							$html .= ' '.$db_io['address'].'</option>'."\n";
 						}

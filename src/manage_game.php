@@ -1088,7 +1088,7 @@ else {
 											}
 											else {
 												$received_amt_disp = $app->format_bignum($io['amount']/pow(10, $currency_conversion['decimal_places']));
-												$received_utxo_html .= '<a href="/explorer/blockchains/'.$currency_conversion['url_identifier']."/utxo/".$invoice_io['tx_hash']."/".$invoice_io['out_index'].'/">'.$receive_amt_disp." ".($receive_amt_disp==1 ? $currency_conversion['coin_name'] : $currency_conversion['coin_name_plural'])."</a><br/>\n";
+												$received_utxo_html .= '<a href="/explorer/blockchains/'.$currency_conversion['url_identifier']."/utxo/".$invoice_io['tx_hash']."/".$invoice_io['out_index'].'/">'.$receive_amt_disp." ".($receive_amt_disp=="1" ? $currency_conversion['coin_name'] : $currency_conversion['coin_name_plural'])."</a><br/>\n";
 												
 												$conversion_blockchain_amount_float += $io['amount']/pow(10, $currency_conversion['decimal_places']);
 											}

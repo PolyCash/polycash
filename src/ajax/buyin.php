@@ -98,17 +98,17 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 				}
 				
 				if ($game->db_game['min_buyin_amount'] && $receive_amount < $game->db_game['min_buyin_amount']) {
-					$content_html .= '<p class="text-danger">Please deposit at least '.$game->db_game['min_buyin_amount']." ".($game->db_game['min_buyin_amount']==1 ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']).".</p>\n";
+					$content_html .= '<p class="text-danger">Please deposit at least '.$game->db_game['min_buyin_amount']." ".($game->db_game['min_buyin_amount']=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']).".</p>\n";
 					$buyin_amount_ok = false;
 				}
 				
 				if ($buyin_amount_ok) {
 					$content_html .= '<p>';
 					if ($user_enters_game_amount) {
-						$content_html .= 'To get '.$receive_amount.' '.($receive_amount==1 ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']).', please deposit '.$app->to_significant_digits($pay_amount, 8).' '.($app->to_significant_digits($pay_amount, 8)==1 ? $buyin_currency['short_name'] : $buyin_currency['short_name_plural']).'. ';
+						$content_html .= 'To get '.$receive_amount.' '.($receive_amount=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']).', please deposit '.$app->to_significant_digits($pay_amount, 8).' '.($app->to_significant_digits($pay_amount, 8)=="1" ? $buyin_currency['short_name'] : $buyin_currency['short_name_plural']).'. ';
 					}
 					else {
-						$content_html .= 'For '.$buyin_amount.' '.($buyin_amount==1 ? $buyin_currency['short_name'] : $buyin_currency['short_name_plural']).', you\'ll receive approximately '.$app->format_bignum($receive_amount).' '.($app->format_bignum($receive_amount)==1 ? $game->db_game['coin_name_plural'] : $game->db_game['coin_name_plural']).'. ';
+						$content_html .= 'For '.$buyin_amount.' '.($buyin_amount=="1" ? $buyin_currency['short_name'] : $buyin_currency['short_name_plural']).', you\'ll receive approximately '.$app->format_bignum($receive_amount).' '.($app->format_bignum($receive_amount)=="1" ? $game->db_game['coin_name_plural'] : $game->db_game['coin_name_plural']).'. ';
 					}
 					$content_html .= 'Send '.$buyin_currency['short_name_plural'].' to '.$invoice_address['address'].'
 					</p>

@@ -574,7 +574,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 							echo '<div class="row">';
 							
 							$balance_disp = $app->format_bignum($address_balance/pow(10, $blockchain->db_blockchain['decimal_places']));
-							echo '<div class="col-sm-2">'.$balance_disp.' '.($balance_disp==1 ? $blockchain->db_blockchain['coin_name'] : $blockchain->db_blockchain['coin_name_plural']).'</div>';
+							echo '<div class="col-sm-2">'.$balance_disp.' '.($balance_disp=="1" ? $blockchain->db_blockchain['coin_name'] : $blockchain->db_blockchain['coin_name_plural']).'</div>';
 							
 							if ($account_game) {
 								echo '<div class="col-sm-2">'.$account_game->display_coins($game_balance).'</div>';

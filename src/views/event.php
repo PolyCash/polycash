@@ -69,13 +69,13 @@ if ($event->db_event['event_starting_block'] > $last_block_id+1) {
 	$blocks_to_start = $event->db_event['event_starting_block'] - $last_block_id;
 	$sec_to_start = $blockchain->seconds_per_block('average')*$blocks_to_start;
 	?>
-	Betting starts in <?php echo number_format($blocks_to_start); ?> block<?php echo $blocks_to_start==1 ? "" : "s"; ?> (<?php echo $app->format_seconds($sec_to_start); ?>)
+	Betting starts in <?php echo number_format($blocks_to_start); ?> block<?php echo $blocks_to_start=="1" ? "" : "s"; ?> (<?php echo $app->format_seconds($sec_to_start); ?>)
 	<br/>
 	<?php
 }
 else if ($blocks_left > 0) {
 	$sec_left = $blockchain->seconds_per_block('average')*$blocks_left;
-	echo $app->format_bignum($blocks_left); ?> betting block<?php echo $blocks_left==1 ? "" : "s"; ?> left (<?php echo $app->format_seconds($sec_left); ?>)<br/>
+	echo $app->format_bignum($blocks_left); ?> betting block<?php echo $blocks_left=="1" ? "" : "s"; ?> left (<?php echo $app->format_seconds($sec_left); ?>)<br/>
 	<?php
 }
 

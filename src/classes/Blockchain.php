@@ -1913,7 +1913,7 @@ class Blockchain {
 			$html .= " in block <a href=\"/explorer/blockchains/".$this->db_blockchain['url_identifier']."/blocks/".$transaction['block_id']."\">#".$transaction['block_id']."</a>, ";
 		}
 		$amount_disp = $this->app->format_bignum($transaction['amount']/pow(10,$this->db_blockchain['decimal_places']));
-		$html .= (int)$transaction['num_inputs']." input".($transaction['num_inputs']==1 ? "" : "s").", ".(int)$transaction['num_outputs']." output".($transaction['num_outputs']==1 ? "" : "s").", ".$amount_disp." ".($amount_disp==1 ? $this->db_blockchain['coin_name'] : $this->db_blockchain['coin_name_plural']);
+		$html .= (int)$transaction['num_inputs']." input".($transaction['num_inputs']=="1" ? "" : "s").", ".(int)$transaction['num_outputs']." output".($transaction['num_outputs']=="1" ? "" : "s").", ".$amount_disp." ".($amount_disp=="1" ? $this->db_blockchain['coin_name'] : $this->db_blockchain['coin_name_plural']);
 		
 		$transaction_fee = $transaction['fee_amount'];
 		if ($transaction['transaction_desc'] != "coinbase") {
@@ -2029,8 +2029,8 @@ class Blockchain {
 			$html .= "\" style=\"text-align: right;\">".number_format($block['num_transactions']);
 			$html .= "&nbsp;transactions</div>\n";
 			$html .= "<div class=\"col-sm-2\" style=\"text-align: right;\">".$block_sum_disp."&nbsp;";
-			if ($game) $html .= $block_sum_disp==1 ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural'];
-			else $html .= $block_sum_disp==1 ? $this->db_blockchain['coin_name'] : $this->db_blockchain['coin_name_plural'];
+			if ($game) $html .= $block_sum_disp=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural'];
+			else $html .= $block_sum_disp=="1" ? $this->db_blockchain['coin_name'] : $this->db_blockchain['coin_name_plural'];
 			$html .= "</div>\n";
 			$html .= "</div>\n";
 		}

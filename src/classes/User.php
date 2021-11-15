@@ -75,20 +75,20 @@ class User {
 		$html = '<div class="row"><div class="col-sm-4">Available&nbsp;funds:</div>';
 		$html .= '<div class="col-sm-6 text-right"><font class="greentext">';
 		$html .= $available_disp;
-		$html .= "</font> ".($available_disp==1 ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural'])."</div></div>\n";
+		$html .= "</font> ".($available_disp=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural'])."</div></div>\n";
 		
 		$locked_disp = $game->display_coins($locked_amount, false, true);
 		$html .= '<div class="row"><div class="col-sm-4">Locked&nbsp;funds:</div>';
-		$html .= '<div class="col-sm-6 text-right"><font class="redtext">'.$locked_disp.'</font> '.($locked_disp==1 ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']).'</div>';
+		$html .= '<div class="col-sm-6 text-right"><font class="redtext">'.$locked_disp.'</font> '.($locked_disp=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']).'</div>';
 		$html .= "</div>\n";
 		
 		$pending_disp = $game->display_coins($pending_bets, false, true);
-		$html .= '<div class="row"><div class="col-sm-4">Pending bets:</div><div class="col-sm-6 text-right"><font class="greentext">'.$pending_disp.'</font> '.($pending_disp==1 ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']).'</div></div>'."\n";
+		$html .= '<div class="row"><div class="col-sm-4">Pending bets:</div><div class="col-sm-6 text-right"><font class="greentext">'.$pending_disp.'</font> '.($pending_disp=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']).'</div></div>'."\n";
 		
 		if ($game->db_game['payout_weight'] != "coin") {
 			if ($game->db_game['inflation'] == "exponential") {
 				$unrealized_disp = $game->display_coins($votes_value, false, true);
-				$html .= '<div class="row"><div class="col-sm-4">Unrealized gains:</div><div class="col-sm-6 text-right"><font class="greentext">'.$unrealized_disp.'</font> '.($unrealized_disp==1 ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']).'</div></div>'."\n";
+				$html .= '<div class="row"><div class="col-sm-4">Unrealized gains:</div><div class="col-sm-6 text-right"><font class="greentext">'.$unrealized_disp.'</font> '.($unrealized_disp=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']).'</div></div>'."\n";
 			}
 			else {
 				$html .= '<div class="row"><div class="col-sm-4">Votes:</div><div class="col-sm-6 text-right"><font class="greentext">'.$game->display_coins($user_votes, false, true).'</font> votes available</div></div>'."\n";

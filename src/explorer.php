@@ -434,7 +434,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 									<div class="col-sm-4">Total bets:</div>
 									<div class="col-sm-8"><font class="greentext"><?php
 									$total_bets_disp = $app->format_bignum($total_bets/pow(10,$game->db_game['decimal_places']));
-									echo $total_bets_disp."</font> ".($total_bets_disp==1 ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']);
+									echo $total_bets_disp."</font> ".($total_bets_disp=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']);
 									?></div>
 								</div>
 							</div>
@@ -1344,7 +1344,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							foreach ($display_utxos as $utxo) {
 								$disp_amount = $app->format_bignum($utxo['amount']/pow(10,$blockchain->db_blockchain['decimal_places']));
 								echo '<div class="row">';
-								echo '<div class="col-sm-3"><a href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/utxo/'.$utxo['tx_hash']."/".$utxo['out_index'].'">'.$disp_amount.' '.($disp_amount==1 ? $blockchain->db_blockchain['coin_name'] : $blockchain->db_blockchain['coin_name_plural']).'</a></div>';
+								echo '<div class="col-sm-3"><a href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/utxo/'.$utxo['tx_hash']."/".$utxo['out_index'].'">'.$disp_amount.' '.($disp_amount=="1" ? $blockchain->db_blockchain['coin_name'] : $blockchain->db_blockchain['coin_name_plural']).'</a></div>';
 								echo '<div class="col-sm-3">'.$utxo['spend_status']."</div>\n";
 								echo '<div class="col-sm-3"><a href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/addresses/'.$utxo['address'].'">'.$utxo['address']."</a></div>\n";
 								echo '</div>';
@@ -1485,7 +1485,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							echo "<br/>You're ";
 							if ($unresolved_net_delta >= 0) echo 'up <font class="greentext">';
 							else echo 'down <font class="redtext">';
-							echo $unresolved_net_delta_disp.' '.($unresolved_net_delta_disp==1 ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']);
+							echo $unresolved_net_delta_disp.' '.($unresolved_net_delta_disp=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']);
 							echo '</font> on your outstanding positions.';
 						}
 						

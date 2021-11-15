@@ -740,7 +740,7 @@ class App {
 			return $str;
 		}
 		else if ($minutes > 0) {
-			return $minutes." minute".($minutes==1 ? "" : "s");
+			return $minutes." minute".($minutes=="1" ? "" : "s");
 		}
 		else {
 			if ($seconds != 1) return $seconds." seconds";
@@ -3115,7 +3115,7 @@ class App {
 		
 		$adjusted_net_delta = $net_delta+$resolved_fees_paid;
 		
-		$html = number_format($num_bets)." bets totalling <font class=\"greentext\">".$this->format_bignum($net_stake)."</font> ".($this->format_bignum($net_stake)==1 ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']).".<br/>\n";
+		$html = number_format($num_bets)." bets totalling <font class=\"greentext\">".$this->format_bignum($net_stake)."</font> ".($this->format_bignum($net_stake)=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']).".<br/>\n";
 		$html .= "You've won ".number_format($num_wins)." of your ".number_format($num_wins+$num_losses)." resolved bets (".round($win_rate*100, 1)."%). ";
 		if ($resolved_fees_paid != 0) {
 			$resolved_fees_disp = $this->format_bignum(abs($resolved_fees_paid));
@@ -3125,7 +3125,7 @@ class App {
 			else {
 				$html .= "You earned <font class=\"greentext\">".$resolved_fees_disp."</font> ";
 			}
-			$html .= ($resolved_fees_disp==1 ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural'])." in fees and made ";
+			$html .= ($resolved_fees_disp=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural'])." in fees and made ";
 		}
 		else $html .= "You made ";
 		$html .= " a net ";
@@ -3135,7 +3135,7 @@ class App {
 		if ($adjusted_net_delta >= 0) $html .= "greentext";
 		else $html .= "redtext";
 		$adjusted_net_delta_disp = $this->format_bignum(abs($adjusted_net_delta));
-		$html .= "\">".$adjusted_net_delta_disp."</font> ".($adjusted_net_delta_disp==1 ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural'])." on your bets.";
+		$html .= "\">".$adjusted_net_delta_disp."</font> ".($adjusted_net_delta_disp=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural'])." on your bets.";
 		if ($num_unresolved > 0 || $num_refunded > 0) {
 			$html .= "\n<br/>";
 			if ($num_refunded > 0) $html .= number_format($num_refunded)." of your bets were refunded";
@@ -3143,7 +3143,7 @@ class App {
 			else if ($num_unresolved > 0) $html .= "You have ";
 			if ($num_unresolved > 0) {
 				$pending_stake_disp = $this->format_bignum($pending_stake);
-				$html .= number_format($num_unresolved)." pending bets totalling <font class=\"greentext\">".$pending_stake_disp."</font> ".($pending_stake_disp==1 ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']);
+				$html .= number_format($num_unresolved)." pending bets totalling <font class=\"greentext\">".$pending_stake_disp."</font> ".($pending_stake_disp=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']);
 			}
 			$html .= ".";
 		}
