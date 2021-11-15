@@ -661,6 +661,7 @@ class Event {
 		foreach ($options_by_score as $option_info) {
 			$options_by_index[$option_info['event_option_index']] = $option_info;
 		}
+		asort($options_by_index);
 		
 		$score_disp = "";
 		foreach ($options_by_index as $option) {
