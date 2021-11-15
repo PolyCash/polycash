@@ -2613,10 +2613,12 @@ class Game {
 			if (!in_array($this->db_game['buyin_policy'], ["none","for_sale",""])) $this->process_sellouts_in_block($block_height);
 			
 			$in_progress_events = $this->events_being_determined_in_block($block_height);
-			
-			foreach ($in_progress_events as $in_progress_event) {
-				if (!empty($in_progress_event->db_event['option_block_rule'])) {
-					$in_progress_event->process_option_blocks($game_block, count($in_progress_events), $in_progress_event->db_event['event_index']);
+			if (count($in_progress_events) > 0) {
+				$in_progress_first_event_index = $in_progress_events[0]->db_event['event_index'];
+				foreach ($in_progress_events as $in_progress_event) {
+					if (!empty($in_progress_event->db_event['option_block_rule'])) {
+						$in_progress_event->process_option_blocks($game_block, count($in_progress_events), $in_progress_first_event_index);
+					}
 				}
 			}
 			
