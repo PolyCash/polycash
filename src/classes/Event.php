@@ -647,17 +647,34 @@ class Event {
 	}
 	
 	public function option_block_info() {
-		$option_info_arr = $this->game->blockchain->app->run_query("SELECT SUM(ob.score) AS total_score, o.* FROM option_blocks ob JOIN options o ON ob.option_id=o.option_id WHERE o.event_id=:event_id GROUP BY o.option_id ORDER BY total_score DESC;", ['event_id' => $this->db_event['event_id']])->fetchAll();
+		$options_by_score = $this->game->blockchain->app->run_query("SELECT SUM(ob.score) AS total_score, o.* FROM option_blocks ob JOIN options o ON ob.option_id=o.option_id WHERE o.event_id=:event_id GROUP BY o.option_id ORDER BY total_score DESC;", ['event_id' => $this->db_event['event_id']])->fetchAll();
 		
 		$is_tie = true;
 		$last_total_score = null;
 		
-		foreach ($option_info_arr as $option_info) {
+		foreach ($options_by_score as $option_info) {
 			if ($last_total_score === null) $last_total_score = $option_info['total_score'];
 			if ($option_info['total_score'] != $last_total_score) $is_tie = false;
 		}
 		
-		return [$option_info_arr, $is_tie];
+		$options_by_index = [];
+		foreach ($options_by_score as $option_info) {
+			$options_by_index[$option_info['event_option_index']] = $option_info;
+		}
+		
+		$score_disp = "";
+		foreach ($options_by_index as $option) {
+			$score_disp .= ((int)$option['option_block_score'])."-";
+		}
+		$score_disp = substr($score_disp, 0, strlen($score_disp)-1);
+		
+		$in_progress_summary = "";
+		if ((string)$this->db_event['outcome_index'] === "") {
+			if ($is_tie) $in_progress_summary = "Tied";
+			else $in_progress_summary = $options_by_score[0]['name']." is winning";
+		}
+		
+		return [$options_by_score, $options_by_index, $is_tie, $score_disp, $in_progress_summary];
 	}
 	
 	public function set_target_scores($last_block_id) {

@@ -1,8 +1,8 @@
 <?php
-$last_block_id = $blockchain->last_block_id();
-$mining_block_id = $last_block_id+1;
-$db_last_block = $blockchain->fetch_block_by_id($last_block_id);
-$current_round_id = $game->block_to_round($mining_block_id);
+$last_block_id = $game->last_block_id();
+$blockchain_last_block_id = $blockchain->last_block_id();
+$db_last_block = $blockchain->fetch_block_by_id($blockchain_last_block_id);
+$current_round_id = $game->block_to_round($blockchain_last_block_id+1);
 
 $filter_arr = false;
 $event_ids = "";
@@ -18,7 +18,7 @@ $play_now_url = '/wallet/'.$game->db_game['url_identifier'].'/';
 <script type="text/javascript">
 games.push(new Game(thisPageManager, <?php
 	echo $game->db_game['game_id'];
-	echo ', '.$game->last_block_id();
+	echo ', '.$last_block_id;
 	echo ', false';
 	echo ', ""';
 	echo ', "'.$game->db_game['payout_weight'].'"';
@@ -74,6 +74,7 @@ games.push(new Game(thisPageManager, <?php
 		?>
 	</center>
 	<?php
+	$just_ended_events = $game->events_by_outcome_block($last_block_id);
 	$being_determined_events = $game->events_being_determined_in_block($last_block_id+1);
 	if (count($being_determined_events) > 0) {
 		?>
@@ -83,6 +84,7 @@ games.push(new Game(thisPageManager, <?php
 				'thisuser' => $user,
 				'game' => $game,
 				'events' => $being_determined_events,
+				'just_ended_events' => $just_ended_events,
 				'user_game' => $user_game,
 				'round_id' => $current_round_id,
 				'as_panel' => false,

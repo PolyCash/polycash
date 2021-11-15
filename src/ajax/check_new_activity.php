@@ -228,11 +228,13 @@ if ($thisuser && $refresh_page == "wallet") {
 else $output['new_messages'] = 0;
 
 if ($include_being_determined_events) {
-	$being_determined_events = $game->events_being_determined_in_block($blockchain_last_block_id+1);
+	$just_ended_events = $game->events_by_outcome_block($last_block_id);
+	$being_determined_events = $game->events_being_determined_in_block($last_block_id+1);
 	$being_determined_content = $app->render_view('being_determined_events', [
 		'thisuser' => $thisuser ? $thisuser : null,
 		'game' => $game,
 		'events' => $being_determined_events,
+		'just_ended_events' => $just_ended_events,
 		'user_game' => $thisuser ? $user_game : null,
 		'round_id' => $current_round,
 		'as_panel' => $refresh_page == "wallet",

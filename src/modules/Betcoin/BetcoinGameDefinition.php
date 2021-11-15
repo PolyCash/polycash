@@ -145,14 +145,14 @@ class BetcoinGameDefinition {
 	public function set_event_outcome(&$game, &$event) {
 		$payout_block = $game->blockchain->fetch_block_by_id($event->db_event['event_payout_block']-1);
 		
-		list($option_info_arr, $is_tie) = $event->option_block_info();
+		list($options_by_score, $options_by_index, $is_tie, $score_disp, $in_progress_summary) = $event->option_block_info();
 		
 		if ($is_tie) {
 			$block_hash_last_chars = substr($payout_block['block_hash'], strlen($payout_block['block_hash'])-8, 8);
 			$random_number = hexdec($block_hash_last_chars);
 			$outcome_index = $random_number%2;
 		}
-		else $outcome_index = $option_info_arr[0]['event_option_index'];
+		else $outcome_index = $options_by_score[0]['event_option_index'];
 		
 		$game->set_game_defined_outcome($event->db_event['event_index'], $outcome_index);
 		$event->set_outcome_index($outcome_index);
