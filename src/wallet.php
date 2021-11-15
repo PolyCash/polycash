@@ -227,8 +227,7 @@ $user_game = $thisuser->ensure_user_in_game($game, false);
 if (($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['action'] == "save_voting_strategy_fees") && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'])) {
 	$voting_strategy = $_REQUEST['voting_strategy'];
 	$voting_strategy_id = intval($_REQUEST['voting_strategy_id']);
-	$aggregate_threshold = intval($_REQUEST['aggregate_threshold']);
-	$api_url = $app->strong_strip_tags($_REQUEST['api_url']);
+	$api_url = "";
 	if ($voting_strategy == "hit_url") $api_url = $app->strong_strip_tags($_REQUEST['hit_api_url']);
 	
 	if ($voting_strategy_id > 0) {
@@ -265,61 +264,13 @@ if (($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['action'] == "sa
 	}
 	else {
 		if (in_array($voting_strategy, ['manual', 'api', 'by_plan', 'by_entity','hit_url','featured'])) {
-			$min_votesum_pct = intval($_REQUEST['min_votesum_pct']);
-			$max_votesum_pct = intval($_REQUEST['max_votesum_pct']);
-			
-			if ($max_votesum_pct > 100) $max_votesum_pct = 100;
-			if ($min_votesum_pct < 0) $min_votesum_pct = 0;
-			if ($max_votesum_pct < $min_votesum_pct) $max_votesum_pct = $min_votesum_pct;
-			
 			$update_strategy_params = [
 				'voting_strategy' => $voting_strategy,
-				'max_votesum_pct' => $max_votesum_pct,
-				'min_votesum_pct' => $min_votesum_pct,
 				'api_url' => $api_url,
 				'strategy_id' => $user_strategy['strategy_id']
 			];
-			$update_strategy_q = "UPDATE user_strategies SET voting_strategy=:voting_strategy";
-			if ($aggregate_threshold >= 0 && $aggregate_threshold <= 100) {
-				$update_strategy_q .= ", aggregate_threshold=:aggregate_threshold";
-				$update_strategy_params['aggregate_threshold'] = $aggregate_threshold;
-			}
-			
-			$update_strategy_q .= ", max_votesum_pct=:max_votesum_pct, min_votesum_pct=:min_votesum_pct, api_url=:api_url WHERE strategy_id=:strategy_id;";
+			$update_strategy_q = "UPDATE user_strategies SET voting_strategy=:voting_strategy, api_url=:api_url WHERE strategy_id=:strategy_id;";
 			$app->run_query($update_strategy_q, $update_strategy_params);
-		}
-		
-		$entity_pct_sum = 0;
-		$entity_pct_error = FALSE;
-		
-		$entities_by_game = $game->entities_by_game()->fetchAll();
-		
-		foreach ($entities_by_game as $entity) {
-			$entity_pct = intval($_REQUEST['entity_pct_'.$entity['entity_id']]);
-			$entity_pct_sum += $entity_pct;
-		}
-		
-		if ($entity_pct_sum == 100) {
-			$app->run_query("DELETE FROM user_strategy_entities WHERE strategy_id=:strategy_id;", [
-				'strategy_id' => $user_strategy['strategy_id']
-			]);
-			
-			foreach ($entities_by_game as $entity) {
-				$entity_pct = intval($_REQUEST['entity_pct_'.$entity['entity_id']]);
-				if ($entity_pct > 0) {
-					$app->run_insert_query("user_strategy_entities", [
-						'strategy_id' => $user_strategy['strategy_id'],
-						'entity_id' => $entity['entity_id'],
-						'pct_points' => $entity_pct
-					]);
-				}
-			}
-		}
-		else {
-			if ($voting_strategy == "by_entity") {
-				$error_code = 2;
-				$message = "Error: the percentages that you entered did not add up to 100, your changes were discarded.";
-			}
 		}
 	}
 }
@@ -852,18 +803,6 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 						</div>
 					</div>
 					
-					<div class="row bordered_row">
-						<div class="col-md-2">
-							<input type="radio" id="voting_strategy_api" name="voting_strategy" value="api"<?php if ($user_strategy['voting_strategy'] == "api") echo ' checked="checked"'; ?>><label class="plainlabel" for="voting_strategy_api">&nbsp;Vote&nbsp;by&nbsp;API</label>
-						</div>
-						<div class="col-md-10">
-							<label class="plainlabel" for="voting_strategy_api">
-								Hit a URL matching the PolyCash API format:
-								<input class="form-control" type="text" size="40" placeholder="http://" name="api_url" id="api_url" value="<?php echo $user_strategy['api_url']; ?>" />
-							</label><br/>
-							<a href="/api/about/">API documentation</a><br/>
-						</div>
-					</div>
 					<div class="row bordered_row">
 						<div class="col-md-2">
 							<input type="radio" id="voting_strategy_by_plan" name="voting_strategy" value="by_plan"<?php if ($user_strategy['voting_strategy'] == "by_plan") echo ' checked="checked"'; ?>><label class="plainlabel" for="voting_strategy_by_plan">&nbsp;Plan&nbsp;my&nbsp;votes</label>
