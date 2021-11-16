@@ -1,13 +1,5 @@
 ## About PolyCash
-PolyCash is an open source P2P blockchain protocol & app that makes it easy to launch your own digital currencies and crypto assets.  PolyCash is a colored coins implementation & is a virtualization layer for the blockchain.  It can be used to create currencies on top of bitcoin, litecoin or any other blockchain based on the Bitcoin source code.  The PolyCash web app runs on PHP and MySQL and is easy to install and configure.
-
-PolyCash is designed for stablecoins which are backed by tangible assets such as dollars, stocks or intellectual property.  PolyCash was built for P2P prediction markets, and betting currencies are the primary application of this protocol.  But PolyCash is also great for launching crypto assets which have nothing to do with betting.  This app includes a blockchain explorer which is useful for viewing blockchain data.  PolyCash loads blockchains into a relational database making it easy to run fast queries about blockchain data.
-
-Design your new currency by choosing a blockchain to run on, a name for your coins and an initial supply. Then create your genesis transaction and import the new coins into your wallet.  Next decentralize your currency by installing it on a bunch of different nodes and distributing the coins to any initial investors and stakeholders.
-
-You can manage the list of betting events associated with your currency by uploading a spreadsheet or by integrating an API data source. Depending on the topology of your network, any changes that you make to the betting events for your currency may automatically propagate or may require the approval of the node operators running your currency.
-
-Install bitcoin if you want to allow your players to buy in and cash out to BTC. PolyCash requires all blockchains to be installed as full nodes. Each installed blockchain is synced to MySQL in real time requiring significant RAM, disk space, CPU and IO. To efficiently operate a node running bitcoin, you may need to spend around $100 / month for a dedicated server.
+PolyCash is an open source blockchain protocol for peer to peer betting currencies.  PolyCash integrates with blockchains including Bitcoin, Litecoin, Dogecoin & [Datachain](https://github.com/datachains/datachain). The PolyCash protocol powers Betcoin, a digital currency with a novel inflation model where coins are given out to players for betting on virtual basketball games in addition to being given to miners for securing the network.
 
 ## Install PolyCash
 To get started, first install and secure Apache, MySQL and PHP (at least version 7).  Set your Apache web root to the "public" folder of this repository.  Then create a file src/config/config.json by copying and pasting src/config/example_config.json.
@@ -70,8 +62,8 @@ a2enmod expires
 ```
 
 ## Install Blockchains & Games
-The user account you set up when installing has special permissions.  Use this account to import any game definitions for crypto assets that you want to run on your node.  Any time you update PolyCash from github, make sure to visit the install page and any new database migrations will automatically be applied.
+By default, the Betcoin cryptocurrency is installed when you install PolyCash.  You can install other PolyCash-protocol cryptocurrencies by pasting their game definitions in via the "Import" link found in the left menu.
 
-Use the install page to enter the RPC parameters for any blockchains that you want to use.  Install and start your blockchains as full nodes before entering the RPC parameters.  To install full nodes, make sure to set txindex=1 in bitcoin.conf, litecoin.conf etc.  After entering blockchain RPC parameters, use the "reset & synchronize" link on the install page to quickly insert initial empty blocks.
+To get the betcoin cryptocurrency in sync, you'll need to install the Datachain blockchain as a full node.  For more information on that step, check out [Datachain](https://github.com/datachains/datachain) on github.
 
-You need to set the right value for "first required block" for any blockchains that you install.  You should set the first required block for each blockchain at least as early as the lowest starting block for any games that you plan to install on that blockchain.  You should try to avoid ever changing the first required block to a lower value because this will cause the entire blockchain to re-sync with PolyCash which can take hours or days.
+After installing Datachain, click the "Manage Blockchains" link in PolyCash, then select Datachain -> Set RPC credentials, and then enter the RPC username and password from your datacoin.conf.  Then run PolyCash either by setting up a cron job to run the src/cron/minutely.php every minute, or by visiting Install -> "Start process in new tab".
