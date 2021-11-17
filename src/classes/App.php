@@ -2049,6 +2049,16 @@ class App {
 		else return false;
 	}
 	
+	public function give_many_addresses_to_account($account, $address_ids) {
+		$this->run_query("UPDATE addresses SET user_id=:user_id WHERE address_id IN (".implode(",", $address_ids).");", [
+			'user_id' => $account['user_id'],
+		]);
+		
+		$this->run_query("UPDATE address_keys SET account_id=:account_id WHERE address_id IN (".implode(",", $address_ids).");", [
+			'account_id' => $account['account_id'],
+		]);
+	}
+	
 	public function give_address_to_user(&$game, &$user, $db_address) {
 		if ($game) {
 			$user_game = $user->ensure_user_in_game($game, false);

@@ -183,7 +183,7 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 											<?php
 										}
 										?>
-										<option value="manage_coinbase">Manage mined coins</option>
+										<option value="manage_unclaimed">Manage mined coins</option>
 										<?php
 										if ($blockchain->db_blockchain['p2p_mode'] != "none") { ?>
 											<option value="reset">Reset blockchain</option>
@@ -312,7 +312,7 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 					</tbody>
 				</table>
 				
-				<div style="display: none;" class="modal fade" id="manage_coinbase_modal"></div>
+				<div style="display: none;" class="modal fade" id="manage_unclaimed_modal"></div>
 				
 				<div class="modal fade" id="new_blockchain_modal" style="display: none;">
 					<div class="modal-dialog">
@@ -396,7 +396,7 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 				
 				var confirm_ok = false;
 				
-				if (action == "set_rpc_credentials" || action == "see_definition" || action == "manage_coinbase") confirm_ok = true;
+				if (action == "set_rpc_credentials" || action == "see_definition" || action == "manage_unclaimed") confirm_ok = true;
 				else {
 					var confirm_message = "Are you sure you want to ";
 					if (action == "reset") confirm_message += "reset "+blockchain_name+"?";
@@ -416,16 +416,16 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 					else if (action == "see_definition") {
 						window.open('/explorer/blockchains/'+blockchain_identifier+'/definition/', '_blank');
 					}
-					else if (action == "manage_coinbase") {
+					else if (action == "manage_unclaimed") {
 						$.ajax({
-							url: "/ajax/manage_coinbase.php",
+							url: "/ajax/manage_unclaimed.php",
 							data: {
 								blockchain_id: blockchain_id,
 								action: 'view'
 							},
 							success: function(manage_response) {
-								$('#manage_coinbase_modal').html(manage_response);
-								$('#manage_coinbase_modal').modal('show');
+								$('#manage_unclaimed_modal').html(manage_response);
+								$('#manage_unclaimed_modal').modal('show');
 							}
 						});
 					}
@@ -454,6 +454,44 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 					else {
 						$('#'+action+'_'+blockchain_id).submit();
 					}
+				}
+			};
+			
+			this.manageUnclaimedGameSelected = function(blockchain_id, selectEl) {
+				if (selectEl.value) {
+					$.ajax({
+						url: "/ajax/manage_unclaimed.php",
+						data: {
+							blockchain_id: blockchain_id,
+							game_id: selectEl.value,
+							action: 'view'
+						},
+						success: function(manage_response) {
+							$('#manage_unclaimed_modal').html(manage_response);
+							$('#manage_unclaimed_modal').modal('show');
+						}
+					});
+				}
+			};
+			
+			this.submitUnclaimedAction = function(blockchain_id, game_id) {
+				var account_id = $('#claim_all_to_account_id').val();
+				
+				if (account_id) {
+					$.ajax({
+						url: "/ajax/manage_unclaimed.php",
+						data: {
+							blockchain_id: blockchain_id,
+							game_id: game_id,
+							action: 'claim_all_to_account',
+							account_id: account_id,
+							synchronizer_token: this.synchronizer_token,
+						},
+						success: function(manage_response) {
+							$('#manage_unclaimed_modal').html(manage_response);
+							$('#manage_unclaimed_modal').modal('show');
+						}
+					});
 				}
 			};
 		};

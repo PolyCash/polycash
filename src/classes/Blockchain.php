@@ -2868,36 +2868,6 @@ class Blockchain {
 		return $this->app->run_query($spendable_io_q, $spendable_io_params);
 	}
 	
-	public function fetch_coinbase_ios($unclaimed_only, $unspent_only, $mature_only, $limit) {
-		$coinbase_io_q = "SELECT io.* FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id JOIN address_keys ak ON io.address_id=ak.address_id WHERE t.blockchain_id=:blockchain_id AND t.transaction_desc='coinbase'";
-		
-		$coinbase_io_params = [
-			'blockchain_id' => $this->db_blockchain['blockchain_id']
-		];
-		
-		if ($unspent_only) {
-			$coinbase_io_q .= " AND io.spend_status='unspent'";
-		}
-		
-		if ($unclaimed_only) {
-			$coinbase_io_q .= " AND ak.account_id IS NULL";
-		}
-		
-		if ($mature_only) {
-			$coinbase_io_q .= " AND io.create_block_id <= :mature_at_block_height";
-			$coinbase_io_params['mature_at_block_height'] = $this->last_block_id()-$this->db_blockchain['coinbase_maturity']+1;
-		}
-		
-		$coinbase_io_q .= " ORDER BY t.block_id ASC";
-		
-		if ($limit) {
-			$coinbase_io_q .= " LIMIT :limit";
-			$coinbase_io_params['limit'] = $limit;
-		}
-		
-		return $this->app->run_limited_query($coinbase_io_q, $coinbase_io_params)->fetchAll();
-	}
-	
 	public function set_processed_my_addresses_to_block($block_id) {
 		$this->app->run_query("UPDATE blockchains SET processed_my_addresses_to_block=:processed_my_addresses_to_block WHERE blockchain_id=:blockchain_id;", [
 			'processed_my_addresses_to_block' => $block_id,

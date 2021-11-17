@@ -3960,5 +3960,22 @@ class Game {
 		if ($this->db_game['finite_events']) return true;
 		else return false;
 	}
+	
+	public function fetch_unclaimed_coins($unspent_only) {
+		$unclaimed_q = "SELECT gio.* FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id AND gio.game_id=:game_id JOIN transactions t ON io.create_transaction_id=t.transaction_id JOIN address_keys ak ON io.address_id=ak.address_id WHERE t.blockchain_id=:blockchain_id AND ak.account_id IS NULL";
+		
+		$unclaimed_params = [
+			'blockchain_id' => $this->db_game['blockchain_id'],
+			'game_id' => $this->db_game['game_id'],
+		];
+		
+		if ($unspent_only) {
+			$unclaimed_q .= " AND io.spend_status='unspent'";
+		}
+		
+		$unclaimed_q .= " ORDER BY t.block_id ASC";
+		
+		return $this->blockchain->app->run_query($unclaimed_q, $unclaimed_params)->fetchAll();
+	}
 }
 ?>
