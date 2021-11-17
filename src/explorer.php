@@ -1069,7 +1069,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$coins_out = $game->transaction_coins_out($transaction['transaction_id'], true);
 						$coins_diff = $coins_in-$coins_out;
 						echo $game->display_coins($coins_in)." in, ".$game->display_coins($coins_out)." out";
-						if ($coins_in > 0) echo " (".$game->display_coins($coins_diff)." destroyed)";
+						if ($coins_diff > 0) echo " (".$game->display_coins($coins_diff)." destroyed)";
 						echo ".<br/>\n";
 						
 						$votes_in_params = [
