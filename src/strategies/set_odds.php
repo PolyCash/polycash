@@ -66,7 +66,7 @@ if ($user_game) {
 						$coins_per_event = floor($mature_balance*$frac_mature_bal/$num_events);
 					}
 					else {
-						list($user_votes, $votes_value) = $thisuser->user_current_votes($game, $last_block_id, $round_id, $user_game);
+						list($user_votes, $votes_value) = $user->user_current_votes($game, $last_block_id, $round_id, $user_game);
 						$coins_per_event = ceil($votes_value/$num_events);
 					}
 				}

@@ -444,55 +444,49 @@ class Game {
 		
 		$log_text .= $strategy_user->db_user['username'].": ".$this->blockchain->app->format_bignum($spendable_balance/pow(10,$this->db_game['decimal_places']))." coins (".$spendable_balance.") ".$user_game['voting_strategy']."<br/>\n";
 		
-		if ($spendable_balance > 0) {
-			if ($user_game['voting_strategy'] == "api" || $user_game['voting_strategy'] == "featured") {
-				if ($user_game['voting_strategy'] == "api") $api_url = $user_game['api_url'];
-				else {
-					$api_url = $user_game['base_url'];
-					if (substr($api_url, 0, 4) != "http") $api_url = AppSettings::getParam('base_url').$api_url;
-					if (strpos($api_url, '?')) $api_url .= "&";
-					else $api_url .= "?";
-					$api_url .= "api_key=".$user_game['api_access_code'];
-					if ($force_now) $api_url .= "&force=1";
-				}
+		if ($user_game['voting_strategy'] == "api" || $user_game['voting_strategy'] == "featured") {
+			if ($user_game['voting_strategy'] == "api") $api_url = $user_game['api_url'];
+			else {
+				$api_url = $user_game['base_url'];
+				if (substr($api_url, 0, 4) != "http") $api_url = AppSettings::getParam('base_url').$api_url;
+				if (strpos($api_url, '?')) $api_url .= "&";
+				else $api_url .= "?";
+				$api_url .= "api_key=".$user_game['api_access_code'];
+				if ($force_now) $api_url .= "&force=1";
+			}
+			
+			$api_response = $this->blockchain->app->safe_fetch_url($api_url);
+			
+			if ($user_game['hit_url'] == 1) {
+				$api_response = json_decode($api_response);
+			}
+			else {
+				$api_obj = json_decode($api_response);
 				
-				$api_response = $this->blockchain->app->safe_fetch_url($api_url);
-				
-				if ($user_game['hit_url'] == 1) {
-					$api_response = json_decode($api_response);
-				}
-				else {
-					$api_obj = json_decode($api_response);
+				if ($api_obj->recommendations && count($api_obj->recommendations) > 0 && in_array($api_obj->recommendation_unit, array('coin','percent'))) {
+					$input_error = false;
+					$input_io_ids = [];
 					
-					if ($api_obj->recommendations && count($api_obj->recommendations) > 0 && in_array($api_obj->recommendation_unit, array('coin','percent'))) {
-						$input_error = false;
-						$input_io_ids = [];
-						
-						if ($api_obj->input_utxo_ids) {
-							if (count($api_obj->input_utxo_ids) > 0) {
-								for ($i=0; $i<count($api_obj->input_utxo_ids); $i++) {
-									if (!$input_error) {
-										$utxo_id = intval($api_obj->input_utxo_ids[$i]);
-										if (strval($utxo_id) === strval($api_obj->input_utxo_ids[$i])) {
-											$utxo = $this->blockchain->app->run_query("SELECT *, ca.user_id AS account_user_id FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys ak ON a.address_id=ak.address_id JOIN currency_accounts ca ON ak.account_id=ca.account_id WHERE gio.game_io_id=:utxo_id;", ['utxo_id'=>$utxo_id])->fetch();
-											if ($utxo) {
-												if ($utxo['account_user_id'] == $strategy_user->db_user['user_id']) {
-													if (!$utxo['spend_transaction_id'] && $utxo['spend_status'] == "unspent" && $utxo['create_block_id'] !== "") {
-														$input_io_ids[count($input_io_ids)] = $utxo['io_id'];
-													}
-													else {
-														$input_error = true;
-														$log_text .= "Error, you specified an input which has already been spent.";
-													}
+					if ($api_obj->input_utxo_ids) {
+						if (count($api_obj->input_utxo_ids) > 0) {
+							for ($i=0; $i<count($api_obj->input_utxo_ids); $i++) {
+								if (!$input_error) {
+									$utxo_id = intval($api_obj->input_utxo_ids[$i]);
+									if (strval($utxo_id) === strval($api_obj->input_utxo_ids[$i])) {
+										$utxo = $this->blockchain->app->run_query("SELECT *, ca.user_id AS account_user_id FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys ak ON a.address_id=ak.address_id JOIN currency_accounts ca ON ak.account_id=ca.account_id WHERE gio.game_io_id=:utxo_id;", ['utxo_id'=>$utxo_id])->fetch();
+										if ($utxo) {
+											if ($utxo['account_user_id'] == $strategy_user->db_user['user_id']) {
+												if (!$utxo['spend_transaction_id'] && $utxo['spend_status'] == "unspent" && $utxo['create_block_id'] !== "") {
+													$input_io_ids[count($input_io_ids)] = $utxo['io_id'];
 												}
 												else {
 													$input_error = true;
-													$log_text .= "Error, you specified an input which is not associated with your user account.";
+													$log_text .= "Error, you specified an input which has already been spent.";
 												}
 											}
 											else {
 												$input_error = true;
-												$log_text .= "Error, an invalid transaction input was specified.";
+												$log_text .= "Error, you specified an input which is not associated with your user account.";
 											}
 										}
 										else {
@@ -500,124 +494,128 @@ class Game {
 											$log_text .= "Error, an invalid transaction input was specified.";
 										}
 									}
+									else {
+										$input_error = true;
+										$log_text .= "Error, an invalid transaction input was specified.";
+									}
 								}
 							}
-							else {
-								$input_error = true;
-								$log_text .= "Error, invalid format for transaction inputs.";
-							}
 						}
-						if (count($input_io_ids) > 0 && $input_error == false) {}
-						else $input_io_ids = false;
+						else {
+							$input_error = true;
+							$log_text .= "Error, invalid format for transaction inputs.";
+						}
+					}
+					if (count($input_io_ids) > 0 && $input_error == false) {}
+					else $input_io_ids = false;
+					
+					$amount_error = false;
+					$amount_sum = 0;
+					$option_id_error = false;
+					
+					$log_text .= $strategy_user->db_user['username']." has ".$spendable_balance/pow(10,$this->db_game['decimal_places'])." coins available, hitting url: ".$user_game['api_url']."<br/>\n";
+					
+					foreach ($api_obj->recommendations as $recommendation) {
+						if ($recommendation->recommended_amount && $recommendation->recommended_amount > 0 && $this->blockchain->app->friendly_intval($recommendation->recommended_amount) == $recommendation->recommended_amount) $amount_sum += $recommendation->recommended_amount;
+						else $amount_error = true;
 						
-						$amount_error = false;
-						$amount_sum = 0;
-						$option_id_error = false;
+						$db_option = $this->blockchain->app->run_query("SELECT * FROM options op JOIN events ev ON op.event_id=ev.event_id WHERE op.option_index=:option_index AND ev.game_id=:game_id AND ev.event_starting_block <= :ref_block_id AND ev.event_final_block >= :ref_block_id;", [
+							'option_index' => $recommendation->option_index,
+							'game_id' => $this->db_game['game_id'],
+							'ref_block_id' => $mining_block_id
+						])->fetch();
 						
-						$log_text .= $strategy_user->db_user['username']." has ".$spendable_balance/pow(10,$this->db_game['decimal_places'])." coins available, hitting url: ".$user_game['api_url']."<br/>\n";
+						if ($db_option) {
+							$recommendation->option_id = $db_option['option_id'];
+						}
+						else $option_id_error = true;
+					}
+					
+					if ($api_obj->recommendation_unit == "coin") {
+						if ($amount_sum <= $spendable_balance) {}
+						else $amount_error = true;
+					}
+					else {
+						if ($amount_sum <= 100) {}
+						else $amount_error = true;
+					}
+					
+					if ($amount_error) {
+						$log_text .= "Error, an invalid amount was specified.";
+					}
+					else if ($option_id_error) {
+						$log_text .= "Error, one of the option IDs was invalid.";
+					}
+					else {
+						$vote_option_ids = [];
+						$vote_amounts = [];
 						
 						foreach ($api_obj->recommendations as $recommendation) {
-							if ($recommendation->recommended_amount && $recommendation->recommended_amount > 0 && $this->blockchain->app->friendly_intval($recommendation->recommended_amount) == $recommendation->recommended_amount) $amount_sum += $recommendation->recommended_amount;
-							else $amount_error = true;
+							if ($api_obj->recommendation_unit == "coin") $vote_amount = $recommendation->recommended_amount;
+							else $vote_amount = floor($spendable_balance*$recommendation->recommended_amount/100);
 							
-							$db_option = $this->blockchain->app->run_query("SELECT * FROM options op JOIN events ev ON op.event_id=ev.event_id WHERE op.option_index=:option_index AND ev.game_id=:game_id AND ev.event_starting_block <= :ref_block_id AND ev.event_final_block >= :ref_block_id;", [
-								'option_index' => $recommendation->option_index,
-								'game_id' => $this->db_game['game_id'],
-								'ref_block_id' => $mining_block_id
-							])->fetch();
+							$vote_option_id = $recommendation->option_id;
 							
-							if ($db_option) {
-								$recommendation->option_id = $db_option['option_id'];
-							}
-							else $option_id_error = true;
+							$vote_option_ids[count($vote_option_ids)] = $vote_option_id;
+							$vote_amounts[count($vote_amounts)] = $vote_amount;
+							
+							$log_text .= "Vote ".$vote_amount." for ".$vote_option_id."<br/>\n";
 						}
 						
-						if ($api_obj->recommendation_unit == "coin") {
-							if ($amount_sum <= $spendable_balance) {}
-							else $amount_error = true;
-						}
-						else {
-							if ($amount_sum <= 100) {}
-							else $amount_error = true;
-						}
+						$error_message = false;
+						$transaction_id = $this->create_transaction($vote_option_ids, $vote_amounts, $user_game, false, 'transaction', $input_io_ids, false, false, $api_obj->recommended_fee, $error_message);
 						
-						if ($amount_error) {
-							$log_text .= "Error, an invalid amount was specified.";
-						}
-						else if ($option_id_error) {
-							$log_text .= "Error, one of the option IDs was invalid.";
-						}
-						else {
-							$vote_option_ids = [];
-							$vote_amounts = [];
-							
-							foreach ($api_obj->recommendations as $recommendation) {
-								if ($api_obj->recommendation_unit == "coin") $vote_amount = $recommendation->recommended_amount;
-								else $vote_amount = floor($spendable_balance*$recommendation->recommended_amount/100);
-								
-								$vote_option_id = $recommendation->option_id;
-								
-								$vote_option_ids[count($vote_option_ids)] = $vote_option_id;
-								$vote_amounts[count($vote_amounts)] = $vote_amount;
-								
-								$log_text .= "Vote ".$vote_amount." for ".$vote_option_id."<br/>\n";
-							}
-							
-							$error_message = false;
-							$transaction_id = $this->create_transaction($vote_option_ids, $vote_amounts, $user_game, false, 'transaction', $input_io_ids, false, false, $api_obj->recommended_fee, $error_message);
-							
-							if ($transaction_id) $log_text .= "Added transaction $transaction_id<br/>\n";
-							else $log_text .= $error_message."<br/>\n";
-						}
+						if ($transaction_id) $log_text .= "Added transaction $transaction_id<br/>\n";
+						else $log_text .= $error_message."<br/>\n";
 					}
 				}
 			}
-			else if ($user_game['voting_strategy'] == "hit_url") {
-				$api_response = $this->blockchain->app->safe_fetch_url($user_game['api_url']);
-			}
-			else {
-				$log_text .= "user game #".$user_game['user_game_id'].", strategy: ".$user_game['voting_strategy']." ";
+		}
+		else if ($user_game['voting_strategy'] == "hit_url") {
+			$api_response = $this->blockchain->app->safe_fetch_url($user_game['api_url']);
+		}
+		else {
+			$log_text .= "user game #".$user_game['user_game_id'].", strategy: ".$user_game['voting_strategy']." ";
+			
+			$log_text .= "Dividing by plan for ".$strategy_user->db_user['username']."<br/>\n";
+			
+			$db_allocations = $this->blockchain->app->run_query("SELECT * FROM strategy_round_allocations WHERE strategy_id=:strategy_id AND round_id=:round_id AND applied=0;", [
+				'strategy_id' => $user_game['strategy_id'],
+				'round_id' => $current_round_id
+			])->fetchAll();
+			
+			if (count($db_allocations) > 0) {
+				$allocations = [];
+				$point_sum = 0;
 				
-				$log_text .= "Dividing by plan for ".$strategy_user->db_user['username']."<br/>\n";
+				foreach ($db_allocations as $allocation) {
+					$allocations[count($allocations)] = $allocation;
+					$point_sum += intval($allocation['points']);
+				}
 				
-				$db_allocations = $this->blockchain->app->run_query("SELECT * FROM strategy_round_allocations WHERE strategy_id=:strategy_id AND round_id=:round_id AND applied=0;", [
-					'strategy_id' => $user_game['strategy_id'],
-					'round_id' => $current_round_id
-				])->fetchAll();
+				$option_ids = [];
+				$amounts = [];
+				$amount_sum = 0;
 				
-				if (count($db_allocations) > 0) {
-					$allocations = [];
-					$point_sum = 0;
-					
-					foreach ($db_allocations as $allocation) {
-						$allocations[count($allocations)] = $allocation;
-						$point_sum += intval($allocation['points']);
-					}
-					
-					$option_ids = [];
-					$amounts = [];
-					$amount_sum = 0;
+				for ($i=0; $i<count($allocations); $i++) {
+					$option_ids[$i] = $allocations[$i]['option_id'];
+					$amount = floor(($spendable_balance-$user_game['transaction_fee'])*$allocations[$i]['points']/$point_sum);
+					$amounts[$i] = $amount;
+					$amount_sum += $amount;
+				}
+				if ($amount_sum < ($spendable_balance-$user_game['transaction_fee'])) $amounts[count($amounts)-1] += ($spendable_balance-$user_game['transaction_fee']) - $amount_sum;
+				
+				$error_message = false;
+				$transaction_id = $this->create_transaction($option_ids, $amounts, $user_game, false, 'transaction', false, false, false, $user_game['transaction_fee'], $error_message);
+				
+				if ($transaction_id) {
+					$log_text .= "Added transaction $transaction_id<br/>\n";
 					
 					for ($i=0; $i<count($allocations); $i++) {
-						$option_ids[$i] = $allocations[$i]['option_id'];
-						$amount = floor(($spendable_balance-$user_game['transaction_fee'])*$allocations[$i]['points']/$point_sum);
-						$amounts[$i] = $amount;
-						$amount_sum += $amount;
+						$this->blockchain->app->run_query("UPDATE strategy_round_allocations SET applied=1 WHERE allocation_id=:allocation_id;", ['allocation_id'=>$allocations[$i]['allocation_id']]);
 					}
-					if ($amount_sum < ($spendable_balance-$user_game['transaction_fee'])) $amounts[count($amounts)-1] += ($spendable_balance-$user_game['transaction_fee']) - $amount_sum;
-					
-					$error_message = false;
-					$transaction_id = $this->create_transaction($option_ids, $amounts, $user_game, false, 'transaction', false, false, false, $user_game['transaction_fee'], $error_message);
-					
-					if ($transaction_id) {
-						$log_text .= "Added transaction $transaction_id<br/>\n";
-						
-						for ($i=0; $i<count($allocations); $i++) {
-							$this->blockchain->app->run_query("UPDATE strategy_round_allocations SET applied=1 WHERE allocation_id=:allocation_id;", ['allocation_id'=>$allocations[$i]['allocation_id']]);
-						}
-					}
-					else $log_text .= $error_message."<br/>\n";
 				}
+				else $log_text .= $error_message."<br/>\n";
 			}
 		}
 	}

@@ -106,6 +106,6 @@ if ($thisuser && !empty($_REQUEST['game_id'])) {
 	}
 }
 
-if (AppSettings::getParam('pageview_tracking_enabled')) $viewer_id = $pageviewController->insert_pageview($thisuser);
+if (AppSettings::getParam('pageview_tracking_enabled') && !AppSettings::runningFromCommandline()) $viewer_id = $pageviewController->insert_pageview($thisuser);
 else $viewer_id = false;
 ?>
