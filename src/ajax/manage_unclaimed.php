@@ -24,7 +24,7 @@ if ($thisuser && $app->user_is_admin($thisuser)) {
 							$unclaimed_coins = $game->fetch_unclaimed_coins(true);
 							$unclaimed_coins_total = array_sum(array_column($unclaimed_coins, 'colored_amount'));
 							?>
-							<p>There are <?php echo $game->display_coins($unclaimed_coins_total); ?> unclaimed coins.</p>
+							<p>There are <?php echo $game->display_coins($unclaimed_coins_total); ?> in unclaimed coins.</p>
 							
 							<div class="form-group">
 								<label for="manage_unclaimed_action">What would you like to do next?</label>

@@ -1318,7 +1318,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							
 							echo '</div>';
 							
-							echo '<div class="col-sm-3">'.$utxo['spend_status']."</div>\n";
+							echo '<div class="col-sm-3">'.ucfirst($utxo['spend_status'])."</div>\n";
 							
 							echo '<div class="col-sm-3"><a href="/explorer/games/'.$game->db_game['url_identifier'].'/addresses/'.$utxo['address'].'">'.$utxo['address']."</a></div>\n";
 							echo '</div>';

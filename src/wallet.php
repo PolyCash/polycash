@@ -453,7 +453,7 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 								'user_id' => $thisuser->db_user['user_id'],
 								'game_id' => $game->db_game['game_id']
 							])->fetchAll();
-							if (count($user_games_by_game) <= 5) $user_game_show_balances = true;
+							if (count($user_games_by_game) <= 20) $user_game_show_balances = true;
 							else $user_game_show_balances = false;
 							
 							foreach ($user_games_by_game as $db_user_game) {
