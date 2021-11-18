@@ -661,7 +661,7 @@ class Event {
 		foreach ($options_by_score as $option_info) {
 			$options_by_index[$option_info['event_option_index']] = $option_info;
 		}
-		array_multisort($options_by_index, array_column($options_by_index, 'total_score'), SORT_NUMERIC);
+		ksort($options_by_index, SORT_NUMERIC);
 		
 		$score_disp = "";
 		foreach ($options_by_index as $option) {
