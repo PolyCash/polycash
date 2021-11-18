@@ -93,7 +93,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 										$invite_game = false;
 										$send_user_game = false;
 										$app->try_apply_invite_key($send_to_user['user_id'], $invitation['invitation_key'], $invite_game, $send_user_game);
-										$game->give_faucet_to_user($send_user_game);
+										$game->claim_max_from_faucet($send_user_game);
 										
 										$app->output_message(1, "Great, the invitation has been sent.", false);
 									}

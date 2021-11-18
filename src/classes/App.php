@@ -706,7 +706,7 @@ class App {
 		$invite_game = false;
 		$user_game = false;
 		$this->try_apply_invite_key($db_user['user_id'], $invitation['invitation_key'], $invite_game, $user_game);
-		$invite_game->give_faucet_to_user($user_game);
+		$invite_game->claim_max_from_faucet($user_game);
 	}
 	
 	public function format_seconds($seconds) {

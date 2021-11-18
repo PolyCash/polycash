@@ -3446,29 +3446,6 @@ class Game {
 		else return false;
 	}
 	
-	public function give_faucet_to_user(&$user_game) {
-		$this->blockchain->app->dbh->beginTransaction();
-		
-		$faucet_io = $this->check_faucet($user_game);
-		
-		if ($faucet_io) {
-			$this->blockchain->app->run_query("UPDATE address_keys SET account_id=:account_id WHERE address_key_id=:address_key_id;", [
-				'account_id' => $user_game['account_id'],
-				'address_key_id' => $faucet_io['address_key_id']
-			]);
-			$this->blockchain->app->run_query("UPDATE addresses SET user_id=:user_id WHERE address_id=:address_id;", [
-				'user_id' => $user_game['user_id'],
-				'address_id' => $faucet_io['address_id']
-			]);
-			$this->blockchain->app->run_query("UPDATE user_games SET faucet_claims=faucet_claims+1 WHERE user_game_id=:user_game_id;", ['user_game_id'=>$user_game['user_game_id']]);
-		}
-		
-		$this->blockchain->app->dbh->commit();
-		
-		if ($faucet_io) return true;
-		else return false;
-	}
-	
 	public function ensure_genesis_transaction() {
 		$any_error = null;
 		$error_message = null;
