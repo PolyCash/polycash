@@ -57,9 +57,12 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 					$content_html .= "</select>\n";
 					$content_html .= "</div>\n";
 					
-					$content_html .= "<p>The exchange rate is ".$app->format_bignum($exchange_rate)." ".$game->db_game['coin_name_plural']." per ".$sellout_currency['short_name'].".<p>";
+					$exchange_rate_disp = $app->format_bignum($exchange_rate);
+					$content_html .= "<p>The exchange rate is ".$exchange_rate_disp." ".($exchange_rate_disp=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural'])." per ".$sellout_currency['short_name'].".<p>";
 					
-					$content_html .= "<p>There are ".$app->format_bignum($blockchain_sale_amount/pow(10, $sellout_blockchain->db_blockchain['decimal_places']))." ".$sellout_blockchain->db_blockchain['coin_name_plural']." available (".$app->format_bignum($game_forsale_amount)." ".$game->db_game['coin_name_plural'].").<p>\n";
+					$sale_amount_disp = $app->format_bignum($blockchain_sale_amount/pow(10, $sellout_blockchain->db_blockchain['decimal_places']));
+					$game_forsale_disp = $app->format_bignum($game_forsale_amount);
+					$content_html .= "<p>There are ".$sale_amount_disp." ".($sale_amount_disp=="1" ? $sellout_blockchain->db_blockchain['coin_name'] : $sellout_blockchain->db_blockchain['coin_name_plural'])." available (".$game_forsale_disp." ".($game_forsale_disp=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']).").<p>\n";
 					
 					if ($game->db_game['buyin_policy'] != 'for_sale' || $sellout_blockchain->db_blockchain['online'] == 1) {
 						$content_html .= '
@@ -101,7 +104,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 						$content_html .= '<p class="text-danger">You don\'t have that many '.$game->db_game['coin_name_plural'].'.</p>';
 					}
 					else if ($game->db_game['min_sellout_amount'] && $sellout_amount < $game->db_game['min_sellout_amount']) {
-						$content_html .= '<p class="text-danger">Please change at least '.$game->db_game['min_sellout_amount'].' '.$game->db_game['coin_name_plural'].".</p>\n";
+						$content_html .= '<p class="text-danger">Please change at least '.$game->db_game['min_sellout_amount'].' '.($game->db_game['min_sellout_amount']=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']).".</p>\n";
 					}
 					else {
 						$sellout_receive_amount = $sellout_amount/$exchange_rate - $fee_amount;
@@ -114,12 +117,14 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 								$content_html .= '<p class="text-danger">That\'s not enough to conver transaction fees.</p>';
 							}
 							else {
+								$sellout_receive_disp = $app->format_bignum($sellout_receive_amount);
+								
 								$content_html .= '
 								<p>
 									'.$app->format_bignum($fee_amount).' '.$sellout_currency['short_name'].' tx fee
 								</p>
 								<p>
-									'.$sellout_amount.' '.$game->db_game['coin_name_plural'].' will get you approximately '.$app->format_bignum($sellout_receive_amount).' '.$sellout_currency['short_name_plural'].' after fees.
+									'.$sellout_amount.' '.($sellout_amount=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']).' will get you approximately '.$sellout_receive_disp.' '.($sellout_receive_disp=="1" ? $sellout_currency['short_name'] : $sellout_currency['short_name_plural']).' after fees.
 								</p>
 								<form method="post" onsubmit="thisPageManager.manage_sellout(\'confirm\'); return false;">
 									<div class="form-group">
@@ -148,7 +153,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 						$user_game_account = $app->fetch_account_by_id($user_game['account_id']);
 						
 						$receive_address = $_REQUEST['address'];
-						$db_receive_address = $sellout_blockchain->create_or_fetch_address($receive_address, true, false, true, false, false);
+						$db_receive_address = $sellout_blockchain->create_or_fetch_address($receive_address, false, null);
 						
 						$app->run_query("UPDATE currency_invoices SET receive_address_id=:receive_address_id, buyin_amount=:buyin_amount, fee_amount=:fee_amount WHERE invoice_id=:invoice_id;", [
 							'receive_address_id' => $db_receive_address['address_id'],

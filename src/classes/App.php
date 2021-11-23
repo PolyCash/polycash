@@ -104,6 +104,18 @@ class App {
 		return iconv('UTF-8', 'UTF-8//IGNORE', $str);
 	}
 
+	public function render_view($view_path, $view_data=[]) {
+		foreach ($view_data as $name => &$value) {
+			eval('$'.$name.' = $view_data["'.$name.'"];');
+		}
+		$view_fname = dirname(dirname(__FILE__)).'/views/'.$view_path.".php";
+		if (!is_file($view_fname)) die("Failed to open view: ".$view_fname);
+		
+		ob_start();
+		include($view_fname);
+		return ob_get_clean();
+	}
+	
 	public function min_excluding_false($some_array) {
 		$min_value = false;
 		for ($i=0; $i<count($some_array); $i++) {
@@ -204,6 +216,20 @@ class App {
 		return $this->run_query("SELECT * FROM transactions WHERE transaction_id=:transaction_id;", ['transaction_id'=>$transaction_id])->fetch();
 	}
 	
+	public function needs_schema_update() {
+		try {
+			$last_migration_id = (int)$this->get_site_constant("last_migration_id");
+		}
+		catch (Exception $e) {
+			return true;
+		}
+		
+		$migrations_path = AppSettings::srcPath()."/sql";
+		$next_migration_fname = $migrations_path."/".($last_migration_id+1).".sql";
+		if (is_file($next_migration_fname)) return true;
+		else return false;
+	}
+	
 	public function update_schema() {
 		$migrations_path = AppSettings::srcPath()."/sql";
 		
@@ -235,6 +261,7 @@ class App {
 								fwrite($error_fh, $cmd_response);
 								fclose($error_fh);
 							}
+							$this->set_site_constant("last_migration_id", $migration_id-1);
 							echo "Error on migration #".$migration_id.": ".$cmd_response."<br/>\n";
 							die();
 						}
@@ -327,6 +354,14 @@ class App {
 			$block_loading_process = $this->run_shell_command($cmd, $print_debug);
 			if (is_resource($block_loading_process)) $process_count++;
 			else $html .= "Failed to start a process for syncing ".$sync_blockchain['blockchain_name'].".\n";
+			
+			if ($sync_blockchain['p2p_mode'] == "rpc") {
+				$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/process_my_addresses.php" blockchain_id='.$sync_blockchain['blockchain_id'];
+				$my_addresses_process = $this->run_shell_command($cmd, $print_debug);
+				if (is_resource($my_addresses_process)) $process_count++;
+				else $html .= "Failed to start processing my addresses for ".$sync_blockchain['blockchain_name'].".\n";
+			}
+			
 			sleep(0.02);
 		}
 		
@@ -671,7 +706,7 @@ class App {
 		$invite_game = false;
 		$user_game = false;
 		$this->try_apply_invite_key($db_user['user_id'], $invitation['invitation_key'], $invite_game, $user_game);
-		$invite_game->give_faucet_to_user($user_game);
+		$invite_game->claim_max_from_faucet($user_game);
 	}
 	
 	public function format_seconds($seconds) {
@@ -705,12 +740,7 @@ class App {
 			return $str;
 		}
 		else if ($minutes > 0) {
-			$remainder_sec = $seconds-$minutes*60;
-			$str = "";
-			if ($minutes != 1) $str .= $minutes." minutes";
-			else $str .= $minutes." minute";
-			if ($remainder_sec > 0 && $minutes < 10) $str .= " and ".$remainder_sec." seconds";
-			return $str;
+			return $minutes." minute".($minutes=="1" ? "" : "s");
 		}
 		else {
 			if ($seconds != 1) return $seconds." seconds";
@@ -768,8 +798,12 @@ class App {
 		}
 		else {
 			$rate_ref_per_numerator_record = $this->currency_price_at_time($numerator_currency_id, $ref_currency_id, $ref_time);
-			$rate_ref_per_numerator = $rate_ref_per_numerator_record['price'];
-			$price_time = min($price_time, $rate_ref_per_numerator_record['time_added']);
+			
+			if ($rate_ref_per_numerator_record) {
+				$rate_ref_per_numerator = $rate_ref_per_numerator_record['price'];
+				$price_time = min($price_time, $rate_ref_per_numerator_record['time_added']);
+			}
+			else $rate_ref_per_numerator = null;
 		}
 		
 		if ($denominator_currency_id == $ref_currency_id) {
@@ -777,12 +811,18 @@ class App {
 		}
 		else {
 			$rate_ref_per_denominator_record = $this->currency_price_at_time($denominator_currency_id, $ref_currency_id, $ref_time);
-			$rate_ref_per_denominator = $rate_ref_per_denominator_record['price'];
-			$price_time = min($price_time, $rate_ref_per_denominator_record['time_added']);
+			if ($rate_ref_per_denominator_record) {
+				$rate_ref_per_denominator = $rate_ref_per_denominator_record['price'];
+				$price_time = min($price_time, $rate_ref_per_denominator_record['time_added']);
+			}
+			else $rate_ref_per_denominator = null;
 		}
 		
+		$exchange_rate = null;
+		if ($rate_ref_per_numerator !== null && $rate_ref_per_denominator !== null && $rate_ref_per_numerator > 0) $exchange_rate = $rate_ref_per_denominator/$rate_ref_per_numerator;
+		
 		return [
-			'exchange_rate' => $rate_ref_per_numerator > 0 ? $rate_ref_per_denominator/$rate_ref_per_numerator : 0,
+			'exchange_rate' => $exchange_rate,
 			'time' => $price_time
 		];
 	}
@@ -822,7 +862,7 @@ class App {
 	public function set_reference_currency($reference_currency_id) {
 		$has_ref_price = count($this->run_query("SELECT * FROM currency_prices WHERE currency_id=:currency_id AND reference_currency_id=:currency_id;", ['currency_id' => $reference_currency_id])->fetchAll()) > 0;
 		if (!$has_ref_price) {
-			$app->run_insert_query("currency_prices", [
+			$this->run_insert_query("currency_prices", [
 				'reference_currency_id' => $reference_currency_id,
 				'currency_id' => $reference_currency_id,
 				'price' => 1,
@@ -959,12 +999,15 @@ class App {
 	}
 	
 	public function new_normal_address_key($currency_id, &$account) {
+		$failed_gen_address = false;
 		do {
 			$address_key = $this->new_address_key($currency_id, $account);
+			if (!$address_key) $failed_gen_address = true;
 		}
-		while ($address_key['is_separator_address'] == 1 || $address_key['is_destroy_address'] == 1 || $address_key['is_passthrough_address'] == 1);
+		while (!$failed_gen_address && ($address_key['is_separator_address'] == 1 || $address_key['is_destroy_address'] == 1 || $address_key['is_passthrough_address'] == 1));
 		
-		return $address_key;
+		if ($address_key) return $address_key;
+		else return false;
 	}
 	
 	public function insert_address_key($new_key_params) {
@@ -1018,7 +1061,7 @@ class App {
 			
 			if ($failed) return false;
 			else {
-				$db_address = $blockchain->create_or_fetch_address($address_text, true, false, false, true, false);
+				$db_address = $blockchain->create_or_fetch_address($address_text, true, null);
 				
 				if ($reject_destroy_addresses && $db_address['is_destroy_address'] == 1) return $this->new_address_key($currency_id, $account, $reject_destroy_addresses);
 				else {
@@ -1084,97 +1127,18 @@ class App {
 		$display_games = $this->run_query($display_games_q, $display_games_params)->fetchAll();
 		
 		if (count($display_games) > 0) {
-			$cell_width = 12;
-			
 			$counter = 0;
-			echo '<div class="row">';
 			
 			foreach ($display_games as $db_game) {
 				$blockchain = new Blockchain($this, $db_game['blockchain_id']);
 				$featured_game = new Game($blockchain, $db_game['game_id']);
-				$last_block_id = $blockchain->last_block_id();
-				$mining_block_id = $last_block_id+1;
-				$db_last_block = $blockchain->fetch_block_by_id($last_block_id);
-				$current_round_id = $featured_game->block_to_round($mining_block_id);
-				
-				$filter_arr = false;
-				$event_ids = "";
-				list($new_event_js, $new_event_html) = $featured_game->new_event_js($counter, $user, $filter_arr, $event_ids, true);
-				?>
-				<script type="text/javascript">
-				games.push(new Game(thisPageManager, <?php
-					echo $db_game['game_id'];
-					echo ', '.$featured_game->last_block_id();
-					echo ', false';
-					echo ', ""';
-					echo ', "'.$db_game['payout_weight'].'"';
-					echo ', '.$db_game['round_length'];
-					echo ', 0';
-					echo ', "'.$db_game['url_identifier'].'"';
-					echo ', "'.$db_game['coin_name'].'"';
-					echo ', "'.$db_game['coin_name_plural'].'"';
-					echo ', "'.$blockchain->db_blockchain['coin_name'].'"';
-					echo ', "'.$blockchain->db_blockchain['coin_name_plural'].'"';
-					echo ', "home", "'.$event_ids.'"';
-					echo ', "'.$featured_game->logo_image_url().'"';
-					echo ', "'.$featured_game->vote_effectiveness_function().'"';
-					echo ', "'.$featured_game->effectiveness_param1().'"';
-					echo ', "'.$featured_game->blockchain->db_blockchain['seconds_per_block'].'"';
-					echo ', "'.$featured_game->db_game['inflation'].'"';
-					echo ', "'.$featured_game->db_game['exponential_inflation_rate'].'"';
-					echo ', "'.$db_last_block['time_mined'].'"';
-					echo ', "'.$featured_game->db_game['decimal_places'].'"';
-					echo ', "'.$featured_game->blockchain->db_blockchain['decimal_places'].'"';
-					echo ', "'.$db_game['view_mode'].'"';
-					echo ', 0';
-					echo ', false';
-					echo ', "'.$featured_game->db_game['default_betting_mode'].'"';
-					echo ', false';
-				?>));
-				</script>
-				<?php
-				echo '<div class="col-md-'.$cell_width.'">';
-				echo '<center><h2 style="display: inline-block">'.$featured_game->db_game['name'].'</h2>';
-				if ($featured_game->db_game['short_description'] != "") echo "<p>".$featured_game->db_game['short_description']."</p>";
-				
-				$ref_user_game = false;
-				$faucet_io = $featured_game->check_faucet($ref_user_game);
-				
-				$play_now_url = '/wallet/'.$featured_game->db_game['url_identifier'].'/';
-				
-				echo '<p><a href="'.$play_now_url.'" class="btn btn-sm btn-success"><i class="fas fa-play-circle"></i> &nbsp; ';
-				if ($faucet_io) echo 'Join now & receive '.$this->format_bignum($faucet_io['colored_amount_sum']/pow(10,$featured_game->db_game['decimal_places'])).' '.$featured_game->db_game['coin_name_plural'];
-				else echo 'Play Now';
-				echo "</a>";
-				echo ' <a href="/explorer/games/'.$featured_game->db_game['url_identifier'].'/events/" class="btn btn-sm btn-primary"><i class="fas fa-list"></i> &nbsp; '.ucwords($featured_game->db_game['event_type_name']).' Results</a>';
-				echo "</p>\n";
-				
-				if ($featured_game->db_game['module'] == "CoinBattles") {
-					$featured_game->load_current_events();
-					$event = $featured_game->current_events[0];
-					list($html, $js) = $featured_game->module->currency_chart($featured_game, $event->db_event['event_starting_block'], false);
-					echo '<div style="margin-bottom: 15px;" id="game'.$counter.'_chart_html">'.$html."</div>\n";
-					echo '<div id="game'.$counter.'_chart_js"><script type="text/javascript">'.$js.'</script></div>'."\n";
-				}
-				
-				echo '<div id="game'.$counter.'_events" class="game_events game_events_short">'.$new_event_html.'</div>'."\n";
-				echo '<script type="text/javascript" id="game'.$counter.'_new_event_js">'."\n";
-				echo $new_event_js;
-				echo '</script>';
-				
-				echo "<br/>\n";
-				echo '<a href="/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-sm btn-success"><i class="fas fa-play-circle"></i> &nbsp; ';
-				if ($faucet_io) echo 'Join now & receive '.$this->format_bignum($faucet_io['colored_amount_sum']/pow(10,$featured_game->db_game['decimal_places'])).' '.$featured_game->db_game['coin_name_plural'];
-				else echo 'Play Now';
-				echo '</a>';
-				echo ' <a href="/explorer/games/'.$featured_game->db_game['url_identifier'].'/events/" class="btn btn-sm btn-primary"><i class="fas fa-list"></i> &nbsp; '.ucwords($featured_game->db_game['event_type_name']).' Results</a>';
-				echo "</center><br/>\n";
-				
-				if ($counter%(12/$cell_width) == 1) echo '</div><div class="row">';
+				echo $this->render_view('featured_game', [
+					'game' => $featured_game,
+					'blockchain' => $blockchain,
+					'counter' => $counter,
+				]);
 				$counter++;
-				echo "</div>\n";
 			}
-			echo "</div>\n";
 		}
 		else {
 			echo "No public games are running right now.<br/>\n";
@@ -1191,6 +1155,10 @@ class App {
 	
 	public function fetch_image_by_id($image_id) {
 		return $this->run_query("SELECT * FROM images WHERE image_id=:image_id;", ['image_id'=>$image_id])->fetch();
+	}
+	
+	public function fetch_image_by_identifier($image_identifier) {
+		return $this->run_query("SELECT * FROM images WHERE image_identifier=:image_identifier;", ['image_identifier'=>$image_identifier])->fetch();
 	}
 	
 	public function image_url(&$db_image) {
@@ -1281,7 +1249,6 @@ class App {
 		$html = '<div class="game_info_table">';
 		
 		$blocks_per_hour = 3600/$db_game['seconds_per_block'];
-		$round_reward = ($db_game['pos_reward']+$db_game['pow_reward']*$db_game['round_length'])/pow(10,$db_game['decimal_places']);
 		$seconds_per_round = $db_game['seconds_per_block']*$db_game['round_length'];
 		
 		$invite_currency = false;
@@ -1329,7 +1296,7 @@ class App {
 		else $html .= '<a href="/explorer/games/'.$db_game['url_identifier'].'/addresses/'.$db_game['escrow_address'].'">'.$db_game['escrow_address'].'</a>';
 		$html .= "</div></div>\n";
 		
-		$genesis_amount_disp = $this->format_bignum($db_game['genesis_amount']/pow(10,$db_game['decimal_places']));
+		$genesis_amount_disp = $this->format_bignum($db_game['genesis_amount']);
 		$html .= '<div class="row"><div class="col-sm-5">Genesis transaction:</div><div class="col-sm-7">';
 		$html .= '<a href="/explorer/games/'.$db_game['url_identifier'].'/transactions/'.$db_game['genesis_tx_hash'].'">';
 		$html .= $genesis_amount_disp.' ';
@@ -1407,23 +1374,15 @@ class App {
 		$html .= "</div></div>\n";
 		
 		$html .= '<div class="row"><div class="col-sm-5">Inflation:</div><div class="col-sm-7">';	
-		if ($db_game['inflation'] == "linear") $html .= "Linear (".$this->format_bignum($round_reward)." coins per round)";
-		else if ($db_game['inflation'] == "fixed_exponential") $html .= "Fixed Exponential (".(100*$db_game['exponential_inflation_rate'])."% per round)";
-		else {
+		if ($db_game['inflation'] == "exponential") {
 			if ($db_game['exponential_inflation_rate'] == 0) {
 				$html .= "None, fixed supply";
 			}
 			else {
-				$html .= "Exponential (".(100*$db_game['exponential_inflation_rate'])."% per round)<br/>";
-				$html .= $this->format_bignum($this->votes_per_coin($db_game))." ".str_replace("_", " ", $db_game['payout_weight'])."s per ".$db_game['coin_name'];
+				$html .= "Exponential (".(100*$db_game['exponential_inflation_rate'])."% per round)";
 			}
 		}
 		$html .= "</div></div>\n";
-		
-		$total_inflation_pct = $this->game_final_inflation_pct($db_game);
-		if ($total_inflation_pct) {
-			$html .= '<div class="row"><div class="col-sm-5">Potential inflation:</div><div class="col-sm-7">'.number_format($total_inflation_pct)."%</div></div>\n";
-		}
 		
 		$html .= '<div class="row"><div class="col-sm-5">Blocks per round:</div><div class="col-sm-7">'.$db_game['round_length']."</div></div>\n";
 		
@@ -1442,12 +1401,6 @@ class App {
 		if ($db_game['min_payout_rate'] != $db_game['max_payout_rate']) $html .= " to ".$this->format_percentage((1-$db_game['min_payout_rate'])*100)."%";
 		$html .= "</div></div>\n";
 		
-		if ($db_game['maturity'] != 0) {
-			$html .= '<div class="row"><div class="col-sm-5">Transaction maturity:</div><div class="col-sm-7">'.$db_game['maturity']." block";
-			if ($db_game['maturity'] != 1) $html .= "s";
-			$html .= "</div></div>\n";
-		}
-		
 		if ($game) {
 			$escrow_amounts = EscrowAmount::fetch_escrow_amounts_in_game($game, "actual")->fetchAll();
 			
@@ -1465,99 +1418,12 @@ class App {
 			}
 			
 			$latest_event = $game->latest_event();
-			$html .= '<div class="row"><div class="col-sm-5">Events:</div><div class="col-sm-7">'.number_format($latest_event['event_index'])."</div></div>\n";
+			$html .= '<div class="row"><div class="col-sm-5">Events:</div><div class="col-sm-7">'.(empty($latest_event['event_index']) ? "None" : number_format($latest_event['event_index']))."</div></div>\n";
 		}
 		
 		$html .= "</div>\n";
 		
 		return $html;
-	}
-	
-	public function game_final_inflation_pct(&$db_game) {
-		if ($db_game['final_round'] > 0) {
-			if ($db_game['inflation'] == "fixed_exponential" || $db_game['inflation'] == "exponential") {
-				$inflation_factor = pow(1+$db_game['exponential_inflation_rate'], $db_game['final_round']);
-			}
-			else {
-				if ($db_game['start_condition'] == "players_joined") {
-					$db_game['initial_coins'] = $db_game['genesis_amount'];
-					$final_coins = $this->ideal_coins_in_existence_after_round($db_game, $db_game['final_round']);
-					$inflation_factor = $final_coins/$db_game['initial_coins'];
-				}
-				else return false;
-			}
-			$inflation_pct = round(($inflation_factor-1)*100);
-			return $inflation_pct;
-		}
-		else return false;
-	}
-	
-	public function ideal_coins_in_existence_after_round(&$db_game, $round_id) {
-		if ($db_game['inflation'] == "linear") return $db_game['genesis_amount'] + $round_id*($db_game['pos_reward'] + $db_game['round_length']*$db_game['pow_reward']);
-		else if ($db_game['inflation'] == "fixed_exponential") return floor($db_game['genesis_amount'] * pow(1 + $db_game['exponential_inflation_rate'], $round_id));
-	}
-	
-	public function coins_created_in_round(&$db_game, $round_id) {
-		if ($db_game['inflation'] == "exponential") {
-			$blockchain = new Blockchain($this, $db_game['blockchain_id']);
-			$game = new Game($blockchain, $db_game['game_id']);
-			$coi_block = ($round_id-1)*$game->db_game['round_length'];
-			$coins_in_existence = $game->coins_in_existence($coi_block, false);
-			return $coins_in_existence*$game->db_game['exponential_inflation_rate'];
-		}
-		else {
-			$thisround_coins = $this->ideal_coins_in_existence_after_round($db_game, $round_id);
-			$prevround_coins = $this->ideal_coins_in_existence_after_round($db_game, $round_id-1);
-			if (is_nan($thisround_coins) || is_nan($prevround_coins) || is_infinite($thisround_coins) || is_infinite($prevround_coins)) return 0;
-			else return $thisround_coins - $prevround_coins;
-		}
-	}
-
-	public function pow_reward_in_round(&$db_game, $round_id) {
-		if ($db_game['inflation'] == "linear") return $db_game['pow_reward'];
-		else if ($db_game['inflation'] == "fixed_exponential" || $db_game['inflation'] == "exponential") {
-			$round_coins_created = $this->coins_created_in_round($db_game, $round_id);
-			$round_pow_coins = floor($db_game['exponential_inflation_minershare']*$round_coins_created);
-			return floor($round_pow_coins/$db_game['round_length']);
-		}
-		else return 0;
-	}
-
-	public function pos_reward_in_round(&$db_game, $round_id) {
-		if ($db_game['inflation'] == "linear") return $db_game['pos_reward'];
-		else if ($db_game['inflation'] == "fixed_exponential") {
-			if ($round_id > 1 || empty($db_game['game_id'])) {
-				$round_coins_created = $this->coins_created_in_round($db_game, $round_id);
-			}
-			else {
-				$blockchain = new Blockchain($this, $db_game['blockchain_id']);
-				$game = new Game($blockchain, $db_game['game_id']);
-				$round_coins_created = $game->coins_in_existence(false, true)*$db_game['exponential_inflation_rate'];
-			}
-			return floor((1-$db_game['exponential_inflation_minershare'])*$round_coins_created);
-		}
-		else {
-			$info = $this->run_query("SELECT SUM(:payout_weight_score), SUM(:unconfirmed_payout_weight_score) FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.game_id=:game_id;", [
-				'payout_weight_score' => $db_game['payout_weight']."_score",
-				'unconfirmed_payout_weight_score' => "unconfirmed_".$db_game['payout_weight']."_score",
-				'game_id' => $db_game['game_id']
-			])->fetch();
-			$score = $info['SUM('.$db_game['payout_weight'].'_score)']+$info['SUM(unconfirmed_'.$db_game['payout_weight'].'_score)'];
-			
-			return $score/$this->votes_per_coin($db_game);
-		}
-	}
-	
-	public function votes_per_coin($db_game) {
-		if ($db_game['inflation'] == "exponential") {
-			if ($db_game['exponential_inflation_rate'] == 0) return 0;
-			else {
-				if ($db_game['payout_weight'] == "coin_round") $votes_per_coin = 1/$db_game['exponential_inflation_rate'];
-				else $votes_per_coin = $db_game['round_length']/$db_game['exponential_inflation_rate'];
-				return $votes_per_coin;
-			}
-		}
-		else return 0;
 	}
 	
 	public function coins_per_vote($db_game) {
@@ -1767,10 +1633,12 @@ class App {
 	public function event_verbatim_vars() {
 		return [
 			['int', 'event_index', true],
+			['int', 'season_index', true],
 			['int', 'next_event_index', true],
 			['int', 'event_starting_block', true],
 			['int', 'event_final_block', true],
-			['int', 'event_outcome_block', true],
+			['int', 'event_determined_from_block', true],
+			['int', 'event_determined_to_block', true],
 			['int', 'event_payout_block', true],
 			['string', 'payout_rule', true],
 			['float', 'payout_rate', true],
@@ -1804,13 +1672,11 @@ class App {
 			['string', 'event_type_name_plural', true],
 			['string', 'event_rule', true],
 			['string', 'event_winning_rule', true],
-			['int', 'event_entity_type_id', true],
-			['int', 'events_per_round', true],
 			['string', 'inflation', true],
 			['float', 'exponential_inflation_rate', true],
-			['int', 'pos_reward', true],
+			['string', 'pow_reward_type', true],
+			['float', 'pow_fixed_reward', true],
 			['int', 'round_length', true],
-			['int', 'maturity', true],
 			['string', 'payout_weight', true],
 			['int', 'final_round', true],
 			['string', 'buyin_policy', true],
@@ -1822,7 +1688,7 @@ class App {
 			['string', 'coin_abbreviation', true],
 			['string', 'escrow_address', true],
 			['string', 'genesis_tx_hash', true],
-			['int', 'genesis_amount', true],
+			['float', 'genesis_amount', true],
 			['int', 'game_starting_block', true],
 			['float', 'default_payout_rate', true],
 			['string', 'default_vote_effectiveness_function', true],
@@ -1831,7 +1697,8 @@ class App {
 			['int', 'default_option_max_width', false],
 			['int', 'default_payout_block_delay', true],
 			['string', 'view_mode', true],
-			['string', 'order_options_by', true]
+			['string', 'order_options_by', true],
+			['float', 'target_option_block_score', true],
 		];
 	}
 	
@@ -1839,33 +1706,22 @@ class App {
 		return [
 			['string', 'blockchain_name'],
 			['string', 'url_identifier'],
+			['string', 'p2p_mode'],
 			['string', 'coin_name'],
 			['string', 'coin_name_plural'],
+			['string', 'abbreviation'],
 			['int', 'seconds_per_block'],
 			['int', 'decimal_places'],
-			['int', 'initial_pow_reward']
+			['int', 'initial_pow_reward'],
+			['int', 'coinbase_maturity'],
+			['int', 'default_rpc_port'],
+			['string', 'default_image_identifier'],
 		];
 	}
 	
 	public function fetch_blockchain_definition(&$blockchain) {
 		$verbatim_vars = $this->blockchain_verbatim_vars();
 		$blockchain_definition = [];
-		
-		if (in_array($blockchain->db_blockchain['p2p_mode'], array("web_api", "none"))) {
-			if ($blockchain->db_blockchain['p2p_mode'] == "none") {
-				$peer = $this->get_peer_by_server_name(AppSettings::getParam('base_url'), true);
-			}
-			else {
-				$peer = $this->fetch_peer_by_id($blockchain->db_blockchain['authoritative_peer_id']);
-			}
-			$blockchain_definition['peer'] = $peer['base_url'];
-		}
-		else $blockchain_definition['peer'] = "none";
-		
-		if (in_array($blockchain->db_blockchain['p2p_mode'], array("none","web_api"))) {
-			$blockchain_definition['p2p_mode'] = "web";
-		}
-		else $blockchain_definition['p2p_mode'] = "rpc";
 		
 		for ($i=0; $i<count($verbatim_vars); $i++) {
 			$var_type = $verbatim_vars[$i][0];
@@ -1880,6 +1736,19 @@ class App {
 			
 			$blockchain_definition[$var_name] = $var_val;
 		}
+		
+		if ($blockchain_definition['p2p_mode'] == "none") $blockchain_definition['p2p_mode'] = "web_api";
+		
+		if (in_array($blockchain->db_blockchain['p2p_mode'], array("web_api", "none"))) {
+			if ($blockchain->db_blockchain['p2p_mode'] == "none") {
+				$peer = $this->get_peer_by_server_name(AppSettings::getParam('base_url'), true);
+			}
+			else {
+				$peer = $this->fetch_peer_by_id($blockchain->db_blockchain['authoritative_peer_id']);
+			}
+			$blockchain_definition['peer'] = $peer['base_url'];
+		}
+		
 		return $blockchain_definition;
 	}
 	
@@ -2008,6 +1877,11 @@ class App {
 		return $this->run_query("SELECT * FROM modules WHERE module_name=:module_name;", ['module_name'=>$module_name])->fetch();
 	}
 	
+	public function create_module($module_name) {
+		$this->run_insert_query("modules", ['module_name' => $module_name]);
+		return $this->check_module($module_name);
+	}
+	
 	public function create_blockchain_from_definition(&$definition, &$thisuser, &$error_message) {
 		$blockchain = false;
 		$blockchain_def = json_decode($definition) or die("Error: invalid JSON formatted blockchain");
@@ -2016,25 +1890,9 @@ class App {
 			$db_blockchain = $this->fetch_blockchain_by_identifier($blockchain_def->url_identifier);
 			
 			if (!$db_blockchain) {
-				if (empty($blockchain_def->p2p_mode) || !in_array($blockchain_def->p2p_mode, ['rpc', 'none', 'web_api'])) $p2p_mode = "web_api";
-				else $p2p_mode = $blockchain_def->p2p_mode;
-				
 				$import_params = [
-					'p2p_mode' => $p2p_mode,
 					'creator_id' => $thisuser->db_user['user_id'],
-					'online' => 1
 				];
-				
-				if ($p2p_mode != "rpc") $import_params['first_required_block'] = 1;
-				
-				$peer = false;
-				$import_params['authoritative_peer_id'] = null;
-				if ($blockchain_def->peer != "none") {
-					$peer = $this->get_peer_by_server_name($blockchain_def->peer, true);
-					if ($peer) {
-						$import_params['authoritative_peer_id'] = $peer['peer_id'];
-					}
-				}
 				
 				$verbatim_vars = $this->blockchain_verbatim_vars();
 				
@@ -2042,13 +1900,40 @@ class App {
 					$var_type = $verbatim_vars[$var_i][0];
 					$var_name = $verbatim_vars[$var_i][1];
 					
-					$import_params[$var_name] = $blockchain_def->$var_name;
+					if (property_exists($blockchain_def, $var_name)) {
+						$import_params[$var_name] = $blockchain_def->$var_name;
+					}
+				}
+				
+				if ($import_params['p2p_mode'] != "rpc") $import_params['first_required_block'] = 1;
+				
+				if (property_exists($blockchain_def, 'online')) {
+					$import_params['online'] = $blockchain_def->online;
+				}
+				
+				$peer = false;
+				$import_params['authoritative_peer_id'] = null;
+				if (!empty($blockchain_def->peer) && $blockchain_def->peer != "none") {
+					$peer = $this->get_peer_by_server_name($blockchain_def->peer, true);
+					if ($peer) {
+						$import_params['authoritative_peer_id'] = $peer['peer_id'];
+					}
+				}
+				
+				if (!empty($import_params['default_image_identifier'])) {
+					$default_image = $this->fetch_image_by_identifier($import_params['default_image_identifier']);
+					if ($default_image) {
+						$import_params['default_image_id'] = $default_image['image_id'];
+					}
 				}
 				
 				$this->run_insert_query("blockchains", $import_params);
 				$blockchain_id = $this->last_insert_id();
+				$blockchain = new Blockchain($this, $blockchain_id);
 				
-				$error_message = "Successfully imported the ".$blockchain_def->blockchain_name." blockchain. Next please <a href=\"/scripts/sync_blockchain_initial.php?key=".AppSettings::getParam('operator_key')."&blockchain_id=".$blockchain_id."\">reset and synchronize ".$blockchain_def->blockchain_name."</a>";
+				$error_message = "Successfully imported the ".$blockchain_def->blockchain_name." blockchain. ";
+				if ($blockchain->db_blockchain['p2p_mode'] == "rpc") $error_message .= "Next please <a href=\"/manage_blockchains/?prompt_action=set_rpc_credentials&blockchain_id=".$blockchain->db_blockchain['blockchain_id']."\">set RPC credentials for ".$blockchain_def->blockchain_name."</a>";
+				else $error_message .= "Next please <a href=\"/scripts/sync_blockchain_initial.php?key=".AppSettings::getParam('operator_key')."&blockchain_id=".$blockchain_id."\">initialize ".$blockchain_def->blockchain_name."</a>";
 				
 				return $blockchain_id;
 			}
@@ -2156,9 +2041,22 @@ class App {
 	public function permission_to_claim_address(&$thisuser, &$address_blockchain, &$db_address) {
 		if (!empty($thisuser) && $this->user_is_admin($thisuser) && empty($db_address['user_id'])) {
 			if ($address_blockchain->db_blockchain['p2p_mode'] == "none") return true;
-			else return false;
+			else {
+				if ($db_address['is_mine']) return true;
+				else return false;
+			}
 		}
 		else return false;
+	}
+	
+	public function give_many_addresses_to_account($account, $address_ids) {
+		$this->run_query("UPDATE addresses SET user_id=:user_id WHERE address_id IN (".implode(",", $address_ids).");", [
+			'user_id' => $account['user_id'],
+		]);
+		
+		$this->run_query("UPDATE address_keys SET account_id=:account_id WHERE address_id IN (".implode(",", $address_ids).");", [
+			'account_id' => $account['account_id'],
+		]);
 	}
 	
 	public function give_address_to_user(&$game, &$user, $db_address) {
@@ -2195,9 +2093,9 @@ class App {
 		}
 		else {
 			$blockchain = new Blockchain($this, $db_address['primary_blockchain_id']);
-			$currency_id = $blockchain->currency_id();
-			
-			$account = $this->user_blockchain_account($user->db_user['user_id'], $currency_id);
+			$currency = $this->fetch_currency_by_id($blockchain->currency_id());
+			$user->ensure_currency_account($currency);
+			$account = $this->user_blockchain_account($user->db_user['user_id'], $currency['currency_id']);
 			
 			if ($account) {
 				$address_key = $this->fetch_address_key_by_address_id($db_address['address_id']);
@@ -2210,7 +2108,7 @@ class App {
 				}
 				else {
 					$address_key = $this->insert_address_key([
-						'currency_id' => $currency_id,
+						'currency_id' => $currency['currency_id'],
 						'address_id' => $db_address['address_id'],
 						'account_id' => $account['account_id'],
 						'pub_key' => $db_address['address'],
@@ -2239,7 +2137,7 @@ class App {
 				'name' => $db_blockchain['blockchain_name'],
 				'short_name' => $db_blockchain['coin_name'],
 				'short_name_plural' => $db_blockchain['coin_name_plural'],
-				'abbreviation' => $db_blockchain['coin_name_plural']
+				'abbreviation' => $db_blockchain['abbreviation']
 			]);
 		}
 	}
@@ -2688,7 +2586,7 @@ class App {
 			])->fetch();
 			
 			if ($io) {
-				$db_address = $blockchain->create_or_fetch_address($address, true, false, false, false, false);
+				$db_address = $blockchain->create_or_fetch_address($address, false, null);
 				
 				$fee_amount = $fee*pow(10, $blockchain->db_blockchain['decimal_places']);
 				$amounts = array($io['amount']-$fee_amount);
@@ -2959,6 +2857,12 @@ class App {
 		])->fetch();
 	}
 	
+	public function fetch_address_key_by_id($address_key_id) {
+		return $this->run_query("SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.address_key_id=:address_key_id;", [
+			'address_key_id' => $address_key_id
+		])->fetch();
+	}
+	
 	public function calculate_effectiveness_factor($vote_effectiveness_function, $effectiveness_param1, $event_starting_block, $event_final_block, $block_id) {
 		if ($vote_effectiveness_function == "linear_decrease") {
 			$slope = -1*$effectiveness_param1;
@@ -3221,16 +3125,17 @@ class App {
 		
 		$adjusted_net_delta = $net_delta+$resolved_fees_paid;
 		
-		$html = number_format($num_bets)." bets totalling <font class=\"greentext\">".$this->format_bignum($net_stake)."</font> ".$game->db_game['coin_name_plural'].".<br/>\n";
+		$html = number_format($num_bets)." bets totalling <font class=\"greentext\">".$this->format_bignum($net_stake)."</font> ".($this->format_bignum($net_stake)=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']).".<br/>\n";
 		$html .= "You've won ".number_format($num_wins)." of your ".number_format($num_wins+$num_losses)." resolved bets (".round($win_rate*100, 1)."%). ";
 		if ($resolved_fees_paid != 0) {
+			$resolved_fees_disp = $this->format_bignum(abs($resolved_fees_paid));
 			if ($resolved_fees_paid > 0) {
-				$html .= "You paid <font class=\"redtext\">".$this->format_bignum($resolved_fees_paid)."</font> ";
+				$html .= "You paid <font class=\"redtext\">".$resolved_fees_disp."</font> ";
 			}
 			else {
-				$html .= "You earned <font class=\"greentext\">".$this->format_bignum(abs($resolved_fees_paid))."</font> ";
+				$html .= "You earned <font class=\"greentext\">".$resolved_fees_disp."</font> ";
 			}
-			$html .= $game->db_game['coin_name_plural']." in fees and made ";
+			$html .= ($resolved_fees_disp=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural'])." in fees and made ";
 		}
 		else $html .= "You made ";
 		$html .= " a net ";
@@ -3239,13 +3144,17 @@ class App {
 		$html .= " of <font class=\"";
 		if ($adjusted_net_delta >= 0) $html .= "greentext";
 		else $html .= "redtext";
-		$html .= "\">".$this->format_bignum(abs($adjusted_net_delta))."</font> ".$game->db_game['coin_name_plural']." on your bets.";
+		$adjusted_net_delta_disp = $this->format_bignum(abs($adjusted_net_delta));
+		$html .= "\">".$adjusted_net_delta_disp."</font> ".($adjusted_net_delta_disp=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural'])." on your bets.";
 		if ($num_unresolved > 0 || $num_refunded > 0) {
 			$html .= "\n<br/>";
 			if ($num_refunded > 0) $html .= number_format($num_refunded)." of your bets were refunded";
 			if ($num_unresolved > 0 && $num_refunded > 0) $html .= " and you have ";
 			else if ($num_unresolved > 0) $html .= "You have ";
-			if ($num_unresolved > 0) $html .= number_format($num_unresolved)." pending bets totalling <font class=\"greentext\">".$this->format_bignum($pending_stake)."</font> ".$game->db_game['coin_name_plural'];
+			if ($num_unresolved > 0) {
+				$pending_stake_disp = $this->format_bignum($pending_stake);
+				$html .= number_format($num_unresolved)." pending bets totalling <font class=\"greentext\">".$pending_stake_disp."</font> ".($pending_stake_disp=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']);
+			}
 			$html .= ".";
 		}
 		return $html;
@@ -3377,7 +3286,7 @@ class App {
 						$has_option_indices_until = $option_index;
 					}
 					else {
-						$address_key = $this->run_query("SELECT * FROM address_keys WHERE primary_blockchain_id=:blockchain_id AND option_index=:option_index AND account_id IS NULL AND address_set_id IS NULL LIMIT 1;", [
+						$address_key = $this->run_query("SELECT * FROM address_keys WHERE primary_blockchain_id=:blockchain_id AND option_index=:option_index AND account_id IS NULL AND address_set_id IS NULL AND used_in_my_tx=0 LIMIT 1;", [
 							'blockchain_id' => $game->blockchain->db_blockchain['blockchain_id'],
 							'option_index' => $option_index
 						])->fetch();
@@ -3559,7 +3468,7 @@ class App {
 			$spendable_io_q .= ", SUM(gio.colored_amount*(:ref_round_id-gio.create_round_id)) AS coin_rounds";
 			$spendable_io_params['ref_round_id'] = $round_id;
 		}
-		$spendable_io_q .= " FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id AND gio.address_id=k.address_id WHERE io.spend_status IN ('unspent','unconfirmed') AND k.account_id=:account_id AND gio.game_id=:game_id GROUP BY gio.io_id HAVING COUNT(*)=num_resolved ORDER BY io.io_id ASC;";
+		$spendable_io_q .= " FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id AND gio.address_id=k.address_id WHERE io.spend_status IN ('unspent','unconfirmed') AND io.is_mature=1 AND k.account_id=:account_id AND gio.game_id=:game_id GROUP BY gio.io_id HAVING COUNT(*)=num_resolved ORDER BY io.io_id ASC;";
 		return $this->run_query($spendable_io_q, $spendable_io_params);
 	}
 	
@@ -3630,7 +3539,7 @@ class App {
 	}
 	
 	public function fetch_recycle_ios_in_account($account_id, $quantity) {
-		$fetch_q = "SELECT * FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id WHERE k.account_id=:account_id AND k.option_index=0 AND io.spend_status='unspent' ORDER BY io.amount DESC";
+		$fetch_q = "SELECT * FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id WHERE k.account_id=:account_id AND k.option_index=0 AND io.spend_status='unspent' AND io.is_coinbase=0 ORDER BY io.amount DESC";
 		
 		$fetch_params = [
 			'account_id' => $account_id
@@ -3822,7 +3731,7 @@ class App {
 		
 		if ($this->user_is_admin($thisuser)) {
 			$blockchains_dir = dirname(__DIR__).'/config/install_blockchains';
-
+			
 			if (is_dir($blockchains_dir)) {
 				foreach (scandir($blockchains_dir) as $blockchain_fname) {
 					if (!in_array($blockchain_fname, ['.', '..'])) {
@@ -3837,7 +3746,14 @@ class App {
 								if (!$existing_blockchain) {
 									$import_blockchain_message = null;
 									$new_blockchain_id = $this->create_blockchain_from_definition($blockchain_def, $thisuser, $import_blockchain_message);
-									$this->blockchain_ensure_currencies();
+									
+									if ($new_blockchain_id) {
+										$new_blockchain = new Blockchain($this, $new_blockchain_id);
+										$this->blockchain_ensure_currencies();
+										$currency = $this->fetch_currency_by_id($new_blockchain->currency_id());
+										$thisuser->ensure_currency_account($currency);
+									}
+									
 									array_push($messages, $import_blockchain_message);
 								}
 							}
@@ -3846,8 +3762,30 @@ class App {
 				}
 			}
 			
+			$modules_dir = dirname(__DIR__).'/modules';
+			
+			if (is_dir($modules_dir)) {
+				foreach (scandir($modules_dir) as $module_name) {
+					if (!in_array($module_name, ['.', '..'])) {
+						$module_path = $modules_dir."/".$module_name;
+						if (is_dir($module_path)) {
+							$module_def_fname = $module_path."/".$module_name."GameDefinition.php";
+							
+							if (is_file($module_def_fname)) {
+								$db_module = $this->check_module($module_name);
+								if (!$db_module) {
+									$db_module = $this->create_module($module_name);
+									array_push($messages, 'Created module '.$module_name);
+									include($module_def_fname);
+								}
+							}
+						}
+					}
+				}
+			}
+			
 			$games_dir = dirname(__DIR__).'/config/install_games';
-
+			
 			if (is_dir($games_dir)) {
 				foreach (scandir($games_dir) as $game_fname) {
 					if (!in_array($game_fname, ['.', '..'])) {

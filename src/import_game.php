@@ -38,16 +38,24 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 							$definition = $_REQUEST['definition'];
 							
 							if ($import_mode == "game") {
-								GameDefinition::set_game_from_definition($app, $definition, $thisuser, $error_message, $db_new_game, false);
+								list($new_game, $is_new_game) = GameDefinition::set_game_from_definition($app, $definition, $thisuser, $error_message, $db_new_game, false);
 								
 								if (!empty($error_message)) echo "<p>".$error_message."</p>\n";
 								
-								if ($db_new_game) {
-									echo "<p>Your ".$import_mode." definition was successfully imported!<br/>\n";
-									echo "Next please <a href=\"/manage/".$db_new_game['url_identifier']."/?next=internal_settings\">click here</a> and then start the game.</p>\n";
+								if ($new_game) {
+									echo "<p>Your ".$import_mode." definition was successfully imported!</p>\n";
+									echo "<p>Next please join <a href=\"/wallet/".$new_game->db_game['url_identifier']."\">".$new_game->db_game['name']."</a></p>\n";
 								}
 								else {
 									echo "<p><a href=\"/import/?import_mode=".$import_mode."\">Try again</a></p>\n";
+								}
+								
+								if ($is_new_game) {
+									list($new_game_start_error, $new_game_start_error_message) = $new_game->start_game();
+									
+									if ($new_game_start_error) {
+										echo "<p>".$new_game_start_error_message."</p>\n";
+									}
 								}
 							}
 							else {

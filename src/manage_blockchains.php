@@ -83,6 +83,15 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 							'blockchain_id' => $existing_blockchain['blockchain_id']
 						]);
 					}
+					else if (in_array($_REQUEST['action'], ["start_mining", "stop_mining"])) {
+						if ($existing_blockchain['p2p_mode'] == "rpc") {
+							$app->run_query("UPDATE blockchains SET is_rpc_mining=:is_rpc_mining WHERE blockchain_id=:blockchain_id;", [
+								'is_rpc_mining' => $_REQUEST['action'] == "start_mining" ? 1 : 0,
+								'blockchain_id' => $existing_blockchain['blockchain_id']
+							]);
+						}
+						else die("Invalid action supplied.");
+					}
 					else die("Invalid action supplied.");
 				}
 				else die("Error: invalid blockchain ID.");
@@ -107,7 +116,7 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 						<tr>
 							<th style="width: 180px;">P2P Type</th>
 							<th>Name</th>
-							<th>Enabled?</th>
+							<th>Status</th>
 							<th>Connection Status</th>
 							<th>Actions</th>
 						</tr>
@@ -133,6 +142,12 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 								<td><?php
 								if ($blockchain->db_blockchain['online']) echo '<font class="text-success">Enabled</font>';
 								else echo '<font class="text-danger">Disabled</font>';
+								
+								echo ", ";
+								
+								if ($blockchain->db_blockchain['p2p_mode'] == "none") echo "Mining";
+								else if ($blockchain->db_blockchain['p2p_mode'] == "web_api") echo "Not Mining";
+								else echo $blockchain->db_blockchain['is_rpc_mining'] ? "Mining" : "Not Mining";
 								?></td>
 								<td>
 									<?php
@@ -156,15 +171,7 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 										echo ','.json_encode($blockchain->db_blockchain['url_identifier']);
 										?>, this);'>
 										<option value="">-- Please Select --</option>
-										<option value="see_definition">See Definition</option>
-										<?php if ($blockchain->db_blockchain['p2p_mode'] != "none") { ?>
-											<option value="reset_synchronize">Reset &amp; Synchronize</option>
-											<?php
-										}
-										if ($blockchain->db_blockchain['p2p_mode'] == "rpc") { ?>
-											<option value="set_rpc_credentials"><?php echo empty($blockchain->db_blockchain['rpc_username'].$blockchain->db_blockchain['rpc_password']) ? "Set" : "Change"; ?> RPC Credentials</option>
-											<?php
-										}
+										<?php
 										if ($blockchain->db_blockchain['online']) {
 											?>
 											<option value="disable">Disable</option>
@@ -175,9 +182,32 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 											<option value="enable">Enable</option>
 											<?php
 										}
-										if ($blockchain->db_blockchain['p2p_mode'] == "none") { ?>
-											<option value="claim_coinbase">Transfer mined coins to address</option>
+										?>
+										<option value="manage_unclaimed">Manage mined coins</option>
+										<?php
+										if ($blockchain->db_blockchain['p2p_mode'] != "none") { ?>
+											<option value="reset">Reset blockchain</option>
 											<?php
+										}
+										?>
+										<option value="see_definition">See definition</option>
+										<?php
+										if ($blockchain->db_blockchain['p2p_mode'] == "rpc") { ?>
+											<option value="set_rpc_credentials">Set RPC credentials</option>
+											<?php
+										}
+										
+										if ($blockchain->db_blockchain['p2p_mode'] == "rpc") {
+											if ($blockchain->db_blockchain['is_rpc_mining']) {
+												?>
+												<option value="stop_mining">Stop mining</option>
+												<?php
+											}
+											else {
+												?>
+												<option value="start_mining">Start mining</option>
+												<?php
+											}
 										}
 										?>
 									</select>
@@ -201,20 +231,50 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 											<div class="modal-content">
 												<form method="post" action="/manage_blockchains/">
 													<div class="modal-body">
-														<p>Please enter the RPC username and password for connecting to the <b><?php echo $db_blockchain['blockchain_name']; ?></b> daemon:</p>
+														<p>Please set up the connection to <b><?php echo $db_blockchain['blockchain_name']; ?></b> by entering the parameters below:</p>
 														<input type="hidden" name="action" value="save_blockchain_params" />
 														<input type="hidden" name="blockchain_id" value="<?php echo $blockchain->db_blockchain['blockchain_id']; ?>" />
 														<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
-														<input class="form-control" name="rpc_host" placeholder="RPC hostname (default 127.0.0.1)" />
-														<input class="form-control" name="rpc_username" placeholder="RPC username" />
-														<input class="form-control" name="rpc_password" placeholder="RPC password" autocomplete="off" />
-														<input class="form-control" name="rpc_port" value="<?php echo $blockchain->db_blockchain['default_rpc_port']; ?>" placeholder="RPC port" />
-														<input class="form-control" name="first_required_block" value="" placeholder="First required block" />
+														
+														<div class="form-group">
+															<label for="rpc_host_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>">
+																RPC hostname
+															</label>
+															<input class="form-control input-sm" name="rpc_host" id="rpc_host_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>" placeholder="127.0.0.1" required />
+														</div>
+														
+														<div class="form-group">
+															<label for="rpc_username_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>">
+																RPC username
+															</label>
+															<input class="form-control input-sm" name="rpc_username" id="rpc_username_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>" autocomplete="off" required />
+														</div>
+														
+														<div class="form-group">
+															<label for="rpc_password_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>">
+																RPC password
+															</label>
+															<input class="form-control input-sm" type="password" name="rpc_password" id="rpc_password_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>" autocomplete="off" required />
+														</div>
+														
+														<div class="form-group">
+															<label for="rpc_port_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>">
+																RPC port
+															</label>
+															<input class="form-control input-sm" name="rpc_port" id="rpc_port_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>" placeholder="<?php echo $blockchain->db_blockchain['default_rpc_port']; ?>" required />
+														</div>
+														
+														<div class="form-group">
+															<label for="first_required_block_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>">
+																Sync from block
+															</label>
+															<input class="form-control input-sm" name="first_required_block" id="first_required_block_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>" placeholder="1" required />
+														</div>
 													</div>
 													<div class="modal-footer">
 														<button type="button" class="btn btn-warning" data-dismiss="modal">Cancel</button>
 														 &nbsp;&nbsp; or &nbsp; 
-														<input type="submit" class="btn btn-success" value="Save RPC Credentials" />
+														<input type="submit" class="btn btn-success" value="Save RPC Connection" />
 													</div>
 												</form>
 											</div>
@@ -232,6 +292,18 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 										<input type="hidden" name="blockchain_id" value="<?php echo $blockchain->db_blockchain['blockchain_id']; ?>" />
 										<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
 									</form>
+									
+									<form method="post" action="/manage_blockchains/" id="start_mining_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>">
+										<input type="hidden" name="action" value="start_mining" />
+										<input type="hidden" name="blockchain_id" value="<?php echo $blockchain->db_blockchain['blockchain_id']; ?>" />
+										<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
+									</form>
+									
+									<form method="post" action="/manage_blockchains/" id="stop_mining_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>">
+										<input type="hidden" name="action" value="stop_mining" />
+										<input type="hidden" name="blockchain_id" value="<?php echo $blockchain->db_blockchain['blockchain_id']; ?>" />
+										<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
+									</form>
 								</td>
 							</tr>
 							<?php
@@ -239,6 +311,8 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 						?>
 					</tbody>
 				</table>
+				
+				<div style="display: none;" class="modal fade" id="manage_unclaimed_modal"></div>
 				
 				<div class="modal fade" id="new_blockchain_modal" style="display: none;">
 					<div class="modal-dialog">
@@ -322,24 +396,38 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 				
 				var confirm_ok = false;
 				
-				if (action == "set_rpc_credentials" || action == "see_definition") confirm_ok = true;
+				if (action == "set_rpc_credentials" || action == "see_definition" || action == "manage_unclaimed") confirm_ok = true;
 				else {
 					var confirm_message = "Are you sure you want to ";
-					if (action == "reset_synchronize") confirm_message += "reset & synchronize "+blockchain_name+"?";
-					else if (action == "claim_coinbase") confirm_message += "move mined coins to an address?";
+					if (action == "reset") confirm_message += "reset "+blockchain_name+"?";
+					else if (action == "start_mining") confirm_message += "start mining?";
+					else if (action == "stop_mining") confirm_message += "stop mining?";
 					else confirm_message += action+" "+blockchain_name+"?";
 					confirm_ok = confirm(confirm_message);
 				}
 				
 				if (confirm_ok) {
-					if (action == "reset_synchronize") {
-						window.open('/scripts/sync_blockchain_initial.php?&blockchain_id='+blockchain_id, '_blank');
+					if (action == "reset") {
+						window.open('/scripts/reset_blockchain.php?blockchain_id='+blockchain_id, '_blank');
 					}
 					else if (action == "set_rpc_credentials") {
 						$('#set_rpc_'+blockchain_id).modal('show');
 					}
 					else if (action == "see_definition") {
 						window.open('/explorer/blockchains/'+blockchain_identifier+'/definition/', '_blank');
+					}
+					else if (action == "manage_unclaimed") {
+						$.ajax({
+							url: "/ajax/manage_unclaimed.php",
+							data: {
+								blockchain_id: blockchain_id,
+								action: 'view'
+							},
+							success: function(manage_response) {
+								$('#manage_unclaimed_modal').html(manage_response);
+								$('#manage_unclaimed_modal').modal('show');
+							}
+						});
 					}
 					else if (action == "claim_coinbase") {
 						var coinbase_quantity = prompt("How many "+blockchain_name+" coinbase outputs do you want to claim?");
@@ -368,12 +456,59 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 					}
 				}
 			};
+			
+			this.manageUnclaimedGameSelected = function(blockchain_id, selectEl) {
+				if (selectEl.value) {
+					$.ajax({
+						url: "/ajax/manage_unclaimed.php",
+						data: {
+							blockchain_id: blockchain_id,
+							game_id: selectEl.value,
+							action: 'view'
+						},
+						success: function(manage_response) {
+							$('#manage_unclaimed_modal').html(manage_response);
+							$('#manage_unclaimed_modal').modal('show');
+						}
+					});
+				}
+			};
+			
+			this.submitUnclaimedAction = function(blockchain_id, game_id) {
+				var account_id = $('#claim_all_to_account_id').val();
+				
+				if (account_id) {
+					$.ajax({
+						url: "/ajax/manage_unclaimed.php",
+						data: {
+							blockchain_id: blockchain_id,
+							game_id: game_id,
+							action: 'claim_all_to_account',
+							account_id: account_id,
+							synchronizer_token: this.synchronizer_token,
+						},
+						success: function(manage_response) {
+							$('#manage_unclaimed_modal').html(manage_response);
+							$('#manage_unclaimed_modal').modal('show');
+						}
+					});
+				}
+			};
 		};
 		
 		var thisBlockchainManager;
 		
 		window.onload = function() {
 			thisBlockchainManager = new BlockchainManager('<?php echo $thisuser->get_synchronizer_token(); ?>');
+			<?php
+			if (!empty($_REQUEST['prompt_action']) && $_REQUEST['prompt_action'] == "set_rpc_credentials") {
+				if (!empty($_REQUEST['blockchain_id'])) {
+					?>
+					$('#set_rpc_<?php echo (int) $_REQUEST['blockchain_id']; ?>').modal('show');
+					<?php
+				}
+			}
+			?>
 		};
 		</script>
 		<?php

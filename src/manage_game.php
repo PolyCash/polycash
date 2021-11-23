@@ -471,7 +471,7 @@ else {
 					echo ', 0';
 					echo ', false';
 					echo ', "'.$game->db_game['default_betting_mode'].'"';
-					echo ', false';
+					echo ', false, false, false';
 				?>));
 				
 				<?php
@@ -562,19 +562,6 @@ else {
 											<input class="form-control" type="text" id="game_form_coin_abbreviation" />
 										</div>
 										<div class="form-group">
-											<label for="game_form_has_final_round">Game ends?</label>
-											<select class="form-control" id="game_form_has_final_round" onchange="thisPageManager.game_form_final_round_changed();">
-												<option value="0">No</option>
-												<option value="1">Yes</option>
-											</select>
-										</div>
-										<div id="game_form_final_round_disp">
-											<div class="form-group">
-												<label for="game_form_final_round">Number of rounds in the game:</label>
-												<input type="text" class="form-control" id="game_form_final_round" placeholder="0" />
-											</div>
-										</div>
-										<div class="form-group">
 											<label for="game_form_game_starting_block">Game starts on block:</label>
 											<input class="form-control" type="text" style="text-align: right;" id="game_form_game_starting_block" />
 										</div>
@@ -595,6 +582,31 @@ else {
 											<input class="form-control" type="text" id="game_form_genesis_amount" style="text-align: right;" />
 										</div>
 										<div class="form-group">
+											<label for="game_form_inflation">Proof of stake reward type:</label>
+											<select id="game_form_inflation" class="form-control" onchange="thisPageManager.game_form_inflation_changed();">
+												<option value="exponential">Exponential</option>
+											</select>
+										</div>
+										<div id="game_form_inflation_exponential">
+											<div class="form-group">
+												<label for="game_form_exponential_inflation_rate">Proof of stake inflation per round:</label>
+												<input class="form-control" style="text-align: right;" type="text" id="game_form_exponential_inflation_rate" placeholder="0" />
+											</div>
+										</div>
+										<div class="form-group">
+											<label for="game_form_pow_reward_type">Proof of work reward type:</label>
+											<select id="game_form_pow_reward_type" class="form-control" onchange="thisPageManager.game_form_pow_reward_type_changed(this);">
+												<option value="none">No POW rewards</option>
+												<option value="fixed">Fixed reward per block</option>
+											</select>
+										</div>
+										<div id="game_form_pow_fixed">
+											<div class="form-group">
+												<label for="game_form_pow_fixed_reward">Proof of work reward per block:</label>
+												<input class="form-control" style="text-align: right;" type="text" id="game_form_pow_fixed_reward" placeholder="100" />
+											</div>
+										</div>
+										<div class="form-group">
 											<label for="game_form_payout_weight">Definition of a vote:</label>
 											<select class="form-control" id="game_form_payout_weight">
 												<option value="coin">Coins staked</option>
@@ -610,10 +622,6 @@ else {
 											</select>
 										</div>
 										<div class="form-group">
-											<label for="game_form_maturity">Transaction lock time (blocks):</label>
-											<input class="form-control" style="text-align: right;" type="text" id="game_form_maturity" />
-										</div>
-										<div class="form-group">
 											<label for="game_form_buyin_policy">Buy-in policy:</label>
 											<select class="form-control" id="game_form_buyin_policy" onchange="thisPageManager.game_form_buyin_policy_changed();">
 												<option value="none">No additional buy-ins</option>
@@ -625,26 +633,6 @@ else {
 										<div id="game_form_game_buyin_cap_disp">
 											<label for="game_form_game_buyin_cap">Game-wide buy-in cap:</label>
 											<input class="form-control" style="text-align: right;" type="text" id="game_form_game_buyin_cap" />
-										</div>
-										<div class="form-group">
-											<label for="game_form_inflation">Inflation:</label>
-											<select id="game_form_inflation" class="form-control" onchange="thisPageManager.game_form_inflation_changed();">
-												<option value="linear">Linear</option>
-												<option value="fixed_exponential">Fixed Exponential</option>
-												<option value="exponential">Exponential</option>
-											</select>
-										</div>
-										<div id="game_form_inflation_exponential">
-											<div class="form-group">
-												<label for="game_form_exponential_inflation_rate">Inflation per round:</label>
-												<input class="form-control" style="text-align: right;" type="text" id="game_form_exponential_inflation_rate" placeholder="100" />
-											</div>
-										</div>
-										<div id="game_form_inflation_linear">
-											<div class="form-group">
-												<label for="game_form_pos_reward">Voting payout reward:</label>
-												<input class="form-control" style="text-align: right;" type="text" id="game_form_pos_reward" />
-											</div>
 										</div>
 										<div class="form-group">
 											<label for="game_form_event_rule">Event rule:</label>
@@ -1094,12 +1082,13 @@ else {
 											if ($currency_conversion['invoice_type'] == "sale_buyin") {
 												$game_amount = $game->game_amount_by_io($io['io_id']);
 												
-												$received_utxo_html .= '<a href="/explorer/games/'.$game->db_game['url_identifier']."/utxo/".$invoice_io['tx_hash']."/".$invoice_io['game_out_index'].'/">'.$app->format_bignum($game_amount/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']."</a> ";
+												$received_utxo_html .= '<a href="/explorer/games/'.$game->db_game['url_identifier']."/utxo/".$invoice_io['tx_hash']."/".$invoice_io['game_out_index'].'/">'.$game->display_coins($game_amount)."</a> ";
 												
 												$conversion_game_amount_float += $game_amount/pow(10, $game->db_game['decimal_places']);
 											}
 											else {
-												$received_utxo_html .= '<a href="/explorer/blockchains/'.$currency_conversion['url_identifier']."/utxo/".$invoice_io['tx_hash']."/".$invoice_io['out_index'].'/">'.$app->format_bignum($io['amount']/pow(10, $currency_conversion['decimal_places']))." ".$currency_conversion['coin_name_plural']."</a><br/>\n";
+												$received_amt_disp = $app->format_bignum($io['amount']/pow(10, $currency_conversion['decimal_places']));
+												$received_utxo_html .= '<a href="/explorer/blockchains/'.$currency_conversion['url_identifier']."/utxo/".$invoice_io['tx_hash']."/".$invoice_io['out_index'].'/">'.$receive_amt_disp." ".($receive_amt_disp=="1" ? $currency_conversion['coin_name'] : $currency_conversion['coin_name_plural'])."</a><br/>\n";
 												
 												$conversion_blockchain_amount_float += $io['amount']/pow(10, $currency_conversion['decimal_places']);
 											}

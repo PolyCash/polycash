@@ -1,5 +1,3 @@
-INSERT INTO modules SET module_name='VirtualStockMarket';
-
 INSERT INTO `currencies` SET name='Amazon', short_name='AMZN', short_name_plural='AMZN', abbreviation='AMZN';
 INSERT INTO `currencies` SET name='Apple', short_name='AAPL', short_name_plural='AAPL', abbreviation='AAPL';
 INSERT INTO `currencies` SET name='Facebook', short_name='FB', short_name_plural='FB', abbreviation='FB';

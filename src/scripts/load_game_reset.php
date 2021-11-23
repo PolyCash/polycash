@@ -29,9 +29,11 @@ if ($app->running_as_admin()) {
 		$app->set_site_constant($process_lock_name, getmypid());
 		
 		$game->delete_reset_game($action);
-		$game->start_game();
+		list($start_error, $start_error_message) = $game->start_game();
 		
-		$app->print_debug("Great, ".$game->db_game['name']." has been ".$action."!");
+		$app->print_debug($game->db_game['name']." has been ".$action."!");
+		
+		if ($start_error) $app->print_debug($start_error_message);
 		
 		$app->set_site_constant($process_lock_name, 0);
 	}

@@ -329,7 +329,7 @@ if ($uri_parts[1] == "api") {
 	else if (!empty($uri_parts[2])) {
 		$game_identifier = $uri_parts[2];
 		
-		$db_game = $app->run_query("SELECT game_id, blockchain_id, maturity, pos_reward, pow_reward, round_length, payout_weight, name FROM games WHERE url_identifier=:url_identifier;", ['url_identifier'=>$game_identifier])->fetch();
+		$db_game = $app->run_query("SELECT game_id, blockchain_id, round_length, payout_weight, name FROM games WHERE url_identifier=:url_identifier;", ['url_identifier'=>$game_identifier])->fetch();
 		
 		if ($db_game) {
 			$blockchain = new Blockchain($app, $db_game['blockchain_id']);
@@ -370,7 +370,7 @@ if ($uri_parts[1] == "api") {
 					$btc_currency = $app->get_currency_by_abbreviation("BTC");
 				}
 				
-				$intval_vars = ['game_id','round_length','maturity'];
+				$intval_vars = ['game_id','round_length'];
 				for ($i=0; $i<count($intval_vars); $i++) {
 					$game->db_game[$intval_vars[$i]] = (int) $game->db_game[$intval_vars[$i]];
 				}
@@ -384,7 +384,7 @@ if ($uri_parts[1] == "api") {
 					if ($user_game && $user_game['game_id'] == $game->db_game['game_id']) {
 						$api_user = new User($app, $user_game['user_id']);
 						$account_value = $game->account_balance($user_game['account_id']);
-						$immature_balance = $api_user->immature_balance($game, $user_game);
+						$unconfirmed_amount = $api_user->unconfirmed_amount($game, $user_game);
 						$mature_balance = $api_user->mature_balance($game, $user_game);
 						list($votes_available, $votes_value) = $api_user->user_current_votes($game, $last_block_id, $current_round, $user_game);
 						
@@ -392,14 +392,14 @@ if ($uri_parts[1] == "api") {
 						$api_user_info['account_id'] = intval($user_game['account_id']);
 						$api_user_info['balance'] = $account_value;
 						$api_user_info['mature_balance'] = $mature_balance;
-						$api_user_info['immature_balance'] = $immature_balance;
+						$api_user_info['unconfirmed_amount'] = $unconfirmed_amount;
 						$api_user_info['votes_available'] = $votes_available;
 						
 						$mature_utxos = [];
 						$mature_utxo_r = $app->run_query("SELECT io.*, ak.pub_key AS address FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id JOIN address_keys ak ON io.address_id=ak.address_id WHERE io.spend_status='unspent' AND io.spend_transaction_id IS NULL AND ak.account_id=:account_id AND gio.game_id=:game_id AND io.create_block_id <= :ref_block GROUP BY io.io_id ORDER BY io.io_id ASC;", [
 							'account_id' => $user_game['account_id'],
 							'game_id' => $game->db_game['game_id'],
-							'ref_block' => ($last_block_id-$game->db_game['maturity'])
+							'ref_block' => $last_block_id
 						]);
 						
 						$utxo_i = 0;
@@ -419,8 +419,7 @@ if ($uri_parts[1] == "api") {
 							while ($game_io = $db_game_ios->fetch()) {
 								array_push($game_utxos, [
 									'game_io_id' => (int) $game_io['game_io_id'],
-									'coins' => (int) $game_io['colored_amount'],
-									'is_coinbase' => (int) $game_io['is_coinbase']
+									'coins' => (int) $game_io['colored_amount']
 								]);
 							}
 							$mature_utxo['game_utxos'] = $game_utxos;

@@ -119,9 +119,11 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 		$db_option = $app->fetch_option_by_id($option_ids[$i]);
 		
 		if ($db_option && $db_option['game_id'] == $game->db_game['game_id']) {
-			$db_address = $app->fetch_addresses_in_account($account, $db_option['option_index'], 1)[0];
+			$db_addresses = $app->fetch_addresses_in_account($account, $db_option['option_index'], 1);
 			
-			if ($db_address) {
+			if (!empty($db_addresses[0])) {
+				$db_address = $db_addresses[0];
+				
 				array_push($address_ids, $db_address['address_id']);
 				
 				if (count($separator_addresses) > 0) {

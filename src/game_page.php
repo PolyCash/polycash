@@ -43,13 +43,6 @@ else $exchange_rate = 0;
 				if ($game->db_game['short_description'] != "") {
 					echo str_replace("<br/>", " ", $game->db_game['short_description'])." ";
 				}
-				
-				if ($game->db_game['game_status'] == "running") {
-					echo "This game started ".date("M j, Y g:ia", strtotime($game->db_game['start_datetime'])).". ";
-				}
-				else if (strtotime($game->db_game['start_datetime']) > 0) {
-					echo "This game starts in ".$app->format_seconds(strtotime($game->db_game['start_datetime'])-time())." on ".date("M d Y", strtotime($game->db_game['start_datetime'])).". ";
-				}
 				?>
 			</p>
 			<p>
@@ -58,7 +51,9 @@ else $exchange_rate = 0;
 				$ref_user_game = false;
 				$faucet_io = $game->check_faucet($ref_user_game);
 				
-				if ($faucet_io) echo 'Join now & receive '.$app->format_bignum($faucet_io['colored_amount_sum']/pow(10,$game->db_game['decimal_places'])).' '.$game->db_game['coin_name_plural'];
+				if ($faucet_io) {
+					echo 'Join now & receive '.$game->display_coins($faucet_io['colored_amount_sum']);
+				}
 				else echo 'Play Now';
 				?>
 				</a>
@@ -127,7 +122,7 @@ games.push(new Game(thisPageManager, <?php
 	else echo "0";
 	echo ', false';
 	echo ', "'.$game->db_game['default_betting_mode'].'"';
-	echo ', false';
+	echo ', false, true, false';
 ?>));
 
 <?php

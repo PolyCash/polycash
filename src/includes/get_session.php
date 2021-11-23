@@ -1,4 +1,6 @@
 <?php
+if ($app->needs_schema_update()) die("Schema is out of date. Please visit <a href='/install.php'>install.php</a>");
+
 if (isset($_COOKIE['my_session_global'])) {
 	$session_key = $_COOKIE['my_session_global'];
 }
@@ -104,6 +106,6 @@ if ($thisuser && !empty($_REQUEST['game_id'])) {
 	}
 }
 
-if (AppSettings::getParam('pageview_tracking_enabled')) $viewer_id = $pageviewController->insert_pageview($thisuser);
+if (AppSettings::getParam('pageview_tracking_enabled') && !AppSettings::runningFromCommandline()) $viewer_id = $pageviewController->insert_pageview($thisuser);
 else $viewer_id = false;
 ?>

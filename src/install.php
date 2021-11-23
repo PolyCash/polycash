@@ -1,7 +1,11 @@
 <?php
 ini_set('memory_limit', '1024M');
+
+$src_path = realpath(dirname(dirname(__FILE__)))."/src";
+require_once($src_path."/classes/AppSettings.php");
+
 $skip_select_db = TRUE;
-require(AppSettings::srcPath()."/includes/connect.php");
+require($src_path."/includes/connect.php");
 
 if ($app->running_as_admin()) {
 	set_time_limit(0);
@@ -15,9 +19,10 @@ if ($app->running_as_admin()) {
 
 			if (!empty(AppSettings::getParam('sqlite_db'))) {}
 			else {
-				$list_of_dbs = $app->run_query("SHOW DATABASES;");
-				while ($dbname = $list_of_dbs->fetch()) {
-					if ($dbname['Database'] == AppSettings::getParam('database_name')) $db_exists = true;
+				$list_of_dbs = $app->run_query("SHOW DATABASES;")->fetchAll();
+				
+				foreach ($list_of_dbs as $db_info) {
+					if ($db_info['Database'] == AppSettings::getParam('database_name')) $db_exists = true;
 				}
 				
 				if (strpos(AppSettings::getParam('mysql_password'), "'") !== false) {
@@ -29,9 +34,10 @@ if ($app->running_as_admin()) {
 				}
 				else {
 					$app->run_query("CREATE DATABASE ".AppSettings::getParam('database_name'));
-					$app->dbh->query("USE ".AppSettings::getParam('database_name').";") or die("Failed to create database '".AppSettings::getParam('database_name')."'");
 					$app->select_db(AppSettings::getParam('database_name'));
 				}
+				
+				$app->flush_buffers();
 				
 				$table_exists = count($app->run_query("SHOW TABLES;")->fetchAll()) > 0;
 				
@@ -43,7 +49,7 @@ if ($app->running_as_admin()) {
 					else $base_schema_path = AppSettings::srcPath()."/sql/schema-initial.sql";
 					
 					$cmd .= " ".AppSettings::getParam('database_name')." < ".$base_schema_path;
-					echo exec($cmd);
+					exec($cmd);
 				}
 				
 				$table_exists = count($app->run_query("SHOW TABLES;")->fetchAll()) > 0;
@@ -58,9 +64,16 @@ if ($app->running_as_admin()) {
 			
 			if (empty(AppSettings::getParam('identifier_case_sensitive'))) die('Please set the variable "identifier_case_sensitive" in your config file.');
 			if (empty(AppSettings::getParam('identifier_first_char'))) die('Please set the variable "identifier_first_char" in your config file.');
-			if (empty($app->get_site_constant("reference_currency_id"))) $app->set_reference_currency(6);
 			
 			$app->blockchain_ensure_currencies();
+			
+			if (empty($app->get_site_constant("reference_currency_id"))) {
+				$btc_currency = $app->fetch_currency_by_abbreviation("BTC");
+				if ($btc_currency) {
+					$app->set_reference_currency($btc_currency['currency_id']);
+				}
+			}
+			
 			$general_entity_type = $app->check_set_entity_type("general entity");
 			
 			require(AppSettings::srcPath()."/includes/get_session.php");
@@ -103,10 +116,9 @@ if ($app->running_as_admin()) {
 									
 									$error_message = "";
 									$db_game = false;
-									$new_game = GameDefinition::set_game_from_definition($app, $new_game_def_txt, $thisuser, $error_message, $db_game, false);
+									list($new_game, $is_new_game) = GameDefinition::set_game_from_definition($app, $new_game_def_txt, $thisuser, $error_message, $db_game, false);
 									
-									if (!empty($new_game)) {
-										$new_game->start_game();
+									if ($new_game) {
 										$error_message = "Import was successful. Next please <a href=\"/manage/".$new_game->db_game['url_identifier']."/?next=internal_settings\">visit this page and start the game</a>.";
 									}
 									else if (empty($error_message)) $error_message = "Error: failed to create the game.";
@@ -114,6 +126,12 @@ if ($app->running_as_admin()) {
 									if (!empty($error_message)) {
 										if (is_string($error_message)) echo $error_message."<br/>\n";
 										else echo "<pre>".json_encode($error_message, JSON_PRETTY_PRINT)."</pre>\n";
+									}
+									
+									if ($is_new_game) {
+										list($new_game_start_error, $new_game_start_error_message) = $new_game->start_game();
+										
+										if ($new_game_start_error) echo $new_game_start_error_message."<br/>\n";
 									}
 								}
 								else echo "<p>Failed to find the blockchain.</p>\n";

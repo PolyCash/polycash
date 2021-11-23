@@ -18,5 +18,3 @@ ALTER TABLE `game_types`
   DROP `default_game_winning_inflation`;
 
 DROP TABLE `event_types`;
-
-DELETE FROM `modules` WHERE module_name='StakemoneyShares';

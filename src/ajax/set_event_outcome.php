@@ -11,8 +11,9 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 		if ($db_game) {
 			$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 			$game = new Game($blockchain, $db_game['game_id']);
+			$event = new Event($game, null, $db_event['event_id']);
 			
-			if ($app->user_can_edit_game($thisuser, $game)) {
+			if ($app->user_can_edit_game($thisuser, $game) && $game->allow_game_def_changes()) {
 				$user_game = $thisuser->ensure_user_in_game($game, false);
 				
 				if ($_REQUEST['action'] == "fetch") {

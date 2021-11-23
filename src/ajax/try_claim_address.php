@@ -21,8 +21,9 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 		
 		if ($permission_to_claim_address) {
 			if ($thisuser) {
-				$app->give_address_to_user($game, $thisuser, $db_address);
-				$app->output_message(1, "successful!", false);
+				$successful = $app->give_address_to_user($game, $thisuser, $db_address);
+				if ($successful) $app->output_message(1, "successful!", false);
+				else $app->output_message(6, "Failed", false);
 			}
 			else {
 				if ($game) $url = "/explorer/games/".$game->db_game['url_identifier']."/addresses/".$db_address['address']."/?action=claim";

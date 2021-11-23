@@ -28,7 +28,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 				$faucet_io = $game->check_faucet($user_game);
 				
 				if ($faucet_io) {
-					$faucet_message .= '<p><button id="faucet_btn" class="btn btn-success" onclick="thisPageManager.claim_from_faucet();"><i class="fas fa-hand-paper"></i> &nbsp; Claim '.$app->format_bignum($faucet_io['colored_amount_sum']/pow(10,$game->db_game['decimal_places'])).' '.$game->db_game['coin_name_plural'].'</button></p>'."\n";
+					$faucet_message .= '<p><button id="faucet_btn" class="btn btn-success" onclick="thisPageManager.claim_from_faucet();"><i class="fas fa-hand-paper"></i> &nbsp; Claim '.$game->display_coins($faucet_io['colored_amount_sum']).'</button></p>'."\n";
 				}
 				else $faucet_message .= "There's no money in the faucet right now.";
 			}
@@ -36,8 +36,10 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 				if ($time_available) {
 					$ref_user_game = false;
 					$faucet_io = $game->check_faucet($ref_user_game);
-					
-					$faucet_message .= "You'll be eligible to claim ".$app->format_bignum($faucet_io['colored_amount_sum']/pow(10,$game->db_game['decimal_places'])).' '.$game->db_game['coin_name_plural']." from the faucet in ".$app->format_seconds($time_available-time()).".";
+					if ($faucet_io) {
+						$faucet_message .= "You'll be eligible to claim ".$game->display_coins($faucet_io['colored_amount_sum'])." from the faucet in ".$app->format_seconds($time_available-time()).".";
+					}
+					else $faucet_message = "There's no money in the faucet right now.";
 				}
 				else $faucet_message .= "You're not eligible to claim coins from this faucet.";
 			}

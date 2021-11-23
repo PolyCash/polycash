@@ -19,7 +19,7 @@ if ($game && $thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 		$mining_block_id = $last_block_id+1;
 		$round_id = $game->block_to_round($mining_block_id);
 		
-		$blockchain_mature_balance = $game->blockchain->user_mature_balance($user_game);
+		$blockchain_spendable_balance = $game->blockchain->account_balance($user_game['account_id'], true);
 		$game_mature_balance = $thisuser->mature_balance($game, $user_game);
 		
 		$remainder_address = $app->any_normal_address_in_account($user_game['account_id']);
@@ -28,7 +28,7 @@ if ($game && $thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 		$success = $game->get_user_strategy($user_game, $user_strategy);
 		
 		if ($success) {
-			if ($fee < $blockchain_mature_balance) {
+			if ($fee < $blockchain_spendable_balance) {
 				$spendable_ios_in_account = $app->spendable_ios_in_account($user_game['account_id'], $game->db_game['game_id'], $round_id, $last_block_id);
 				
 				$gio_sum = 0;
@@ -59,11 +59,11 @@ if ($game && $thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 						$validate_address = $game->blockchain->coin_rpc->validateaddress($address_text);
 						$address_ok = $validate_address['isvalid'];
 						if ($address_ok) {
-							$db_address = $game->blockchain->create_or_fetch_address($address_text, true, false, false, false, false);
+							$db_address = $game->blockchain->create_or_fetch_address($address_text, false, null);
 						}
 					}
 					else {
-						$db_address = $game->blockchain->create_or_fetch_address($address_text, true, false, false, false, false);
+						$db_address = $game->blockchain->create_or_fetch_address($address_text, false, null);
 						$address_ok = true;
 					}
 					

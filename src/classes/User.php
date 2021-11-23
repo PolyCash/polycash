@@ -24,7 +24,7 @@ class User {
 		return "We just sent you a verification email. Please open your inbox and click the link to log in.";
 	}
 	
-	public function immature_balance(&$game, &$user_game) {
+	public function unconfirmed_amount(&$game, &$user_game) {
 		$query_params = [
 			'game_id' => $game->db_game['game_id'],
 			'account_id' => $user_game['account_id']
@@ -32,6 +32,13 @@ class User {
 		return (int)($this->app->run_query("SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.game_id=:game_id AND k.account_id=:account_id AND io.spend_status != 'spent' AND gio.is_resolved=0;", $query_params)->fetch(PDO::FETCH_NUM)[0]);
 	}
 
+	public function immature_amount(&$game, &$user_game) {
+		return (int)($this->app->run_query("SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.game_id=:game_id AND k.account_id=:account_id AND io.is_mature=0;", [
+			'game_id' => $game->db_game['game_id'],
+			'account_id' => $user_game['account_id']
+		])->fetch(PDO::FETCH_NUM)[0]);
+	}
+	
 	public function mature_balance(&$game, &$user_game) {
 		$spendable_ios_in_account = $game->blockchain->app->spendable_ios_in_account($user_game['account_id'], $game->db_game['game_id'], false, false);
 		
@@ -63,24 +70,28 @@ class User {
 		return [$votes, $votes_value];
 	}
 	
-	public function wallet_text_stats(&$game, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance, $user_votes, $votes_value, $pending_bets, &$user_game) {
+	public function wallet_text_stats(&$game, $current_round, $last_block_id, $block_within_round, $mature_balance, $locked_amount, $user_votes, $votes_value, $pending_bets, &$user_game) {
+		$available_disp = $game->display_coins($mature_balance, false, true);
 		$html = '<div class="row"><div class="col-sm-4">Available&nbsp;funds:</div>';
 		$html .= '<div class="col-sm-6 text-right"><font class="greentext">';
-		$html .= $this->app->format_bignum($mature_balance/pow(10,$game->db_game['decimal_places']));
-		$html .= "</font> ".$game->db_game['coin_name_plural']."</div></div>\n";
+		$html .= $available_disp;
+		$html .= "</font> ".($available_disp=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural'])."</div></div>\n";
 		
+		$locked_disp = $game->display_coins($locked_amount, false, true);
 		$html .= '<div class="row"><div class="col-sm-4">Locked&nbsp;funds:</div>';
-		$html .= '<div class="col-sm-6 text-right"><font class="redtext">'.$this->app->format_bignum($immature_balance/pow(10,$game->db_game['decimal_places'])).'</font> '.$game->db_game['coin_name_plural'].'</div>';
+		$html .= '<div class="col-sm-6 text-right"><font class="redtext">'.$locked_disp.'</font> '.($locked_disp=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']).'</div>';
 		$html .= "</div>\n";
 		
-		$html .= '<div class="row"><div class="col-sm-4">Pending bets:</div><div class="col-sm-6 text-right"><font class="greentext">'.$this->app->format_bignum($pending_bets/pow(10,$game->db_game['decimal_places'])).'</font> '.$game->db_game['coin_name_plural'].'</div></div>'."\n";
+		$pending_disp = $game->display_coins($pending_bets, false, true);
+		$html .= '<div class="row"><div class="col-sm-4">Pending bets:</div><div class="col-sm-6 text-right"><font class="greentext">'.$pending_disp.'</font> '.($pending_disp=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']).'</div></div>'."\n";
 		
 		if ($game->db_game['payout_weight'] != "coin") {
 			if ($game->db_game['inflation'] == "exponential") {
-				$html .= '<div class="row"><div class="col-sm-4">Unrealized gains:</div><div class="col-sm-6 text-right"><font class="greentext">'.$this->app->format_bignum($votes_value/pow(10,$game->db_game['decimal_places'])).'</font> '.$game->db_game['coin_name_plural'].'</div></div>'."\n";
+				$unrealized_disp = $game->display_coins($votes_value, false, true);
+				$html .= '<div class="row"><div class="col-sm-4">Unrealized gains:</div><div class="col-sm-6 text-right"><font class="greentext">'.$unrealized_disp.'</font> '.($unrealized_disp=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']).'</div></div>'."\n";
 			}
 			else {
-				$html .= '<div class="row"><div class="col-sm-4">Votes:</div><div class="col-sm-6 text-right"><font class="greentext">'.$this->app->format_bignum($user_votes/pow(10,$game->db_game['decimal_places'])).'</font> votes available</div></div>'."\n";
+				$html .= '<div class="row"><div class="col-sm-4">Votes:</div><div class="col-sm-6 text-right"><font class="greentext">'.$game->display_coins($user_votes, false, true).'</font> votes available</div></div>'."\n";
 			}
 		}
 		
@@ -119,12 +130,6 @@ class User {
 				'notification_preference' => 'email',
 				'betting_mode' => 'principal'
 			];
-			if (!empty($this->db_user['payout_address_id'])) {
-				$new_user_game_params['payout_address_id'] = $this->db_user['payout_address_id'];
-			}
-			if ($game->db_game['giveaway_status'] == "public_pay" || $game->db_game['giveaway_status'] == "invite_pay") {
-				$new_user_game_params['payment_required'] = 1;
-			}
 			$this->app->run_insert_query("user_games", $new_user_game_params);
 			$user_game_id = $this->app->last_insert_id();
 			
@@ -139,10 +144,13 @@ class User {
 			
 			$address_key = $this->app->new_normal_address_key($currency_id, $account);
 			
-			$this->app->run_query("UPDATE currency_accounts SET current_address_id=:current_address_id WHERE account_id=:account_id;", [
-				'current_address_id' => $address_key['address_id'],
-				'account_id' => $account['account_id']
-			]);
+			if ($address_key) {
+				$this->app->run_query("UPDATE currency_accounts SET current_address_id=:current_address_id WHERE account_id=:account_id;", [
+					'current_address_id' => $address_key['address_id'],
+					'account_id' => $account['account_id']
+				]);
+			}
+			
 			$this->app->run_query("UPDATE user_games SET account_id=:account_id WHERE user_game_id=:user_game_id;", [
 				'account_id' => $account['account_id'],
 				'user_game_id' => $user_game_id
@@ -170,26 +178,12 @@ class User {
 			
 			$strategy = $this->app->fetch_strategy_by_id($strategy_id);
 			
-			for ($block=1; $block<=$game->db_game['round_length']; $block++) {
-				$this->app->run_insert_query("user_strategy_blocks", [
-					'strategy_id' => $strategy_id,
-					'block_within_round' => $block
-				]);
-			}
-			
 			$this->app->run_query("UPDATE user_games SET strategy_id=:strategy_id WHERE user_game_id=:user_game_id;", [
 				'strategy_id' => $strategy_id,
 				'user_game_id' => $user_game['user_game_id']
 			]);
 			
 			$user_game['strategy_id'] = $strategy_id;
-		}
-		
-		if ($game->db_game['game_status'] == "published" && $game->db_game['start_condition'] == "num_players") {
-			$num_players = $game->paid_players_in_game();
-			if ($num_players >= $game->db_game['start_condition_players']) {
-				$game->start_game();
-			}
 		}
 		
 		return $user_game;
@@ -306,7 +300,7 @@ class User {
 						$has_option_indices_until = $option_index;
 					}
 					else {
-						$address = $this->app->run_query("SELECT * FROM address_keys WHERE primary_blockchain_id=:blockchain_id AND option_index=:option_index AND account_id IS NULL AND address_set_id IS NULL;", [
+						$address = $this->app->run_query("SELECT * FROM address_keys WHERE primary_blockchain_id=:blockchain_id AND option_index=:option_index AND account_id IS NULL AND address_set_id IS NULL AND used_in_my_tx=0;", [
 							'blockchain_id' => $game->blockchain->db_blockchain['blockchain_id'],
 							'option_index' => $option_index
 						])->fetch();
@@ -376,28 +370,32 @@ class User {
 		}
 	}
 	
+	public function ensure_currency_account(&$currency) {
+		$user_blockchain_account = $this->app->user_blockchain_account($this->db_user['user_id'], $currency['currency_id']);
+		
+		if (empty($user_blockchain_account)) {
+			$account = $this->app->create_new_account([
+				'user_id' => $this->db_user['user_id'],
+				'currency_id' => $currency['currency_id'],
+				'account_name' => "Primary ".$currency['name']." Account"
+			]);
+			
+			$address_key = $this->app->new_normal_address_key($currency['currency_id'], $account);
+			
+			if ($address_key) {
+				$this->app->run_query("UPDATE currency_accounts SET current_address_id=:address_id WHERE account_id=:account_id;", [
+					'address_id' => $address_key['address_id'],
+					'account_id' => $account['account_id']
+				]);
+			}
+		}
+	}
+	
 	public function ensure_currency_accounts() {
 		$required_currencies = $this->app->run_query("SELECT * FROM currencies c JOIN blockchains b ON c.blockchain_id=b.blockchain_id WHERE b.online=1;");
 		
 		while ($currency = $required_currencies->fetch()) {
-			$user_blockchain_account = $this->app->user_blockchain_account($this->db_user['user_id'], $currency['currency_id']);
-			
-			if (empty($user_blockchain_account)) {
-				$account = $this->app->create_new_account([
-					'user_id' => $this->db_user['user_id'],
-					'currency_id' => $currency['currency_id'],
-					'account_name' => "Primary ".$currency['name']." Account"
-				]);
-				
-				$address_key = $this->app->new_address_key($currency['currency_id'], $account);
-				
-				if ($address_key) {
-					$this->app->run_query("UPDATE currency_accounts SET current_address_id=:address_id WHERE account_id=:account_id;", [
-						'address_id' => $address_key['address_id'],
-						'account_id' => $account['account_id']
-					]);
-				}
-			}
+			$this->ensure_currency_account($currency);
 		}
 	}
 	

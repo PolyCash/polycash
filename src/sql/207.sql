@@ -1,0 +1,2 @@
+ALTER TABLE `blockchains` ADD `processed_my_addresses_to_block` INT NULL DEFAULT NULL AFTER `is_rpc_mining`;
+ALTER TABLE `blockchains` ADD `coinbase_maturity` INT NULL DEFAULT NULL AFTER `processed_my_addresses_to_block`;

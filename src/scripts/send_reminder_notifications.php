@@ -44,13 +44,13 @@ while ($db_running_game = $running_games->fetch()) {
 						
 						if ($eligible_for_faucet) {
 							if ($faucet_io) {
-								$faucet_txt .= "You're eligible to <a href=\"".AppSettings::getParam('base_url').'/wallet/'.$running_game->db_game['url_identifier']."/\">claim ".$app->format_bignum($faucet_io['colored_amount_sum']/pow(10,$running_game->db_game['decimal_places'])).' '.$running_game->db_game['coin_name_plural']."</a> from the faucet.\n";
+								$faucet_txt .= "You're eligible to <a href=\"".AppSettings::getParam('base_url').'/wallet/'.$running_game->db_game['url_identifier']."/\">claim ".$running_game->display_coins($faucet_io['colored_amount_sum'])."</a> from the faucet.\n";
 							}
 							else $faucet_txt .= "There's no money in the faucet right now.\n";
 						}
 						else {
 							if ($time_available) {
-								$faucet_txt .= "You'll be eligible to claim ".$app->format_bignum($faucet_io['colored_amount_sum']/pow(10,$running_game->db_game['decimal_places'])).' '.$running_game->db_game['coin_name_plural']." from the faucet in ".$app->format_seconds($time_available-time()).".";
+								$faucet_txt .= "You'll be eligible to claim ".$running_game->display_coins($faucet_io['colored_amount_sum'])." from the faucet in ".$app->format_seconds($time_available-time()).".";
 							}
 							else $faucet_txt .= "You're not eligible to claim coins from this faucet.";
 						}

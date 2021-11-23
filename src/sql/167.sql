@@ -1,5 +1,4 @@
 ALTER TABLE `games` ADD `save_every_definition` TINYINT NOT NULL DEFAULT '1' AFTER `cached_definition_time`;
-INSERT IGNORE INTO modules SET module_name='RockPaperScissors';
 
 CREATE TABLE `game_definition_migrations` (
   `migration_id` int(11) NOT NULL,

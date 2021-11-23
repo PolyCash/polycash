@@ -108,7 +108,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 									else echo "TX Error: ".$error_message.".<br/>\n";
 								}
 								else {
-									echo "UTXO is only ".$app->format_bignum($colored_coin_sum/pow(10,$sale_game->db_game['decimal_places']))." ".$sale_game->db_game['coin_name_plural']." but you tried to spend ".$app->format_bignum($total_cost_satoshis/pow(10,$sale_game->db_game['decimal_places']))."<br/>\n";
+									echo "UTXO is only ".$sale_game->display_coins($colored_coin_sum)." but you tried to spend ".$sale_game->display_coins($total_cost_satoshis, false, true)."<br/>\n";
 								}
 							}
 							else echo "You don't own this UTXO.<br/>\n";
@@ -225,7 +225,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 									else echo "TX Error: ".$error_message."<br/>\n";
 								}
 								else {
-									echo "UTXO is only ".$app->format_bignum($colored_coin_sum/pow(10,$donate_game->db_game['decimal_places']))." ".$donate_game->db_game['coin_name_plural']." but you tried to spend ".$app->format_bignum($total_cost_satoshis/pow(10,$donate_game->db_game['decimal_places']))."<br/>\n";
+									echo "UTXO is only ".$donate_game->display_coins($colored_coin_sum)." but you tried to spend ".$donate_game->display_coins($total_cost_satoshis, false, true)."<br/>\n";
 								}
 							}
 							else echo "You don't own this UTXO.<br/>\n";
@@ -325,10 +325,14 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 				
 				foreach ($accounts as $account) {
 					$blockchain = new Blockchain($app, $account['blockchain_id']);
+					$last_block_id = $blockchain->last_block_id();
 					
 					if ($account['game_id'] > 0) {
 						$account_game = new Game($blockchain, $account['game_id']);
-						if ($show_balances) $account_value = $account_game->account_balance($account['account_id']);
+						if ($show_balances) {
+							$game_confirmed_balance = $account_game->account_balance($account['account_id'], ['confirmed_only' => true]);
+							$game_immature_balance = $account_game->account_balance($account['account_id'], ['include_immature' => 1]);
+						}
 					}
 					else $account_game = false;
 					
@@ -347,24 +351,34 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 					echo '</div>';
 					
 					if ($show_balances) {
-						$balance = $blockchain->account_balance($account['account_id']);
-						$unconfirmed_balance = $blockchain->account_balance($account['account_id'], true);
+						$mature_balance = $blockchain->account_balance($account['account_id']);
+						$immature_balance = $blockchain->account_balance($account['account_id'], true);
+						$immature_amount = $blockchain->account_balance($account['account_id'], false, true);
 					}
 					
-					echo '<div class="col-sm-2 greentext" style="text-align: right">';
+					echo '<div class="col-sm-2" style="text-align: right">';
 					if ($account['game_id'] > 0) {
-						if ($show_balances) echo $app->format_bignum($account_value/pow(10,$account_game->db_game['decimal_places'])).' ';
-						echo $account_game->db_game['coin_name_plural'];
+						if ($show_balances) {
+							echo '<font class="text-success">'.$account_game->display_coins($game_confirmed_balance).'</font>';
+							
+							if ($game_immature_balance != $game_confirmed_balance) {
+								$game_immature_amount = $game_immature_balance - $game_confirmed_balance;
+								echo ' &nbsp; <font class="text-warning">(+'.$account_game->display_coins($game_immature_amount, false, true).')</font>';
+							}
+						}
 					}
 					else echo "&nbsp;";
 					echo '</div>';
 					
 					echo '<div class="col-sm-2" style="text-align: right">';
 					if ($show_balances) {
-						echo '<font class="text-success">'.$app->format_bignum($balance/pow(10,$blockchain->db_blockchain['decimal_places'])).' '.$account['short_name_plural'].'</font>';
+						$ready_balance = $mature_balance - $immature_amount;
+						$unready_balance = $immature_balance - $ready_balance;
 						
-						if ($unconfirmed_balance != $balance) {
-							echo ' &nbsp; <font class="text-warning">('.$app->format_bignum($unconfirmed_balance/pow(10,$blockchain->db_blockchain['decimal_places'])).')</font>';
+						echo '<font class="text-success">'.$app->format_bignum($ready_balance/pow(10,$blockchain->db_blockchain['decimal_places'])).' '.$account['short_name_plural'].'</font>';
+						
+						if ($unready_balance > 0) {
+							echo ' &nbsp; <font class="text-warning">(+'.$app->format_bignum($unready_balance/pow(10,$blockchain->db_blockchain['decimal_places'])).')</font>';
 						}
 					}
 					echo '</div>';
@@ -476,12 +490,16 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 							echo $transaction['pub_key'];
 							echo '</a></div>';
 							
+							if ($transaction['is_mature'] == 0 || $transaction['create_block_id'] == "") $io_render_class = "text-warning";
+							else $io_render_class = "text-success";
+							
 							if ($account_game) {
-								echo '<div class="col-sm-2" style="text-align: right;"><a class="greentext" target="_blank" href="/explorer/games/'.$account_game->db_game['url_identifier'].'/transactions/'.$transaction['tx_hash'].'/">';
-								echo "+".$app->format_bignum($colored_coin_amount/pow(10,$account_game->db_game['decimal_places']))."&nbsp;".$account_game->db_game['coin_name_plural'];
+								echo '<div class="col-sm-2" style="text-align: right;"><a class="'.$io_render_class.'" target="_blank" href="/explorer/games/'.$account_game->db_game['url_identifier'].'/transactions/'.$transaction['tx_hash'].'/">';
+								echo "+".str_replace(" ", "&nbsp;", $account_game->display_coins($colored_coin_amount));
 								echo '</a></div>';
 							}
-							echo '<div class="col-sm-2" style="text-align: right;"><a class="greentext" target="_blank" href="/explorer/blockchains/'.$account['blockchain_url_identifier'].'/utxo/'.$transaction['tx_hash'].'/'.$transaction['out_index'].'">';
+							
+							echo '<div class="col-sm-2" style="text-align: right;"><a class="'.$io_render_class.'" target="_blank" href="/explorer/blockchains/'.$account['blockchain_url_identifier'].'/utxo/'.$transaction['tx_hash'].'/'.$transaction['out_index'].'">';
 							echo "+".$app->format_bignum($transaction['amount']/pow(10,$blockchain->db_blockchain['decimal_places']))."&nbsp;".$account['short_name_plural'];
 							echo '</a></div>';
 							
@@ -490,8 +508,16 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 							else echo "<a target=\"_blank\" href=\"/explorer/blockchains/".$account['blockchain_url_identifier']."/blocks/".$transaction['block_id']."\">Block&nbsp;#".$transaction['block_id']."</a>";
 							echo "</div>\n";
 							
-							echo '<div class="col-sm-2">'.ucwords($transaction['spend_status']);
-							if ($transaction['spend_status'] != "spent" && $transaction['block_id'] !== "") {
+							echo '<div class="col-sm-2">';
+							
+							if ($transaction['is_mature'] == 0) {
+								$mature_on_block = $transaction['create_block_id'] + $blockchain->db_blockchain['coinbase_maturity'] - 1;
+								$blocks_til_maturity = $mature_on_block - $last_block_id;
+								echo 'Immature ('.$blocks_til_maturity.' block'.($blocks_til_maturity == 1 ? '' : 's').' left)';
+							}
+							else echo ucwords($transaction['spend_status']);
+							
+							if ($transaction['spend_status'] != "spent" && $transaction['is_mature']) {
 								echo "&nbsp;&nbsp;<a href=\"\" onclick=\"thisPageManager.account_start_spend_io(";
 								if ($account_game) echo $account_game->db_game['game_id'];
 								else echo 'false';
@@ -515,7 +541,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 							
 							if ($account_game) {
 								echo '<div class="col-sm-2" style="text-align: right;"><a class="redtext" target="_blank" href="/explorer/games/'.$account_game->db_game['url_identifier'].'/transactions/'.$transaction['tx_hash'].'">';
-								echo "-".$app->format_bignum($colored_coin_amount/pow(10,$account_game->db_game['decimal_places']))."&nbsp;".$account_game->db_game['coin_name_plural'];
+								echo "-".$account_game->display_coins($colored_coin_amount);
 								echo '</a></div>';
 							}
 							
@@ -539,16 +565,19 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 						])->fetchAll();
 						echo "<p>This account has ".count($addr_arr)." addresses.</p>";
 						
+						echo '<div style="max-height: 400px; overflow-x: hidden; overflow-y: scroll;">';
+						
 						foreach ($addr_arr as $address) {
 							$address_balance = $blockchain->address_balance_at_block($address, false);
 							if ($account_game) $game_balance = $account_game->address_balance_at_block($address, false);
 							
 							echo '<div class="row">';
 							
-							echo '<div class="col-sm-2">'.$app->format_bignum($address_balance/pow(10, $blockchain->db_blockchain['decimal_places'])).' '.$blockchain->db_blockchain['coin_name_plural'].'</div>';
+							$balance_disp = $app->format_bignum($address_balance/pow(10, $blockchain->db_blockchain['decimal_places']));
+							echo '<div class="col-sm-2">'.$balance_disp.' '.($balance_disp=="1" ? $blockchain->db_blockchain['coin_name'] : $blockchain->db_blockchain['coin_name_plural']).'</div>';
 							
 							if ($account_game) {
-								echo '<div class="col-sm-2">'.$app->format_bignum($game_balance/pow(10, $account_game->db_game['decimal_places'])).' '.$account_game->db_game['coin_name_plural'].'</div>';
+								echo '<div class="col-sm-2">'.$account_game->display_coins($game_balance).'</div>';
 							}
 							
 							echo '<div class="col-sm-2">'.$address['vote_identifier'].' (#'.$address['option_index'].')';
@@ -567,6 +596,8 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 							
 							echo "</div>\n";
 						}
+						
+						echo "</div>\n";
 						
 						echo '<br/><p><button class="btn btn-sm btn-primary" onclick="thisPageManager.manage_addresses('.$account['account_id'].', \'new\', false);">New Address</button></p>';
 						echo '
@@ -614,7 +645,6 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 						<select class="form-control" id="create_account_action" onchange="thisPageManager.create_account_step(1);">
 							<option value="">-- Please Select --</option>
 							<option value="for_blockchain">Create a new blockchain account</option>
-							<option value="by_rpc_account">Import an existing account by RPC</option>
 						</select>
 					</div>
 					<div class="form-group" id="create_account_step2" style="display: none;">
@@ -688,6 +718,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 								</div>
 							</form>
 						</div>
+						<?php if ($account_game) { ?>
 						<div id="account_spend_faucet" style="display: none;">
 							<form action="/accounts/" method="get">
 								<input type="hidden" name="action" value="donate_to_faucet" />
@@ -746,7 +777,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 								<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
 								
 								<div class="form-group">
-									<label for="split_amount_each">How many coins should be in each UTXO?</label>
+									<label for="split_amount_each">How many <?php echo $account_game->db_game['coin_name_plural']; ?> should be in each UTXO?</label>
 									<input type="text" class="form-control" name="split_amount_each" id="split_amount_each" />
 								</div>
 								<div class="form-group">
@@ -769,6 +800,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 								</div>
 							</form>
 						</div>
+						<?php } ?>
 						<div id="account_spend_buyin" style="display: none;">
 							<br/>
 							<p>

@@ -143,7 +143,7 @@ if ($app->running_as_admin()) {
 						if ($fee_amount_int > 0 && $buyin_amount_int > 0 && $amount_to_color > 0) {
 							$invoice_user = new User($app, $invoice_address['user_id']);
 							
-							$escrow_address = $game->blockchain->create_or_fetch_address($game->db_game['escrow_address'], true, false, false, false, false);
+							$escrow_address = $game->blockchain->create_or_fetch_address($game->db_game['escrow_address'], false, null);
 							$user_address = $app->any_normal_address_in_account($invoice_address['user_game_account_id']);
 							
 							if ($user_address) {
@@ -370,7 +370,7 @@ if ($app->running_as_admin()) {
 		
 		while ($db_game = $db_running_games->fetch()) {
 			if (empty($blockchains[$db_game['blockchain_id']])) $blockchains[$db_game['blockchain_id']] = new Blockchain($app, $db_game['blockchain_id']);
-			$escrow_address = $blockchains[$db_game['blockchain_id']]->create_or_fetch_address($db_game['escrow_address'], true, false, false, false, false);
+			$escrow_address = $blockchains[$db_game['blockchain_id']]->create_or_fetch_address($db_game['escrow_address'], false, null);
 			
 			if ($escrow_address['is_mine'] == 1) {
 				$this_game = new Game($blockchains[$db_game['blockchain_id']], $db_game['game_id']);

@@ -38,7 +38,9 @@ class GameDefinition {
 				if ($game->db_game[$var_name] == "0" || $game->db_game[$var_name] > 0) $var_val = (int) $game->db_game[$var_name];
 				else $var_val = null;
 			}
-			else if ($var_type == "float") $var_val = (float) $game->db_game[$var_name];
+			else if ($var_type == "float") {
+				$var_val = $game->db_game[$var_name] == "" ? null : (float) $game->db_game[$var_name];
+			}
 			else if ($var_type == "bool") {
 				if ($game->db_game[$var_name]) $var_val = true;
 				else $var_val = false;
@@ -72,55 +74,58 @@ class GameDefinition {
 		$event_verbatim_vars = $app->event_verbatim_vars();
 		$events_obj = [];
 		
-		if ($definition_mode == "defined") {
-			$events_q = "SELECT ev.*, sp.entity_name AS sport_name, lg.entity_name AS league_name FROM game_defined_events ev LEFT JOIN entities sp ON ev.sport_entity_id=sp.entity_id LEFT JOIN entities lg ON ev.league_entity_id=lg.entity_id WHERE ev.game_id=:game_id ORDER BY ev.event_index ASC;";
-			$options_q = "SELECT event_index, name, entity_id, target_probability FROM game_defined_options WHERE game_id=:game_id ORDER BY event_index ASC, option_index ASC;";
-		}
-		else {
-			$events_q = "SELECT ev.*, sp.entity_name AS sport_name, lg.entity_name AS league_name FROM events ev LEFT JOIN entities sp ON ev.sport_entity_id=sp.entity_id LEFT JOIN entities lg ON ev.league_entity_id=lg.entity_id WHERE ev.game_id=:game_id ORDER BY ev.event_index ASC;";
-			$options_q = "SELECT ev.event_index, op.name, op.entity_id, op.target_probability FROM events ev JOIN options op ON ev.event_id=op.event_id WHERE ev.game_id=:game_id ORDER BY ev.event_index ASC, op.event_option_index ASC;";
-		}
-		$db_events = $app->run_query($events_q, ['game_id'=>$game->db_game['game_id']]);
-		$db_options = $app->run_query($options_q, ['game_id'=>$game->db_game['game_id']])->fetchAll(PDO::FETCH_ASSOC);
-		$options_by_event_index = AppSettings::arrayToMapOnKey($db_options, "event_index", true);
-		
-		$i=0;
-		while ($db_event = $db_events->fetch()) {
-			$temp_event = [];
+		if ($game->db_game['finite_events']) {
+			if ($definition_mode == "defined") {
+				$events_q = "SELECT ev.*, sp.entity_name AS sport_name, lg.entity_name AS league_name FROM game_defined_events ev LEFT JOIN entities sp ON ev.sport_entity_id=sp.entity_id LEFT JOIN entities lg ON ev.league_entity_id=lg.entity_id WHERE ev.game_id=:game_id ORDER BY ev.event_index ASC;";
+				$options_q = "SELECT event_index, name, entity_id, target_probability FROM game_defined_options WHERE game_id=:game_id ORDER BY event_index ASC, option_index ASC;";
+			}
+			else {
+				$events_q = "SELECT ev.*, sp.entity_name AS sport_name, lg.entity_name AS league_name FROM events ev LEFT JOIN entities sp ON ev.sport_entity_id=sp.entity_id LEFT JOIN entities lg ON ev.league_entity_id=lg.entity_id WHERE ev.game_id=:game_id ORDER BY ev.event_index ASC;";
+				$options_q = "SELECT ev.event_index, op.name, op.entity_id, op.target_probability FROM events ev JOIN options op ON ev.event_id=op.event_id WHERE ev.game_id=:game_id ORDER BY ev.event_index ASC, op.event_option_index ASC;";
+			}
+			$db_events = $app->run_query($events_q, ['game_id'=>$game->db_game['game_id']]);
+			$db_options = $app->run_query($options_q, ['game_id'=>$game->db_game['game_id']])->fetchAll(PDO::FETCH_ASSOC);
+			$options_by_event_index = AppSettings::arrayToMapOnKey($db_options, "event_index", true);
 			
-			for ($j=0; $j<count($event_verbatim_vars); $j++) {
-				$var_type = $event_verbatim_vars[$j][0];
-				$var_name = $event_verbatim_vars[$j][1];
+			$i=0;
+			while ($db_event = $db_events->fetch()) {
+				$temp_event = [];
 				
-				if ($db_event['payout_rule'] != "linear" && in_array($var_name, ['track_max_price','track_min_price','track_payout_price','track_name_short'])) {}
-				else {
-					$var_val = $db_event[$var_name];
+				for ($j=0; $j<count($event_verbatim_vars); $j++) {
+					$var_type = $event_verbatim_vars[$j][0];
+					$var_name = $event_verbatim_vars[$j][1];
 					
-					if ($var_type == "int" && $var_val != "") $var_val = (int) $var_val;
-					else if ($var_type == "float" && $var_val != "") $var_val = (float) $var_val;
-					
-					$temp_event[$var_name] = $var_val;
+					if ($db_event['payout_rule'] != "linear" && in_array($var_name, ['track_max_price','track_min_price','track_payout_price','track_name_short'])) {}
+					else {
+						$var_val = $db_event[$var_name];
+						
+						if ($var_type == "int" && $var_val != "") $var_val = (int) $var_val;
+						else if ($var_type == "float" && $var_val != "") $var_val = (float) $var_val;
+						
+						$temp_event[$var_name] = $var_val;
+					}
 				}
+				
+				if (!empty($db_event['sport_name'])) $temp_event['sport'] = $db_event['sport_name'];
+				if (!empty($db_event['league_name'])) $temp_event['league'] = $db_event['league_name'];
+				if (!empty($db_event['external_identifier']) && $show_internal_params) $temp_event['external_identifier'] = $db_event['external_identifier'];
+				
+				$j = 0;
+				foreach ($options_by_event_index[$db_event['event_index']] as $option) {
+					$possible_outcome = ["title"=>$option->name];
+					if ($show_internal_params) {
+						if (!empty($option->target_probability)) $possible_outcome['target_probability'] = $option->target_probability;
+						if (!empty($option->entity_id)) $possible_outcome['entity_id'] = $option->entity_id;
+					}
+					$temp_event['possible_outcomes'][$j] = $possible_outcome;
+					$j++;
+				}
+				$events_obj[$i] = $temp_event;
+				$i++;
 			}
 			
-			if (!empty($db_event['sport_name'])) $temp_event['sport'] = $db_event['sport_name'];
-			if (!empty($db_event['league_name'])) $temp_event['league'] = $db_event['league_name'];
-			if (!empty($db_event['external_identifier']) && $show_internal_params) $temp_event['external_identifier'] = $db_event['external_identifier'];
-			
-			$j = 0;
-			foreach ($options_by_event_index[$db_event['event_index']] as $option) {
-				$possible_outcome = ["title"=>$option->name];
-				if ($show_internal_params) {
-					if (!empty($option->target_probability)) $possible_outcome['target_probability'] = $option->target_probability;
-					if (!empty($option->entity_id)) $possible_outcome['entity_id'] = $option->entity_id;
-				}
-				$temp_event['possible_outcomes'][$j] = $possible_outcome;
-				$j++;
-			}
-			$events_obj[$i] = $temp_event;
-			$i++;
+			$game_definition['events'] = $events_obj;
 		}
-		$game_definition['events'] = $events_obj;
 		
 		$game_def_str = self::game_def_to_text($game_definition);
 		$game_def_hash = self::game_def_to_hash($game_def_str);
@@ -288,13 +293,13 @@ class GameDefinition {
 					$ref_from_event = $from_def->events[$event_pos];
 					$ref_from_event->event_starting_block = null;
 					$ref_from_event->event_final_block = null;
-					$ref_from_event->event_outcome_block = null;
+					$ref_from_event->event_determined_to_block = null;
 					$ref_from_event->event_payout_block = null;
 					
 					$ref_to_event = $to_def->events[$event_pos];
 					$ref_to_event->event_starting_block = null;
 					$ref_to_event->event_final_block = null;
-					$ref_to_event->event_outcome_block = null;
+					$ref_to_event->event_determined_to_block = null;
 					$ref_to_event->event_payout_block = null;
 					
 					if (json_encode($ref_from_event) == json_encode($ref_to_event)) $event_differences['block_changed_events']++;
@@ -471,6 +476,7 @@ class GameDefinition {
 	public static function set_game_from_definition(&$app, &$game_definition, &$thisuser, &$error_message, &$db_game, $permission_override) {
 		$game = false;
 		$decode_error = false;
+		$is_new_game = false;
 		
 		if (is_object($game_definition)) $game_def = $game_definition;
 		else {
@@ -483,6 +489,10 @@ class GameDefinition {
 		
 		if (!$decode_error) {
 			$module_ok = true;
+			if (!empty($game_def->module)) {
+				$db_module = $app->check_module($game_def->module);
+				if (!$db_module) $module_ok = false;
+			}
 			
 			if ($module_ok) {
 				if (!empty($game_def->blockchain_identifier)) {
@@ -585,6 +595,8 @@ class GameDefinition {
 									
 									$game = Game::create_game($blockchain, $new_game_params);
 									
+									$is_new_game = true;
+									
 									if (!empty($game_def->module)) {
 										$app->run_query("UPDATE modules SET primary_game_id=:primary_game_id WHERE module_name=:module_name AND primary_game_id IS NULL;", [
 											'primary_game_id' => $game->db_game['game_id'],
@@ -653,9 +665,9 @@ class GameDefinition {
 				}
 				else $error_message .= "Error, blockchain url identifier was empty.\n";
 			}
-			else $error_message .= "Error, invalid module.\n";
+			else $error_message .= "Failed to import game, you don't have the ".$game_def->module." module installed.\n";
 		}
 		
-		return $game;
+		return [$game, $is_new_game];
 	}
 }
