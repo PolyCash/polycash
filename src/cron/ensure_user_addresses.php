@@ -26,6 +26,8 @@ if ($app->running_as_admin()) {
 		
 		if ($print_debug) $app->print_debug("Giving addresses to users.");
 		
+		$need_address_blockchain_ids = [];
+		
 		for ($game_i=0; $game_i<count($db_running_games); $game_i++) {
 			if (empty($blockchains[$db_running_games[$game_i]['blockchain_id']])) $blockchains[$db_running_games[$game_i]['blockchain_id']] = new Blockchain($app, $db_running_games[$game_i]['blockchain_id']);
 			$running_games[$game_i] = new Game($blockchains[$db_running_games[$game_i]['blockchain_id']], $db_running_games[$game_i]['game_id']);
@@ -45,6 +47,8 @@ if ($app->running_as_admin()) {
 				foreach ($user_games as $user_game) {
 					$user = new User($app, $user_game['user_id']);
 					$user->generate_user_addresses($running_games[$game_i], $user_game);
+					$user_game_account = $app->fetch_account_by_id($user_game['account_id']);
+					if ($user_game_account['has_option_indices_until'] < $to_option_index) $need_address_blockchain_ids[$running_games[$game_i]->db_game['blockchain_id']] = true;
 					if ($print_debug) {
 						echo ". ";
 						$app->flush_buffers();
@@ -53,7 +57,6 @@ if ($app->running_as_admin()) {
 			}
 		}
 		
-		$need_address_blockchain_ids = [];
 		if ($print_debug) $app->print_debug("Now filling address sets for ".count($db_running_games)." games.");
 		
 		for ($game_i=0; $game_i<count($running_games); $game_i++) {
