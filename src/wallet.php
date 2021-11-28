@@ -629,6 +629,8 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 						echo $new_event_js;
 						?>
 						</script>
+						
+						<?php echo $app->render_view('event_details_modal'); ?>
 					</div>
 					<div class="col-md-6">
 						<div id="betting_mode_inflationary" style="display: none;">

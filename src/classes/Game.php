@@ -3954,5 +3954,36 @@ class Game {
 		
 		return $this->blockchain->app->run_query($unclaimed_q, $unclaimed_params)->fetchAll();
 	}
+	
+	public function fetch_events_by_entity_and_season($entity_id, $season_index, $event_starting_block) {
+		$events = $this->blockchain->app->run_query("SELECT ev.*, w.entity_id AS winning_entity_id FROM events ev JOIN options op ON ev.event_id=op.event_id JOIN options w ON ev.winning_option_id=w.option_id WHERE ev.game_id=:game_id AND ev.season_index=:season_index AND op.entity_id=:entity_id AND ev.event_determined_to_block<:event_starting_block GROUP BY ev.event_id ORDER BY ev.event_index ASC;", [
+			'game_id' => $this->db_game['game_id'],
+			'season_index' => $season_index,
+			'entity_id' => $entity_id,
+			'event_starting_block' => $event_starting_block,
+		])->fetchAll(PDO::FETCH_ASSOC);
+		
+		$events_by_id = [];
+		
+		foreach ($events as $event) {
+			$events_by_id[$event['event_id']] = $event;
+		}
+		
+		$options = $this->blockchain->app->run_query("SELECT op.* FROM events ev JOIN options eop ON ev.event_id=eop.event_id JOIN options op ON op.event_id=ev.event_id WHERE ev.game_id=:game_id AND ev.season_index=:season_index AND eop.entity_id=:entity_id AND ev.event_determined_to_block<:event_starting_block ORDER BY ev.event_index ASC, op.event_option_index ASC;", [
+			'game_id' => $this->db_game['game_id'],
+			'season_index' => $season_index,
+			'entity_id' => $entity_id,
+			'event_starting_block' => $event_starting_block,
+		])->fetchAll(PDO::FETCH_ASSOC);
+		
+		foreach ($options as $option) {
+			if (empty($events_by_id[$option['event_id']]['options'])) {
+				$events_by_id[$option['event_id']]['options'] = [];
+			}
+			$events_by_id[$option['event_id']]['options'][$option['option_id']] = $option;
+		}
+		
+		return $events_by_id;
+	}
 }
 ?>

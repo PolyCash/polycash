@@ -1144,6 +1144,8 @@ class App {
 			echo "No public games are running right now.<br/>\n";
 		}
 		echo "</div>\n";
+		
+		echo $this->render_view('event_details_modal');
 	}
 	
 	public function refresh_utxo_user_ids($only_unspent_utxos) {

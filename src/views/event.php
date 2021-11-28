@@ -204,6 +204,7 @@ if (!empty($event->db_event['option_block_rule'])) {
 		echo "<p>";
 		if ($is_tie) echo "A tie ".$was_is." predicted";
 		else echo $predicted_winner['name']." ".$was_is." predicted to win ".substr($target_score_disp, 0, strlen($target_score_disp)-1);
+		echo ' &nbsp; <a href="" onclick="thisPageManager.open_event_details_modal('.$game->db_game['game_id'].', '.$event->db_event['event_index'].'); return false;">See Details</a>';
 		echo "</p>\n";
 	}
 }

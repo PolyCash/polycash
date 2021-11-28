@@ -92,6 +92,8 @@ else $exchange_rate = 0;
 	</div>
 </div>
 
+<?php echo $app->render_view('event_details_modal'); ?>
+
 <script type="text/javascript">
 //<![CDATA[
 games.push(new Game(thisPageManager, <?php

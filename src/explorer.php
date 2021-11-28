@@ -495,6 +495,8 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$event_html = $event->event_html($thisuser, false, false, 0, 0);
 						echo $event_html;
 						
+						echo $app->render_view('event_details_modal');
+						
 						if ($event->db_event['option_block_rule'] == "basketball_game") {
 							echo "<br/><h2>".ucfirst($game->db_game['event_type_name'])." Summary</h2>\n";
 							
@@ -526,7 +528,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							list($options_by_score, $options_by_index, $is_tie, $score_disp, $in_progress_summary) = $event->option_block_info();
 							
 							if ((string)$event->db_event['winning_option_id'] !== "" && $is_tie) {
-								echo "<p>".$options_by_score[0]['name']." won in overtime.</p>\n";
+								echo "<p>".$winner_option['name']." won in overtime.</p>\n";
 							}
 						}
 						

@@ -2951,7 +2951,6 @@ var PageManager = function() {
 				migration_id: migration_id
 			},
 			success: function(migration_details) {
-				console.log("done");
 				$('#migration_modal').modal('show');
 				$('#migration_modal_content').html(migration_details);
 			}
@@ -2972,6 +2971,21 @@ var PageManager = function() {
 			},
 			success: function(migration_history) {
 				$('#migration_history').html(migration_history);
+			}
+		});
+	};
+	this.open_event_details_modal = function(game_id, event_index) {
+		$.ajax({
+			url: "/ajax/event_details_modal.php",
+			type: "GET",
+			dataType: "json",
+			data: {
+				game_id: game_id,
+				event_index: event_index,
+			},
+			success: function(details) {
+				$('#event_details_modal').modal('show');
+				$('#event_details_inner').html(details.renderedContent);
 			}
 		});
 	};
