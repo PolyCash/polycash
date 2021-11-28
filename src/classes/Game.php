@@ -2071,15 +2071,19 @@ class Game {
 			if ($print_debug) $this->blockchain->app->print_debug("Resetting the game..");
 			
 			if (array_key_exists("reset_from_block", $extra_info)) {
-				$this->reset_blocks_from_block($extra_info['reset_from_block']);
-				$this->set_loaded_until_block($extra_info['reset_from_block']-1);
-				$this->set_events_until_block($extra_info['reset_from_block']-1);
+				$reset_from_block = $extra_info['reset_from_block'];
+				$this->reset_blocks_from_block($reset_from_block);
+				$this->set_loaded_until_block($reset_from_block-1);
+				$this->set_events_until_block($reset_from_block-1);
 				unset($extra_info['reset_from_block']);
 				
 				if (array_key_exists("reset_from_event_index", $extra_info)) {
 					$this->reset_events_from_index($extra_info['reset_from_event_index']);
 					unset($extra_info['reset_from_event_index']);
 				}
+				
+				$this->ensure_events_until_block($this->blockchain->last_complete_block_id()+1, $print_debug);
+				$this->set_target_scores_at_block($reset_from_block);
 			}
 			else {
 				$this->delete_reset_game('reset');
