@@ -2098,7 +2098,7 @@ class Game {
 		
 		$load_block_height = $this->db_game['loaded_until_block']+1;
 		$to_block_height = $this->blockchain->last_complete_block_id();
-		$ensure_block_id = $to_block_height+1;
+		$ensure_block_id = $this->blockchain->last_block_id()+1;
 		
 		// Load events
 		$this->ensure_events_until_block($ensure_block_id, $print_debug);
