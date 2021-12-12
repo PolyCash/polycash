@@ -3802,12 +3802,17 @@ class App {
 								if (!$existing_game) {
 									$new_game_message = null;
 									$db_new_game = null;
-									GameDefinition::set_game_from_definition($this, $game_def, $thisuser, $new_game_message, $db_new_game, false);
+									list($new_game, $is_new_game) = GameDefinition::set_game_from_definition($this, $game_def, $thisuser, $new_game_message, $db_new_game, false);
 									
 									if (!empty($error_message)) array_push($messages, $new_game_message);
 									
-									if ($db_new_game) {
-										array_push($messages, "The ".$db_new_game['name']." game was successfully created.");
+									if ($new_game) {
+										array_push($messages, "The ".$new_game->db_game['name']." game was successfully created.");
+										
+										if ($thisuser && empty($new_game->blockchain->db_blockchain['auto_claim_to_account_id'])) {
+											$user_game = $thisuser->ensure_user_in_game($new_game, false);
+											$new_game->blockchain->set_auto_claim_to_account($user_game['account_id']);
+										}
 									}
 								}
 							}

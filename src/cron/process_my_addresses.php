@@ -59,6 +59,7 @@ if ($app->running_as_admin()) {
 								$currency_id = $blockchain->currency_id();
 								$add_count = 0;
 								$add_privkey_count = 0;
+								$transfer_count = 0;
 								
 								foreach ($listsinceblock['transactions'] as $my_transaction) {
 									$address_info = $blockchain->coin_rpc->getaddressinfo($my_transaction['address']);
@@ -92,6 +93,15 @@ if ($app->running_as_admin()) {
 											]);
 										}
 										
+										if ($address_key && empty($address_key['account_id']) && !empty($blockchain->db_blockchain['auto_claim_to_account_id'])) {
+											$app->run_query("UPDATE address_keys SET account_id=:account_id WHERE address_key_id=:address_key_id;", [
+												'account_id' => $blockchain->db_blockchain['auto_claim_to_account_id'],
+												'address_key_id' => $address_key['address_key_id'],
+											]);
+											$address_key['account_id'] = $blockchain->db_blockchain['auto_claim_to_account_id'];
+											$transfer_count++;
+										}
+										
 										if ($address_key && empty($address_key['priv_key'])) {
 											$priv_key = $blockchain->coin_rpc->dumpprivkey($address_key['pub_key']);
 											
@@ -111,7 +121,7 @@ if ($app->running_as_admin()) {
 								$total_add_count += $add_count;
 								$total_add_privkey_count += $add_privkey_count;
 								
-								if ($print_debug) $app->print_debug("Set ".$add_count." addresses as mine, backed up ".$add_privkey_count." private keys");
+								if ($print_debug) $app->print_debug("Set ".$add_count." addresses as mine, backed up ".$add_privkey_count." private keys, transferred ".$transfer_count." to account");
 							}
 							else if ($print_debug) $app->print_debug("listsinceblock ".$process_from_block['block_id']." returned 0 transactions.");
 						}

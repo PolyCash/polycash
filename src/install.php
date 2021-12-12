@@ -119,7 +119,7 @@ if ($app->running_as_admin()) {
 									list($new_game, $is_new_game) = GameDefinition::set_game_from_definition($app, $new_game_def_txt, $thisuser, $error_message, $db_game, false);
 									
 									if ($new_game) {
-										$error_message = "Import was successful. Next please <a href=\"/manage/".$new_game->db_game['url_identifier']."/?next=internal_settings\">visit this page and start the game</a>.";
+										$error_message = "Import was successful. <a href=\"/wallet/".$new_game->db_game['url_identifier']."/\">Play now</a>.";
 									}
 									else if (empty($error_message)) $error_message = "Error: failed to create the game.";
 									

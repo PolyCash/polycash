@@ -429,28 +429,6 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 							}
 						});
 					}
-					else if (action == "claim_coinbase") {
-						var coinbase_quantity = prompt("How many "+blockchain_name+" coinbase outputs do you want to claim?");
-						if (coinbase_quantity) {
-							var to_address = prompt("Please enter the address where these coins should be deposited:");
-							if (to_address) {
-								$.ajax({
-									url: "/ajax/claim_coinbase.php",
-									dataType: "json",
-									data: {
-										blockchain_id: blockchain_id,
-										synchronizer_token: this.synchronizer_token,
-										quantity: coinbase_quantity,
-										to_address: to_address
-									},
-									success: function(claim_response) {
-										if (claim_response.status_code == 1) window.location = claim_response.message;
-										else alert(claim_response.message);
-									}
-								});
-							}
-						}
-					}
 					else {
 						$('#'+action+'_'+blockchain_id).submit();
 					}
@@ -486,6 +464,7 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 							action: 'claim_all_to_account',
 							account_id: account_id,
 							synchronizer_token: this.synchronizer_token,
+							auto_claim: $('#auto_claim').is(":checked") ? 1 : 0,
 						},
 						success: function(manage_response) {
 							$('#manage_unclaimed_modal').html(manage_response);

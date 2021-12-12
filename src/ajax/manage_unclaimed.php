@@ -55,6 +55,10 @@ if ($thisuser && $app->user_is_admin($thisuser)) {
 											?>
 										</select>
 									</div>
+									<div class="form-group">
+										<input type="checkbox" name="auto_claim" id="auto_claim" value="1" />
+										<label for="auto_claim">Automatically transfer all unclaimed coins to this account going forward</label>
+									</div>
 									<button class="btn btn-success">Claim <?php echo ucfirst($game->db_game['coin_name_plural']); ?></button>
 								</form>
 							</div>
@@ -101,6 +105,7 @@ if ($thisuser && $app->user_is_admin($thisuser)) {
 								$account = $app->fetch_account_by_id($_REQUEST['account_id']);
 								
 								if ($account['game_id'] == $game->db_game['game_id']) {
+									$auto_claim = (int) $_REQUEST['auto_claim'];
 									$unclaimed_coins = $game->fetch_unclaimed_coins(true);
 									$address_ids = array_values(array_unique(array_column($unclaimed_coins, 'address_id')));
 									
@@ -113,6 +118,13 @@ if ($thisuser && $app->user_is_admin($thisuser)) {
 									else {
 										?>
 										Didn't find any coins to claim.
+										<?php
+									}
+									
+									if ($auto_claim) {
+										$blockchain->set_auto_claim_to_account($account['account_id']);
+										?>
+										<br/>All mined coins will be transferred to account #<?php echo $account['account_id']; ?>
 										<?php
 									}
 								}

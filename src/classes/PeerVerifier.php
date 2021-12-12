@@ -67,9 +67,10 @@ class PeerVerifier {
 			$out_obj = [];
 			
 			$events_by_game_params = [
-				'game_id' => $this->game->db_game['game_id']
+				'game_id' => $this->game->db_game['game_id'],
+				'block_id' => $this->game->last_block_id(),
 			];
-			$events_by_game_q = "SELECT ev.event_id, gde.event_index, gde.event_name, gde.outcome_index FROM game_defined_events gde LEFT JOIN events ev ON gde.event_index=ev.event_index WHERE gde.game_id=:game_id AND ev.game_id=:game_id ORDER BY gde.event_index ASC;";
+			$events_by_game_q = "SELECT ev.event_id, gde.event_index, gde.event_name, gde.outcome_index FROM game_defined_events gde LEFT JOIN events ev ON gde.event_index=ev.event_index WHERE gde.game_id=:game_id AND ev.game_id=:game_id AND ev.event_final_block <= :block_id ORDER BY gde.event_index ASC;";
 			$events_by_game = $this->app->run_query($events_by_game_q, $events_by_game_params)->fetchAll(PDO::FETCH_ASSOC);
 			
 			foreach ($events_by_game as $db_event) {

@@ -194,7 +194,7 @@ class Blockchain {
 				'block_hash' => $block_hash,
 				'block_id' => $block_height,
 				'time_created' => time(),
-				'locally_saved' => 0
+				'locally_saved' => 0,
 			]);
 			$internal_block_id = $this->app->last_insert_id();
 			$db_block = $this->fetch_block_by_internal_id($internal_block_id);
@@ -227,8 +227,10 @@ class Blockchain {
 	
 	public function add_block_fast($block_hash, $block_height, &$web_api_block, $print_debug) {
 		$ref_time = microtime(true);
-		
 		$any_error = false;
+		
+		$this->app->dbh->beginTransaction();
+		
 		$this->load_coin_rpc();
 		
 		$db_block = $this->coind_prep_add_block($block_hash, $block_height, $print_debug);
@@ -621,6 +623,8 @@ class Blockchain {
 			$postprocessing_error = $this->coind_postprocess_block($block_height, $db_block, $ref_time);
 			if ($postprocessing_error) $any_error = true;
 		}
+		
+		$this->app->dbh->commit();
 		
 		if ($any_error) $this->delete_blocks_from_height($block_height);
 		
@@ -2890,6 +2894,14 @@ class Blockchain {
 			'transaction_id' => $transaction['transaction_id'],
 			'out_index' => $position
 		])->fetch();
+	}
+	
+	public function set_auto_claim_to_account($account_id) {
+		$this->app->run_query("UPDATE blockchains SET auto_claim_to_account_id=:account_id WHERE blockchain_id=:blockchain_id;", [
+			'account_id' => $account_id,
+			'blockchain_id' => $this->db_blockchain['blockchain_id'],
+		]);
+		$this->db_blockchain['auto_claim_to_account_id'] = $account_id;
 	}
 }
 ?>

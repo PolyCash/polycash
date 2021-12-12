@@ -1263,7 +1263,7 @@ class Game {
 		}
 		else {
 			$headers_pct_complete = 100*($total_game_blocks-$missingheader_blocks)/$total_game_blocks;
-			$blocks_pct_complete = 100*($total_game_blocks-($missing_blocks-$block_fraction))/$total_game_blocks;
+			$blocks_pct_complete = 100*($total_game_blocks-$missing_blocks)/$total_game_blocks;
 		}
 		$est_time_remaining = $missing_blocks*$time_per_block;
 		
