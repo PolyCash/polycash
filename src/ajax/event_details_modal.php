@@ -23,7 +23,7 @@ if ($db_game) {
 			}
 		}
 		$option['past_wins'] = $past_wins;
-		$option['past_average_score'] = $past_score_sum/count($past_events[$option['option_id']]);
+		$option['past_average_score'] = count($past_events[$option['option_id']]) > 0 ? $past_score_sum/count($past_events[$option['option_id']]) : $game->db_game['target_option_block_score'];
 	}
 	
 	$event_past_avg = round(array_sum(array_column($options, 'past_average_score'))/count($options), 8);
