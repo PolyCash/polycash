@@ -602,8 +602,8 @@ else {
 										</div>
 										<div id="game_form_pow_fixed">
 											<div class="form-group">
-												<label for="game_form_pow_fixed_reward">Proof of work reward per block:</label>
-												<input class="form-control" style="text-align: right;" type="text" id="game_form_pow_fixed_reward" placeholder="100" />
+												<label for="game_form_initial_pow_reward">Proof of work initial reward per block:</label>
+												<input class="form-control" style="text-align: right;" type="text" id="game_form_initial_pow_reward" placeholder="100" />
 											</div>
 										</div>
 										<div class="form-group">

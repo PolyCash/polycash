@@ -466,7 +466,7 @@ var PageManager = function() {
 	this.last_event_index_shown = false;
 	this.event_outcome_sections_shown = 1;
 
-	this.game_form_vars = ['blockchain_id', 'module', 'event_rule', 'option_group_id', 'events_per_round', 'event_type_name', 'name', 'payout_weight', 'round_length', 'inflation', 'exponential_inflation_rate', 'final_round', 'coin_name', 'coin_name_plural', 'coin_abbreviation', 'start_condition', 'buyin_policy', 'game_buyin_cap', 'default_vote_effectiveness_function', 'default_effectiveness_param1', 'default_max_voting_fraction', 'game_starting_block', 'escrow_address', 'genesis_tx_hash', 'genesis_amount', 'default_betting_mode', 'finite_events', 'pow_reward_type', 'pow_fixed_reward'];
+	this.game_form_vars = ['blockchain_id', 'module', 'event_rule', 'option_group_id', 'events_per_round', 'event_type_name', 'name', 'payout_weight', 'round_length', 'inflation', 'exponential_inflation_rate', 'final_round', 'coin_name', 'coin_name_plural', 'coin_abbreviation', 'start_condition', 'buyin_policy', 'game_buyin_cap', 'default_vote_effectiveness_function', 'default_effectiveness_param1', 'default_max_voting_fraction', 'game_starting_block', 'escrow_address', 'genesis_tx_hash', 'genesis_amount', 'default_betting_mode', 'finite_events', 'pow_reward_type', 'initial_pow_reward'];
 	this.event_verbatim_vars = ['event_index', 'next_event_index', 'event_starting_block', 'event_final_block', 'event_payout_block', 'event_starting_time', 'event_final_time', 'event_payout_time', 'event_name', 'option_block_rule', 'option_name', 'option_name_plural', 'outcome_index', 'payout_rule', 'payout_rate', 'track_max_price', 'track_min_price', 'track_payout_price', 'track_name_short'];
 
 	this.transaction_in_progress = false;

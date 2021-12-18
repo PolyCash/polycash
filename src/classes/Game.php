@@ -2230,8 +2230,8 @@ class Game {
 				}
 			}
 			
-			if ($this->db_game['pow_reward_type'] == "fixed" && $this->db_game['pow_fixed_reward'] > 0) {
-				$pow_reward_int = (int)($this->db_game['pow_fixed_reward']*pow(10, $this->db_game['decimal_places']));
+			if ($this->db_game['pow_reward_type'] == "fixed" && $this->db_game['initial_pow_reward'] > 0) {
+				$pow_reward_int = (int)($this->db_game['initial_pow_reward']*pow(10, $this->db_game['decimal_places']));
 				$coinbase_tx = $this->blockchain->fetch_tx_by_position_in_block($db_block['block_id'], 0);
 				$coinbase_io = $this->blockchain->fetch_io_by_position_in_tx($coinbase_tx, 0);
 				$game_io_index++;

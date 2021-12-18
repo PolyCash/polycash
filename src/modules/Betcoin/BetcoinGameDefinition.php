@@ -26,7 +26,7 @@ class BetcoinGameDefinition {
 			"inflation": "exponential",
 			"exponential_inflation_rate": 0.0001,
 			"pow_reward_type": "fixed",
-			"pow_fixed_reward": 50,
+			"initial_pow_reward": 50,
 			"round_length": 50,
 			"payout_weight": "coin_round",
 			"final_round": null,
