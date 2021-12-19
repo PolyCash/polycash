@@ -2094,6 +2094,7 @@ class Game {
 			unset($extra_info['pending_reset']);
 			
 			$this->set_extra_info($extra_info);
+			$this->update_db_game();
 		}
 		
 		$load_block_height = $this->db_game['loaded_until_block']+1;
@@ -2274,7 +2275,7 @@ class Game {
 						
 						$new_pow_reward = $this->pegged_pow_reward($adjustment_block, $genesis_tx);
 						
-						if ($print_debug) $this->blockchain->app->print_debug("Changed POW reward to ".$new_pow_reward);
+						if ($print_debug) $this->blockchain->app->print_debug("Changed POW reward to ".$new_pow_reward." based on block #".$adjustment_block);
 						
 						$this->blockchain->app->run_query("UPDATE games SET current_pow_reward=:new_pow_reward WHERE game_id=:game_id;", [
 							'new_pow_reward' => $new_pow_reward,
