@@ -598,12 +598,19 @@ else {
 											<select id="game_form_pow_reward_type" class="form-control" onchange="thisPageManager.game_form_pow_reward_type_changed(this);">
 												<option value="none">No POW rewards</option>
 												<option value="fixed">Fixed reward per block</option>
+												<option value="pegged_to_supply">Pegged to supply</option>
 											</select>
 										</div>
 										<div id="game_form_pow_fixed">
 											<div class="form-group">
-												<label for="game_form_pow_fixed_reward">Proof of work reward per block:</label>
-												<input class="form-control" style="text-align: right;" type="text" id="game_form_pow_fixed_reward" placeholder="100" />
+												<label for="game_form_initial_pow_reward">Proof of work initial reward per block:</label>
+												<input class="form-control" style="text-align: right;" type="text" id="game_form_initial_pow_reward" placeholder="100" />
+											</div>
+										</div>
+										<div id="game_form_pow_pegged">
+											<div class="form-group">
+												<label for="game_form_blocks_per_pow_reward_ajustment">Blocks per POW reward adjustment:</label>
+												<input class="form-control" style="text-align: right;" type="text" id="game_form_blocks_per_pow_reward_ajustment" placeholder="1000" />
 											</div>
 										</div>
 										<div class="form-group">
