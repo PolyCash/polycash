@@ -2155,16 +2155,23 @@ class Game {
 		])->fetch();
 	}
 	
-	public function pegged_pow_reward($adjustment_block, $genesis_tx) {
-		$supply_prior_blocks = 50;
-		$ref_supply_block = $adjustment_block-$supply_prior_blocks;
+	public function pegged_pow_reward($adjustment_block, $genesis_tx, $print_debug=false) {
+		$max_event_length = (int) ($this->blockchain->app->run_query("SELECT MAX(event_payout_block-event_starting_block) AS max_event_length FROM events WHERE game_id=:game_id AND event_starting_block<:adjustment_block;", [
+			'game_id' => $this->db_game['game_id'],
+			'adjustment_block' => $adjustment_block,
+		])->fetch()['max_event_length']);
+		
+		$ref_supply_subtract_blocks = $max_event_length+1;
+		$ref_supply_block = $adjustment_block-$ref_supply_subtract_blocks;
+		
+		if ($print_debug) $this->blockchain->app->print_debug("Adjusting pow reward on block #".$adjustment_block.", max event length: ".$max_event_length.", ref block #".$ref_supply_block);
 		
 		if ($ref_supply_block <= $genesis_tx['block_id']) $new_pow_reward = $this->db_game['initial_pow_reward'];
 		else {
 			$initial_reward_per_supply = $this->db_game['initial_pow_reward']/$this->db_game['genesis_amount'];
 			$ref_supply = $this->coins_in_existence($ref_supply_block, false)/pow(10, $this->db_game['decimal_places']);
 			
-			$event_info = $this->blockchain->app->run_query("SELECT SUM(p.destroy_amount) AS destroy_amount, SUM(p.".$this->db_game['payout_weight']."s_destroyed) as inflation_score FROM events ev JOIN options op ON ev.event_id=op.event_id JOIN transaction_game_ios gio JOIN transaction_game_ios p ON gio.parent_io_id=p.game_io_id WHERE gio.option_id=op.option_id AND ev.game_id=:game_id AND ev.event_starting_block <= :ref_supply_block AND ev.event_payout_block > :ref_supply_block;", [
+			$event_info = $this->blockchain->app->run_query("SELECT SUM(p.destroy_amount) AS destroy_amount, SUM(p.".$this->db_game['payout_weight']."s_destroyed) as inflation_score FROM events ev JOIN options op ON ev.event_id=op.event_id JOIN transaction_game_ios gio JOIN transaction_game_ios p ON gio.parent_io_id=p.game_io_id WHERE gio.option_id=op.option_id AND ev.game_id=:game_id AND ev.event_starting_block <= :ref_supply_block AND ev.event_payout_block >= :ref_supply_block;", [
 				'game_id' => $this->db_game['game_id'],
 				'ref_supply_block' => $ref_supply_block,
 			])->fetch();
@@ -2273,7 +2280,7 @@ class Game {
 					if ($adjustment_block !== null) {
 						$genesis_tx = $this->blockchain->fetch_transaction_by_hash($this->db_game['genesis_tx_hash']);
 						
-						$new_pow_reward = $this->pegged_pow_reward($adjustment_block, $genesis_tx);
+						$new_pow_reward = $this->pegged_pow_reward($adjustment_block, $genesis_tx, $print_debug);
 						
 						if ($print_debug) $this->blockchain->app->print_debug("Changed POW reward to ".$new_pow_reward." based on block #".$adjustment_block);
 						
