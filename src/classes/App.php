@@ -1678,6 +1678,7 @@ class App {
 			['float', 'exponential_inflation_rate', true],
 			['string', 'pow_reward_type', true],
 			['float', 'initial_pow_reward', true],
+			['int', 'blocks_per_pow_reward_ajustment', true],
 			['int', 'round_length', true],
 			['string', 'payout_weight', true],
 			['int', 'final_round', true],

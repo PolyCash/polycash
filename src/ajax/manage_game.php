@@ -22,7 +22,6 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 				"event_type_name_plural": "events",
 				"event_rule": "game_definition",
 				"event_winning_rule": "game_definition",
-				"events_per_round": 1,
 				"inflation": "exponential",
 				"exponential_inflation_rate": 0,
 				"round_length": 1,
@@ -243,7 +242,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 		}
 		else if ($app->user_can_edit_game($thisuser, $game)) {
 			if ($action == "fetch") {
-				$switch_game = $app->run_query("SELECT game_id, blockchain_id, module, creator_id, event_rule, option_group_id, events_per_round, event_type_name, game_status, block_timing, name, payout_weight, round_length, inflation, exponential_inflation_rate, final_round, invite_cost, invite_currency, coin_name, coin_name_plural, coin_abbreviation, start_condition, buyin_policy, game_buyin_cap, default_vote_effectiveness_function, default_effectiveness_param1, default_max_voting_fraction, game_starting_block, escrow_address, genesis_tx_hash, genesis_amount, default_betting_mode, finite_events, pow_reward_type, initial_pow_reward FROM games WHERE game_id=:game_id;", [
+				$switch_game = $app->run_query("SELECT game_id, blockchain_id, module, creator_id, event_rule, option_group_id, event_type_name, game_status, block_timing, name, payout_weight, round_length, inflation, exponential_inflation_rate, final_round, invite_cost, invite_currency, coin_name, coin_name_plural, coin_abbreviation, start_condition, buyin_policy, game_buyin_cap, default_vote_effectiveness_function, default_effectiveness_param1, default_max_voting_fraction, game_starting_block, escrow_address, genesis_tx_hash, genesis_amount, default_betting_mode, finite_events, pow_reward_type, initial_pow_reward, blocks_per_pow_reward_ajustment FROM games WHERE game_id=:game_id;", [
 					'game_id' => $game->db_game['game_id']
 				])->fetch(PDO::FETCH_ASSOC);
 				

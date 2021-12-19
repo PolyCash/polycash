@@ -22,7 +22,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 			$game_info['url_identifier'] = $game->db_game['url_identifier'];
 
 			if ($game->db_game['game_status'] == "editable") {
-				$game_form_vars = ['event_rule','option_group_id','events_per_round','event_type_name','name','payout_weight','round_length','inflation','exponential_inflation_rate','coin_name','coin_name_plural','coin_abbreviation','start_condition','buyin_policy','game_buyin_cap','default_vote_effectiveness_function','default_effectiveness_param1','default_max_voting_fraction','game_starting_block','escrow_address','genesis_tx_hash','genesis_amount','pow_reward_type', 'initial_pow_reward'];
+				$game_form_vars = ['event_rule','option_group_id','event_type_name','name','payout_weight','round_length','inflation','exponential_inflation_rate','coin_name','coin_name_plural','coin_abbreviation','start_condition','buyin_policy','game_buyin_cap','default_vote_effectiveness_function','default_effectiveness_param1','default_max_voting_fraction','game_starting_block','escrow_address','genesis_tx_hash','genesis_amount','pow_reward_type', 'initial_pow_reward', 'blocks_per_pow_reward_ajustment'];
 				
 				if ($_REQUEST['inflation'] == "exponential") $_REQUEST['payout_weight'] = "coin_round";
 				if ($_REQUEST['event_rule'] == "single_event_series") $_REQUEST['events_per_round'] = 1;

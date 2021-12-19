@@ -661,7 +661,7 @@ class Game {
 				'block_id' => $block_height
 			]);
 		}
-		$this->blockchain->app->run_query("UPDATE games SET loaded_until_block=NULL, coins_in_existence=0, cached_pending_bets=NULL, cached_vote_supply=NULL WHERE game_id=:game_id;", [
+		$this->blockchain->app->run_query("UPDATE games SET loaded_until_block=NULL, coins_in_existence=0, cached_pending_bets=NULL, cached_vote_supply=NULL, current_pow_reward=NULL WHERE game_id=:game_id;", [
 			'game_id' => $this->db_game['game_id']
 		]);
 		
@@ -760,7 +760,7 @@ class Game {
 			$this->blockchain->app->run_query("DELETE FROM events WHERE game_id=:game_id;", ['game_id'=>$this->db_game['game_id']]);
 		}
 
-		$this->blockchain->app->run_query("UPDATE games SET events_until_block=NULL, loaded_until_block=NULL, min_option_index=NULL, max_option_index=NULL WHERE game_id=:game_id;", ['game_id'=>$this->db_game['game_id']]);
+		$this->blockchain->app->run_query("UPDATE games SET events_until_block=NULL, loaded_until_block=NULL, min_option_index=NULL, max_option_index=NULL, current_pow_reward=NULL WHERE game_id=:game_id;", ['game_id'=>$this->db_game['game_id']]);
 		
 		if ($delete_or_reset == "reset") {
 			$this->blockchain->app->run_query("UPDATE games SET coins_in_existence=0, cached_pending_bets=NULL, cached_vote_supply=NULL, cached_definition_hash=NULL, defined_cached_definition_hash=NULL, cached_definition_time=NULL WHERE game_id=:game_id;", ['game_id'=>$this->db_game['game_id']]);
@@ -1397,7 +1397,7 @@ class Game {
 			];
 			$in_existence_q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id WHERE gio.game_id=:game_id";
 			if ($block_id !== false) {
-				$in_existence_q .= " AND gio.create_block_id <= :block_id AND ((io.spend_block_id IS NULL AND io.spend_status IN ('unspent','unconfirmed')) OR io.spend_block_id>:block_id)";
+				$in_existence_q .= " AND gio.create_block_id <= :block_id AND (io.spend_block_id IS NULL OR io.spend_block_id>:block_id)";
 				$in_existence_params['block_id'] = $block_id;
 			}
 			else $in_existence_q .= " AND io.spend_status IN ('unspent','unconfirmed')";
@@ -2230,8 +2230,54 @@ class Game {
 				}
 			}
 			
-			if ($this->db_game['pow_reward_type'] == "fixed" && $this->db_game['initial_pow_reward'] > 0) {
-				$pow_reward_int = (int)($this->db_game['initial_pow_reward']*pow(10, $this->db_game['decimal_places']));
+			if (in_array($this->db_game['pow_reward_type'], ["fixed","pegged_to_supply"]) && $this->db_game['initial_pow_reward'] > 0) {
+				if ($this->db_game['pow_reward_type'] == "fixed") $pow_reward_int = (int)($this->db_game['initial_pow_reward']*pow(10, $this->db_game['decimal_places']));
+				else {
+					$supply_prior_blocks = 50;
+					if ((string)$this->db_game['current_pow_reward'] === "") {
+						$adjustment_block = (floor(($block_height-$this->db_game['game_starting_block'])/$this->db_game['blocks_per_pow_reward_ajustment'])*$this->db_game['blocks_per_pow_reward_ajustment'])+$this->db_game['game_starting_block'];
+					}
+					else if (($block_height-$this->db_game['game_starting_block'])%$this->db_game['blocks_per_pow_reward_ajustment'] == 0) {
+						$adjustment_block = $block_height;
+					}
+					else {
+						$adjustment_block = null;
+						$pow_reward_int = $this->db_game['current_pow_reward']*pow(10, $this->db_game['decimal_places']);
+					}
+					
+					if ($adjustment_block !== null) {
+						$genesis_tx = $this->blockchain->fetch_transaction_by_hash($this->db_game['genesis_tx_hash']);
+						$ref_supply_block = $adjustment_block-$supply_prior_blocks;
+						
+						if ($ref_supply_block <= $genesis_tx['block_id']) $new_pow_reward = $this->db_game['initial_pow_reward'];
+						else {
+							$initial_reward_per_supply = $this->db_game['initial_pow_reward']/$this->db_game['genesis_amount'];
+							$ref_supply = $this->coins_in_existence($ref_supply_block, false)/pow(10, $this->db_game['decimal_places']);
+							
+							$event_info = $this->blockchain->app->run_query("SELECT SUM(p.destroy_amount) AS destroy_amount, SUM(p.".$this->db_game['payout_weight']."s_destroyed) as inflation_score FROM events ev JOIN options op ON ev.event_id=op.event_id JOIN transaction_game_ios gio JOIN transaction_game_ios p ON gio.parent_io_id=p.game_io_id WHERE gio.option_id=op.option_id AND ev.game_id=:game_id AND ev.event_starting_block <= :block_height AND ev.event_payout_block > :block_height;", [
+								'game_id' => $this->db_game['game_id'],
+								'block_height' => $block_height,
+							])->fetch();
+							if ($event_info) {
+								$pending_bets = ((int)$event_info['inflation_score'])*$this->blockchain->app->coins_per_vote($this->db_game)/pow(10, $this->db_game['decimal_places']);
+								$pending_bets += ((int)$event_info['destroy_amount'])/pow(10, $this->db_game['decimal_places']);
+							}
+							else $pending_bets = 0;
+							
+							$new_pow_reward = round(($ref_supply+$pending_bets)*$initial_reward_per_supply, $this->db_game['decimal_places']);
+							if ($print_debug) $this->blockchain->app->print_debug("Changed POW reward to ".$new_pow_reward);
+						}
+						
+						$this->blockchain->app->run_query("UPDATE games SET current_pow_reward=:new_pow_reward WHERE game_id=:game_id;", [
+							'new_pow_reward' => $new_pow_reward,
+							'game_id' => $this->db_game['game_id'],
+						]);
+						$this->db_game['current_pow_reward'] = $new_pow_reward;
+						
+						$pow_reward_int = $new_pow_reward*pow(10, $this->db_game['decimal_places']);
+					}
+				}
+				
 				$coinbase_tx = $this->blockchain->fetch_tx_by_position_in_block($db_block['block_id'], 0);
 				$coinbase_io = $this->blockchain->fetch_io_by_position_in_tx($coinbase_tx, 0);
 				$game_io_index++;
