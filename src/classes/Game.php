@@ -1392,6 +1392,13 @@ class Game {
 	public function coins_in_existence($block_id, $use_cache) {
 		if ($use_cache && $this->db_game['coins_in_existence'] != 0) return $this->db_game['coins_in_existence'];
 		else {
+			$this->blockchain->app->dbh->beginTransaction();
+			
+			$temp = $this->blockchain->app->run_query("SELECT gio.game_io_id, gio.colored_amount FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id WHERE gio.game_id=1 AND gio.create_block_id <= :block_id AND (io.spend_block_id IS NULL OR io.spend_block_id>:block_id) ORDER BY gio.game_io_id ASC;", [
+				'block_id' => $block_id,
+			])->fetchAll(PDO::FETCH_ASSOC);
+			echo count($temp)." gios: ".json_encode($temp, JSON_PRETTY_PRINT)."\n";
+			
 			$in_existence_params = [
 				'game_id' => $this->db_game['game_id']
 			];
@@ -1411,6 +1418,9 @@ class Game {
 				]);
 				$this->db_game['coins_in_existence'] = $coins;
 			}
+			
+			$this->blockchain->app->dbh->commit();
+			
 			return $coins;
 		}
 	}
@@ -2133,7 +2143,7 @@ class Game {
 				if ($bulk_to_block) $block_height = $bulk_to_block;
 				
 				if ($successful) $this->set_loaded_until_block($block_height);
-				
+				if ($block_height == 3651) die("exit3651\n");
 				if (microtime(true)-$last_set_loaded_time >= 3) {
 					if ($max_load_seconds && microtime(true)-$sync_start_time >= $max_load_seconds) {
 						$block_height = $to_block_height+1;
@@ -2161,7 +2171,7 @@ class Game {
 			'adjustment_block' => $adjustment_block,
 		])->fetch()['max_event_length']);
 		
-		$ref_supply_subtract_blocks = $max_event_length+1;
+		$ref_supply_subtract_blocks = 1;//$max_event_length;
 		$ref_supply_block = $adjustment_block-$ref_supply_subtract_blocks;
 		
 		if ($print_debug) $this->blockchain->app->print_debug("Adjusting pow reward on block #".$adjustment_block.", max event length: ".$max_event_length.", ref block #".$ref_supply_block);
@@ -2171,15 +2181,17 @@ class Game {
 			$initial_reward_per_supply = $this->db_game['initial_pow_reward']/$this->db_game['genesis_amount'];
 			$ref_supply = $this->coins_in_existence($ref_supply_block, false)/pow(10, $this->db_game['decimal_places']);
 			
-			$event_info = $this->blockchain->app->run_query("SELECT SUM(p.destroy_amount) AS destroy_amount, SUM(p.".$this->db_game['payout_weight']."s_destroyed) as inflation_score FROM events ev JOIN options op ON ev.event_id=op.event_id JOIN transaction_game_ios gio JOIN transaction_game_ios p ON gio.parent_io_id=p.game_io_id WHERE gio.option_id=op.option_id AND ev.game_id=:game_id AND ev.event_starting_block <= :ref_supply_block AND ev.event_payout_block >= :ref_supply_block;", [
+			$unpaid_bets_info = $this->blockchain->app->run_query("SELECT SUM(p.destroy_amount) AS destroy_amount, SUM(p.".$this->db_game['payout_weight']."s_destroyed) as inflation_score FROM events ev JOIN options op ON ev.event_id=op.event_id JOIN transaction_game_ios gio JOIN transaction_game_ios p ON gio.parent_io_id=p.game_io_id WHERE gio.option_id=op.option_id AND ev.game_id=:game_id AND ev.event_starting_block <= :ref_supply_block AND ev.event_payout_block > :ref_supply_block AND gio.create_block_id <= :ref_supply_block;", [
 				'game_id' => $this->db_game['game_id'],
 				'ref_supply_block' => $ref_supply_block,
 			])->fetch();
-			if ($event_info) {
-				$pending_bets = ((int)$event_info['inflation_score'])*$this->blockchain->app->coins_per_vote($this->db_game)/pow(10, $this->db_game['decimal_places']);
-				$pending_bets += ((int)$event_info['destroy_amount'])/pow(10, $this->db_game['decimal_places']);
+			if ($unpaid_bets_info) {
+				$pending_bets = ((int)$unpaid_bets_info['inflation_score'])*$this->blockchain->app->coins_per_vote($this->db_game)/pow(10, $this->db_game['decimal_places']);
+				$pending_bets += ((int)$unpaid_bets_info['destroy_amount'])/pow(10, $this->db_game['decimal_places']);
 			}
 			else $pending_bets = 0;
+			
+			if ($print_debug) $this->blockchain->app->print_debug("Coins in existence: ".$ref_supply.", pending bets: ".$pending_bets);
 			
 			$new_pow_reward = round(($ref_supply+$pending_bets)*$initial_reward_per_supply, $this->db_game['decimal_places']);
 		}
