@@ -2143,7 +2143,7 @@ class Game {
 				if ($bulk_to_block) $block_height = $bulk_to_block;
 				
 				if ($successful) $this->set_loaded_until_block($block_height);
-				if ($block_height == 3651) die("exit3651\n");
+				
 				if (microtime(true)-$last_set_loaded_time >= 3) {
 					if ($max_load_seconds && microtime(true)-$sync_start_time >= $max_load_seconds) {
 						$block_height = $to_block_height+1;
