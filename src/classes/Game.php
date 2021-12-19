@@ -1392,13 +1392,6 @@ class Game {
 	public function coins_in_existence($block_id, $use_cache) {
 		if ($use_cache && $this->db_game['coins_in_existence'] != 0) return $this->db_game['coins_in_existence'];
 		else {
-			$this->blockchain->app->dbh->beginTransaction();
-			
-			$temp = $this->blockchain->app->run_query("SELECT gio.game_io_id, gio.colored_amount FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id WHERE gio.game_id=1 AND gio.create_block_id <= :block_id AND (io.spend_block_id IS NULL OR io.spend_block_id>:block_id) ORDER BY gio.game_io_id ASC;", [
-				'block_id' => $block_id,
-			])->fetchAll(PDO::FETCH_ASSOC);
-			echo count($temp)." gios: ".json_encode($temp, JSON_PRETTY_PRINT)."\n";
-			
 			$in_existence_params = [
 				'game_id' => $this->db_game['game_id']
 			];
@@ -1411,6 +1404,15 @@ class Game {
 			$in_existence_q .= ";";
 			$coins = (int)($this->blockchain->app->run_query($in_existence_q, $in_existence_params)->fetch(PDO::FETCH_NUM)[0]);
 			
+			if ($block_id !== false) {
+				$doublecounted_amount = (int)($this->blockchain->app->run_query("SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id JOIN options op ON gio.option_id=op.option_id JOIN events ev ON op.event_id=ev.event_id WHERE gio.game_id=:game_id AND gio.create_block_id <= :block_id AND (io.spend_block_id IS NULL OR io.spend_block_id>:block_id) AND gio.is_game_coinbase=1 AND ev.event_payout_block > :block_id AND ev.event_payout_block <= :last_block_id AND ev.event_starting_block <= :block_id;", [
+					'game_id' => $this->db_game['game_id'],
+					'block_id' => $block_id,
+					'last_block_id' => $this->last_block_id(),
+				])->fetch(PDO::FETCH_NUM)[0]);
+				if ($doublecounted_amount > 0) $coins -= $doublecounted_amount;
+			}
+			
 			if ($block_id === false) {
 				$this->blockchain->app->run_query("UPDATE games SET coins_in_existence=:coins_in_existence WHERE game_id=:game_id;", [
 					'coins_in_existence' => $coins,
@@ -1418,8 +1420,6 @@ class Game {
 				]);
 				$this->db_game['coins_in_existence'] = $coins;
 			}
-			
-			$this->blockchain->app->dbh->commit();
 			
 			return $coins;
 		}
@@ -2166,12 +2166,7 @@ class Game {
 	}
 	
 	public function pegged_pow_reward($adjustment_block, $genesis_tx, $print_debug=false) {
-		$max_event_length = (int) ($this->blockchain->app->run_query("SELECT MAX(event_payout_block-event_starting_block) AS max_event_length FROM events WHERE game_id=:game_id AND event_starting_block<:adjustment_block;", [
-			'game_id' => $this->db_game['game_id'],
-			'adjustment_block' => $adjustment_block,
-		])->fetch()['max_event_length']);
-		
-		$ref_supply_subtract_blocks = 1;//$max_event_length;
+		$ref_supply_subtract_blocks = 1;
 		$ref_supply_block = $adjustment_block-$ref_supply_subtract_blocks;
 		
 		if ($print_debug) $this->blockchain->app->print_debug("Adjusting pow reward on block #".$adjustment_block.", max event length: ".$max_event_length.", ref block #".$ref_supply_block);
