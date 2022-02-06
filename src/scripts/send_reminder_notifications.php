@@ -4,12 +4,70 @@ require_once(dirname(dirname(__FILE__))."/includes/connect.php");
 $running_games = $app->fetch_running_games();
 
 while ($db_running_game = $running_games->fetch()) {
-	if ($db_running_game['every_event_bet_reminder_minutes'] > 0) {
-		$blockchain = new Blockchain($app, $db_running_game['blockchain_id']);
-		$last_block_id = $blockchain->last_block_id();
-		$seconds_per_block = $blockchain->seconds_per_block('target');
+	$blockchain = new Blockchain($app, $db_running_game['blockchain_id']);
+	$running_game = new Game($blockchain, $db_running_game['game_id']);
+	$last_block_id = $blockchain->last_block_id();
+	$current_round = $running_game->block_to_round($last_block_id+1);
+	$seconds_per_block = $blockchain->seconds_per_block('target');
+	$coins_per_vote = $app->coins_per_vote($running_game->db_game);
+	
+	if (!empty($running_game->db_game['auto_stake_featured_strategy_id']) && $running_game->last_block_id() == $blockchain->last_block_id()) {
+		$notify_users = $app->run_query("SELECT ug.*, u.notification_email FROM user_games ug JOIN users u ON ug.user_id=u.user_id WHERE ug.notification_preference='email' AND u.notification_email LIKE '%@%' AND ug.game_id=:game_id;", ['game_id' => $running_game->db_game['game_id']])->fetchAll();
 		
-		$running_game = new Game($blockchain, $db_running_game['game_id']);
+		echo "Checking ".count($notify_users)." users\n";
+		
+		foreach ($notify_users as $user_game) {
+			$notify_user = new User($app, $user_game['user_id']);
+			
+			if ($user_game['account_id'] > 0 && (true || empty($user_game['latest_speedup_reminder_time']) || $user_game['latest_speedup_reminder_time'] < time() - (3600*24*2.5))) {
+				$balance = $running_game->account_balance($user_game['account_id']);
+				
+				if ($balance > 0) {
+					list($user_votes, $votes_value) = $notify_user->user_current_votes($running_game, $last_block_id, $current_round, $user_game);
+					
+					if ($running_game->db_game['payout_weight'] == "coin_round") $votes_per_coin_per_round = 1;
+					else if ($running_game->db_game['payout_weight'] == "coin_block") $votes_per_coin_per_round = $running_game->db_game['round_length'];
+					else throw new Exception("This feature is disabled for deprecated payout_weight modes.");
+					
+					$gain_per_round = $votes_per_coin_per_round*$balance*$coins_per_vote;
+					$seconds_per_round = $seconds_per_block*$running_game->db_game['round_length'];
+					$rounds_per_day = 3600*24/$seconds_per_round;
+					$gain_per_day = $gain_per_round*$rounds_per_day;
+					
+					$speedup_pct = $votes_value/$balance*100;
+					
+					if ($speedup_pct > 0.1) {
+						$subject = "Earn ".$running_game->db_game['coin_name_plural']." ".round($speedup_pct, 3)."% faster by staking your ".$app->format_bignum($votes_value/pow(10, $running_game->db_game['decimal_places']))." in unrealized ".$running_game->db_game['coin_name_plural'];
+						
+						$auto_stake_key = $app->random_string(24);
+						
+						$message = $app->render_view('speedup_email', [
+							'game' => $running_game,
+							'balance' => $balance,
+							'votes_value' => $votes_value,
+							'speedup_pct' => $speedup_pct,
+							'gain_per_day' => $gain_per_day,
+							'wallet_link' => AppSettings::getParam('base_url').'/wallet/'.$running_game->db_game['url_identifier'].'/?action=change_user_game&user_game_id='.$user_game['user_game_id'],
+							'account_id' => $user_game['account_id'],
+							'auto_stake_link' => AppSettings::getParam('base_url').'/auto_stake/?account_id='.$user_game['account_id']."&stake_key=".$auto_stake_key,
+						]);
+						
+						echo $user_game['notification_email'].", #".$user_game['account_id'].", bal:".$balance/pow(10, $running_game->db_game['decimal_places']).", unrealized:".$votes_value/pow(10, $running_game->db_game['decimal_places']).", gain per day:".$gain_per_day/pow(10, $running_game->db_game['decimal_places']).", speedup:".$speedup_pct."%\n";
+						
+						$delivery_key = $app->random_string(16);
+						
+						$app->mail_async($user_game['notification_email'], AppSettings::getParam('site_name'), "no-reply@".AppSettings::getParam('site_domain'), $subject, $message, "", "", $delivery_key);
+						
+						$app->run_query("UPDATE user_games SET latest_speedup_reminder_time=".time().", auto_stake_key='".$auto_stake_key."', auto_stake_tx_hash=NULL WHERE user_game_id=:user_game_id;", [
+							'user_game_id' => $user_game['user_game_id']
+						]);
+					}
+				}
+			}
+		}
+	}
+	
+	if ($db_running_game['every_event_bet_reminder_minutes'] > 0) {
 		$running_game->load_current_events();
 		
 		echo $db_running_game['name'].": ".$db_running_game['every_event_bet_reminder_minutes']." minutes, ".count($running_game->current_events)." current events\n";

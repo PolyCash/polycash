@@ -33,11 +33,12 @@
 	<p>
 		<?php echo $options[0]['name']; ?> had a target score of <?php echo $options[0]['target_score']; ?> points for this game.<br/>
 		<?php echo $options[1]['name']; ?> had a target score of <?php echo $options[1]['target_score']; ?> points for this game.<br/>
-		These teams averaged <?php echo $event_past_avg; ?> in prior games, so each team's target score was 
+		These teams averaged <?php echo $event_past_avg; ?> in prior games, so each team's target was set
 		<?php
-		if ($event_score_boost >= 0) echo 'boosted by <font class="text-success">'.$event_score_boost.'</font> points.';
-		else echo 'reduced by <font class="text-danger">'.abs($event_score_boost).'</font> points.'
+		if ($event_score_boost >= 0) echo '<font class="text-success">'.$event_score_boost.'</font> points above';
+		else echo '<font class="text-danger">'.abs($event_score_boost).'</font> points below';
 		?>
+		their prior average.
 	</p>
 	
 	<p>

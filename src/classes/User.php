@@ -59,9 +59,10 @@ class User {
 		$query_params = [
 			'ref_block' => ($last_block_id+1),
 			'ref_round' => $current_round,
-			'account_id' => $user_game['account_id']
+			'account_id' => $user_game['account_id'],
+			'game_id' => $game->db_game['game_id'],
 		];
-		$info = $this->app->run_query("SELECT ROUND(SUM(gio.colored_amount)) coins, ROUND(SUM(gio.colored_amount*(:ref_block-gio.create_block_id))) coin_blocks, ROUND(SUM(gio.colored_amount*(:ref_round-gio.create_round_id))) coin_rounds FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE io.spend_status='unspent' AND k.account_id=:account_id;", $query_params)->fetch();
+		$info = $this->app->run_query("SELECT ROUND(SUM(gio.colored_amount)) coins, ROUND(SUM(gio.colored_amount*(:ref_block-gio.create_block_id))) coin_blocks, ROUND(SUM(gio.colored_amount*(:ref_round-gio.create_round_id))) coin_rounds FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE io.spend_status='unspent' AND k.account_id=:account_id AND gio.game_id=:game_id;", $query_params)->fetch();
 		$votes = (int) $info[$game->db_game['payout_weight']."s"];
 		
 		$coins_per_vote = $game->blockchain->app->coins_per_vote($game->db_game);

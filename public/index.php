@@ -69,6 +69,9 @@ else if ($uri_parts[1] == "analytics") {
 else if ($uri_parts[1] == "groups") {
 	include($src_path."/manage_groups.php");
 }
+else if ($uri_parts[1] == "auto_stake") {
+	include($src_path."/auto_stake.php");
+}
 else {
 	$extension_pos = strpos($uri, ".php");
 	if ($extension_pos !== false) {
