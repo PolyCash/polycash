@@ -19,7 +19,7 @@ while ($db_running_game = $running_games->fetch()) {
 		foreach ($notify_users as $user_game) {
 			$notify_user = new User($app, $user_game['user_id']);
 			
-			if ($user_game['account_id'] > 0 && (true || empty($user_game['latest_speedup_reminder_time']) || $user_game['latest_speedup_reminder_time'] < time() - (3600*24*2.5))) {
+			if ($user_game['account_id'] > 0 && (empty($user_game['latest_speedup_reminder_time']) || $user_game['latest_speedup_reminder_time'] < time() - (3600*24*2.5))) {
 				$balance = $running_game->account_balance($user_game['account_id']);
 				
 				if ($balance > 0) {
