@@ -26,6 +26,7 @@ services:
       dockerfile: Dockerfile
     volumes:
       - ./:/var/www/html
+      - ./.datacoin:/root/.datacoin
     ports:
       - 8080:80
     depends_on:

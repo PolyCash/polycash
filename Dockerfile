@@ -22,7 +22,6 @@ COPY ./ ./
 RUN mv ./.dockerize/apache/000-default.conf /etc/apache2/sites-enabled/000-default.conf
 RUN mv ./.dockerize/cron/crontab /etc/crontab
 RUN mkdir /root/.datacoin
-RUN mv ./.dockerize/datachain/datacoin.conf /root/.datacoin
 
 RUN mkdir /var/www/datachain
 RUN wget https://poly.cash/binaries/debian/datacoin-cli -P /var/www/datachain
