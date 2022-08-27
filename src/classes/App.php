@@ -12,7 +12,7 @@ class App {
 			}
 		}
 		catch (PDOException $err) {
-			die('There was an error connecting to MySQL. Check your mysql credentials.');
+			die('There was an error connecting to MySQL: '.$err->getMessage());
 		}
 		
 		if (!$skip_select_db) {
@@ -23,7 +23,13 @@ class App {
 	
 	public function select_db($db_name) {
 		if (empty(AppSettings::getParam('sqlite_db'))) {
-			$this->dbh->query("USE ".$db_name.";") or die("Error accessing the '".$db_name."' database, please visit <a href=\"/install.php?key=\">install.php</a>.");
+			$select_db_error = "Error accessing the '".$db_name."' database, please visit <a href=\"/install.php?key=\">install.php</a>.";
+			try {
+				$this->dbh->query("USE ".$db_name.";") or die($select_db_error);
+			}
+			catch (PDOException $err) {
+				die($select_db_error);
+			}
 		}
 		$this->dbh->query("SET sql_mode='';");
 		

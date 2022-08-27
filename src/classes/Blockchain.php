@@ -2903,5 +2903,22 @@ class Blockchain {
 		]);
 		$this->db_blockchain['auto_claim_to_account_id'] = $account_id;
 	}
+
+	public function set_blockchain_parameters($new_values) {
+		$query_params = [
+			'blockchain_id' => $this->db_blockchain['blockchain_id']
+		];
+
+		$query = "UPDATE blockchains SET ";
+
+		foreach ($new_values as $name => $value) {
+			$query .= $name."=:".$name.", ";
+			$query_params[$name] = $value;
+		}
+
+		$query = substr($query, 0, -2)." WHERE blockchain_id=:blockchain_id;";
+
+		$this->app->run_query($query, $query_params);
+	}
 }
 ?>

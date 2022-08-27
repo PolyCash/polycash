@@ -61,18 +61,18 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 			}
 			else {
 				$blockchain_id = (int) $_REQUEST['blockchain_id'];
-				$existing_blockchain = $app->fetch_blockchain_by_id($blockchain_id);
+				$existing_blockchain_arr = $app->fetch_blockchain_by_id($blockchain_id);
 				
-				if ($existing_blockchain) {
+				if ($existing_blockchain_arr) {
 					if ($_REQUEST['action'] == "save_blockchain_params") {
-						$app->run_query("UPDATE blockchains SET rpc_host=:rpc_host, rpc_username=:rpc_username, rpc_password=:rpc_password, rpc_port=:rpc_port, first_required_block=:first_required_block, last_complete_block=:last_complete_block WHERE blockchain_id=:blockchain_id;", [
+						$existing_blockchain = new Blockchain($app, $existing_blockchain_arr['blockchain_id']);
+						$existing_blockchain->set_blockchain_parameters([
 							'rpc_host' => $_REQUEST['rpc_host'],
 							'rpc_username' => $_REQUEST['rpc_username'],
 							'rpc_password' => $_REQUEST['rpc_password'],
 							'rpc_port' => $_REQUEST['rpc_port'],
 							'first_required_block' => $first_required_block,
 							'last_complete_block' => (string) $first_required_block == "" ? null : ($_REQUEST['first_required_block']-1),
-							'blockchain_id' => $existing_blockchain['blockchain_id']
 						]);
 					}
 					else if (in_array($_REQUEST['action'], ['enable','disable'])) {
@@ -80,14 +80,14 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 						
 						$app->run_query("UPDATE blockchains SET online=:online WHERE blockchain_id=:blockchain_id;", [
 							'online' => $online,
-							'blockchain_id' => $existing_blockchain['blockchain_id']
+							'blockchain_id' => $existing_blockchain_arr['blockchain_id']
 						]);
 					}
 					else if (in_array($_REQUEST['action'], ["start_mining", "stop_mining"])) {
-						if ($existing_blockchain['p2p_mode'] == "rpc") {
+						if ($existing_blockchain_arr['p2p_mode'] == "rpc") {
 							$app->run_query("UPDATE blockchains SET is_rpc_mining=:is_rpc_mining WHERE blockchain_id=:blockchain_id;", [
 								'is_rpc_mining' => $_REQUEST['action'] == "start_mining" ? 1 : 0,
-								'blockchain_id' => $existing_blockchain['blockchain_id']
+								'blockchain_id' => $existing_blockchain_arr['blockchain_id']
 							]);
 						}
 						else die("Invalid action supplied.");
