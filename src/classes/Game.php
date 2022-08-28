@@ -2169,7 +2169,7 @@ class Game {
 		$ref_supply_subtract_blocks = 1;
 		$ref_supply_block = $adjustment_block-$ref_supply_subtract_blocks;
 		
-		if ($print_debug) $this->blockchain->app->print_debug("Adjusting pow reward on block #".$adjustment_block.", max event length: ".$max_event_length.", ref block #".$ref_supply_block);
+		if ($print_debug) $this->blockchain->app->print_debug("Adjusting pow reward on block #".$adjustment_block.", ref block #".$ref_supply_block);
 		
 		if ($ref_supply_block <= $genesis_tx['block_id']) $new_pow_reward = $this->db_game['initial_pow_reward'];
 		else {

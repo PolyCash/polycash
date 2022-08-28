@@ -1,0 +1,33 @@
+---
+version: "3.3"
+
+services:
+  db-mysql:
+    platform: linux/x86_64
+    image: mysql:5.7
+    container_name: polycash-db-mysql
+    environment:
+      MYSQL_ROOT_USER: root
+      MYSQL_ROOT_PASSWORD: root
+      TZ: America/New_York
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./data/db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysql", "-proot"]
+      interval: 30s
+      timeout: 10s
+      retries: 6
+
+  polycash-app:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    volumes:
+      - ./:/var/www/html
+      - ./.datacoin:/root/.datacoin
+    ports:
+      - 8080:80
+    depends_on:
+      - db-mysql
