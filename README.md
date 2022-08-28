@@ -9,6 +9,7 @@ PolyCash runs on Apache, MySQL and PHP.  To get started quickly, we recommend in
 Once Docker Desktop is installed and running, open a terminal and clone the PolyCash repository:
 ```
 git clone https://github.com/PolyCash/polycash.git
+cd polycash
 ```
 
 Next, build your docker container:
