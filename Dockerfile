@@ -12,10 +12,12 @@ RUN apt-get install -y \
 	wget \
 	libboost-all-dev \
 	libdb5.3++ \
-	libdb5.3++-dev
+	libdb5.3++-dev \
+	libpng-dev
 
 RUN docker-php-ext-install pdo_mysql \
     && docker-php-ext-install mysqli \
+	&& docker-php-ext-install gd \
     && docker-php-source delete
 
 COPY ./ ./

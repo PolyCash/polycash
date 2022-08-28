@@ -2,64 +2,28 @@
 PolyCash is an open source blockchain protocol for peer to peer betting currencies.  PolyCash integrates with blockchains including Bitcoin, Litecoin, Dogecoin & [Datachain](https://github.com/datachains/datachain). The PolyCash protocol powers Betcoin, a digital currency with a novel inflation model where coins are given out to players for betting on virtual basketball games in addition to being given to miners for securing the network.
 
 ## Install PolyCash
-To get started, first install and secure Apache, MySQL and PHP (at least version 7).  Set your Apache web root to the "public" folder of this repository.  Then create a file src/config/config.json by copying and pasting src/config/example_config.json.
+You can try PolyCash by creating a web wallet on a public node like [https://poly.cash](https://poly.cash).  But installing PolyCash on your own computer helps decentralize our network and allows you to control your own private keys.
 
-Make sure to set the following params in your config.json to something like the following:
-```
-"site_domain": "localhost",
-"mysql_server": "127.0.0.1",
-"mysql_user": "mysqluser",
-"mysql_password": "somesecurepass",
-"database": "polycash",
-"operator_key": "anothersecurepass"
-```
-"operator_key" is a parameter which allows a site administrator to perform certain actions like updating the application.  If you are installing PolyCash on a public facing server, be sure to set a secure value for this parameter.
+PolyCash runs on Apache, MySQL and PHP.  To get started quickly, we recommend installing PolyCash with docker.  You can download Docker Desktop [here](https://www.docker.com/products/docker-desktop/).
 
-If you want to allow users to log in with an email address, enter your sendgrid API key in your config file:
+Once Docker Desktop is installed and running, open a terminal and clone the PolyCash repository:
 ```
-"sendgrid_api_key": ""
+https://github.com/PolyCash/polycash.git
 ```
 
-Next, configure cron to poll PolyCash every minute. This keeps PolyCash in sync at all times. Add this line to your /etc/crontab:
+Next, build your docker container:
 ```
-* * * * * root /usr/bin/php /var/www/polycash/src/cron/minutely.php
-```
-
-Set "pageview_tracking_enabled": true in your config.json if you want to track all pageviews.  If you don't set this parameter, no IP addresses or pageviews will be tracked.
-
-Next, point your browser to http://localhost/install.php?key=<operator_key> where <operator_key> is the random string that you generated above.  If Apache, MySQL and PHP are all installed correctly, PolyCash should automatically install.
-
-Make sure you have curl installed:
-```
-apt-get install php-curl
+docker-compose -f docker-compose.yml up --build
 ```
 
-Make sure QR codes are rendering correctly in the blockchain explorer. If not, ensure php-gd is installed.
+Next, open your browser and navigate to:
 ```
-apt-get install php-gd
-```
-
-Don't forget to restart apache after installing libraries like php-curl and php-gd.
-```
-service apache2 restart
+http://localhost:8080/
 ```
 
-If the home page doesn't load, it's possible that mod_rewrite needs to be enabled.  To enable mod_rewrite, edit your httpd.conf and make sure this line is uncommented:
+PolyCash will automatically install and begin syncing with the network.  The synchronization step can take hours to complete. 
 
-```
-#!php
-
-LoadModule rewrite_module modules/mod_rewrite.so
-```
-Or run this command:
-```
-a2enmod rewrite
-```
-
-For faster page loads, make sure that browser caching is enabled
-```
-a2enmod expires
-```
+To start or stop PolyCash, simply open Docker Desktop, navigate to the Containers section and then use the start and stop buttons.
 
 ## Install Blockchains & Games
 By default, the Betcoin cryptocurrency is installed when you install PolyCash.  You can install other PolyCash-protocol cryptocurrencies by pasting their game definitions in via the "Import" link found in the left menu.
