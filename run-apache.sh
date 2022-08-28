@@ -6,7 +6,7 @@ if ! [ -f "$CONF_FNAME" ]; then
 	cp /var/www/html/.dockerize/datachain/datacoin.conf "$CONF_FNAME"
 fi
 
-/var/www/datachain/datacoind &
+/var/www/html/datacoind &
 cron
 a2enmod headers rewrite
 apache2-foreground
