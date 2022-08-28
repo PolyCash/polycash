@@ -23,6 +23,7 @@ RUN docker-php-ext-install pdo_mysql \
 COPY ./ ./
 RUN mv ./.dockerize/apache/000-default.conf /etc/apache2/sites-enabled/000-default.conf
 RUN mv ./.dockerize/cron/crontab /etc/crontab
+RUN mv ./.dockerize/polycash/example-config.json /var/www/html/src/config/config.json
 RUN mkdir /root/.datacoin
 
 RUN wget https://poly.cash/binaries/debian/datacoin-cli -P /var/www/html
