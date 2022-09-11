@@ -432,12 +432,10 @@ class App {
 		if (is_resource($set_game_def_process)) $process_count++;
 		else $html .= "Failed to start a process for caching game definitions.\n";
 		
-		if (!empty(AppSettings::getParam('coinbase_key'))) {
-			$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/process_target_balances.php"';
-			$target_balances_process = $this->run_shell_command($cmd, $print_debug);
-			if (is_resource($target_balances_process)) $process_count++;
-			else $html .= "Failed to start a process for target balances.\n";
-		}
+		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/process_target_balances.php"';
+		$target_balances_process = $this->run_shell_command($cmd, $print_debug);
+		if (is_resource($target_balances_process)) $process_count++;
+		else $html .= "Failed to start a process for target balances.\n";
 		
 		$html .= "Started ".$process_count." background processes.\n";
 		return $html;
