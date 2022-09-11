@@ -175,7 +175,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 								$address_key = $app->new_normal_address_key($faucet_account['currency_id'], $faucet_account);
 								
 								array_push($address_ids, $address_key['address_id']);
-								array_push($address_key_ids, $address_key_id);
+								array_push($address_key_ids, $address_key['address_key_id']);
 								
 								$addresses_needed--;
 								$loop_count++;
@@ -252,6 +252,19 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 				
 				$app->set_target_balance($target_account['account_id'], $target_balance);
 			}
+		}
+	}
+	else if ($action == "save_settings") {
+		$settings_account_id = (int) $_REQUEST['account_id'];
+		$settings_account = $app->fetch_account_by_id($settings_account_id);
+		
+		if (!empty($settings_account) && $settings_account['user_id'] == $thisuser->db_user['user_id']) {
+			$app->run_query("UPDATE currency_accounts SET faucet_donations_on=:faucet_donations_on, faucet_target_balance=:faucet_target_balance, faucet_amount_each=:faucet_amount_each WHERE account_id=:account_id;", [
+				'faucet_donations_on' => $_REQUEST['faucet_donations_on'],
+				'faucet_target_balance' => $_REQUEST['faucet_target_balance'],
+				'faucet_amount_each' => $_REQUEST['faucet_amount_each'],
+				'account_id' => $settings_account['account_id'],
+			]);
 		}
 	}
 }
@@ -428,7 +441,8 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 						<ul class="nav nav-tabs">
 							<li '.($account_selected_tab == "primary_address" ? 'class="active" ' : '').'role="presentation"><a data-toggle="tab" href="#primary_address_'.$account['account_id'].'">Deposit Address</a></li>
 							<li '.($account_selected_tab == "transactions" ? 'class="active" ' : '').'role="presentation"><a data-toggle="tab" href="#transactions_'.$account['account_id'].'">Transactions</a></li>
-							<li '.($account_selected_tab == "addresses" ? 'class="active" ' : '').'role="presentation"><a data-toggle="tab" href="#addresses_'.$account['account_id'].'">Addresses</a></li>';
+							<li '.($account_selected_tab == "addresses" ? 'class="active" ' : '').'role="presentation"><a data-toggle="tab" href="#addresses_'.$account['account_id'].'">Addresses</a></li>
+							<li '.($account_selected_tab == "settings" ? 'class="active" ' : '').'role="presentation"><a data-toggle="tab" href="#settings_'.$account['account_id'].'">Settings</a></li>';
 							
 							if ($app->user_is_admin($thisuser) && $account['is_blockchain_sale_account']) {
 								echo '<li '.($account_selected_tab == "target" ? 'class="active" ' : '').'role="presentation"><a data-toggle="tab" href="#target_'.$account['account_id'].'">Target Balance</a></li>';
@@ -601,8 +615,43 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 						
 						echo '<br/><p><button class="btn btn-sm btn-primary" onclick="thisPageManager.manage_addresses('.$account['account_id'].', \'new\', false);">New Address</button></p>';
 						echo '
-							</div>
-						</div>';
+							</div>';
+						?>
+						<div id="settings_<?php echo $account['account_id']; ?>" class="tab-pane<?php echo $account_selected_tab == "settings" ? ' active' : ' fade'; ?>">
+							<?php if ($account_game) { ?>
+								<form action="/accounts/?account_id=<?php echo $account['account_id']; ?>" method="post">
+									<input type="hidden" name="action" value="save_settings" />
+									<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
+									<div class="form-group">
+										<label for="faucet_donations_on">Would you like to make recurring donations to the faucet account for <?php echo $account_game->db_game['name']; ?>?</label>
+										<select class="form-control" id="faucet_donations_on" name="faucet_donations_on" onChange="faucet_donations_on_changed(this);">
+											<option value="0">No</option>
+											<option value="1" <?php if ($account['faucet_donations_on'] == 1) echo 'selected="selected"'; ?>>Yes</option>
+										</select>
+									</div>
+									<div id="faucet_donation_params">
+										<div class="form-group">
+											<label for="faucet_target_balance">What do you want to donate the faucet's balance up to?</label>
+											<input type="text" class="form-control" id="faucet_target_balance" name="faucet_target_balance" value="<?php echo $account['faucet_target_balance']; ?>" />
+										</div>
+										<div class="form-group">
+											<label for="faucet_amount_each">How many <?php echo $account_game->db_game['coin_name_plural']; ?> should each person receive per faucet claim?</label>
+											<input type="text" class="form-control" id="faucet_amount_each" name="faucet_amount_each" value="<?php echo $account['faucet_amount_each']; ?>" />
+										</div>
+									</div>
+									<button class="btn btn-sm btn-primary">Save Settings</button>
+								</form>
+								<script type="text/javascript">
+								function faucet_donations_on_changed(selectEl) {
+									if (selectEl.value == 0) document.getElementById('faucet_donation_params').style.display = "none";
+									else document.getElementById('faucet_donation_params').style.display = "block";
+								}
+								faucet_donations_on_changed(document.getElementById('faucet_donations_on'));
+								</script>
+							<?php } ?>
+						</div>
+						<?php
+						echo "</div>\n";
 						
 						echo "</div>\n";
 					}

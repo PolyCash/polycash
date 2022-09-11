@@ -11,167 +11,182 @@ if ($app->running_as_admin()) {
 	$print_debug = false;
 	if (!empty($_REQUEST['print_debug'])) $print_debug = true;
 	
-	if (empty(AppSettings::getParam("coinbase_key"))) die("Please configure coinbase parameters to use this feature.\n");
-	
 	$process_lock_name = "process_target_balances";
 	$process_locked = $app->check_process_running($process_lock_name);
 	
 	if (!$process_locked) {
 		$admin_user_id = $app->get_site_constant("admin_user_id");
 		
-		$client = new CoinbaseClient(AppSettings::getParam('coinbase_key'), AppSettings::getParam('coinbase_secret'), AppSettings::getParam('coinbase_passphrase'));
+		$db_running_games = $app->fetch_running_games()->fetchAll();
 		
-		$min_buy_amounts = [
-			'LTC' => 0.1,
-			'BTC' => 0.001
-		];
+		if ($print_debug) $app->print_debug("Checking auto faucet donations for ".count($db_running_games)." games.");
 		
-		$send_fee_by_currency = [
-			'BTC' => 0.00002,
-			'LTC' => 0.00002
-		];
-		
-		$deposit_address_by_currency = [
-			'BTC' => AppSettings::getParam('coinbase_deposit_btc_address'),
-			'LTC' => AppSettings::getParam('coinbase_deposit_ltc_address')
-		];
-		
-		$blockchains_by_id = [];
-		
-		$running_games = $app->fetch_running_games()->fetchAll();
-		echo "Processing ".count($running_games)." games.\n";
-		
-		foreach ($running_games as &$running_game) {
-			$sale_accounts = $app->run_query("SELECT * FROM currency_accounts ca JOIN currencies c ON ca.currency_id=c.currency_id WHERE ca.game_id=:game_id AND ca.is_blockchain_sale_account=1 AND ca.target_balance > 0 AND ca.user_id=:admin_user_id;", [
-				'game_id' => $running_game['game_id'],
-				'admin_user_id' => $admin_user_id
-			])->fetchAll();
+		foreach ($db_running_games as $db_running_game) {
+			$blockchain = new Blockchain($app, $db_running_game['blockchain_id']);
+			$running_game = new Game($blockchain, $db_running_game['game_id']);
 			
-			echo $running_game['name']."\n\n";
+			if ($running_game->last_block_id() == $blockchain->last_block_id()) {
+				$running_game->make_auto_donations($print_debug);
+			}
+			else if ($print_debug) $app->print_debug("Skipping ".$running_game->db_game['name'].", it's not in sync.");
+		}
+		
+		if (empty(AppSettings::getParam('coinbase_key'))) echo "Skipping Coinbase functionality; it's not configured.\n";
+		else {
+			$client = new CoinbaseClient(AppSettings::getParam('coinbase_key'), AppSettings::getParam('coinbase_secret'), AppSettings::getParam('coinbase_passphrase'));
 			
-			foreach ($sale_accounts as &$sale_account) {
-				if (empty($blockchains_by_id[$sale_account['blockchain_id']])) $blockchains_by_id[$sale_account['blockchain_id']] = new Blockchain($app, $sale_account['blockchain_id']);
+			$min_buy_amounts = [
+				'LTC' => 0.1,
+				'BTC' => 0.001
+			];
+			
+			$send_fee_by_currency = [
+				'BTC' => 0.00002,
+				'LTC' => 0.00002
+			];
+			
+			$deposit_address_by_currency = [
+				'BTC' => AppSettings::getParam('coinbase_deposit_btc_address'),
+				'LTC' => AppSettings::getParam('coinbase_deposit_ltc_address')
+			];
+			
+			$blockchains_by_id = [];
+			
+			$running_games = $app->fetch_running_games()->fetchAll();
+			echo "Processing ".count($running_games)." games.\n";
+			
+			foreach ($running_games as &$running_game) {
+				$sale_accounts = $app->run_query("SELECT * FROM currency_accounts ca JOIN currencies c ON ca.currency_id=c.currency_id WHERE ca.game_id=:game_id AND ca.is_blockchain_sale_account=1 AND ca.target_balance > 0 AND ca.user_id=:admin_user_id;", [
+					'game_id' => $running_game['game_id'],
+					'admin_user_id' => $admin_user_id
+				])->fetchAll();
 				
-				$bal = $blockchains_by_id[$sale_account['blockchain_id']]->account_balance($sale_account['account_id'], true)/pow(10, $blockchains_by_id[$sale_account['blockchain_id']]->db_blockchain['decimal_places']);
+				echo $running_game['name']."\n\n";
 				
-				echo $sale_account['account_name'].": ".$bal." / ".$sale_account['target_balance']."\n";
-				
-				if (empty($sale_account['current_address_id'])) {
-					echo "Account has no primary address.\n";
-				}
-				else {
-					$account_address = $app->fetch_address_by_id($sale_account['current_address_id']);
+				foreach ($sale_accounts as &$sale_account) {
+					if (empty($blockchains_by_id[$sale_account['blockchain_id']])) $blockchains_by_id[$sale_account['blockchain_id']] = new Blockchain($app, $sale_account['blockchain_id']);
 					
-					$add_amount = $sale_account['target_balance'] - $bal;
+					$bal = $blockchains_by_id[$sale_account['blockchain_id']]->account_balance($sale_account['account_id'], true)/pow(10, $blockchains_by_id[$sale_account['blockchain_id']]->db_blockchain['decimal_places']);
 					
-					if ($add_amount != 0) {
-						list($cb_accounts, $returned_headers, $error_message) = $client->apiRequest("/accounts", "GET", [
-							'currency' => $sale_account['abbreviation']
-						]);
+					echo $sale_account['account_name'].": ".$bal." / ".$sale_account['target_balance']."\n";
+					
+					if (empty($sale_account['current_address_id'])) {
+						echo "Account has no primary address.\n";
+					}
+					else {
+						$account_address = $app->fetch_address_by_id($sale_account['current_address_id']);
 						
-						$accounts_by_abbrev = AppSettings::arrayToMapOnKey($cb_accounts, "currency");
+						$add_amount = $sale_account['target_balance'] - $bal;
 						
-						if ($add_amount > 0) {
-							if ($add_amount >= $min_buy_amounts[$sale_account['abbreviation']]/10) {
-								$avail_amount = $accounts_by_abbrev[$sale_account['abbreviation']]->available;
-								
-								echo "avail: ".$avail_amount."\n";
-								
-								if ($avail_amount >= $add_amount) {
-									echo "send: ".$add_amount."\n";
-									
-									$withdrawal_address = $app->new_normal_address_key($sale_account['currency_id'], $sale_account);
-									
-									list($withdrawal, $returned_headers, $error_message) = $client->apiRequest("/withdrawals/crypto", "POST", [
-										"amount" => $add_amount,
-										"currency" => $sale_account['abbreviation'],
-										"crypto_address" => $withdrawal_address['address']
-									]);
-									
-									echo "withdrawal: ".$withdrawal->id."\n";
-									
-									sleep(2);
-									
-									$blockchains_by_id[$sale_account['blockchain_id']]->load_coin_rpc();
-									$all_wallet_txns = $blockchains_by_id[$sale_account['blockchain_id']]->coin_rpc->listreceivedbyaddress(0);
-									
-									$withdrawal_address_txns = AppSettings::arrayToMapOnKey($all_wallet_txns, "address", true);
-									
-									if (!empty($withdrawal_address_txns[$withdrawal_address['address']])) {
-										if ($withdrawal_address_txns[$withdrawal_address['address']]->confirmations == 0) {
-											foreach ($withdrawal_address_txns[$account_address['address']]->txids as $tx_hash) {
-												$blockchains_by_id[$sale_account['blockchain_id']]->walletnotify($tx_hash, true);
-												echo "walletnotify ".$tx_hash."\n";
-											}
-										}
-									}
-								}
-								else echo "not enough\n";
-							}
-						}
-						else {
-							$fee_amount_float = $send_fee_by_currency[$sale_account['abbreviation']];
-							$sell_amount_float = $add_amount*(-1) - $fee_amount_float;
-							$successful_send = false;
+						if ($add_amount != 0) {
+							list($cb_accounts, $returned_headers, $error_message) = $client->apiRequest("/accounts", "GET", [
+								'currency' => $sale_account['abbreviation']
+							]);
 							
-							if ($deposit_address_by_currency[$sale_account['abbreviation']] && $sell_amount_float > $min_buy_amounts[$sale_account['abbreviation']]/2) {
-								$fee_amount = $fee_amount_float*pow(10, $blockchains_by_id[$sale_account['blockchain_id']]->db_blockchain['decimal_places']);
-								
-								$sell_amount_int = (int) ($sell_amount_float*pow(10, $blockchains_by_id[$sale_account['blockchain_id']]->db_blockchain['decimal_places']));
-								
-								echo "send ".$sell_amount_float."\n";
-								
-								$spendable_ios = $blockchains_by_id[$sale_account['blockchain_id']]->spendable_ios_in_blockchain_account($sale_account['account_id'])->fetchAll();
-								
-								if (count($spendable_ios) > 0) {
-									$spendable_io_pos = 0;
-									$io_ids = [];
-									$address_ids = [];
-									$io_inputs_sum = 0;
+							$accounts_by_abbrev = AppSettings::arrayToMapOnKey($cb_accounts, "currency");
+							
+							if ($add_amount > 0) {
+								if ($add_amount >= $min_buy_amounts[$sale_account['abbreviation']]/10) {
+									$avail_amount = $accounts_by_abbrev[$sale_account['abbreviation']]->available;
 									
-									do {
-										array_push($io_ids, $spendable_ios[$spendable_io_pos]['io_id']);
-										$io_inputs_sum += $spendable_ios[$spendable_io_pos]['amount'];
-										$spendable_io_pos++;
-									}
-									while (!empty($spendable_ios[$spendable_io_pos]['amount']) && $io_inputs_sum < $fee_amount+$sell_amount_int);
+									echo "avail: ".$avail_amount."\n";
 									
-									if ($io_inputs_sum >= $fee_amount+$sell_amount_int) {
-										$deposit_address = $blockchains_by_id[$sale_account['blockchain_id']]->create_or_fetch_address($deposit_address_by_currency[$sale_account['abbreviation']], false, null);
+									if ($avail_amount >= $add_amount) {
+										echo "send: ".$add_amount."\n";
 										
-										if ($deposit_address) {
-											$deposit_address_ids = [$deposit_address['address_id']];
-											$io_amounts = [$sell_amount_int];
-											
-											if ($sell_amount_int+$fee_amount < $io_inputs_sum) {
-												$refund_amount = $io_inputs_sum - $fee_amount - $sell_amount_int;
-												
-												$refund_address = $app->new_normal_address_key($sale_account['currency_id'], $sale_account);
-												
-												array_push($deposit_address_ids, $refund_address['address_id']);
-												array_push($io_amounts, $refund_amount);
+										$withdrawal_address = $app->new_normal_address_key($sale_account['currency_id'], $sale_account);
+										
+										list($withdrawal, $returned_headers, $error_message) = $client->apiRequest("/withdrawals/crypto", "POST", [
+											"amount" => $add_amount,
+											"currency" => $sale_account['abbreviation'],
+											"crypto_address" => $withdrawal_address['address']
+										]);
+										
+										echo "withdrawal: ".$withdrawal->id."\n";
+										
+										sleep(2);
+										
+										$blockchains_by_id[$sale_account['blockchain_id']]->load_coin_rpc();
+										$all_wallet_txns = $blockchains_by_id[$sale_account['blockchain_id']]->coin_rpc->listreceivedbyaddress(0);
+										
+										$withdrawal_address_txns = AppSettings::arrayToMapOnKey($all_wallet_txns, "address", true);
+										
+										if (!empty($withdrawal_address_txns[$withdrawal_address['address']])) {
+											if ($withdrawal_address_txns[$withdrawal_address['address']]->confirmations == 0) {
+												foreach ($withdrawal_address_txns[$account_address['address']]->txids as $tx_hash) {
+													$blockchains_by_id[$sale_account['blockchain_id']]->walletnotify($tx_hash, true);
+													echo "walletnotify ".$tx_hash."\n";
+												}
 											}
-											
-											$error_message = null;
-											$transaction_id = $blockchains_by_id[$sale_account['blockchain_id']]->create_transaction("transaction", $io_amounts, false, $io_ids, $deposit_address_ids, $fee_amount, $error_message);
-											
-											if ($transaction_id) {
-												$transaction = $app->fetch_transaction_by_id($transaction_id);
-												echo "tx: ".$transaction['tx_hash']."\n";
-												$successful_send = true;
-											}
-											else echo "error: ".$error_message."\n";
 										}
 									}
-									else echo "not enough ".$blockchains_by_id[$sale_account['blockchain_id']]->db_blockchain['coin_name_plural']." to complete the send\n";
+									else echo "not enough\n";
 								}
-								else echo "not enough confirmed ".$blockchains_by_id[$sale_account['blockchain_id']]->db_blockchain['coin_name_plural']."\n";
+							}
+							else {
+								$fee_amount_float = $send_fee_by_currency[$sale_account['abbreviation']];
+								$sell_amount_float = $add_amount*(-1) - $fee_amount_float;
+								$successful_send = false;
+								
+								if ($deposit_address_by_currency[$sale_account['abbreviation']] && $sell_amount_float > $min_buy_amounts[$sale_account['abbreviation']]/2) {
+									$fee_amount = $fee_amount_float*pow(10, $blockchains_by_id[$sale_account['blockchain_id']]->db_blockchain['decimal_places']);
+									
+									$sell_amount_int = (int) ($sell_amount_float*pow(10, $blockchains_by_id[$sale_account['blockchain_id']]->db_blockchain['decimal_places']));
+									
+									echo "send ".$sell_amount_float."\n";
+									
+									$spendable_ios = $blockchains_by_id[$sale_account['blockchain_id']]->spendable_ios_in_blockchain_account($sale_account['account_id'])->fetchAll();
+									
+									if (count($spendable_ios) > 0) {
+										$spendable_io_pos = 0;
+										$io_ids = [];
+										$address_ids = [];
+										$io_inputs_sum = 0;
+										
+										do {
+											array_push($io_ids, $spendable_ios[$spendable_io_pos]['io_id']);
+											$io_inputs_sum += $spendable_ios[$spendable_io_pos]['amount'];
+											$spendable_io_pos++;
+										}
+										while (!empty($spendable_ios[$spendable_io_pos]['amount']) && $io_inputs_sum < $fee_amount+$sell_amount_int);
+										
+										if ($io_inputs_sum >= $fee_amount+$sell_amount_int) {
+											$deposit_address = $blockchains_by_id[$sale_account['blockchain_id']]->create_or_fetch_address($deposit_address_by_currency[$sale_account['abbreviation']], false, null);
+											
+											if ($deposit_address) {
+												$deposit_address_ids = [$deposit_address['address_id']];
+												$io_amounts = [$sell_amount_int];
+												
+												if ($sell_amount_int+$fee_amount < $io_inputs_sum) {
+													$refund_amount = $io_inputs_sum - $fee_amount - $sell_amount_int;
+													
+													$refund_address = $app->new_normal_address_key($sale_account['currency_id'], $sale_account);
+													
+													array_push($deposit_address_ids, $refund_address['address_id']);
+													array_push($io_amounts, $refund_amount);
+												}
+												
+												$error_message = null;
+												$transaction_id = $blockchains_by_id[$sale_account['blockchain_id']]->create_transaction("transaction", $io_amounts, false, $io_ids, $deposit_address_ids, $fee_amount, $error_message);
+												
+												if ($transaction_id) {
+													$transaction = $app->fetch_transaction_by_id($transaction_id);
+													echo "tx: ".$transaction['tx_hash']."\n";
+													$successful_send = true;
+												}
+												else echo "error: ".$error_message."\n";
+											}
+										}
+										else echo "not enough ".$blockchains_by_id[$sale_account['blockchain_id']]->db_blockchain['coin_name_plural']." to complete the send\n";
+									}
+									else echo "not enough confirmed ".$blockchains_by_id[$sale_account['blockchain_id']]->db_blockchain['coin_name_plural']."\n";
+								}
 							}
 						}
 					}
+					
+					echo "\n";
 				}
-				
-				echo "\n";
 			}
 		}
 	}

@@ -4058,5 +4058,82 @@ class Game {
 		
 		return $events_by_id;
 	}
+	
+	public function make_auto_donations($print_debug=false) {
+		$donate_from_accounts = $this->blockchain->app->run_query("SELECT * FROM currency_accounts ca WHERE ca.game_id=:game_id AND faucet_donations_on=1;", [
+			'game_id' => $this->db_game['game_id'],
+		])->fetchAll(PDO::FETCH_ASSOC);
+		
+		$faucet_account = $this->check_set_faucet_account();
+		
+		foreach ($donate_from_accounts as $donate_from_account) {
+			$faucet_balance_int = $this->account_balance($faucet_account['account_id'], ['include_immature' => 1]);
+			$faucet_balance_float = $faucet_balance_int/pow(10, $this->db_game['decimal_places']);
+			
+			if ($faucet_balance_float < 0.9*$donate_from_account['faucet_target_balance']) {
+				$quantity_donations = floor(($donate_from_account['faucet_target_balance'] - $faucet_balance_float)/$donate_from_account['faucet_amount_each']);
+				
+				if ($quantity_donations > 0) {
+					if ($print_debug) $this->blockchain->app->print_debug("Top up faucet from account #".$donate_from_account['account_id'].", current balance of ".$faucet_balance_float." vs target of ".$donate_from_account['faucet_target_balance'].", making ".$quantity_donations." donations of ".$donate_from_account['faucet_amount_each']);
+					
+					$user_game = $this->blockchain->app->fetch_user_game_by_account_id($donate_from_account['account_id']);
+					$strategy = $this->blockchain->app->fetch_strategy_by_id($user_game['strategy_id']);
+					
+					$game_cost_int = $quantity_donations*$donate_from_account['faucet_amount_each']*pow(10, $this->db_game['decimal_places']);
+					$fee_int = $strategy['transaction_fee']*pow(10, $this->blockchain->db_blockchain['decimal_places']);
+					
+					$spendable_ios = $this->blockchain->app->spendable_ios_in_account($donate_from_account['account_id'], $this->db_game['game_id'], false, false)->fetchAll();
+					
+					$gio_input_sum = 0;
+					$io_input_sum = 0;
+					$spend_io_ids = [];
+					$input_io_pos = 0;
+					
+					while ($input_io_pos < count($spendable_ios) && $gio_input_sum < 1.1*$game_cost_int) {
+						array_push($spend_io_ids, $spendable_ios[$input_io_pos]['io_id']);
+						$gio_input_sum += $spendable_ios[$input_io_pos]['coins'];
+						$io_input_sum += $spendable_ios[$input_io_pos]['amount'];
+						$input_io_pos++;
+					}
+					
+					$gio_per_io = $gio_input_sum/($io_input_sum-$fee_int);
+					$io_amount_per_donation = ceil($donate_from_account['faucet_amount_each']*pow(10, $this->db_game['decimal_places'])/$gio_per_io);
+					$amounts = [];
+					$io_output_sum = 0;
+					$to_address_ids = [];
+					
+					for ($i=0; $i<$quantity_donations; $i++) {
+						$address_key = $this->blockchain->app->new_normal_address_key($faucet_account['currency_id'], $faucet_account);
+						array_push($amounts, $io_amount_per_donation);
+						array_push($to_address_ids, $address_key['address_id']);
+						$io_output_sum += $io_amount_per_donation;
+					}
+					
+					$io_leftover_amount = $io_input_sum-$io_output_sum-$fee_int;
+					
+					if ($io_leftover_amount > 0) {
+						$address_key = $this->blockchain->app->new_normal_address_key($donate_from_account['currency_id'], $donate_from_account);
+						array_push($amounts, $io_leftover_amount);
+						array_push($to_address_ids, $address_key['address_id']);
+						$io_output_sum += $io_leftover_amount;
+					}
+					
+					$io_output_sum += $fee_int;
+					
+					if ($io_output_sum == $io_input_sum) {
+						$error_message = null;
+						$transaction_id = $this->blockchain->create_transaction('transaction', $amounts, false, $spend_io_ids, $to_address_ids, $fee_int, $error_message);
+						
+						if ($transaction_id) {
+							$transaction = $this->blockchain->app->fetch_transaction_by_id($transaction_id);
+							$this->blockchain->app->print_debug("Successfully donated to the faucet with tx ".$transaction['tx_hash']);
+						}
+						else if ($print_debug) $this->blockchain->app->print_debug("Donation failed: ".$error_message);
+					}
+					else if ($print_debug) $this->blockchain->app->print_debug("Account balance is too low to donate to the faucet.");
+				}
+			}
+		}
+	}
 }
 ?>
