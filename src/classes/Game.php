@@ -4066,15 +4066,19 @@ class Game {
 		
 		$faucet_account = $this->check_set_faucet_account();
 		
+		if ($print_debug) $this->blockchain->app->print_debug("Checking ".count($donate_from_accounts)." donating accounts in ".$this->db_game['name'].".");
+		
 		foreach ($donate_from_accounts as $donate_from_account) {
-			$faucet_balance_int = $this->account_balance($faucet_account['account_id'], ['include_immature' => 1]);
+			$faucet_balance_int = $this->account_balance($faucet_account['account_id']);
 			$faucet_balance_float = $faucet_balance_int/pow(10, $this->db_game['decimal_places']);
+			
+			if ($print_debug) $this->blockchain->app->print_debug("Account #".$donate_from_account['account_id'].", current balance of ".$faucet_balance_float." vs target of ".$donate_from_account['faucet_target_balance']);
 			
 			if ($faucet_balance_float < 0.9*$donate_from_account['faucet_target_balance']) {
 				$quantity_donations = floor(($donate_from_account['faucet_target_balance'] - $faucet_balance_float)/$donate_from_account['faucet_amount_each']);
 				
 				if ($quantity_donations > 0) {
-					if ($print_debug) $this->blockchain->app->print_debug("Top up faucet from account #".$donate_from_account['account_id'].", current balance of ".$faucet_balance_float." vs target of ".$donate_from_account['faucet_target_balance'].", making ".$quantity_donations." donations of ".$donate_from_account['faucet_amount_each']);
+					if ($print_debug) $this->blockchain->app->print_debug("Making ".$quantity_donations." donations of ".$donate_from_account['faucet_amount_each']);
 					
 					$user_game = $this->blockchain->app->fetch_user_game_by_account_id($donate_from_account['account_id']);
 					$strategy = $this->blockchain->app->fetch_strategy_by_id($user_game['strategy_id']);

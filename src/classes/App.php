@@ -575,7 +575,7 @@ class App {
 	}
 	
 	public function to_significant_digits($number, $significant_digits) {
-		if ($number === 0) return 0;
+		if ($number == 0) return 0;
 		$number_digits = floor(log10($number));
 		$returnval = (pow(10, $number_digits - $significant_digits + 1)) * round($number/(pow(10, $number_digits - $significant_digits + 1)));
 		return $returnval;
