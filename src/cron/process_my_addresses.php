@@ -60,6 +60,7 @@ if ($app->running_as_admin()) {
 								$add_count = 0;
 								$add_privkey_count = 0;
 								$transfer_count = 0;
+								$transaction_pos = 0;
 								
 								foreach ($listsinceblock['transactions'] as $my_transaction) {
 									$address_info = $blockchain->coin_rpc->getaddressinfo($my_transaction['address']);
@@ -114,6 +115,10 @@ if ($app->running_as_admin()) {
 											}
 										}
 									}
+									
+									if ($print_debug && $transaction_pos > 0 && $transaction_pos%1000 == 0) $app->print_debug($transaction_pos."/".count($listsinceblock['transactions']).", ".round(100*$transaction_pos/count($listsinceblock['transactions']), 4)."%");
+									
+									$transaction_pos++;
 								}
 								
 								$blockchain->set_processed_my_addresses_to_block($last_block_id);
