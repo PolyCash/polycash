@@ -357,9 +357,9 @@ if ($uri_parts[1] == "api") {
 			if (!empty($uri_parts[4]) && (string) $uri_parts[4] == (string)((int) $uri_parts[4])) {
 				$txo = $game->fetch_game_io_by_index($uri_parts[4]);
 				
-				if (!empty($txo['checksum'])) {
+				if (!empty($txo['partition_checksum'])) {
 					$app->output_message(1, "Successfully returned checksum for TXO #".$uri_parts[4].".", [
-						'checksum' => $txo['checksum']
+						'checksum' => $txo['partition_checksum']
 					]);
 				}
 				else $app->output_message(4, "No checksum is set for that TXO.");

@@ -4169,8 +4169,8 @@ class Game {
 			$lower_gio = $this->fetch_game_io_by_index($this->checksum_partition_to_txo_index($lower_partition, $txos_per_partition));
 			$upper_gio = $this->fetch_game_io_by_index($this->checksum_partition_to_txo_index($upper_partition, $txos_per_partition));
 			
-			if (!empty($upper_gio['checksum'])) return $upper_partition;
-			else if (!empty($lower_gio['checksum'])) return $lower_partition;
+			if (!empty($upper_gio['partition_checksum'])) return $upper_partition;
+			else if (!empty($lower_gio['partition_checksum'])) return $lower_partition;
 			else return null;
 		}
 		else {
@@ -4179,7 +4179,7 @@ class Game {
 			
 			if ($print_debug) $this->blockchain->app->print_debug("Checking midpoint ".$mid_partition."(".$this->checksum_partition_to_txo_index($mid_partition, $txos_per_partition).")");
 			
-			if (!empty($mid_gio['checksum'])) {
+			if (!empty($mid_gio['partition_checksum'])) {
 				$max_partition = $this->max_set_checksum_partition($mid_partition+1, $upper_partition, $txos_per_partition, $print_debug);
 				if ($max_partition == null) return $mid_partition;
 				else return $max_partition;
@@ -4202,16 +4202,16 @@ class Game {
 		$ref_time = microtime(true);
 		
 		$checksum = hash("sha256", json_encode([
-			'previous_checksum' => $partition == 0 ? null : $this->fetch_game_io_by_index($this->checksum_partition_to_txo_index($partition-1, $txos_per_partition))['checksum'],
+			'previous_checksum' => $partition == 0 ? null : $this->fetch_game_io_by_index($this->checksum_partition_to_txo_index($partition-1, $txos_per_partition))['partition_checksum'],
 			'txos' => $txos,
 		], JSON_PRETTY_PRINT));
 		
 		if ($print_debug) $this->blockchain->app->print_debug("Checksum generation took ".round(microtime(true)-$ref_time, 4)." sec");
 		$ref_time = microtime(true);
 		
-		$this->blockchain->app->run_query("UPDATE transaction_game_ios SET checksum=:checksum WHERE game_id=:game_id AND game_io_index=:to_txo_index;", [
+		$this->blockchain->app->run_query("UPDATE transaction_game_ios SET partition_checksum=:partition_checksum WHERE game_id=:game_id AND game_io_index=:to_txo_index;", [
 			'game_id' => $this->db_game['game_id'],
-			'checksum' => $checksum,
+			'partition_checksum' => $checksum,
 			'to_txo_index' => $to_txo_index,
 		]);
 		
