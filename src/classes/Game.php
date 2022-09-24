@@ -4158,8 +4158,23 @@ class Game {
 		])->fetch();
 	}
 	
+	public function min_unpaid_block($last_block_id) {
+		$info = $this->blockchain->app->run_query("SELECT MIN(event_starting_block) AS min_unpaid_block FROM events WHERE game_id=:game_id AND event_payout_block>=:last_block_id;", [
+			'game_id' => $this->db_game['game_id'],
+			'last_block_id' => $last_block_id,
+		])->fetch(PDO::FETCH_ASSOC);
+		
+		if (empty($info['min_unpaid_block'])) return null;
+		else return ((int) $info['min_unpaid_block']);
+	}
+	
 	public function checksum_partition_to_txo_index($partition, $txos_per_partition) {
 		return ($partition+1)*$txos_per_partition-1;
+	}
+	
+	public function txo_pos_to_max_set_partition($txo_pos, $txos_per_partition) {
+		if ($txo_pos+1 < $txos_per_partition) return null;
+		else return (floor(($txo_pos+1)/$txos_per_partition)-1);
 	}
 	
 	public function max_set_checksum_partition($lower_partition, $upper_partition, $txos_per_partition, $print_debug=false) {

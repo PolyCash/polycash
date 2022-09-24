@@ -41,6 +41,11 @@ class PeerVerifier {
 		return $remote_url;
 	}
 	
+	public static function peerApiCall($peer, $uri) {
+		$response = file_get_contents($peer['base_url'].$uri);
+		return json_decode($response, true);
+	}
+	
 	public static function fetchTxosByIndex($game, $fromIndex, $toIndex) {
 		$txos = $game->blockchain->app->run_query("SELECT io.create_block_id AS io_create_block_id, gio.game_io_index, gio.create_block_id, gio.colored_amount FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id=:game_id AND gio.game_io_index >= :from_index AND gio.game_io_index <= :to_index ORDER BY gio.game_io_index ASC;", [
 			'game_id' => $game->db_game['game_id'],
