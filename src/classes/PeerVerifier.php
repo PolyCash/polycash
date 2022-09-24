@@ -28,6 +28,10 @@ class PeerVerifier {
 		}
 	}
 	
+	public static function txosPerPartition() {
+		return 1000;
+	}
+	
 	public function remoteUrl($peer, $remote_host_url, $remote_key) {
 		$this->remote_url_base = $peer ? $peer['base_url'] : $remote_host_url;
 		$remote_url = $this->remote_url_base."/scripts/verify_api.php?mode=".$this->mode;
@@ -37,29 +41,28 @@ class PeerVerifier {
 		return $remote_url;
 	}
 	
+	public static function fetchTxosByIndex($game, $fromIndex, $toIndex) {
+		$txos = $game->blockchain->app->run_query("SELECT io.create_block_id AS io_create_block_id, gio.game_io_index, gio.create_block_id, gio.colored_amount FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id=:game_id AND gio.game_io_index >= :from_index AND gio.game_io_index <= :to_index ORDER BY gio.game_io_index ASC;", [
+			'game_id' => $game->db_game['game_id'],
+			'from_index' => $fromIndex,
+			'to_index' => $toIndex,
+		])->fetchAll(PDO::FETCH_ASSOC);
+		
+		$formattedTxos = [];
+		foreach ($txos as $txo) {
+			$formattedTxos[(string)$txo['game_io_index']] = [(int)$txo['game_io_index'], (int)$txo['io_create_block_id'], (int)$txo['create_block_id'], (int)$txo['colored_amount']];
+		}
+		return $formattedTxos;
+	}
+	
 	public function renderOutput() {
 		if ($this->mode == "game_ios") {
 			$total_issued = 0;
 			
-			$confirmed_gios = $this->app->run_query("SELECT io.spend_status, io.create_block_id AS io_create_block_id, gio.game_io_index, gio.create_block_id, gio.colored_amount, gio.coin_rounds_created FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id=:game_id AND gio.game_io_index IS NOT NULL ORDER BY gio.game_io_index ASC;", ['game_id'=>$this->game->db_game['game_id']]);
+			$last_block_id = $this->game->blockchain->last_block_id();
+			$last_block = $this->game->fetch_game_block_by_height($last_block_id);
 			
-			$out_obj = [["in_existence"=>$this->game->coins_in_existence($this->blockchain->last_block_id(), false), "total"=>0]];
-			
-			while ($game_io = $confirmed_gios->fetch()) {
-				array_push($out_obj, [$game_io['game_io_index'], $game_io['io_create_block_id'], $game_io['create_block_id'], $game_io['colored_amount'], $game_io['spend_status'], $game_io['coin_rounds_created']]);
-				$total_issued += $game_io['colored_amount'];
-			}
-			
-			$unconfirmed_gios = $this->app->run_query("SELECT io.spend_status, io.create_block_id AS io_create_block_id, gio.game_io_index, gio.create_block_id, gio.colored_amount, gio.coin_rounds_created FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id=:game_id AND gio.game_io_index IS NULL ORDER BY t.tx_hash ASC, gio.game_out_index ASC;", ['game_id' => $this->game->db_game['game_id']]);
-			
-			while ($game_io = $unconfirmed_gios->fetch()) {
-				array_push($out_obj, [null, $game_io['io_create_block_id'], $game_io['create_block_id'], $game_io['colored_amount'], $game_io['spend_status'], $game_io['coin_rounds_created']]);
-				$total_issued += $game_io['colored_amount'];
-			}
-			
-			$out_obj[0]['total'] = $total_issued;
-			
-			return $out_obj;
+			return PeerVerifier::fetchTxosByIndex($this->game, 0, $last_block['max_game_io_index']);
 		}
 		else if ($this->mode == "game_events") {
 			$check_tx_count = true;

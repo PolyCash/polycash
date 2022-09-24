@@ -326,6 +326,48 @@ if ($uri_parts[1] == "api") {
 		
 		$app->output_message(1, "", ['members' => $formatted_members]);
 	}
+	else if ($uri_parts[2] == "txos_by_index") {
+		if (!empty($uri_parts[3]) && $db_game = $app->fetch_game_by_identifier($uri_parts[3])) {
+			$blockchain = new Blockchain($app, $db_game['blockchain_id']);
+			$game = new Game($blockchain, $db_game['game_id']);
+			
+			$partitionRange = explode(":", $uri_parts[4]);
+			
+			if (count($partitionRange) == 2) {
+				if ((string)$partitionRange[0] === (string)((int) $partitionRange[0]) && (string)$partitionRange[1] === (string)((int) $partitionRange[1])) {
+					list($fromTxoPos, $toTxoPos) = $partitionRange;
+					
+					$txos = PeerVerifier::fetchTxosByIndex($game, $fromTxoPos, $toTxoPos);
+					
+					$app->output_message(1, "Successfully fetched ".number_format(count($txos))." ".$game->db_game['name']." TXOs.", [
+						'txos' => $txos
+					]);
+				}
+				else $app->output_message(4, "Please supply valid TXO indices.");
+			}
+			else $app->output_message(3, "Please supply a range of TXO indices.");
+		}
+		else $app->output_message(2, "Please supply a valid game identifier.");
+	}
+	else if ($uri_parts[2] == "txo_checksum") {
+		if (!empty($uri_parts[3]) && $db_game = $app->fetch_game_by_identifier($uri_parts[3])) {
+			$blockchain = new Blockchain($app, $db_game['blockchain_id']);
+			$game = new Game($blockchain, $db_game['game_id']);
+			
+			if (!empty($uri_parts[4]) && (string) $uri_parts[4] == (string)((int) $uri_parts[4])) {
+				$txo = $game->fetch_game_io_by_index($uri_parts[4]);
+				
+				if (!empty($txo['checksum'])) {
+					$app->output_message(1, "Successfully returned checksum for TXO #".$uri_parts[4].".", [
+						'checksum' => $txo['checksum']
+					]);
+				}
+				else $app->output_message(4, "No checksum is set for that TXO.");
+			}
+			else $app->output_message(3, "Please supply a valid TXO index.");
+		}
+		else $app->output_message(2, "Please supply a valid game identifier.");
+	}
 	else if (!empty($uri_parts[2])) {
 		$game_identifier = $uri_parts[2];
 		
@@ -336,7 +378,11 @@ if ($uri_parts[1] == "api") {
 			$game = new Game($blockchain, $db_game['game_id']);
 			$last_block_id = $game->blockchain->last_block_id();
 			
-			if ($uri_parts[3] == "definition") {
+			if ($uri_parts[3] == "info") {
+				$api_output['status_code'] = 1;
+				$api_output['last_block_id'] = $game->last_block_id();
+			}
+			else if ($uri_parts[3] == "definition") {
 				if (empty($game->db_game['events_until_block']) || $game->db_game['events_until_block'] < $last_block_id) {
 					$api_output['status_code'] = 2;
 					$api_output['message'] = "This game is currently loading.";

@@ -437,6 +437,11 @@ class App {
 		if (is_resource($target_balances_process)) $process_count++;
 		else $html .= "Failed to start a process for target balances.\n";
 		
+		/*$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/check_peers_in_sync.php"';
+		$target_balances_process = $this->run_shell_command($cmd, $print_debug);
+		if (is_resource($target_balances_process)) $process_count++;
+		else $html .= "Failed to start a process for peer synchronization.\n";*/
+		
 		$html .= "Started ".$process_count." background processes.\n";
 		return $html;
 	}
@@ -451,6 +456,12 @@ class App {
 		$game_q .= " GROUP BY ug.game_id;";
 		
 		return $this->run_query($game_q, $game_params);
+	}
+	
+	public function games_owned_by_user($thisuser) {
+		return $this->run_query("SELECT * FROM games g WHERE g.creator_id=:user_id ORDER BY name ASC;", [
+			'user_id' => $thisuser->db_user['user_id']
+		])->fetchAll(PDO::FETCH_ASSOC);
 	}
 	
 	public function generate_games($default_blockchain_id) {
@@ -658,15 +669,19 @@ class App {
 		else return 0;
 	}
 
-	public function output_message($status_code, $message, $dump_object=false) {
+	public function output_message($status_code, $message, $object=false) {
 		header('Content-Type: application/json');
 		
-		if (empty($dump_object)) $dump_object = ["status_code"=>$status_code, "message"=>$message];
+		if (empty($object)) $return_object = ["status_code"=>$status_code, "message"=>$message];
 		else {
-			$dump_object['status_code'] = $status_code;
-			$dump_object['message'] = $message;
+			$return_object['status_code'] = $status_code;
+			$return_object['message'] = $message;
+			
+			foreach ($object as $key => $data) {
+				$return_object[$key] = $data;
+			}
 		}
-		echo json_encode($dump_object, JSON_PRETTY_PRINT);
+		echo json_encode($return_object, JSON_PRETTY_PRINT);
 	}
 	
 	public function try_apply_invite_key($user_id, $invite_key, &$invite_game, &$user_game) {
@@ -2487,26 +2502,35 @@ class App {
 		return $error_message;
 	}
 	
-	public function get_peer_by_server_name($server_name, $allow_new) {
-		$server_name = rtrim(trim(strtolower(strip_tags($server_name))), "/");
-		$initial_server_name = $server_name;
+	public function peer_base_url_to_server_name($base_url) {
+		$server_name = rtrim(trim(strtolower(strip_tags($base_url))), "/");
+		$base_url = $server_name;
 		if (substr($server_name, 0, 7) == "http://") $server_name = substr($server_name, 7, strlen($server_name)-7);
 		if (substr($server_name, 0, 8) == "https://") $server_name = substr($server_name, 8, strlen($server_name)-8);
 		if (substr($server_name, 0, 4) == "www.") $server_name = substr($server_name, 4, strlen($server_name)-4);
+		return [$base_url, $server_name];
+	}
+	
+	public function get_peer_by_server_name($server_name, $allow_new) {
+		list($base_url, $server_name) = $this->peer_base_url_to_server_name($server_name);
 		
 		$peer = $this->run_query("SELECT * FROM peers WHERE peer_identifier=:peer_identifier;", ['peer_identifier'=>$server_name])->fetch();
 		
 		if (!$peer && $allow_new) {
-			$this->run_insert_query("peers", [
+			$peer = $this->create_peer([
 				'peer_identifier' => $server_name,
 				'peer_name' => $server_name,
-				'base_url' => $initial_server_name,
-				'time_created' => time()
+				'base_url' => $base_url
 			]);
-			$peer = $this->fetch_peer_by_id($this->last_insert_id());
 		}
 		
 		return $peer;
+	}
+	
+	public function create_peer($create_params) {
+		$create_params['time_created'] = time();
+		$this->run_insert_query("peers", $create_params);
+		return $this->fetch_peer_by_id($this->last_insert_id());
 	}
 	
 	public function change_card_status(&$db_card, $new_status) {

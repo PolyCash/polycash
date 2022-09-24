@@ -3751,6 +3751,12 @@ class Game {
 		])->fetch();
 	}
 	
+	public function fetch_all_peers() {
+		return $this->blockchain->app->run_query("SELECT * FROM peers p JOIN game_peers gp ON p.peer_id=gp.peer_id WHERE gp.game_id=:game_id ORDER BY p.peer_name ASC;", [
+			'game_id' => $this->db_game['game_id']
+		])->fetchAll();
+	}
+	
 	public function get_definitive_peer() {
 		if ($this->definitive_peer) return $this->definitive_peer;
 		else {
@@ -3762,24 +3768,29 @@ class Game {
 		}
 	}
 	
+	public function get_game_peer_by_peer($peer) {
+		return $this->blockchain->app->run_query("SELECT * FROM game_peers WHERE game_id=:game_id AND peer_id=:peer_id;", [
+			'game_id' => $this->db_game['game_id'],
+			'peer_id' => $peer['peer_id']
+		])->fetch();
+	}
+	
+	public function create_game_peer($peer) {
+		$this->blockchain->app->run_insert_query("game_peers", [
+			'game_id' => $this->db_game['game_id'],
+			'peer_id' => $peer['peer_id']
+		]);
+		return $this->get_game_peer_by_id($this->blockchain->app->last_insert_id());
+	}
+	
 	public function get_game_peer_by_server_name($server_name) {
 		$game_peer = false;
 		$peer = $this->blockchain->app->get_peer_by_server_name($server_name, true);
 		
 		if ($peer) {
-			$game_peer_arr = $this->blockchain->app->run_query("SELECT * FROM game_peers WHERE game_id=:game_id AND peer_id=:peer_id;", [
-				'game_id' => $this->db_game['game_id'],
-				'peer_id' => $peer['peer_id']
-			])->fetchAll();
+			$game_peer = $this->get_game_peer_by_peer($peer);
 			
-			if (count($game_peer_arr) == 0) {
-				$this->blockchain->app->run_insert_query("game_peers", [
-					'game_id' => $this->db_game['game_id'],
-					'peer_id' => $peer['peer_id']
-				]);
-				$game_peer = $this->get_game_peer_by_id($this->blockchain->app->last_insert_id());
-			}
-			else $game_peer = $game_peer_arr[0];
+			if (empty($game_peer)) $game_peer = $this->create_game_peer($peer);
 		}
 		
 		return $game_peer;
@@ -4138,6 +4149,75 @@ class Game {
 				}
 			}
 		}
+	}
+	
+	public function fetch_game_io_by_index($game_io_index) {
+		return $this->blockchain->app->run_query("SELECT * FROM transaction_game_ios WHERE game_id=:game_id AND game_io_index=:game_io_index;", [
+			'game_id' => $this->db_game['game_id'],
+			'game_io_index' => $game_io_index,
+		])->fetch();
+	}
+	
+	public function checksum_partition_to_txo_index($partition, $txos_per_partition) {
+		return ($partition+1)*$txos_per_partition-1;
+	}
+	
+	public function max_set_checksum_partition($lower_partition, $upper_partition, $txos_per_partition, $print_debug=false) {
+		if ($print_debug) $this->blockchain->app->print_debug("Checking ".$lower_partition."(".$this->checksum_partition_to_txo_index($lower_partition, $txos_per_partition).") to ".$upper_partition."(".$this->checksum_partition_to_txo_index($upper_partition, $txos_per_partition).")");
+		
+		if ($upper_partition-$lower_partition <= 1) {
+			$lower_gio = $this->fetch_game_io_by_index($this->checksum_partition_to_txo_index($lower_partition, $txos_per_partition));
+			$upper_gio = $this->fetch_game_io_by_index($this->checksum_partition_to_txo_index($upper_partition, $txos_per_partition));
+			
+			if (!empty($upper_gio['checksum'])) return $upper_partition;
+			else if (!empty($lower_gio['checksum'])) return $lower_partition;
+			else return null;
+		}
+		else {
+			$mid_partition = floor(($upper_partition+$lower_partition)/2);
+			$mid_gio = $this->fetch_game_io_by_index($this->checksum_partition_to_txo_index($mid_partition, $txos_per_partition));
+			
+			if ($print_debug) $this->blockchain->app->print_debug("Checking midpoint ".$mid_partition."(".$this->checksum_partition_to_txo_index($mid_partition, $txos_per_partition).")");
+			
+			if (!empty($mid_gio['checksum'])) {
+				$max_partition = $this->max_set_checksum_partition($mid_partition+1, $upper_partition, $txos_per_partition, $print_debug);
+				if ($max_partition == null) return $mid_partition;
+				else return $max_partition;
+			}
+			else {
+				return $this->max_set_checksum_partition($lower_partition, $mid_partition-1, $txos_per_partition, $print_debug);
+			}
+		}
+	}
+	
+	public function set_partition_checksum($partition, $txos_per_partition, $print_debug=false) {
+		$start_time = microtime(true);
+		
+		$to_txo_index = $this->checksum_partition_to_txo_index($partition, $txos_per_partition);
+		$from_txo_index = $to_txo_index-$txos_per_partition+1;
+		
+		$txos = PeerVerifier::fetchTxosByIndex($this, $from_txo_index, $to_txo_index, true);
+		
+		if ($print_debug) $this->blockchain->app->print_debug("Fetch took ".round(microtime(true)-$start_time, 4)." sec");
+		$ref_time = microtime(true);
+		
+		$checksum = hash("sha256", json_encode([
+			'previous_checksum' => $partition == 0 ? null : $this->fetch_game_io_by_index($this->checksum_partition_to_txo_index($partition-1, $txos_per_partition))['checksum'],
+			'txos' => $txos,
+		], JSON_PRETTY_PRINT));
+		
+		if ($print_debug) $this->blockchain->app->print_debug("Checksum generation took ".round(microtime(true)-$ref_time, 4)." sec");
+		$ref_time = microtime(true);
+		
+		$this->blockchain->app->run_query("UPDATE transaction_game_ios SET checksum=:checksum WHERE game_id=:game_id AND game_io_index=:to_txo_index;", [
+			'game_id' => $this->db_game['game_id'],
+			'checksum' => $checksum,
+			'to_txo_index' => $to_txo_index,
+		]);
+		
+		if ($print_debug) $this->blockchain->app->print_debug("Update took ".round(microtime(true)-$ref_time, 4)." sec");
+		
+		return $checksum;
 	}
 }
 ?>
