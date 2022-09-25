@@ -2320,296 +2320,275 @@ class Game {
 				]);
 			}
 			
-			$keep_looping = true;
-			$relevant_tx_count = 0;
 			$events_by_option_id = [];
 			$option_indices_this_block = [];
 			
-			do {
-				$relevant_transactions = $this->blockchain->app->run_query("SELECT * FROM transaction_ios io JOIN transactions t ON io.spend_transaction_id=t.transaction_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id=:game_id AND t.block_id=:block_id AND t.blockchain_id=:blockchain_id AND gio.spend_round_id IS NULL GROUP BY t.transaction_id ORDER BY t.position_in_block ASC;", [
-					'game_id' => $this->db_game['game_id'],
-					'block_id' => $block_height,
-					'blockchain_id' => $this->blockchain->db_blockchain['blockchain_id']
+			$transactions = $this->blockchain->app->run_query("SELECT * FROM transactions WHERE blockchain_id=:blockchain_id AND block_id=:block_id ORDER BY position_in_block ASC;", [
+				'blockchain_id' => $this->blockchain->db_blockchain['blockchain_id'],
+				'block_id' => $block_height,
+			])->fetchAll(PDO::FETCH_ASSOC);
+			
+			foreach ($transactions as $db_transaction) {
+				if ($db_transaction['tx_hash'] == $this->db_game['genesis_tx_hash']) {
+					continue;
+				}
+				
+				$input_ios = $this->blockchain->app->run_query("SELECT * FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE io.spend_transaction_id=:transaction_id AND gio.game_id=:game_id;", [
+					'transaction_id' => $db_transaction['transaction_id'],
+					'game_id' => $this->db_game['game_id']
 				])->fetchAll();
 				
-				if (count($relevant_transactions) > 0) {
-					$thisloop_genesis_tx_count = 0;
+				if (count($input_ios) > 0) {
+					$tx_game_input_sum = 0;
+					$crd_in = 0;
+					$cbd_in = 0;
+					$game_out_index = 0;
 					
-					foreach ($relevant_transactions as $db_transaction) {
-						if ($db_transaction['tx_hash'] == $this->db_game['genesis_tx_hash']) {
-							$thisloop_genesis_tx_count++;
-							continue;
+					$these_option_ids = [];
+					foreach ($input_ios as $input_io) {
+						if ($input_io['is_game_coinbase'] == 1 && empty($events_by_option_id[$input_io['option_id']])) {
+							array_push($these_option_ids, $input_io['option_id']);
 						}
+					}
+					if (count($these_option_ids) > 0) {
+						$these_db_events = $this->blockchain->app->run_query("SELECT op.option_id, ev.* FROM events ev JOIN options op ON ev.event_id=op.event_id WHERE op.option_id IN (".implode(",", $these_option_ids).");")->fetchAll();
+						foreach ($these_db_events as $this_db_event) {
+							$events_by_option_id[$this_db_event['option_id']] = new Event($this, $this_db_event, false);
+						}
+					}
+					
+					$gio_ids_in = [];
+					$resolved_before_spent_gio_ids = [];
+					$unresolved_before_spent_gio_ids = [];
+					
+					foreach ($input_ios as $input_io) {
+						$tx_game_input_sum += $input_io['colored_amount'];
 						
-						$tx_game_input_sum = 0;
-						$crd_in = 0;
-						$cbd_in = 0;
-						$game_out_index = 0;
+						$gio_in_coin_blocks = $input_io['colored_amount']*($block_height - $input_io['create_block_id']);
+						$gio_in_coin_rounds = $input_io['colored_amount']*($round_id - $input_io['create_round_id']);
+						$cbd_in += $gio_in_coin_blocks;
+						$crd_in += $gio_in_coin_rounds;
 						
-						$input_ios = $this->blockchain->app->run_query("SELECT * FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE io.spend_transaction_id=:transaction_id AND gio.game_id=:game_id;", [
-							'transaction_id' => $db_transaction['transaction_id'],
-							'game_id' => $this->db_game['game_id']
-						])->fetchAll();
+						array_push($gio_ids_in, $input_io['game_io_id']);
 						
-						$these_option_ids = [];
-						foreach ($input_ios as $input_io) {
-							if ($input_io['is_game_coinbase'] == 1 && empty($events_by_option_id[$input_io['option_id']])) {
-								array_push($these_option_ids, $input_io['option_id']);
+						if ($input_io['is_game_coinbase'] == 1) {
+							if ($block_height < $events_by_option_id[$input_io['option_id']]->db_event['event_payout_block']) {
+								if ($input_io['resolved_before_spent'] != 0) {
+									array_push($unresolved_before_spent_gio_ids, $input_io['game_io_id']);
+								}
+							}
+							else if ($block_height >= $events_by_option_id[$input_io['option_id']]->db_event['event_payout_block']) {
+								if ($input_io['resolved_before_spent'] != 1) {
+									array_push($resolved_before_spent_gio_ids, $input_io['game_io_id']);
+								}
 							}
 						}
-						if (count($these_option_ids) > 0) {
-							$these_db_events = $this->blockchain->app->run_query("SELECT op.option_id, ev.* FROM events ev JOIN options op ON ev.event_id=op.event_id WHERE op.option_id IN (".implode(",", $these_option_ids).");")->fetchAll();
+					}
+					
+					$this->blockchain->app->run_query("UPDATE transaction_game_ios SET spend_round_id=".$round_id.", coin_blocks_created=colored_amount*(".$block_height."-create_block_id), coin_rounds_created=colored_amount*(".$round_id."-create_round_id) WHERE game_io_id IN (".implode(",", $gio_ids_in).");");
+					
+					if (count($resolved_before_spent_gio_ids) > 0) {
+						$this->blockchain->app->run_query("UPDATE transaction_game_ios SET resolved_before_spent=1 WHERE game_io_id IN (".implode(",", $resolved_before_spent_gio_ids).");");
+					}
+					
+					if (count($unresolved_before_spent_gio_ids) > 0) {
+						$this->blockchain->app->run_query("UPDATE transaction_game_ios SET resolved_before_spent=0 WHERE game_io_id IN (".implode(",", $unresolved_before_spent_gio_ids).");");
+					}
+					
+					$this->blockchain->app->dbh->beginTransaction();
+					$output_ios = $this->blockchain->app->run_query("SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id=:create_transaction_id;", [
+						'create_transaction_id' => $db_transaction['transaction_id']
+					])->fetchAll();
+					
+					$tx_chain_output_sum = 0;
+					$tx_chain_destroy_sum = 0;
+					$tx_chain_separator_sum = 0;
+					$tx_chain_passthrough_sum = 0;
+					$tx_chain_receiver_sum = 0;
+					
+					foreach ($output_ios as $output_io) {
+						$tx_chain_output_sum += $output_io['amount'];
+						if ($output_io['is_destroy_address'] == 1) $tx_chain_destroy_sum += $output_io['amount'];
+						if ($output_io['is_separator_address'] == 1) $tx_chain_separator_sum += $output_io['amount'];
+						if ($output_io['is_passthrough_address'] == 1) $tx_chain_passthrough_sum += $output_io['amount'];
+						if ($output_io['is_receiver'] == 1) $tx_chain_receiver_sum += $output_io['amount'];
+					}
+					$tx_chain_regular_sum = $tx_chain_output_sum - $tx_chain_destroy_sum - $tx_chain_separator_sum - $tx_chain_passthrough_sum - $tx_chain_receiver_sum;
+					
+					$tx_game_nondestroy_amount = $tx_chain_output_sum > 0 ? floor($tx_game_input_sum*(($tx_chain_regular_sum+$tx_chain_separator_sum+$tx_chain_passthrough_sum+$tx_chain_receiver_sum)/$tx_chain_output_sum)) : 0;
+					$tx_game_destroy_amount = $tx_game_input_sum-$tx_game_nondestroy_amount;
+					
+					$game_destroy_sum = 0;
+					
+					$separator_outputs = $this->blockchain->app->run_query("SELECT io.*, a.* FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id=:transaction_id AND a.is_separator_address=1 ORDER BY io.out_index ASC;", ['transaction_id'=>$db_transaction['transaction_id']])->fetchAll();
+					$next_separator_i = 0;
+					
+					$regular_outputs = $this->blockchain->app->run_query("SELECT io.*, a.* FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id=:transaction_id AND a.is_destroy_address=0 AND a.is_separator_address=0 AND a.is_passthrough_address=0 AND io.is_receiver=0 ORDER BY io.out_index ASC;", ['transaction_id'=>$db_transaction['transaction_id']])->fetchAll();
+					$output_i = 0;
+					
+					if (count($regular_outputs) > 0) {
+						$new_option_indices = [];
+						foreach ($regular_outputs as $regular_output) {
+							if (empty($option_indices_this_block[$regular_output['option_index']])) $new_option_indices[$regular_output['option_index']] = true;
+						}
+						
+						if (count($new_option_indices) > 0) {
+							$this->option_indices_to_id_in_block($new_option_indices, $block_height, $option_indices_this_block);
+						}
+						
+						$new_option_ids = [];
+						foreach ($regular_outputs as $regular_output) {
+							if ($regular_output['option_index'] != "") {
+								if (!empty($option_indices_this_block[$regular_output['option_index']])) {
+									$option_id = $option_indices_this_block[$regular_output['option_index']];
+									
+									if (empty($events_by_option_id[$option_id])) {
+										array_push($new_option_ids, $option_id);
+									}
+								}
+							}
+						}
+						
+						if (count($new_option_ids) > 0) {
+							$these_db_events = $this->blockchain->app->run_query("SELECT op.option_id, ev.* FROM events ev JOIN options op ON ev.event_id=op.event_id WHERE op.option_id IN (".implode(",", $new_option_ids).");")->fetchAll();
 							foreach ($these_db_events as $this_db_event) {
 								$events_by_option_id[$this_db_event['option_id']] = new Event($this, $this_db_event, false);
 							}
 						}
 						
-						$gio_ids_in = [];
-						$resolved_before_spent_gio_ids = [];
-						$unresolved_before_spent_gio_ids = [];
+						$insert_q = "INSERT INTO transaction_game_ios (game_id, io_id, address_id, game_out_index, game_io_index, is_game_coinbase, coin_blocks_destroyed, coin_rounds_destroyed, create_block_id, create_round_id, colored_amount, destroy_amount, option_id, contract_parts, event_id, effectiveness_factor, votes, effective_destroy_amount, is_resolved, resolved_before_spent) VALUES ";
 						
-						foreach ($input_ios as $input_io) {
-							$tx_game_input_sum += $input_io['colored_amount'];
+						foreach ($regular_outputs as $regular_output) {
+							$payout_insert_q = "";
 							
-							$gio_in_coin_blocks = $input_io['colored_amount']*($block_height - $input_io['create_block_id']);
-							$gio_in_coin_rounds = $input_io['colored_amount']*($round_id - $input_io['create_round_id']);
-							$cbd_in += $gio_in_coin_blocks;
-							$crd_in += $gio_in_coin_rounds;
+							$gio_amount = floor($tx_game_nondestroy_amount*$regular_output['amount']/$tx_chain_regular_sum);
+							$cbd = floor($cbd_in*$regular_output['amount']/$tx_chain_regular_sum);
+							$crd = floor($crd_in*$regular_output['amount']/$tx_chain_regular_sum);
 							
-							array_push($gio_ids_in, $input_io['game_io_id']);
+							if ($output_i == count($regular_outputs)-1) $this_destroy_amount = $tx_game_destroy_amount-$game_destroy_sum;
+							else $this_destroy_amount = floor($tx_game_destroy_amount*$regular_output['amount']/$tx_chain_regular_sum);
 							
-							if ($input_io['is_game_coinbase'] == 1) {
-								if ($block_height < $events_by_option_id[$input_io['option_id']]->db_event['event_payout_block']) {
-									if ($input_io['resolved_before_spent'] != 0) {
-										array_push($unresolved_before_spent_gio_ids, $input_io['game_io_id']);
+							$game_destroy_sum += $this_destroy_amount;
+							
+							$game_io_index++;
+							$insert_q .= "('".$this->db_game['game_id']."', '".$regular_output['io_id']."', '".$regular_output['address_id']."', '".$game_out_index."', '".$game_io_index."', 0, '".$cbd."', '".$crd."', '".$block_height."', '".$round_id."', ";
+							$game_out_index++;
+							
+							if ($regular_output['option_index'] != "") {
+								if (!empty($option_indices_this_block[$regular_output['option_index']])) {
+									$option_id = $option_indices_this_block[$regular_output['option_index']];
+									
+									$using_separator = false;
+									if (!empty($separator_outputs[$next_separator_i])) {
+										$payout_io_id = $separator_outputs[$next_separator_i]['io_id'];
+										$payout_address_id = $separator_outputs[$next_separator_i]['address_id'];
+										$next_separator_i++;
+										$using_separator = true;
 									}
-								}
-								else if ($block_height >= $events_by_option_id[$input_io['option_id']]->db_event['event_payout_block']) {
-									if ($input_io['resolved_before_spent'] != 1) {
-										array_push($resolved_before_spent_gio_ids, $input_io['game_io_id']);
+									else {
+										$payout_io_id = $regular_output['io_id'];
+										$payout_address_id = $regular_output['address_id'];
 									}
+									
+									$effectiveness_factor = $events_by_option_id[$option_id]->block_id_to_effectiveness_factor($block_height);
+									
+									if ($this->db_game['payout_weight'] == "coin_block") $votes = floor($effectiveness_factor*$cbd);
+									else if ($this->db_game['payout_weight'] == "coin_round") $votes = floor($effectiveness_factor*$crd);
+									else $votes = floor($effectiveness_factor*$gio_amount);
+									
+									$effective_destroy_amount = floor($this_destroy_amount*$effectiveness_factor);
+									
+									$payout_is_resolved = 0;
+									if ($this_destroy_amount == 0 && $this->db_game['exponential_inflation_rate'] == 0) $payout_is_resolved=1;
+									$this_is_resolved = $payout_is_resolved;
+									if ($using_separator) $this_is_resolved = 1;
+									
+									$insert_q .= "'".$gio_amount."', '".$this_destroy_amount."', '".$option_id."', '".$this->db_game['default_contract_parts']."', '".$events_by_option_id[$option_id]->db_event['event_id']."', '".$effectiveness_factor."', '".$votes."', '".$effective_destroy_amount."', ".$this_is_resolved.", null";
+									
+									$game_io_index++;
+									$payout_insert_q = "('".$this->db_game['game_id']."', '".$payout_io_id."', '".$payout_address_id."', '".$game_out_index."', '".$game_io_index."', 1, 0, 0, '".$block_height."', '".$round_id."', 0, 0, '".$option_id."', '".$this->db_game['default_contract_parts']."', '".$events_by_option_id[$option_id]->db_event['event_id']."', null, 0, 0, ".$payout_is_resolved.", 1), ";
+									$game_out_index++;
 								}
+								else $insert_q .= "'".($gio_amount+$this_destroy_amount)."', 0, null, null, null, null, null, 0, 1, null";
 							}
+							else $insert_q .= "'".$gio_amount."', '".$this_destroy_amount."', null, null, null, null, null, 0, 1, null";
+							
+							$insert_q .= "), ";
+							if ($payout_insert_q != "") $insert_q .= $payout_insert_q;
 						}
 						
-						$this->blockchain->app->run_query("UPDATE transaction_game_ios SET spend_round_id=".$round_id.", coin_blocks_created=colored_amount*(".$block_height."-create_block_id), coin_rounds_created=colored_amount*(".$round_id."-create_round_id) WHERE game_io_id IN (".implode(",", $gio_ids_in).");");
-						
-						if (count($resolved_before_spent_gio_ids) > 0) {
-							$this->blockchain->app->run_query("UPDATE transaction_game_ios SET resolved_before_spent=1 WHERE game_io_id IN (".implode(",", $resolved_before_spent_gio_ids).");");
+						$insert_q = substr($insert_q, 0, -2).";";
+						$this->blockchain->app->run_query($insert_q);
+						if (empty(AppSettings::getParam('sqlite_db'))) {
+							$this->blockchain->app->run_query("UPDATE transaction_ios io JOIN transaction_game_ios gio ON gio.io_id=io.io_id SET gio.parent_io_id=gio.game_io_id-1 WHERE io.create_transaction_id=:transaction_id AND gio.game_id=:game_id AND gio.is_game_coinbase=1;", [
+								'transaction_id' => $db_transaction['transaction_id'],
+								'game_id' => $this->db_game['game_id']
+							]);
+							$this->blockchain->app->run_query("UPDATE transaction_ios io JOIN transaction_game_ios gio ON gio.io_id=io.io_id SET gio.payout_io_id=gio.game_io_id+1 WHERE gio.event_id IS NOT NULL AND io.create_transaction_id=:transaction_id AND gio.game_id=:game_id AND gio.is_game_coinbase=0;", [
+								'transaction_id' => $db_transaction['transaction_id'],
+								'game_id' => $this->db_game['game_id']
+							]);
 						}
-						
-						if (count($unresolved_before_spent_gio_ids) > 0) {
-							$this->blockchain->app->run_query("UPDATE transaction_game_ios SET resolved_before_spent=0 WHERE game_io_id IN (".implode(",", $unresolved_before_spent_gio_ids).");");
+						else {
+							$this->blockchain->app->run_query("UPDATE transaction_game_ios SET parent_io_id=game_io_id-1 WHERE game_id=:game_id AND is_game_coinbase=1 AND io_id IN (SELECT io_id FROM transaction_ios WHERE create_transaction_id=:transaction_id);", [
+								'transaction_id' => $db_transaction['transaction_id'],
+								'game_id' => $this->db_game['game_id']
+							]);
+							$this->blockchain->app->run_query("UPDATE transaction_game_ios SET payout_io_id=game_io_id+1 WHERE event_id IS NOT NULL AND game_id=:game_id AND is_game_coinbase=0 AND io_id IN (SELECT io_id FROM transaction_ios WHERE create_transaction_id=:transaction_id);", [
+								'transaction_id' => $db_transaction['transaction_id'],
+								'game_id' => $this->db_game['game_id']
+							]);
 						}
-						
-						$this->blockchain->app->dbh->beginTransaction();
-						$output_ios = $this->blockchain->app->run_query("SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id=:create_transaction_id;", [
-							'create_transaction_id' => $db_transaction['transaction_id']
-						])->fetchAll();
-						
-						$output_io_ids = [];
-						$tx_chain_output_sum = 0;
-						$tx_chain_destroy_sum = 0;
-						$tx_chain_separator_sum = 0;
-						$tx_chain_passthrough_sum = 0;
-						$tx_chain_receiver_sum = 0;
-						
-						foreach ($output_ios as $output_io) {
-							array_push($output_io_ids, $output_io['io_id']);
-							$tx_chain_output_sum += $output_io['amount'];
-							if ($output_io['is_destroy_address'] == 1) $tx_chain_destroy_sum += $output_io['amount'];
-							if ($output_io['is_separator_address'] == 1) $tx_chain_separator_sum += $output_io['amount'];
-							if ($output_io['is_passthrough_address'] == 1) $tx_chain_passthrough_sum += $output_io['amount'];
-							if ($output_io['is_receiver'] == 1) $tx_chain_receiver_sum += $output_io['amount'];
-						}
-						$tx_chain_regular_sum = $tx_chain_output_sum - $tx_chain_destroy_sum - $tx_chain_separator_sum - $tx_chain_passthrough_sum - $tx_chain_receiver_sum;
-						
-						$tx_game_nondestroy_amount = $tx_chain_output_sum > 0 ? floor($tx_game_input_sum*(($tx_chain_regular_sum+$tx_chain_separator_sum+$tx_chain_passthrough_sum+$tx_chain_receiver_sum)/$tx_chain_output_sum)) : 0;
-						$tx_game_destroy_amount = $tx_game_input_sum-$tx_game_nondestroy_amount;
-						
-						$game_destroy_sum = 0;
-						
-						$separator_outputs = $this->blockchain->app->run_query("SELECT io.*, a.* FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id=:transaction_id AND a.is_separator_address=1 ORDER BY io.out_index ASC;", ['transaction_id'=>$db_transaction['transaction_id']])->fetchAll();
-						$next_separator_i = 0;
-						
-						$regular_outputs = $this->blockchain->app->run_query("SELECT io.*, a.* FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id=:transaction_id AND a.is_destroy_address=0 AND a.is_separator_address=0 AND a.is_passthrough_address=0 AND io.is_receiver=0 ORDER BY io.out_index ASC;", ['transaction_id'=>$db_transaction['transaction_id']])->fetchAll();
-						$output_i = 0;
-						
-						if (count($output_io_ids) > 0) {
-							$this->blockchain->app->run_query("DELETE FROM transaction_game_ios WHERE io_id IN (".implode(",", $output_io_ids).");");
-						}
-						
-						if (count($regular_outputs) > 0) {
-							$new_option_indices = [];
-							foreach ($regular_outputs as $regular_output) {
-								if (empty($option_indices_this_block[$regular_output['option_index']])) $new_option_indices[$regular_output['option_index']] = true;
-							}
-							
-							if (count($new_option_indices) > 0) {
-								$this->option_indices_to_id_in_block($new_option_indices, $block_height, $option_indices_this_block);
-							}
-							
-							$new_option_ids = [];
-							foreach ($regular_outputs as $regular_output) {
-								if ($regular_output['option_index'] != "") {
-									if (!empty($option_indices_this_block[$regular_output['option_index']])) {
-										$option_id = $option_indices_this_block[$regular_output['option_index']];
-										
-										if (empty($events_by_option_id[$option_id])) {
-											array_push($new_option_ids, $option_id);
-										}
-									}
-								}
-							}
-							
-							if (count($new_option_ids) > 0) {
-								$these_db_events = $this->blockchain->app->run_query("SELECT op.option_id, ev.* FROM events ev JOIN options op ON ev.event_id=op.event_id WHERE op.option_id IN (".implode(",", $new_option_ids).");")->fetchAll();
-								foreach ($these_db_events as $this_db_event) {
-									$events_by_option_id[$this_db_event['option_id']] = new Event($this, $this_db_event, false);
-								}
-							}
-							
-							$insert_q = "INSERT INTO transaction_game_ios (game_id, io_id, address_id, game_out_index, game_io_index, is_game_coinbase, coin_blocks_destroyed, coin_rounds_destroyed, create_block_id, create_round_id, colored_amount, destroy_amount, option_id, contract_parts, event_id, effectiveness_factor, votes, effective_destroy_amount, is_resolved, resolved_before_spent) VALUES ";
-							
-							foreach ($regular_outputs as $regular_output) {
-								$payout_insert_q = "";
-								
-								$gio_amount = floor($tx_game_nondestroy_amount*$regular_output['amount']/$tx_chain_regular_sum);
-								$cbd = floor($cbd_in*$regular_output['amount']/$tx_chain_regular_sum);
-								$crd = floor($crd_in*$regular_output['amount']/$tx_chain_regular_sum);
-								
-								if ($output_i == count($regular_outputs)-1) $this_destroy_amount = $tx_game_destroy_amount-$game_destroy_sum;
-								else $this_destroy_amount = floor($tx_game_destroy_amount*$regular_output['amount']/$tx_chain_regular_sum);
-								
-								$game_destroy_sum += $this_destroy_amount;
-								
-								$game_io_index++;
-								$insert_q .= "('".$this->db_game['game_id']."', '".$regular_output['io_id']."', '".$regular_output['address_id']."', '".$game_out_index."', '".$game_io_index."', 0, '".$cbd."', '".$crd."', '".$block_height."', '".$round_id."', ";
-								$game_out_index++;
-								
-								if ($regular_output['option_index'] != "") {
-									if (!empty($option_indices_this_block[$regular_output['option_index']])) {
-										$option_id = $option_indices_this_block[$regular_output['option_index']];
-										
-										$using_separator = false;
-										if (!empty($separator_outputs[$next_separator_i])) {
-											$payout_io_id = $separator_outputs[$next_separator_i]['io_id'];
-											$payout_address_id = $separator_outputs[$next_separator_i]['address_id'];
-											$next_separator_i++;
-											$using_separator = true;
-										}
-										else {
-											$payout_io_id = $regular_output['io_id'];
-											$payout_address_id = $regular_output['address_id'];
-										}
-										
-										$effectiveness_factor = $events_by_option_id[$option_id]->block_id_to_effectiveness_factor($block_height);
-										
-										if ($this->db_game['payout_weight'] == "coin_block") $votes = floor($effectiveness_factor*$cbd);
-										else if ($this->db_game['payout_weight'] == "coin_round") $votes = floor($effectiveness_factor*$crd);
-										else $votes = floor($effectiveness_factor*$gio_amount);
-										
-										$effective_destroy_amount = floor($this_destroy_amount*$effectiveness_factor);
-										
-										$payout_is_resolved = 0;
-										if ($this_destroy_amount == 0 && $this->db_game['exponential_inflation_rate'] == 0) $payout_is_resolved=1;
-										$this_is_resolved = $payout_is_resolved;
-										if ($using_separator) $this_is_resolved = 1;
-										
-										$insert_q .= "'".$gio_amount."', '".$this_destroy_amount."', '".$option_id."', '".$this->db_game['default_contract_parts']."', '".$events_by_option_id[$option_id]->db_event['event_id']."', '".$effectiveness_factor."', '".$votes."', '".$effective_destroy_amount."', ".$this_is_resolved.", null";
-										
-										$game_io_index++;
-										$payout_insert_q = "('".$this->db_game['game_id']."', '".$payout_io_id."', '".$payout_address_id."', '".$game_out_index."', '".$game_io_index."', 1, 0, 0, '".$block_height."', '".$round_id."', 0, 0, '".$option_id."', '".$this->db_game['default_contract_parts']."', '".$events_by_option_id[$option_id]->db_event['event_id']."', null, 0, 0, ".$payout_is_resolved.", 1), ";
-										$game_out_index++;
-									}
-									else $insert_q .= "'".($gio_amount+$this_destroy_amount)."', 0, null, null, null, null, null, 0, 1, null";
-								}
-								else $insert_q .= "'".$gio_amount."', '".$this_destroy_amount."', null, null, null, null, null, 0, 1, null";
-								
-								$insert_q .= "), ";
-								if ($payout_insert_q != "") $insert_q .= $payout_insert_q;
-							}
-							
-							$insert_q = substr($insert_q, 0, -2).";";
-							$this->blockchain->app->run_query($insert_q);
-							if (empty(AppSettings::getParam('sqlite_db'))) {
-								$this->blockchain->app->run_query("UPDATE transaction_ios io JOIN transaction_game_ios gio ON gio.io_id=io.io_id SET gio.parent_io_id=gio.game_io_id-1 WHERE io.create_transaction_id=:transaction_id AND gio.game_id=:game_id AND gio.is_game_coinbase=1;", [
-									'transaction_id' => $db_transaction['transaction_id'],
-									'game_id' => $this->db_game['game_id']
-								]);
-								$this->blockchain->app->run_query("UPDATE transaction_ios io JOIN transaction_game_ios gio ON gio.io_id=io.io_id SET gio.payout_io_id=gio.game_io_id+1 WHERE gio.event_id IS NOT NULL AND io.create_transaction_id=:transaction_id AND gio.game_id=:game_id AND gio.is_game_coinbase=0;", [
-									'transaction_id' => $db_transaction['transaction_id'],
-									'game_id' => $this->db_game['game_id']
-								]);
-							}
-							else {
-								$this->blockchain->app->run_query("UPDATE transaction_game_ios SET parent_io_id=game_io_id-1 WHERE game_id=:game_id AND is_game_coinbase=1 AND io_id IN (SELECT io_id FROM transaction_ios WHERE create_transaction_id=:transaction_id);", [
-									'transaction_id' => $db_transaction['transaction_id'],
-									'game_id' => $this->db_game['game_id']
-								]);
-								$this->blockchain->app->run_query("UPDATE transaction_game_ios SET payout_io_id=game_io_id+1 WHERE event_id IS NOT NULL AND game_id=:game_id AND is_game_coinbase=0 AND io_id IN (SELECT io_id FROM transaction_ios WHERE create_transaction_id=:transaction_id);", [
-									'transaction_id' => $db_transaction['transaction_id'],
-									'game_id' => $this->db_game['game_id']
-								]);
-							}
-						}
-						
-						$unresolved_inputs = $this->blockchain->app->run_query("SELECT * FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE io.spend_transaction_id=:transaction_id AND gio.game_id=:game_id AND gio.is_game_coinbase=1 AND gio.resolved_before_spent=0 ORDER BY io.in_index ASC;", [
-							'transaction_id' => $db_transaction['transaction_id'],
-							'game_id' => $this->db_game['game_id']
-						])->fetchAll();
-						
-						$receiver_outputs = $this->blockchain->app->run_query("SELECT io.*, a.* FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id=:transaction_id AND io.is_receiver=1 ORDER BY io.out_index ASC;", ['transaction_id'=>$db_transaction['transaction_id']])->fetchAll();
-						
-						if (count($unresolved_inputs) > 0 && count($receiver_outputs) > 0) {
-							$insert_q = "INSERT INTO transaction_game_ios (parent_io_id, game_id, io_id, address_id, game_out_index, game_io_index, is_game_coinbase, colored_amount, destroy_amount, coin_blocks_destroyed, coin_rounds_destroyed, create_block_id, create_round_id, option_id, contract_parts, event_id, is_resolved, resolved_before_spent) VALUES ";
-							
-							if (count($receiver_outputs)%count($unresolved_inputs) == 0) {
-								$outputs_per_unresolved_input = count($receiver_outputs)/count($unresolved_inputs);
-							}
-							else $outputs_per_unresolved_input = 1;
-							
-							$receiver_output_index = 0;
-							
-							foreach ($unresolved_inputs as &$unresolved_input) {
-								$outputs_io_amount_sum = 0;
-								for ($this_in_output_i=0; $this_in_output_i<$outputs_per_unresolved_input; $this_in_output_i++) {
-									if (isset($receiver_outputs[$receiver_output_index+$this_in_output_i])) {
-										$this_receiver_output = $receiver_outputs[$receiver_output_index+$this_in_output_i];
-										$outputs_io_amount_sum += $this_receiver_output['amount'];
-									}
-								}
-								
-								for ($this_in_output_i=0; $this_in_output_i<$outputs_per_unresolved_input; $this_in_output_i++) {
-									if (isset($receiver_outputs[$receiver_output_index+$this_in_output_i])) {
-										$this_receiver_output = $receiver_outputs[$receiver_output_index+$this_in_output_i];
-										
-										$contract_parts = floor($unresolved_input['contract_parts']*$this_receiver_output['amount']/$outputs_io_amount_sum);
-										
-										$game_io_index++;
-										$insert_q .= "('".$unresolved_input['parent_io_id']."', '".$this->db_game['game_id']."', '".$this_receiver_output['io_id']."', '".$unresolved_input['address_id']."', '".$game_out_index."', '".$game_io_index."', 1, 0, 0, 0, 0, '".$block_height."', '".$round_id."', '".$unresolved_input['option_id']."', '".$contract_parts."', '".$unresolved_input['event_id']."', 0, 1), ";
-										$game_out_index++;
-									}
-								}
-								
-								$receiver_output_index += $outputs_per_unresolved_input;
-							}
-							
-							$insert_q = substr($insert_q, 0, -2).";";
-							$this->blockchain->app->run_query($insert_q);
-						}
-						
-						$this->blockchain->app->dbh->commit();
 					}
 					
-					$thisloop_relevant_tx_count = count($relevant_transactions) - $thisloop_genesis_tx_count;
+					$unresolved_inputs = $this->blockchain->app->run_query("SELECT * FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE io.spend_transaction_id=:transaction_id AND gio.game_id=:game_id AND gio.is_game_coinbase=1 AND gio.resolved_before_spent=0 ORDER BY io.in_index ASC;", [
+						'transaction_id' => $db_transaction['transaction_id'],
+						'game_id' => $this->db_game['game_id']
+					])->fetchAll();
 					
-					if ($thisloop_relevant_tx_count > 0) $relevant_tx_count += $thisloop_relevant_tx_count;
-					else $keep_looping = false;
+					$receiver_outputs = $this->blockchain->app->run_query("SELECT io.*, a.* FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id=:transaction_id AND io.is_receiver=1 ORDER BY io.out_index ASC;", ['transaction_id'=>$db_transaction['transaction_id']])->fetchAll();
+					
+					if (count($unresolved_inputs) > 0 && count($receiver_outputs) > 0) {
+						$insert_q = "INSERT INTO transaction_game_ios (parent_io_id, game_id, io_id, address_id, game_out_index, game_io_index, is_game_coinbase, colored_amount, destroy_amount, coin_blocks_destroyed, coin_rounds_destroyed, create_block_id, create_round_id, option_id, contract_parts, event_id, is_resolved, resolved_before_spent) VALUES ";
+						
+						if (count($receiver_outputs)%count($unresolved_inputs) == 0) {
+							$outputs_per_unresolved_input = count($receiver_outputs)/count($unresolved_inputs);
+						}
+						else $outputs_per_unresolved_input = 1;
+						
+						$receiver_output_index = 0;
+						
+						foreach ($unresolved_inputs as &$unresolved_input) {
+							$outputs_io_amount_sum = 0;
+							for ($this_in_output_i=0; $this_in_output_i<$outputs_per_unresolved_input; $this_in_output_i++) {
+								if (isset($receiver_outputs[$receiver_output_index+$this_in_output_i])) {
+									$this_receiver_output = $receiver_outputs[$receiver_output_index+$this_in_output_i];
+									$outputs_io_amount_sum += $this_receiver_output['amount'];
+								}
+							}
+							
+							for ($this_in_output_i=0; $this_in_output_i<$outputs_per_unresolved_input; $this_in_output_i++) {
+								if (isset($receiver_outputs[$receiver_output_index+$this_in_output_i])) {
+									$this_receiver_output = $receiver_outputs[$receiver_output_index+$this_in_output_i];
+									
+									$contract_parts = floor($unresolved_input['contract_parts']*$this_receiver_output['amount']/$outputs_io_amount_sum);
+									
+									$game_io_index++;
+									$insert_q .= "('".$unresolved_input['parent_io_id']."', '".$this->db_game['game_id']."', '".$this_receiver_output['io_id']."', '".$unresolved_input['address_id']."', '".$game_out_index."', '".$game_io_index."', 1, 0, 0, 0, 0, '".$block_height."', '".$round_id."', '".$unresolved_input['option_id']."', '".$contract_parts."', '".$unresolved_input['event_id']."', 0, 1), ";
+									$game_out_index++;
+								}
+							}
+							
+							$receiver_output_index += $outputs_per_unresolved_input;
+						}
+						
+						$insert_q = substr($insert_q, 0, -2).";";
+						$this->blockchain->app->run_query($insert_q);
+					}
+					
+					$this->blockchain->app->dbh->commit();
 				}
-				else $keep_looping = false;
 			}
-			while ($keep_looping);
 			
 			if (!in_array($this->db_game['buyin_policy'], ["none","for_sale",""])) $this->process_sellouts_in_block($block_height);
 			
@@ -2670,7 +2649,7 @@ class Game {
 			$this->set_block_stats($game_block);
 			
 			// If nothing was added this block & it's allowed, add game blocks in bulk
-			if ($this->db_game['bulk_add_blocks'] && $relevant_tx_count == 0 && in_array($this->db_game['buyin_policy'], ["none", "for_sale"]) && $this->db_game['pow_reward_type'] == "none") {
+			if ($this->db_game['bulk_add_blocks'] && in_array($this->db_game['buyin_policy'], ["none", "for_sale"]) && $this->db_game['pow_reward_type'] == "none") {
 				$last_block_id = $this->blockchain->last_block_id();
 				
 				if ($last_block_id > $block_height+5) {
