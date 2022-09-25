@@ -50,6 +50,7 @@ include(AppSettings::srcPath()."/classes/EscrowAmount.php");
 include(AppSettings::srcPath()."/classes/Event.php");
 include(AppSettings::srcPath()."/classes/Game.php");
 include(AppSettings::srcPath()."/classes/GameDefinition.php");
+include(AppSettings::srcPath()."/classes/PeerVerifier.php");
 include(AppSettings::srcPath()."/classes/User.php");
 
 if (AppSettings::getParam('pageview_tracking_enabled')) include(AppSettings::srcPath()."/classes/PageviewController.php");

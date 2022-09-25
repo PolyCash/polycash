@@ -2992,6 +2992,20 @@ var PageManager = function() {
 			}
 		});
 	};
+	this.open_public_peer_details = function(game_id) {
+		$.ajax({
+			url: "/ajax/public_peer_details.php",
+			type: "GET",
+			dataType: "json",
+			data: {
+				game_id: game_id,
+			},
+			success: function(details) {
+				$('#game'+game_id+'_public_peer_details_modal').modal('show');
+				$('#game'+game_id+'_public_peer_details_inner').html(details.renderedContent);
+			}
+		});
+	};
 }
 
 var thisPageManager = new PageManager();

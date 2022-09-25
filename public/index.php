@@ -66,6 +66,9 @@ else if ($uri_parts[1] == "manage_currencies") {
 else if ($uri_parts[1] == "analytics") {
 	include($src_path."/analytics.php");
 }
+else if ($uri_parts[1] == "peers") {
+	include($src_path."/peers.php");
+}
 else if ($uri_parts[1] == "groups") {
 	include($src_path."/manage_groups.php");
 }

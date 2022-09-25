@@ -571,3 +571,16 @@ a.selected {
 .my_votes_table .row {
 	line-height: 180% ! important;
 }
+.footer_peer_count {
+	color: #fff;
+	display: inline-block;
+	text-align: center;
+	min-width: 19px;
+	height: 19px;
+	border-radius: 10px;
+	padding: 0px;
+	margin: 0px 5px;
+	font-size: 11px;
+	line-height: 21px;
+	cursor: pointer;
+}

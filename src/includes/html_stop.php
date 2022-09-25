@@ -21,6 +21,27 @@
 		if (!empty($game)) { ?>
 			<div class="status_footer_section">
 			<?php
+			$game_peers = $game->fetch_all_peers();
+			
+			$num_in_sync = 0;
+			$num_expired = 0;
+			$num_out_of_sync = 0;
+			$num_never_checked = 0;
+			
+			foreach ($game_peers as $game_peer) {
+				if ($game_peer['in_sync']) $num_in_sync++;
+				if ($game_peer['expired']) $num_expired++;
+				if ($game_peer['out_of_sync']) $num_out_of_sync++;
+				if ($game_peer['never_checked']) $num_never_checked++;
+			}
+			
+			if (count($game_peers) == 0) $text_class = "bg-warning";
+			else if ($num_in_sync > 0 && ($num_out_of_sync+$num_expired+$num_never_checked) > 0) $text_class = "bg-warning";
+			else if ($num_in_sync > 0) $text_class = "bg-success";
+			else $text_class = "bg-danger";
+			
+			echo '<div class="'.$text_class.' footer_peer_count" title="'.count($game_peers).' peer'.(count($game_peers) == 1 ? '' : 's').'" onClick="thisPageManager.open_public_peer_details('.$game->db_game['game_id'].'); return false;">'.count($game_peers).'</div>';
+			
 			echo '<a href="/'.$game->db_game['url_identifier'].'/">'.$game->db_game['name']."</a>\n";
 			
 			if ($app->user_can_edit_game($thisuser, $game)) {
@@ -65,6 +86,18 @@
 		?>
 	</div>
 </footer>
+
+<?php
+if (!empty($game)) {
+	?>
+	<div style="display: none;" class="modal fade" id="game<?php echo $game->db_game['game_id']; ?>_public_peer_details_modal">
+		<div class="modal-dialog modal-lg">
+			<div class="modal-content" id="game<?php echo $game->db_game['game_id']; ?>_public_peer_details_inner"></div>
+		</div>
+	</div>
+	<?php
+}
+?>
 
 <script type="text/javascript" src="/js/lodash.min.js"></script>
 <script type="text/javascript" src="/js/jquery-1.11.3.js"></script>

@@ -3,7 +3,6 @@ ini_set('memory_limit', '4096M');
 set_time_limit(0);
 $script_start_time = microtime(true);
 require_once(dirname(dirname(__FILE__))."/includes/connect.php");
-require_once(dirname(dirname(__FILE__))."/classes/PeerVerifier.php");
 
 $allowed_params = ['mode','game_identifier','blockchain_identifier','peer_id','remote_key','remote_host'];
 $app->safe_merge_argv_to_request($argv, $allowed_params);
