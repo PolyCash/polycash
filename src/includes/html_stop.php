@@ -21,8 +21,6 @@
 		if (!empty($game)) { ?>
 			<div class="status_footer_section">
 			<?php
-			echo '<a href="/'.$game->db_game['url_identifier'].'/">'.$game->db_game['name']."</a>\n";
-			
 			$game_peers = $game->fetch_all_peers();
 			
 			$num_in_sync = 0;
@@ -43,6 +41,8 @@
 			else $text_class = "bg-danger";
 			
 			echo '<div class="'.$text_class.' footer_peer_count" title="'.count($game_peers).' peer'.(count($game_peers) == 1 ? '' : 's').'" onClick="thisPageManager.open_public_peer_details('.$game->db_game['game_id'].'); return false;">'.count($game_peers).'</div>';
+			
+			echo '<a href="/'.$game->db_game['url_identifier'].'/">'.$game->db_game['name']."</a>\n";
 			
 			if ($app->user_can_edit_game($thisuser, $game)) {
 				$show_internal_params = false;
