@@ -3752,9 +3752,25 @@ class Game {
 	}
 	
 	public function fetch_all_peers() {
-		return $this->blockchain->app->run_query("SELECT * FROM peers p JOIN game_peers gp ON p.peer_id=gp.peer_id WHERE gp.game_id=:game_id ORDER BY p.peer_name ASC;", [
+		$game_peers = $this->blockchain->app->run_query("SELECT * FROM peers p JOIN game_peers gp ON p.peer_id=gp.peer_id WHERE gp.game_id=:game_id ORDER BY p.peer_id ASC;", [
 			'game_id' => $this->db_game['game_id']
 		])->fetchAll();
+		
+		foreach ($game_peers as &$game_peer) {
+			$game_peer['in_sync'] = null;
+			$game_peer['expired'] = null;
+			$game_peer['out_of_sync'] = null;
+			$game_peer['never_checked'] = null;
+			
+			if ($game_peer['last_check_in_sync'] == 1) {
+				if ($game_peer['last_sync_check_at'] >= time()-(60*30)) $game_peer['in_sync'] = true;
+				else $game_peer['expired'] = true;
+			}
+			else if ((string)$game_peer['last_check_in_sync'] === "0") $game_peer['out_of_sync'] = true;
+			else $game_peer['never_checked'] = true;
+		}
+		
+		return $game_peers;
 	}
 	
 	public function get_definitive_peer() {
@@ -4177,6 +4193,49 @@ class Game {
 		else return (floor(($txo_pos+1)/$txos_per_partition)-1);
 	}
 	
+	public function find_peer_out_of_sync_partition($game_peer, $from_partition, $to_partition, $txos_per_partition, $print_debug) {
+		if ($print_debug) $this->blockchain->app->print_debug("Finding out of sync partition from ".$from_partition.":".$to_partition);
+		
+		if ($to_partition-$from_partition <= 1) {
+			$from_txo_pos = $this->checksum_partition_to_txo_index($from_partition, $txos_per_partition);
+			$from_partition_peer_response = PeerVerifier::peerApiCall($game_peer, "/api/txo_checksum/".$this->db_game['url_identifier']."/".$from_txo_pos);
+			$check_from_txo = $this->fetch_game_io_by_index($from_txo_pos);
+			
+			$to_txo_pos = $this->checksum_partition_to_txo_index($to_partition, $txos_per_partition);
+			$to_partition_peer_response = PeerVerifier::peerApiCall($game_peer, "/api/txo_checksum/".$this->db_game['url_identifier']."/".$to_txo_pos);
+			$check_to_txo = $this->fetch_game_io_by_index($to_txo_pos);
+			
+			if (empty($check_from_txo) || empty($check_to_txo) || empty($from_partition_peer_response['status_code']) || empty($to_partition_peer_response['status_code']) || $from_partition_peer_response['status_code'] != 1 || $to_partition_peer_response['status_code'] != 1) return null;
+			else {
+				if ($from_partition_peer_response['checksum'] != $check_from_txo['partition_checksum']) return $from_partition;
+				else if ($to_partition_peer_response['checksum'] != $check_to_txo['partition_checksum']) return $to_partition;
+				else return false;
+			}
+		}
+		else {
+			$mid_partition = floor(($from_partition+$to_partition)/2);
+			
+			$mid_txo_pos = $this->checksum_partition_to_txo_index($mid_partition, $txos_per_partition);
+			$mid_partition_peer_response = PeerVerifier::peerApiCall($game_peer, "/api/txo_checksum/".$this->db_game['url_identifier']."/".$mid_txo_pos);
+			$check_mid_txo = $this->fetch_game_io_by_index($mid_txo_pos);
+			
+			if (empty($check_mid_txo) || empty($mid_partition_peer_response) || $mid_partition_peer_response['status_code'] != 1) return null;
+			else {
+				if ($print_debug) $this->blockchain->app->print_debug("Partition ".$mid_partition.", peer: ".$mid_partition_peer_response['checksum']." vs local: ".$check_mid_txo['partition_checksum']);
+				
+				if ($mid_partition_peer_response['checksum'] != $check_mid_txo['partition_checksum']) {
+					$lower_out_of_sync_partition = $this->find_peer_out_of_sync_partition($game_peer, $from_partition, $mid_partition-1, $txos_per_partition, $print_debug);
+					if ($lower_out_of_sync_partition === null) return null;
+					else if ($lower_out_of_sync_partition === false) return $mid_partition;
+					else return $lower_out_of_sync_partition;
+				}
+				else {
+					return $this->find_peer_out_of_sync_partition($game_peer, $mid_partition+1, $to_partition, $txos_per_partition, $print_debug);
+				}
+			}
+		}
+	}
+	
 	public function max_set_checksum_partition($lower_partition, $upper_partition, $txos_per_partition, $print_debug=false) {
 		if ($print_debug) $this->blockchain->app->print_debug("Checking ".$lower_partition."(".$this->checksum_partition_to_txo_index($lower_partition, $txos_per_partition).") to ".$upper_partition."(".$this->checksum_partition_to_txo_index($upper_partition, $txos_per_partition).")");
 		
@@ -4233,6 +4292,162 @@ class Game {
 		if ($print_debug) $this->blockchain->app->print_debug("Update took ".round(microtime(true)-$ref_time, 4)." sec");
 		
 		return $checksum;
+	}
+	
+	public function find_peer_out_of_sync_block_by_array_scan($peer_utxos, $from_txo_pos, $to_txo_pos) {
+		$txos = PeerVerifier::fetchTxosByIndex($this, $from_txo_pos, $to_txo_pos);
+		
+		foreach ($txos as $txo_pos => $txo) {
+			if (!array_key_exists($txo_pos, $peer_utxos) || json_encode($peer_utxos[$txo_pos]) != json_encode($txo)) {
+				return min($peer_utxos[$txo_pos][2], $txo[2]); // create_block_id
+			}
+		}
+		
+		return false;
+	}
+	
+	public function set_partition_checksums($txos_per_partition, $print_debug) {
+		$last_block_id = $this->blockchain->last_block_id();
+		$last_block = $this->fetch_game_block_by_height($last_block_id);
+		$max_game_io_index = $last_block['max_game_io_index'];
+		$min_unpaid_block = $this->min_unpaid_block($last_block_id);
+		
+		if (!empty($min_unpaid_block)) {
+			$max_paid_block = $this->fetch_game_block_by_height($min_unpaid_block-1);
+			
+			if ($max_paid_block && !empty($max_paid_block['max_game_io_index'])) {
+				$to_partition = $this->txo_pos_to_max_set_partition($max_paid_block['max_game_io_index'], $txos_per_partition);
+
+				if ($print_debug) $this->blockchain->app->print_debug("Max paid block is ".$max_paid_block['block_id'].", setting checksums to TXO ".$max_paid_block['max_game_io_index']." (partition ".$to_partition.")");
+				
+				$max_set_checksum_partition = $this->max_set_checksum_partition(0, $to_partition, $txos_per_partition, false);
+				
+				if ($max_set_checksum_partition === null) $from_partition=0;
+				else $from_partition=$max_set_checksum_partition+1;
+				
+				$num_checksums_to_set = $to_partition-$from_partition+1;
+				
+				if ($print_debug) $this->blockchain->app->print_debug("Setting checksums for ".$num_checksums_to_set." partitions ".$from_partition."(".$this->checksum_partition_to_txo_index($from_partition, $txos_per_partition)."):".$to_partition."(".$this->checksum_partition_to_txo_index($to_partition, $txos_per_partition).")");
+				
+				$set_checksums_start_time = microtime(true);
+				$last_debug_output_time = microtime(true);
+				$last_debug_output_partition = $from_partition-1;
+				$sec_per_debug_output = 1;
+				
+				for ($partition=$from_partition; $partition <= $to_partition; $partition++) {
+					$checksum = $this->set_partition_checksum($partition, $txos_per_partition, false);
+					
+					if ($print_debug && microtime(true)-$last_debug_output_time >= $sec_per_debug_output) {
+						$checksums_remaining = $to_partition-$partition;
+						$sec_per_checksum = (microtime(true)-$set_checksums_start_time)/($partition-$from_partition+1);
+						$est_sec_remaining = $sec_per_checksum*($to_partition-$partition);
+						$this->blockchain->app->print_debug("Set ".($partition-$last_debug_output_partition)." checksums in ".round(microtime(true)-$last_debug_output_time, 4)." sec, ".$this->blockchain->app->format_seconds($est_sec_remaining)." remaining");
+						$last_debug_output_time = microtime(true);
+						$last_debug_output_partition = $partition;
+					}
+				}
+				if ($print_debug) $this->blockchain->app->print_debug("Set ".$num_checksums_to_set." checksums in ".round(microtime(true)-$set_checksums_start_time, 4)." sec");
+			}
+		}
+	}
+	
+	public function peer_out_of_sync_block($game_peer, $txos_per_partition, $last_block, $print_debug) {
+		$min_unpaid_block = $this->min_unpaid_block($last_block['block_id']);
+		
+		$max_set_checksum_partition = null;
+		$peer_missing_checksum = false;
+		
+		if ($min_unpaid_block !== null) {
+			$max_paid_block = $this->fetch_game_block_by_height($min_unpaid_block-1);
+			
+			if ($max_paid_block && !empty($max_paid_block['max_game_io_index'])) {
+				$to_partition = $this->txo_pos_to_max_set_partition($max_paid_block['max_game_io_index'], $txos_per_partition);
+				
+				$max_set_checksum_partition = $this->max_set_checksum_partition(0, $to_partition, $txos_per_partition, false);
+				
+				if ($max_set_checksum_partition !== null) {
+					$txo_pos = $this->checksum_partition_to_txo_index($max_set_checksum_partition, $txos_per_partition);
+					
+					if ($print_debug) $this->blockchain->app->print_debug("Checking partition ".$max_set_checksum_partition."(TXO ".$txo_pos.")");
+					
+					$peer_response = PeerVerifier::peerApiCall($game_peer, "/api/txo_checksum/".$this->db_game['url_identifier']."/".$txo_pos);
+					
+					if (!empty($peer_response['checksum'])) {
+						$check_txo = $this->fetch_game_io_by_index($txo_pos);
+						
+						if ($check_txo['partition_checksum'] == $peer_response['checksum']) $checksum_section_ok = true;
+						else $checksum_section_ok = false;
+					}
+					else {
+						if ($print_debug) $this->blockchain->app->print_debug("Peer is missing checksum for TXO #".$txo_pos.", skipping sync check.");
+						return null;
+					}
+				}
+				else $checksum_section_ok = true;
+			}
+			else $checksum_section_ok = true;
+		}
+		else $checksum_section_ok = true;
+		
+		$out_of_sync_block = null;
+		
+		if ($checksum_section_ok) {
+			$array_scan_from_txo_pos = $max_set_checksum_partition === null ? 0 : $this->checksum_partition_to_txo_index($max_set_checksum_partition, $txos_per_partition)+1;
+			$array_scan_to_txo_pos = $last_block['max_game_io_index'];
+			
+			if ($array_scan_to_txo_pos >= $array_scan_from_txo_pos) {
+				if ($print_debug) $this->blockchain->app->print_debug("No errors in checksum section, running array scan on TXOs ".$array_scan_from_txo_pos.":".$array_scan_to_txo_pos);
+				
+				$peer_response = PeerVerifier::peerApiCall($game_peer, "/api/txos_by_index/".$this->db_game['url_identifier']."/".$array_scan_from_txo_pos.":".$array_scan_to_txo_pos);
+				
+				if ($peer_response['status_code'] == 1) {
+					$out_of_sync_block = $this->find_peer_out_of_sync_block_by_array_scan($peer_response['txos'], $array_scan_from_txo_pos, $array_scan_to_txo_pos);
+				}
+				else if ($print_debug) $this->blockchain->app->print_debug("Failed to fetch TXOs from peer.");
+			}
+			else {
+				$out_of_sync_block = false;
+				if ($print_debug) $this->blockchain->app->print_debug("No array scan needed for TXOs ".$array_scan_from_txo_pos.":".$array_scan_to_txo_pos);
+			}
+		}
+		else {
+			if ($print_debug) $this->blockchain->app->print_debug("Error identified in checksum section, finding out-of-sync block on partitions 0:".$max_set_checksum_partition);
+			
+			$out_of_sync_partition = $this->find_peer_out_of_sync_partition($game_peer, 0, $max_set_checksum_partition, $txos_per_partition, $print_debug);
+			
+			if ($out_of_sync_partition === null) $out_of_sync_block = null;
+			else if ($out_of_sync_partition === false) $out_of_sync_block = false;
+			else {
+				$array_scan_to_txo_pos = $this->checksum_partition_to_txo_index($out_of_sync_partition, $txos_per_partition);
+				$array_scan_from_txo_pos = $array_scan_to_txo_pos - $txos_per_partition + 1;
+				
+				$peer_response = PeerVerifier::peerApiCall($game_peer, "/api/txos_by_index/".$this->db_game['url_identifier']."/".$array_scan_from_txo_pos.":".$array_scan_to_txo_pos);
+				
+				if (!empty($peer_response['status_code']) && $peer_response['status_code'] == 1) {
+					$out_of_sync_block = $this->find_peer_out_of_sync_block_by_array_scan($peer_response['txos'], $array_scan_from_txo_pos, $array_scan_to_txo_pos);
+				}
+				else $out_of_sync_block = null;
+			}
+			
+			if ($print_debug) $this->blockchain->app->print_debug("Out of sync partition: ".json_encode($out_of_sync_partition));
+		}
+		
+		if ($print_debug) $this->blockchain->app->print_debug("Out of sync block: ".json_encode($out_of_sync_block));
+		
+		return $out_of_sync_block;
+	}
+	
+	public function reset_partition_checksums($print_debug) {
+		if ($print_debug) $this->blockchain->app->print_debug("Clearing partition checksums for ".$this->db_game['name']);
+		
+		$this->blockchain->app->run_query("UPDATE transaction_game_ios SET partition_checksum=NULL WHERE game_id=:game_id AND partition_checksum IS NOT NULL;", [
+			'game_id' => $this->db_game['game_id'],
+		]);
+		
+		$this->blockchain->app->run_query("UPDATE games SET last_reset_checksums_at=:time WHERE game_id=:game_id;", [
+			'game_id' => $this->db_game['game_id'],
+			'time' => time(),
+		]);
 	}
 }
 ?>

@@ -67,7 +67,7 @@ else {
 						if (empty($peer)) {
 							list($base_url, $server_name) = $app->peer_base_url_to_server_name($_REQUEST['base_url']);
 							
-							$peer = $this->create_peer([
+							$peer = $app->create_peer([
 								'peer_identifier' => $server_name,
 								'peer_name' => $server_name,
 								'base_url' => $base_url

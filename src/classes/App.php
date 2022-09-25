@@ -437,10 +437,10 @@ class App {
 		if (is_resource($target_balances_process)) $process_count++;
 		else $html .= "Failed to start a process for target balances.\n";
 		
-		/*$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/check_peers_in_sync.php"';
+		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/check_peers_in_sync.php"';
 		$target_balances_process = $this->run_shell_command($cmd, $print_debug);
 		if (is_resource($target_balances_process)) $process_count++;
-		else $html .= "Failed to start a process for peer synchronization.\n";*/
+		else $html .= "Failed to start a process for peer synchronization.\n";
 		
 		$html .= "Started ".$process_count." background processes.\n";
 		return $html;
