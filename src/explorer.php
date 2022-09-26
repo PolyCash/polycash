@@ -245,6 +245,8 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 		}
 	}
 	else if ($explore_mode == "utxos") {
+		if (!AppSettings::allUtxosViewEnabled()) Router::Send404();
+		
 		$account = false;
 		
 		if (!empty($_REQUEST['account_id'])) {

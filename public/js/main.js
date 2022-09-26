@@ -826,7 +826,7 @@ var PageManager = function() {
 			if (games[0].inflation == "exponential") {
 				var coin_equiv = Math.round(votes*games[0].coins_per_vote);
 				var disp_coins = coin_equiv;
-				if (games[0].default_betting_mode == "principal" || games[0].coins_per_vote == 0) disp_coins += this.bet_inputs[index_id].ref_io.game_amount_sum();
+				disp_coins += this.bet_inputs[index_id].ref_io.game_amount_sum();
 				var coin_disp = this.format_coins(disp_coins/Math.pow(10,games[0].decimal_places));
 				
 				render_text = coin_disp+" ";

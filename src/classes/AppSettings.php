@@ -148,6 +148,10 @@ class AppSettings {
 		return false;
 	}
 	
+	public static function allUtxosViewEnabled() {
+		return false;
+	}
+
 	public static function sqlNow() {
 		if (empty(self::$settings->sqlite_db)) return "NOW()";
 		else return "date('now')";

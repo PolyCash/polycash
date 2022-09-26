@@ -27,7 +27,7 @@ if (!empty($blockchain) || !empty($game)) {
 				else echo $blockchain->db_blockchain['url_identifier'];
 				?>/events/">Events</a></li>
 				<?php } ?>
-				<?php if ($game) { ?>
+				<?php if ($game && AppSettings::allUtxosViewEnabled()) { ?>
 				<li><a <?php if ($explore_mode == 'utxos') echo 'class="selected" '; ?>href="/explorer/<?php echo $explorer_type; ?>/<?php
 				echo $game->db_game['url_identifier'];
 				?>/utxos/">UTXOs</a></li>
