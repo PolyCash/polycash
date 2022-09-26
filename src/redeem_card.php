@@ -231,7 +231,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 						<select class="form-control" name="peer_id" id="peer_id">
 							<option value="">-- Please Select --</option>
 							<?php
-							$db_peers = $app->run_query("SELECT * FROM peers WHERE visible=1 ORDER BY peer_name ASC;");
+							$db_peers = $app->run_query("SELECT * FROM peers ORDER BY peer_name ASC;");
 							while ($db_peer = $db_peers->fetch()) {
 								echo "<option value=\"".$db_peer['peer_id']."\">".$db_peer['peer_name']."</option>\n";
 							}

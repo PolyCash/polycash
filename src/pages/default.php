@@ -1,6 +1,13 @@
 <?php
 $pagetitle = AppSettings::getParam('site_name')." - Home";
 $nav_tab_selected = "home";
+
+$running_games = $app->fetch_running_games()->fetchAll();
+if (count($running_games) == 1) {
+	$blockchain = new Blockchain($app, $running_games[0]['blockchain_id']);
+	$game = new Game($blockchain, $running_games[0]['game_id']);
+}
+
 include(AppSettings::srcPath().'/includes/html_start.php');
 ?>
 <div class="container-fluid" style="padding-top: 10px;">

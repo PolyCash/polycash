@@ -83,7 +83,15 @@ else {
 							$added_peer = true;
 						}
 						
-						if ($added_peer) {
+						$enabled_peer = false;
+						
+						if (!empty($game_peer['disabled_at'])) {
+							list($successful, $enable_error_message) = $app->enable_game_peer($game_peer);
+							
+							if ($successful) $enabled_peer = true;
+						}
+						
+						if ($added_peer || $enabled_peer) {
 							array_push($messages, [
 								'type' => 'success',
 								'message' => 'Successfully created a new peer.',
@@ -139,6 +147,9 @@ else {
 					foreach ($game_peers as $game_peer) {
 						?>
 						<div class="row">
+							<div class="col-sm-1">
+								<font class="text-danger" onClick="thisPageManager.remove_game_peer(<?php echo $game_peer['game_peer_id']; ?>);" style="cursor: pointer;">&times;</font>
+							</div>
 							<div class="col-sm-4">
 								<?php echo $game_peer['peer_name']; ?>
 							</div>

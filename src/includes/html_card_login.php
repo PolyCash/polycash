@@ -6,8 +6,8 @@
 		<select class="form-control" name="peer_id" id="peer_id">
 			<option value="">-- Please Select --</option>
 			<?php
-			$visible_peers = $app->run_query("SELECT * FROM peers WHERE visible=1 ORDER BY peer_name ASC;");
-			while ($db_peer = $visible_peers->fetch()) {
+			$peers = $app->run_query("SELECT * FROM peers ORDER BY peer_name ASC;");
+			while ($db_peer = $peers->fetch()) {
 				echo "<option value=\"".$db_peer['peer_id']."\">".$db_peer['peer_name']."</option>\n";
 			}
 			?>

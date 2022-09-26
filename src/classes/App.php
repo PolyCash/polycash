@@ -2511,10 +2511,16 @@ class App {
 		return [$base_url, $server_name];
 	}
 	
+	public function get_peer_by_identifier($peer_identifier) {
+		return $this->run_query("SELECT * FROM peers WHERE peer_identifier=:peer_identifier;", [
+			'peer_identifier' => $peer_identifier
+		])->fetch();
+	}
+	
 	public function get_peer_by_server_name($server_name, $allow_new) {
 		list($base_url, $server_name) = $this->peer_base_url_to_server_name($server_name);
 		
-		$peer = $this->run_query("SELECT * FROM peers WHERE peer_identifier=:peer_identifier;", ['peer_identifier'=>$server_name])->fetch();
+		$peer = $this->get_peer_by_identifier($server_name);
 		
 		if (!$peer && $allow_new) {
 			$peer = $this->create_peer([
@@ -3525,6 +3531,56 @@ class App {
 		return $this->run_query("SELECT * FROM peers WHERE peer_id=:peer_id;", ['peer_id'=>$peer_id])->fetch();
 	}
 	
+	public function fetch_game_peer_by_id($game_peer_id) {
+		return $this->run_query("SELECT * FROM peers p JOIN game_peers gp ON p.peer_id=gp.peer_id WHERE gp.game_peer_id=:game_peer_id;", [
+			'game_peer_id' => $game_peer_id
+		])->fetch();
+	}
+	
+	public function disable_game_peer(&$game_peer) {
+		$successful = null;
+		$error_message = null;
+		
+		if (empty($game_peer['disabled_at'])) {
+			$game_peer['disabled_at'] = time();
+			
+			$this->run_query("UPDATE game_peers SET disabled_at=:disabled_at WHERE game_peer_id=:game_peer_id;", [
+				'disabled_at' => $game_peer['disabled_at'],
+				'game_peer_id' => $game_peer['game_peer_id'],
+			]);
+			
+			$successful = true;
+		}
+		else {
+			$successful = false;
+			$error_message = "Game peer is already disabled";
+		}
+		
+		return [$successful, $error_message];
+	}
+	
+	public function enable_game_peer(&$game_peer) {
+		$successful = null;
+		$error_message = null;
+		
+		if (!empty($game_peer['disabled_at'])) {
+			$game_peer['disabled_at'] = null;
+			
+			$this->run_query("UPDATE game_peers SET disabled_at=:disabled_at WHERE game_peer_id=:game_peer_id;", [
+				'disabled_at' => $game_peer['disabled_at'],
+				'game_peer_id' => $game_peer['game_peer_id'],
+			]);
+			
+			$successful = true;
+		}
+		else {
+			$successful = false;
+			$error_message = "Game peer is already enabled";
+		}
+		
+		return [$successful, $error_message];
+	}
+	
 	public function fetch_event_by_id($event_id) {
 		return $this->run_query("SELECT * FROM events WHERE event_id=:event_id;", ['event_id'=>$event_id])->fetch();
 	}
@@ -3842,6 +3898,54 @@ class App {
 											$user_game = $thisuser->ensure_user_in_game($new_game, false);
 											$new_game->blockchain->set_auto_claim_to_account($user_game['account_id']);
 										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+			
+			$peers_dir = dirname(__DIR__).'/config/install_game_peers';
+			
+			if (is_dir($peers_dir)) {
+				foreach (scandir($peers_dir) as $peer_fname) {
+					if (!in_array($peer_fname, ['.', '..'])) {
+						$peer_fpath = $peers_dir."/".$peer_fname;
+						if ($peer_fh = fopen($peer_fpath, 'r')) {
+							$peer_def = fread($peer_fh, filesize($peer_fpath));
+							$peer_obj = json_decode($peer_def);
+							
+							if (!empty($peer_obj->peer_identifier) && !empty($peer_obj->peer_name) && !empty($peer_obj->base_url) && !empty($peer_obj->game_identifier)) {
+								$db_game = $this->fetch_game_by_identifier($peer_obj->game_identifier);
+								
+								if ($db_game) {
+									$blockchain = new Blockchain($this, $db_game['blockchain_id']);
+									$game = new Game($blockchain, $db_game['game_id']);
+									
+									$added_peer = false;
+									
+									$peer = $this->get_peer_by_identifier($peer_obj->peer_identifier);
+									
+									if (!$peer) {
+										$peer = $this->create_peer([
+											'peer_identifier' => $peer_obj->peer_identifier,
+											'peer_name' => $peer_obj->peer_name,
+											'base_url' => $peer_obj->base_url,
+										]);
+										
+										$added_peer = true;
+									}
+									
+									$game_peer = $game->get_game_peer_by_peer($peer);
+									
+									if (empty($game_peer)) {
+										$game_peer = $game->create_game_peer($peer);
+										$added_peer = true;
+									}
+									
+									if ($added_peer) {
+										array_push($messages, "Successfully added ".$peer['base_url']." as a peer for ".$game->db_game['name'].".");
 									}
 								}
 							}

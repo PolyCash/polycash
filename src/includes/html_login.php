@@ -37,7 +37,9 @@ else {
 		<p>
 			<button class="btn btn-primary" onclick="thisPageManager.existing_account=1; thisPageManager.toggle_to_panel('login');">Yes, I already have an account</button>
 			<button class="btn btn-success" onclick="thisPageManager.existing_account=0; thisPageManager.toggle_to_panel('login');">No, I need to create an account</button>
+			<?php if (AppSettings::cardLoginsEnabled()) { ?>
 			<a href="/redeem/<?php if ($redirect_url) echo "?redirect_key=".$redirect_url['redirect_key']; ?>" class="btn btn-danger">Log in with a gift card</a>
+			<?php } ?>
 		</p>
 	</div>
 </div>

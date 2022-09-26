@@ -3006,6 +3006,23 @@ var PageManager = function() {
 			}
 		});
 	};
+	this.remove_game_peer = function(game_peer_id) {
+		if (confirm("Are you sure you want to remove this peer?")) {
+			$.ajax({
+				url: "/ajax/manage_peers.php",
+				type: "POST",
+				dataType: "json",
+				data: {
+					synchronizer_token: this.synchronizer_token,
+					action: 'disable_game_peer',
+					game_peer_id: game_peer_id,
+				},
+				success: function(details) {
+					location.reload();
+				}
+			});
+		}
+	};
 }
 
 var thisPageManager = new PageManager();

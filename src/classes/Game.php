@@ -3731,7 +3731,7 @@ class Game {
 	}
 	
 	public function fetch_all_peers() {
-		$game_peers = $this->blockchain->app->run_query("SELECT * FROM peers p JOIN game_peers gp ON p.peer_id=gp.peer_id WHERE gp.game_id=:game_id ORDER BY p.peer_id ASC;", [
+		$game_peers = $this->blockchain->app->run_query("SELECT * FROM peers p JOIN game_peers gp ON p.peer_id=gp.peer_id WHERE gp.game_id=:game_id AND gp.disabled_at IS NULL ORDER BY p.peer_id ASC;", [
 			'game_id' => $this->db_game['game_id']
 		])->fetchAll();
 		
