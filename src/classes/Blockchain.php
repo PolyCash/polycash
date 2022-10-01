@@ -1148,7 +1148,7 @@ class Blockchain {
 				
 				$crd_in = 0;
 				foreach ($input_ios as $input_io) {
-					$crd_in += $input_io['colored_amount']*($ref_round_id-$input_io['create_round_id']);
+					if ((string) $input_io['create_round_id'] !== "") $crd_in += $input_io['colored_amount']*($ref_round_id-$input_io['create_round_id']);
 					
 					if ($input_io['is_game_coinbase'] == 1) {
 						if (empty($events_by_option_id[$input_io['option_id']])) {
@@ -1248,12 +1248,12 @@ class Blockchain {
 								
 								$effective_destroy_amount = floor($this_destroy_amount*$effectiveness_factor);
 								
-								$insert_q .= "'".$gio_amount."', '".$this_destroy_amount."', '".$option_id."', '".$color_game->db_game['default_contract_parts']."', '".$event->db_event['event_id']."', '".$effectiveness_factor."', '".$effective_destroy_amount."', 0, null";
-								
 								$payout_is_resolved = 0;
 								if ($this_destroy_amount == 0 && $color_game->db_game['exponential_inflation_rate'] == 0) $payout_is_resolved=1;
 								$this_is_resolved = $payout_is_resolved;
 								if ($using_separator) $this_is_resolved = 1;
+								
+								$insert_q .= "'".$gio_amount."', '".$this_destroy_amount."', '".$option_id."', '".$color_game->db_game['default_contract_parts']."', '".$event->db_event['event_id']."', '".$effectiveness_factor."', '".$effective_destroy_amount."', ".$this_is_resolved.", null";
 								
 								$payout_insert_q = "('".$color_game->db_game['game_id']."', 1, '".$payout_io_id."', '".$payout_address_id."', '".$game_out_index."', null, 0, null, 0, 0, 0, '".$option_id."', '".$color_game->db_game['default_contract_parts']."', '".$event->db_event['event_id']."', null, 0, ".$payout_is_resolved.", 1), ";
 								$game_out_index++;
