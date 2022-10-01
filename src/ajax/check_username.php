@@ -50,7 +50,7 @@ else {
 			
 			$app->output_message($status_code, $message, false);
 		}
-		else $app->output_message(5, "Error: the username you entered is too short. Aliases must be at least 4 characters.", false);
+		else $app->output_message(5, "Error: the username you entered is too short. Usernames must be at least 4 characters.", false);
 	}
 	else $app->output_message(6, "You're already logged in.", false);
 }

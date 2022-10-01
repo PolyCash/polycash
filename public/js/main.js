@@ -2609,14 +2609,26 @@ var PageManager = function() {
 			
 			$.ajax({
 				url: "/ajax/set_featured_strategy.php",
+				dataType: "json",
 				data: {
 					game_id: games[0].game_id,
 					featured_strategy_id: featured_strategy_id,
 					synchronizer_token: this.synchronizer_token
 				},
-				success: function() {
+				success: function(setStrategyResponse) {
 					$('#featured_strategy_save_btn').html("Save");
 					$("input[name=voting_strategy][value='featured']").prop("checked",true);
+					
+					if (setStrategyResponse.status_code == 1) {
+						$('#featured_strategy_success').html(setStrategyResponse.message);
+						$('#featured_strategy_success').show();
+						setTimeout(function() {$('#featured_strategy_success').slideUp('fast');}, 3000);
+					}
+					else {
+						$('#featured_strategy_error').html(setStrategyResponse.message);
+						$('#featured_strategy_error').show();
+						setTimeout(function() {$('#featured_strategy_error').slideUp('fast');}, 3000);
+					}
 				}
 			});
 		}

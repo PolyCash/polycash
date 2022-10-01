@@ -68,6 +68,14 @@ if ($game && $thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 				<?php
 			}
 			?>
+			<div class="row">
+				<div class="col-sm-8">
+					<input type="radio" name="featured_strategy_id" value="0" id="featured_strategy_0"<?php if ($user_strategy['voting_strategy'] == 'manual') echo ' checked="checked"'; ?> /><label for="featured_strategy_0">&nbsp; No automated strategy</label>
+				</div>
+				<div class="col-sm-4"></div>
+			</div>
+			<div id="featured_strategy_success" style="display: none;" class="text-success"></div>
+			<div id="featured_strategy_error" style="display: none;" class="text-danger"></div>
 		</div>
 		<div class="modal-footer">
 			<button type="button" class="btn btn-sm btn-warning" data-dismiss="modal"><i class="fas fa-times"></i> &nbsp; Close</button>

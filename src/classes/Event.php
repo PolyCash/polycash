@@ -647,7 +647,7 @@ class Event {
 	}
 	
 	public function option_block_info() {
-		$options_by_score = $this->game->blockchain->app->run_query("SELECT SUM(ob.score) AS total_score, o.* FROM option_blocks ob JOIN options o ON ob.option_id=o.option_id WHERE o.event_id=:event_id GROUP BY o.option_id ORDER BY total_score DESC;", ['event_id' => $this->db_event['event_id']])->fetchAll();
+		$options_by_score = $this->game->blockchain->app->run_query("SELECT SUM(ob.score) AS total_score, o.* FROM options o LEFT JOIN option_blocks ob ON ob.option_id=o.option_id WHERE o.event_id=:event_id GROUP BY o.option_id ORDER BY total_score DESC;", ['event_id' => $this->db_event['event_id']])->fetchAll();
 		
 		$is_tie = true;
 		$last_total_score = null;
