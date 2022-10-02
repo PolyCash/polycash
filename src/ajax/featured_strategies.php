@@ -24,44 +24,33 @@ if ($game && $thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 			$featured_strategies = $game->fetch_featured_strategies();
 			
 			while ($featured_strategy = $featured_strategies->fetch()) {
-				if ($featured_strategy['account_id'] > 0) {
-					$event_ref_block = $current_event->db_event['event_starting_block'];				
-					$performances = [];
+				$pct_increase = null;
+				
+				if ($featured_strategy['account_id'] > 0 && $featured_strategy['reference_starting_block'] <= $game->blockchain->last_block_id()) {
+					$ref_block = $app->run_query("SELECT * FROM blocks WHERE time_mined < ".(time()-(3600*24*7))." ORDER BY block_id DESC LIMIT 1;")->fetch();
 					
-					for ($i=0; $i<$previous_rounds; $i++) {
-						$first_prev_event = $app->run_query("SELECT * FROM events WHERE game_id=:game_id AND event_starting_block<:event_ref_block ORDER BY event_index DESC;", [
-							'game_id' => $game->db_game['game_id'],
-							'event_ref_block' => $event_ref_block
-						])->fetch();
-						$event_ref_block = $first_prev_event['event_starting_block'];
+					if ($ref_block) {
+						$start_bal_block = $game->blockchain->fetch_block_by_id(max($ref_block['block_id'], $featured_strategy['reference_starting_block']));
 						
-						if ($featured_strategy['reference_starting_block'] <= $first_prev_event['event_starting_block']) {
-							$ref_performance_events = $app->run_query("SELECT * FROM events WHERE game_id=:game_id AND event_starting_block=:block_id ORDER BY event_index ASC;", [
-								'game_id' => $game->db_game['game_id'],
-								'block_id' => $first_prev_event['event_starting_block']
-							]);
-							
-							while ($db_event = $ref_performance_events->fetch()) {
-								$bal1 = $game->account_balance_at_block($featured_strategy['account_id'], $db_event['event_final_block'], false);
-								$bal2 = $game->account_balance_at_block($featured_strategy['account_id'], $db_event['event_final_block'], true);
-								$performance = ($bal2/$bal1)-1;
-								array_push($performances, $performance);
-							}
-						}
+						$starting_balance = $game->account_balance_at_block($featured_strategy['account_id'], $start_bal_block['block_id'], true);
+						$pending_bets_params = ['account_id' => $featured_strategy['account_id']];
+						$final_balance = $game->account_balance($featured_strategy['account_id'])+$game->user_pending_bets($pending_bets_params);
+						
+						$pct_increase = 100*(($final_balance/$starting_balance)-1);
 					}
-					$performance_sum = array_sum($performances);
-					$average_performance = $performance_sum/count($performances);
-					
-					$daily_performance = pow(1+$average_performance, 3);
 				}
 				?>
 				<div class="row">
-					<div class="col-sm-8">
+					<div class="col-sm-6">
 						<input type="radio" name="featured_strategy_id" value="<?php echo $featured_strategy['featured_strategy_id']; ?>" id="featured_strategy_<?php echo $featured_strategy['featured_strategy_id']; ?>"<?php if ($user_strategy['featured_strategy_id'] == $featured_strategy['featured_strategy_id']) echo ' checked="checked"'; ?> /><label for="featured_strategy_<?php echo $featured_strategy['featured_strategy_id']; ?>">&nbsp; <?php echo $featured_strategy['strategy_name']; ?></label>
 					</div>
-					<div class="col-sm-4">
+					<div class="col-sm-6">
 						<?php
-						if ($featured_strategy['account_id'] > 0) echo round(($daily_performance-1)*100, 2)."% per day";
+						if ($pct_increase !== null) {
+							if ($pct_increase >= 0) echo 'Up <font class="text-success">'.round($pct_increase, 2).'%</font>';
+							else echo 'Down <font class="text-danger">'.round(-1*$pct_increase, 2).'%</font>';
+							echo " in the past ".$app->format_seconds(time() - $start_bal_block['time_mined']);
+						}
 						?>
 					</div>
 				</div>
