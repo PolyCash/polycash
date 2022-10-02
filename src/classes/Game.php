@@ -4273,12 +4273,26 @@ class Game {
 		return $checksum;
 	}
 	
-	public function find_peer_out_of_sync_block_by_array_scan($peer_utxos, $from_txo_pos, $to_txo_pos) {
+	public function find_peer_out_of_sync_block_by_array_scan($peer_txos, $from_txo_pos, $to_txo_pos) {
 		$txos = PeerVerifier::fetchTxosByIndex($this, $from_txo_pos, $to_txo_pos);
 		
-		foreach ($txos as $txo_pos => $txo) {
-			if (!array_key_exists($txo_pos, $peer_utxos) || json_encode($peer_utxos[$txo_pos]) != json_encode($txo)) {
-				return min($peer_utxos[$txo_pos][2], $txo[2]); // create_block_id
+		for ($txo_pos=$from_txo_pos; $txo_pos<=$to_txo_pos; $txo_pos++) {
+			if (empty($txos[$txo_pos]) || empty($peer_txos[$txo_pos])) {
+				if (empty($txos[$txo_pos]) && empty($peer_txos[$txo_pos])) {
+					$check_txo_pos = $txo_pos-1;
+					do {
+						if ($check_txo_pos < 0) return $this->db_game['game_starting_block'];
+						$check_txo = $this->fetch_game_io_by_index($check_txo_pos);
+						if ($check_txo) return $check_txo['create_block_id'];
+						else $check_txo_pos--;
+					}
+					while (true);
+				}
+				else if (empty($txos[$txo_pos])) return $peer_txos[$txo_pos][2];
+				else if (empty($peer_txos[$txo_pos])) return $txos[$txo_pos][2];
+			}
+			else if (json_encode($peer_txos[$txo_pos]) != json_encode($txos[$txo_pos])) {
+				return min($peer_txos[$txo_pos][2], $txos[$txo_pos][2]);
 			}
 		}
 		
