@@ -1114,7 +1114,7 @@ var PageManager = function() {
 		this.refresh_compose_bets();
 	}
 	this.show_intro_message = function() {
-		$('#intro_message').modal('show');
+		this.show_featured_strategies();
 	}
 	this.show_planned_votes = function() {
 		$('#planned_votes').modal('show');

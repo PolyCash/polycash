@@ -10,12 +10,11 @@ if ($game && $thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 	<form method="get" onsubmit="thisPageManager.save_featured_strategy(); return false;">
 		<div class="modal-body">
 			<p>
-				Please select a strategy from the options below. 
-				An auto strategy stakes your coins for you so that your account gains value 24/7 without requiring you to do anything. 
-				The percentages shown below reflect recent performances but are no guarantee of future performance.
+				You can select an automated betting strategy from the options below. 
+				The percentages shown here reflect recent performances but are no guarantee of future performance.
 			</p>
 			<p>
-				To write your own custom auto strategy, please see our <a href="/api/about">API documentation</a>.
+				To write your own betting strategy, please see our <a href="/api/about">API documentation</a>.
 			</p>
 			<?php
 			$previous_rounds = 3;

@@ -402,7 +402,7 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 			if ($user_game['show_intro_message'] == 1) { ?>
 				thisPageManager.show_intro_message();
 				<?php
-				$app->run_query("UPDATE user_games SET show_intro_message=0 WHERE user_game_id=:user_game_id;", ['user_game_id' => $user_game['user_game_id']]);
+				$app->run_query("UPDATE user_games SET show_intro_message=0 WHERE user_id=:user_id AND game_id=:game_id;", ['user_id' => $thisuser->db_user['user_id'], 'game_id' => $game->db_game['game_id']]);
 			}
 			if ($user_game['prompt_notification_preference'] == 1) { ?>
 				$('#notification_modal').modal('show');
@@ -902,33 +902,6 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 				}
 				else echo "Sorry, you don't have permission to send invitations for this game.";
 				?>
-			</div>
-		</div>
-	</div>
-	
-	<div class="modal fade" id="intro_message">
-		<div class="modal-dialog">
-			<div class="modal-content">
-				<div class="modal-header">
-					<b class="modal-title">New message from <?php echo AppSettings::getParam('site_name'); ?></b>
-					
-					<button type="button" class="close" data-dismiss="modal" aria-label="Close">
-						<span aria-hidden="true">&times;</span>
-					</button>
-				</div>
-				<div class="modal-body">
-					<p>
-						Hi <?php echo $thisuser->db_user['username']; ?>, thanks for joining <?php echo $game->db_game['name']; ?>!
-					</p>
-					<p>
-						It's recommended that you select an auto strategy so that your account will gain value while you sleep. You can change your auto strategy at any time by logging in and clicking the "Settings" tab to the left.
-					</p>
-				</div>
-				<div class="modal-footer">
-					<button type="button" class="btn btn-sm btn-warning" data-dismiss="modal"><i class="fas fa-times"></i> &nbsp; Close</button>
-					 &nbsp;&nbsp;or&nbsp;&nbsp;
-					<button class="btn btn-sm btn-primary" onclick="$('#intro_message').modal('hide'); thisPageManager.show_featured_strategies();"><i class="fas fa-list"></i> &nbsp; Choose an auto-strategy</button>
-				</div>
 			</div>
 		</div>
 	</div>
