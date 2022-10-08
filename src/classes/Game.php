@@ -1067,23 +1067,6 @@ class Game {
 		return $html;
 	}
 	
-	public function game_description() {
-		$html = "";
-		
-		if ($this->db_game['game_status'] == "running") {
-			$html .= "This game started on block ".$this->db_game['game_starting_block']." ago; ".$this->format_coins($this->coins_in_existence(false, true))." are already in circulation. ";
-		}
-		else {
-			if ($this->db_game['start_condition'] == "fixed_block") {
-				$html .= "This game starts in ".($this->db_game['game_starting_block']-$this->blockchain->last_block_id())." blocks.";
-			}
-		}
-
-		$html .= "Each round consists of ".$this->db_game['round_length'].", ".str_replace(" ", "-", rtrim($this->blockchain->app->format_seconds($this->blockchain->db_blockchain['seconds_per_block']), 's'))." blocks. ";
-		
-		return $html;
-	}
-	
 	public function render_game_players() {
 		$networth_sum = 0;
 		$html = "";

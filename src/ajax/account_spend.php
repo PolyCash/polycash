@@ -140,174 +140,137 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 		else $app->output_message(4, "Error, incorrect game_id", false);
 	}
 	else if ($action == "start_join_tx" || $action == "finish_join_tx") {
-		$io_id = (int) $_REQUEST['io_id'];
-		
-		$db_io = $app->fetch_io_by_id($io_id);
-		
-		if ($db_io) {
-			$key_account = $app->fetch_account_by_user_and_address($thisuser->db_user['user_id'], $db_io['address_id']);
+		if (!empty($_REQUEST['account_id']) && $account = $app->fetch_account_by_id($_REQUEST['account_id'])) {
+			$db_io = $app->fetch_io_by_id((int) $_REQUEST['io_id']);
 			
-			if ($key_account) {
-				if (in_array($db_io['spend_status'], array("unconfirmed", "unspent"))) {
-					if ($key_account['game_id'] > 0) {
-						$db_game = $app->fetch_game_by_id($key_account['game_id']);
-						$blockchain = new Blockchain($app, $db_game['blockchain_id']);
-					}
-					else $blockchain = new Blockchain($app, $db_io['blockchain_id']);
-					
-					if ($action == "start_join_tx") {
-						$joinable_ios_params = [
-							'account_id' => $key_account['account_id'],
-							'io_id' => $db_io['io_id']
-						];
-						if ($key_account['game_id'] > 0) {
-							$joinable_ios_q = "SELECT *, SUM(gio.colored_amount) AS colored_amount_sum FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id=:account_id AND gio.game_id=:game_id AND (io.spend_status='unspent' OR io.spend_status='unconfirmed') AND io.io_id != :io_id GROUP BY io.io_id ORDER BY colored_amount_sum DESC;";
-							$joinable_ios_params['game_id'] = $key_account['game_id'];
+			if ($db_io && $address_key = $app->fetch_address_key_by_address_in_account($db_io['address_id'], $account['account_id'])) {
+				if ($account['user_id'] == $thisuser->db_user['user_id']) {
+					if (in_array($db_io['spend_status'], array("unconfirmed", "unspent"))) {
+						if ($account['game_id'] > 0) {
+							$db_game = $app->fetch_game_by_id($account['game_id']);
+							$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 						}
-						else $joinable_ios_q = "SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id=:account_id AND (io.spend_status='unspent' OR io.spend_status='unconfirmed') AND io.io_id != :io_id GROUP BY io.io_id ORDER BY amount DESC;";
-						$joinable_ios = $app->run_query($joinable_ios_q, $joinable_ios_params);
+						else $blockchain = new Blockchain($app, $db_io['blockchain_id']);
 						
-						$html = '<form action="/accounts/" method="get" onsubmit="thisPageManager.finish_join_tx(); return false;">';
-						
-						$html .= '<div class="form-group"><select id="join_tx_io_id" name="join_tx_io_id" class="form-control">'."\n";
-						$html .= '<option value="">-- Please Select --</option>'."\n";
-						while ($db_io = $joinable_ios->fetch()) {
-							$html .= '<option value="'.$db_io['io_id'].'">';
-							if ($key_account['game_id'] > 0) $html .= $app->format_bignum($db_io['colored_amount_sum']/pow(10,$db_game['decimal_places'])).' '.$db_game['coin_abbreviation'].' (';
-							$io_amount_disp = $app->format_bignum($db_io['amount']/pow(10,$blockchain->db_blockchain['decimal_places']));
-							$html .= $io_amount_disp." ".($io_amount_disp=="1" ? $blockchain->db_blockchain['coin_name'] : $blockchain->db_blockchain['coin_name_plural']);
-							if ($key_account['game_id'] > 0) $html .= ')';
-							$html .= ' '.$db_io['address'].'</option>'."\n";
-						}
-						$html .= "</select></div>\n";
-						
-						$html .= '<div class="form-group">';
-						$html .= '<label for="join_tx_fee">Transaction fee:</label>';
-						$html .= '<input id="join_tx_fee" type="text" class="form-control" value="'.($db_game ? $db_game['default_transaction_fee'] : "").'" />';
-						$html .= "</div>\n";
-						
-						$html .= '<button class="btn btn-primary">Join UTXOs</button>'."\n";
-						$html .= "</form>\n";
-						
-						$output_obj['html'] = $html;
-						
-						$app->output_message(10, "", $output_obj);
-					}
-					else if ($action == "finish_join_tx") {
-						$join_io_id = (int) $_REQUEST['join_io_id'];
-						$join_db_io = $app->fetch_io_by_id($join_io_id);
-						
-						if ($join_db_io) {
-							$join_key_account = $app->run_query("SELECT *, c.currency_id AS currency_id FROM address_keys k JOIN currency_accounts c ON k.account_id=c.account_id WHERE k.address_id=:address_id AND c.user_id=:user_id;", [
-								'address_id' => $join_db_io['address_id'],
-								'user_id' => $thisuser->db_user['user_id']
-							])->fetch();
-							
-							if ($join_key_account) {
-								$tx_fee = (float) $_REQUEST['tx_fee'];
-								$fee_amount = (int)($tx_fee*pow(10,$blockchain->db_blockchain['decimal_places']));
-								$amount = $db_io['amount']+$join_db_io['amount']-$fee_amount;
-								
-								$new_normal_address = $app->new_normal_address_key($join_key_account['currency_id'], $join_key_account);
-								
-								if ($new_normal_address) {
-									$error_message = false;
-									$transaction_id = $blockchain->create_transaction('transaction', [$amount], false, [$db_io['io_id'], $join_db_io['io_id']], [$new_normal_address['address_id']], $fee_amount, $error_message);
-									
-									if ($transaction_id) {
-										$transaction = $app->fetch_transaction_by_id($transaction_id);
-										$app->output_message(1, "/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/transactions/".$transaction['tx_hash']."/", false);
-									}
-									else $app->output_message(13, "TX Error: ".$error_message, false);
-								}
-								else $app->output_message(12, "There was an error generating a new address.", false);
+						if ($action == "start_join_tx") {
+							$joinable_ios_params = [
+								'account_id' => $account['account_id'],
+								'io_id' => $db_io['io_id']
+							];
+							if ($account['game_id'] > 0) {
+								$joinable_ios_q = "SELECT *, SUM(gio.colored_amount) AS colored_amount_sum FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id=:account_id AND gio.game_id=:game_id AND (io.spend_status='unspent' OR io.spend_status='unconfirmed') AND io.io_id != :io_id GROUP BY io.io_id ORDER BY colored_amount_sum DESC;";
+								$joinable_ios_params['game_id'] = $account['game_id'];
 							}
-							else $app->output_message(11, "Error, invalid join UTXO ID.", false);
+							else $joinable_ios_q = "SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id=:account_id AND (io.spend_status='unspent' OR io.spend_status='unconfirmed') AND io.io_id != :io_id GROUP BY io.io_id ORDER BY amount DESC;";
+							$joinable_ios = $app->run_query($joinable_ios_q, $joinable_ios_params);
+							
+							$html = '<form action="/accounts/" method="get" onsubmit="thisPageManager.finish_join_tx(); return false;">';
+							
+							$html .= '<div class="form-group"><select id="join_tx_io_id" name="join_tx_io_id" class="form-control">'."\n";
+							$html .= '<option value="">-- Please Select --</option>'."\n";
+							while ($db_io = $joinable_ios->fetch()) {
+								$html .= '<option value="'.$db_io['io_id'].'">';
+								if ($account['game_id'] > 0) $html .= $app->format_bignum($db_io['colored_amount_sum']/pow(10,$db_game['decimal_places'])).' '.$db_game['coin_abbreviation'].' (';
+								$io_amount_disp = $app->format_bignum($db_io['amount']/pow(10,$blockchain->db_blockchain['decimal_places']));
+								$html .= $io_amount_disp." ".($io_amount_disp=="1" ? $blockchain->db_blockchain['coin_name'] : $blockchain->db_blockchain['coin_name_plural']);
+								if ($account['game_id'] > 0) $html .= ')';
+								$html .= ' '.$db_io['address'].'</option>'."\n";
+							}
+							$html .= "</select></div>\n";
+							
+							$html .= '<div class="form-group">';
+							$html .= '<label for="join_tx_fee">Transaction fee:</label>';
+							$html .= '<input id="join_tx_fee" type="text" class="form-control" value="'.($db_game ? $db_game['default_transaction_fee'] : "").'" />';
+							$html .= "</div>\n";
+							
+							$html .= '<button class="btn btn-primary">Join UTXOs</button>'."\n";
+							$html .= "</form>\n";
+							
+							$output_obj['html'] = $html;
+							
+							$app->output_message(10, "", $output_obj);
 						}
-						else $app->output_message(11, "Error, invalid join UTXO ID.", false);
+						else if ($action == "finish_join_tx") {
+							$join_io_id = (int) $_REQUEST['join_io_id'];
+							$join_db_io = $app->fetch_io_by_id($join_io_id);
+							
+							if ($join_db_io) {
+								$join_key_account = $app->run_query("SELECT *, c.currency_id AS currency_id FROM address_keys k JOIN currency_accounts c ON k.account_id=c.account_id WHERE k.address_id=:address_id AND c.user_id=:user_id;", [
+									'address_id' => $join_db_io['address_id'],
+									'user_id' => $thisuser->db_user['user_id']
+								])->fetch();
+								
+								if ($join_key_account) {
+									$tx_fee = (float) $_REQUEST['tx_fee'];
+									$fee_amount = (int)($tx_fee*pow(10,$blockchain->db_blockchain['decimal_places']));
+									$amount = $db_io['amount']+$join_db_io['amount']-$fee_amount;
+									
+									$new_normal_address = $app->new_normal_address_key($join_key_account['currency_id'], $join_key_account);
+									
+									if ($new_normal_address) {
+										$error_message = false;
+										$transaction_id = $blockchain->create_transaction('transaction', [$amount], false, [$db_io['io_id'], $join_db_io['io_id']], [$new_normal_address['address_id']], $fee_amount, $error_message);
+										
+										if ($transaction_id) {
+											$transaction = $app->fetch_transaction_by_id($transaction_id);
+											if ($account['game_id'] > 0) {
+												$db_game = $app->fetch_game_by_id($account['game_id']);
+												$app->output_message(1, "/explorer/games/".$db_game['url_identifier']."/transactions/".$transaction['tx_hash']."/", false);
+											}
+											else $app->output_message(1, "/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/transactions/".$transaction['tx_hash']."/", false);
+										}
+										else $app->output_message(10, "TX Error: ".$error_message, false);
+									}
+									else $app->output_message(9, "There was an error generating a new address.", false);
+								}
+								else $app->output_message(8, "Error, invalid join UTXO ID.", false);
+							}
+							else $app->output_message(7, "Error, invalid join UTXO ID.", false);
+						}
 					}
+					else $app->output_message(6, "Sorry, that UTXO is not spendable.", false);
 				}
-				else $app->output_message(9, "Error, this UTXO is unconfirmed or already spent.", false);
+				else $app->output_message(5, "Sorry, you don't have permissions for that account.", false);
 			}
-			else $app->output_message(8, "Error, invalid UTXO ID.", false);
+			else $app->output_message(4, "Error, invalid UTXO ID.", false);
 		}
-		else $app->output_message(8, "Error, invalid UTXO ID.", false);
+		else $app->output_message(3, "Please specify a valid account ID.", false);
 	}
 	else if ($action == "withdraw") {
-		$io_id = (int) $_REQUEST['io_id'];
-		$withdraw_type = $_REQUEST['withdraw_type'];
-		$address = strip_tags($_REQUEST['address']);
-		
-		$db_io = $app->fetch_io_by_id($io_id);
-		
-		if ($db_io) {
-			$key_account = $app->fetch_account_by_user_and_address($thisuser->db_user['user_id'], $db_io['address_id']);
+		if (!empty($_REQUEST['account_id']) && $account = $app->fetch_account_by_id($_REQUEST['account_id'])) {
+			$db_io = $app->fetch_io_by_id((int) $_REQUEST['io_id']);
 			
-			if ($key_account) {
-				$blockchain = new Blockchain($app, $db_io['blockchain_id']);
-				$blockchain->load_coin_rpc();
-				
-				if ($blockchain->db_blockchain['p2p_mode'] == "rpc") {
-					try {
-						$info = $blockchain->coin_rpc->getwalletinfo();
-					}
-					catch (Exception $e) {
-						$app->output_message(8, "Error: RPC connection failed.", false);
-						die();
-					}
-				}
-				
-				$amount = (float) $_REQUEST['amount'];
-				$fee = (float) $_REQUEST['fee'];
-				
-				if ($withdraw_type == "blockchain") {
-					$amount = $amount*pow(10, $blockchain->db_blockchain['decimal_places']);
-					$fee_amount = $fee*pow(10, $blockchain->db_blockchain['decimal_places']);
+			if ($db_io && $address_key = $app->fetch_address_key_by_address_in_account($db_io['address_id'], $account['account_id'])) {
+				if ($account['user_id'] == $thisuser->db_user['user_id']) {
+					$address = strip_tags($_REQUEST['address']);
+					$withdraw_type = $_REQUEST['withdraw_type'];
 					
-					if ($db_io['amount'] >= $amount+$fee_amount) {
-						$remainder_amount = $db_io['amount']-$amount-$fee_amount;
-						
-						$db_address = $blockchain->create_or_fetch_address($address, false, null);
-						
-						$amounts = array($amount);
-						$address_ids = array($db_address['address_id']);
-						
-						if ($remainder_amount > 0) {
-							array_push($amounts, $remainder_amount);
-							array_push($address_ids, $db_io['address_id']);
-						}
-						
-						$error_message = false;
-						$transaction_id = $blockchain->create_transaction("transaction", $amounts, false, array($db_io['io_id']), $address_ids, $fee_amount, $error_message);
-						
-						if ($transaction_id) {
-							$transaction = $app->fetch_transaction_by_id($transaction_id);
-							$app->output_message(1, "/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/transactions/".$transaction['tx_hash']."/", false);
-						}
-						else $app->output_message(7, "Error: ", false);
-					}
-					else $app->output_message(6, "Error: not enough coins.", false);
-				}
-				else {
-					$io_game = $app->run_query("SELECT g.game_id, g.blockchain_id, SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN games g ON gio.game_id=g.game_id WHERE gio.is_resolved=1 AND gio.io_id=:io_id AND g.blockchain_id=:blockchain_id GROUP BY g.game_id;", [
-						'io_id' => $db_io['io_id'],
-						'blockchain_id' => $blockchain->db_blockchain['blockchain_id']
-					])->fetch();
+					$blockchain = new Blockchain($app, $db_io['blockchain_id']);
+					$blockchain->load_coin_rpc();
 					
-					if ($io_game) {
-						$game = new Game($blockchain, $io_game['game_id']);
-						
-						$amount = $amount*pow(10, $game->db_game['decimal_places']);
+					if ($blockchain->db_blockchain['p2p_mode'] == "rpc") {
+						try {
+							$info = $blockchain->coin_rpc->getwalletinfo();
+						}
+						catch (Exception $e) {
+							$app->output_message(8, "Error: RPC connection failed.", false);
+							die();
+						}
+					}
+					
+					$amount = (float) $_REQUEST['amount'];
+					$fee = (float) $_REQUEST['fee'];
+					
+					if ($withdraw_type == "blockchain") {
+						$amount = $amount*pow(10, $blockchain->db_blockchain['decimal_places']);
 						$fee_amount = $fee*pow(10, $blockchain->db_blockchain['decimal_places']);
 						
-						$db_address = $blockchain->create_or_fetch_address($address, false, null);
-						
-						$coloredcoins_per_coin = $io_game['SUM(gio.colored_amount)']/($db_io['amount']-$fee_amount);
-						$io_amount = round($amount/$coloredcoins_per_coin);
-						$remainder_amount = $db_io['amount']-$fee_amount-$io_amount;
-						
-						if ($remainder_amount >= 0) {
-							$amounts = array($io_amount);
+						if ($db_io['amount'] >= $amount+$fee_amount) {
+							$remainder_amount = $db_io['amount']-$amount-$fee_amount;
+							
+							$db_address = $blockchain->create_or_fetch_address($address, false, null);
+							
+							$amounts = array($amount);
 							$address_ids = array($db_address['address_id']);
 							
 							if ($remainder_amount > 0) {
@@ -320,18 +283,74 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 							
 							if ($transaction_id) {
 								$transaction = $app->fetch_transaction_by_id($transaction_id);
-								$app->output_message(1, "/explorer/games/".$game->db_game['url_identifier']."/transactions/".$transaction['tx_hash']."/", false);
+								$app->output_message(1, "/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/transactions/".$transaction['tx_hash']."/", false);
 							}
-							else $app->output_message(7, "TX Error: ".$error_message, false);
+							else $app->output_message(7, "Error: ", false);
 						}
-						else $app->output_message(8, "Error: not enough coins.", false);
+						else $app->output_message(6, "Error: not enough coins.", false);
 					}
-					else $app->output_message(6, "Error: no game found for this UTXO.", false);
+					else {
+						$game = new Game($blockchain, $account['game_id']);
+						
+						$amount = $amount*pow(10, $game->db_game['decimal_places']);
+						$fee_amount = $fee*pow(10, $blockchain->db_blockchain['decimal_places']);
+						
+						$db_address = $blockchain->create_or_fetch_address($address, false, null);
+						
+						$game_ios = $game->fetch_game_ios_by_io($db_io['io_id'])->fetchAll();
+						$any_unresolved = false;
+						$gio_sum = 0;
+						
+						foreach ($game_ios as $game_io) {
+							if (!$game_io['is_resolved']) $any_unresolved = true;
+							$gio_sum += $game_io['colored_amount'];
+						}
+						
+						if (!$any_unresolved) {
+							if ($gio_sum >= $amount) {
+								// If withdraw amount is within 0.01% of total balance, round up rather than leaving a tiny amount behind
+								$initial_remainder_amount = $gio_sum-$amount;
+								$remainder_frac = $initial_remainder_amount/$amount;
+								$withdrawing_all = false;
+								if ($remainder_frac < 1/10000 && $initial_remainder_amount < 1*pow(10, $game->db_game['decimal_places'])) {
+									$withdrawing_all = true;
+									$amount += $initial_remainder_amount;
+								}
+								
+								$coloredcoins_per_coin = $gio_sum/($db_io['amount']-$fee_amount);
+								$io_amount = ceil($amount/$coloredcoins_per_coin);
+								$remainder_amount = $db_io['amount']-$fee_amount-$io_amount;
+								
+								if ($remainder_amount >= 0) {
+									$amounts = [$io_amount];
+									$address_ids = [$db_address['address_id']];
+									
+									if ($remainder_amount > 0) {
+										array_push($amounts, $remainder_amount);
+										array_push($address_ids, $db_io['address_id']);
+									}
+									
+									$error_message = false;
+									$transaction_id = $blockchain->create_transaction("transaction", $amounts, false, [$db_io['io_id']], $address_ids, $fee_amount, $error_message);
+									
+									if ($transaction_id) {
+										$transaction = $app->fetch_transaction_by_id($transaction_id);
+										$app->output_message(1, "/explorer/games/".$game->db_game['url_identifier']."/transactions/".$transaction['tx_hash']."/", false);
+									}
+									else $app->output_message(10, "TX Error: ".$error_message, false);
+								}
+								else $app->output_message(9, "Error: not enough coins.", false);
+							}
+							else $app->output_message(8, "Error: your balance is not high enough to spend that amount.", false);
+						}
+						else $app->output_message(7, "Error: attempting to spend unresolved coins.", false);
+					}
 				}
+				else $app->output_message(6, "Error, you don't have permission to spend these coins.", false);
 			}
-			else $app->output_message(5, "Error, you don't have permission to spend these coins.", false);
+			else $app->output_message(5, "Error, invalid UTXO ID.", false);
 		}
-		else $app->output_message(4, "Error, invalid UTXO ID.", false);
+		else $app->output_message(4, "Error, invalid account ID.", false);
 	}
 	else if ($action == "withdraw_from_card") {
 		$card_id = (int) $_REQUEST['card_id'];
@@ -384,86 +403,86 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 		else $app->output_message(4, "Error: invalid card or peer ID.", false);
 	}
 	else if ($action == "split") {
-		$io_id = (int) $_REQUEST['io_id'];
-		$amount_each = (float) $_REQUEST['amount_each'];
-		$quantity = (int) $_REQUEST['quantity'];
-		$game_id = (int) $_REQUEST['game_id'];
-		
-		$db_game = $app->fetch_game_by_id($game_id);
-		
-		if ($db_game) {
-			$blockchain = new Blockchain($app, $db_game['blockchain_id']);
-			$game = new Game($blockchain, $db_game['game_id']);
+		if (!empty($_REQUEST['account_id']) && $account = $app->fetch_account_by_id($_REQUEST['account_id'])) {
+			$db_io = $app->fetch_io_by_id((int) $_REQUEST['io_id']);
 			
-			$fee = (float) $_REQUEST['fee'];
-			$satoshis_each = round(pow(10,$game->db_game['decimal_places'])*$amount_each);
-			$fee_amount = (int) ($fee*pow(10,$game->blockchain->db_blockchain['decimal_places']));
-			
-			if ($quantity > 0 && $satoshis_each > 0) {
-				$total_cost_satoshis = $quantity*$satoshis_each;
-				
-				$db_io = $app->fetch_io_by_id($io_id);
-				
-				if ($db_io) {
-					$db_game_ios = $game->fetch_game_ios_by_io($db_io['io_id'])->fetchAll();
+			if ($db_io && $address_key = $app->fetch_address_key_by_address_in_account($db_io['address_id'], $account['account_id'])) {
+				if ($account['user_id'] == $thisuser->db_user['user_id']) {
+					$amount_each = (float) $_REQUEST['amount_each'];
+					$quantity = (int) $_REQUEST['quantity'];
+					$game_id = (int) $_REQUEST['game_id'];
 					
-					if (count($db_game_ios) > 0) {
-						$game_ios = [];
-						$colored_coin_sum = 0;
+					$db_game = $app->fetch_game_by_id($game_id);
+					
+					if ($db_game && $db_game['game_id'] == $account['game_id']) {
+						$blockchain = new Blockchain($app, $db_game['blockchain_id']);
+						$game = new Game($blockchain, $db_game['game_id']);
 						
-						foreach ($db_game_ios as $game_io) {
-							array_push($game_ios, $game_io);
-							$colored_coin_sum += $game_io['colored_amount'];
-						}
+						$fee = (float) $_REQUEST['fee'];
+						$satoshis_each = round(pow(10,$game->db_game['decimal_places'])*$amount_each);
+						$fee_amount = (int) ($fee*pow(10,$game->blockchain->db_blockchain['decimal_places']));
 						
-						$coin_sum = $game_ios[0]['amount'];
-						$coins_per_chain_coin = (float) $colored_coin_sum/($coin_sum-$fee_amount);
-						$chain_coins_each = ceil($satoshis_each/$coins_per_chain_coin);
-						
-						if ($chain_coins_each > 0 && in_array($db_io['spend_status'], ["unspent", "unconfirmed"])) {
-							$account = $app->fetch_account_by_user_and_address($thisuser->db_user['user_id'], $db_io['address_id']);
+						if ($quantity > 0 && $satoshis_each > 0) {
+							$total_cost_satoshis = $quantity*$satoshis_each;
 							
-							if ($account) {
-								if ($total_cost_satoshis < $colored_coin_sum && $coin_sum > ($chain_coins_each*$quantity) - $fee_amount) {
-									$remainder_satoshis = $coin_sum - ($chain_coins_each*$quantity) - $fee_amount;
-									
-									$amounts = [];
-									$address_ids = [];
-									
-									for ($i=0; $i<$quantity; $i++) {
-										$address_key = $app->new_normal_address_key($account['currency_id'], $account);
-										array_push($address_ids, $address_key['address_id']);
-										array_push($amounts, $chain_coins_each);
-									}
-									if ($remainder_satoshis > 0) {
-										array_push($amounts, $remainder_satoshis);
-										array_push($address_ids, $db_io['address_id']);
-									}
-									
-									$error_message = false;
-									$transaction_id = $game->blockchain->create_transaction('transaction', $amounts, false, [$db_io['io_id']], $address_ids, $fee_amount, $error_message);
-									
-									if ($transaction_id) {
-										$transaction = $app->fetch_transaction_by_id($transaction_id);
-										$app->output_message(1, "/explorer/games/".$db_game['url_identifier']."/transactions/".$transaction['tx_hash']."/", false);
-									}
-									else $app->output_message(11, "TX Error: ".$error_message, false);
+							$db_game_ios = $game->fetch_game_ios_by_io($db_io['io_id'])->fetchAll();
+							
+							if (count($db_game_ios) > 0) {
+								$game_ios = [];
+								$colored_coin_sum = 0;
+								
+								foreach ($db_game_ios as $game_io) {
+									array_push($game_ios, $game_io);
+									$colored_coin_sum += $game_io['colored_amount'];
 								}
-								else {
-									$app->output_message(10, "UTXO is only ".$game->display_coins($colored_coin_sum)." but you tried to spend ".$app->format_bignum($total_cost_satoshis/pow(10,$game->db_game['decimal_places'])), false);
+								
+								$coin_sum = $game_ios[0]['amount'];
+								$coins_per_chain_coin = (float) $colored_coin_sum/($coin_sum-$fee_amount);
+								$chain_coins_each = ceil($satoshis_each/$coins_per_chain_coin);
+								
+								if ($chain_coins_each > 0 && in_array($db_io['spend_status'], ["unspent", "unconfirmed"])) {
+									if ($total_cost_satoshis < $colored_coin_sum && $coin_sum > ($chain_coins_each*$quantity) - $fee_amount) {
+										$remainder_satoshis = $coin_sum - ($chain_coins_each*$quantity) - $fee_amount;
+										
+										$amounts = [];
+										$address_ids = [];
+										
+										for ($i=0; $i<$quantity; $i++) {
+											$address_key = $app->new_normal_address_key($account['currency_id'], $account);
+											array_push($address_ids, $address_key['address_id']);
+											array_push($amounts, $chain_coins_each);
+										}
+										if ($remainder_satoshis > 0) {
+											array_push($amounts, $remainder_satoshis);
+											array_push($address_ids, $db_io['address_id']);
+										}
+										
+										$error_message = false;
+										$transaction_id = $game->blockchain->create_transaction('transaction', $amounts, false, [$db_io['io_id']], $address_ids, $fee_amount, $error_message);
+										
+										if ($transaction_id) {
+											$transaction = $app->fetch_transaction_by_id($transaction_id);
+											$app->output_message(1, "/explorer/games/".$db_game['url_identifier']."/transactions/".$transaction['tx_hash']."/", false);
+										}
+										else $app->output_message(12, "TX Error: ".$error_message, false);
+									}
+									else {
+										$app->output_message(11, "UTXO is only ".$game->display_coins($colored_coin_sum)." but you tried to spend ".$app->format_bignum($total_cost_satoshis/pow(10,$game->db_game['decimal_places'])), false);
+									}
 								}
+								else $app->output_message(10, "UTXO is not spendable.", false);
 							}
-							else $app->output_message(9, "You don't own this UTXO.", false);
+							else $app->output_message(9, "That UTXO isn't associated with any coins.", false);
 						}
-						else $app->output_message(8, "Invalid UTXO.", false);
+						else $app->output_message(8, "Invalid quantity.", false);
 					}
-					else $app->output_message(7, "Invalid UTXO ID.", false);
+					else $app->output_message(7, "Invalid game ID.", false);
 				}
-				else $app->output_message(6, "Invalid UTXO ID.", false);
+				else $app->output_message(6, "You don't have permissions for that account.", false);
 			}
-			else $app->output_message(5, "Invalid quantity.", false);
+			else $app->output_message(5, "Please specify a valid UTXO ID.", false);
 		}
-		else $app->output_message(4, "Invalid game ID.", false);
+		else $app->output_message(4, "Please specify a valid account ID.", false);
 	}
 	else if ($action == "spend_unresolved") {
 		if ($_REQUEST['whole_or_part'] == "whole") {
