@@ -841,7 +841,11 @@ class Game {
 				]);
 				
 				while ($non_escrow_io = $non_escrow_ios->fetch()) {
-					$colored_coins = floor($coins_generated*$non_escrow_io['amount']/$non_escrowed_coins);
+					$colored_coins = $coins_generated*$non_escrow_io['amount']/$non_escrowed_coins;
+					
+					if ($transaction['tx_hash'] == $this->db_game['genesis_tx_hash']) $colored_coins = round($colored_coins);
+					else $colored_coins = floor($colored_coins);
+					
 					$sum_colored_coins += $colored_coins;
 					
 					$game_io_index++;
