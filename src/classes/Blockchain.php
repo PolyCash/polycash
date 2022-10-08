@@ -2241,7 +2241,7 @@ class Blockchain {
 		$created_input_ids = [];
 		
 		if (count($amounts) != count($address_ids) || ($type != "coinbase" && $utxo_balance != $amount)) {
-			$error_message = "Invalid balance or inputs.";
+			$error_message = "Invalid balance or inputs. $utxo_balance != $amount";
 			return false;
 		}
 		

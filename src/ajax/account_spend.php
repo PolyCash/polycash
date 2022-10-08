@@ -122,7 +122,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 						}
 						
 						$error_message = false;
-						$transaction_id = $game->create_transaction(false, array($buyin_amount, $color_amount), $user_game, false, 'transaction', array($io_id), array($escrow_address['address_id'], $color_address['address_id']), false, $fee_amount, $error_message);
+						$transaction_id = $game->blockchain->create_transaction("transaction", [$buyin_amount, $color_amount], null, [$io_id], [$escrow_address['address_id'], $color_address['address_id']], $fee_amount, $error_message);
 						
 						if ($transaction_id) {
 							$app->output_message(1, "Great, your transaction has been submitted (#".$transaction_id.")", false);

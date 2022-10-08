@@ -419,7 +419,7 @@ if ($app->running_as_admin()) {
 							}
 							
 							$error_message = false;
-							$transaction_id = $this_game->create_transaction(false, $amounts, false, false, 'transaction', $io_ids, $address_ids, false, $unprocessed_sellout['fee_amount'], $error_message);
+							$transaction_id = $this_game->blockchain->create_transaction("transaction", $amounts, null, $io_ids, $address_ids, $unprocessed_sellout['fee_amount'], &$error_message);
 							
 							if ($transaction_id) {
 								$db_transaction = $app->fetch_transaction_by_id($transaction_id);
