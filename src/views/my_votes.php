@@ -67,7 +67,7 @@ foreach ($my_bets as $my_bet) {
 				if ($net_delta < 0) echo '<font class="redtext">Net loss of ';
 				else echo '<font class="greentext">Net gain of ';
 				echo $game->display_coins(abs($net_delta));
-				$html .= '</font>';
+				echo '</font>';
 				?>
 			</div>
 			<?php

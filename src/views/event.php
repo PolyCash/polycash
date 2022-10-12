@@ -241,7 +241,7 @@ if ($game->db_game['module'] == "CryptoDuels") {
 if ($event->db_event['payout_rule'] == "linear") {
 	$track_entity = $app->fetch_entity_by_id($round_stats[0]['entity_id']);
 	
-	$track_price_info = $app->exchange_rate_between_currencies(1, $track_entity['currency_id'], time(), 6);
+	$track_price_info = $app->exchange_rate_between_currencies(1, $track_entity['currency_id'], time(), $app->get_reference_currency()['currency_id']);
 	$track_price_usd = max($event->db_event['track_min_price'], min($event->db_event['track_max_price'], $track_price_info['exchange_rate']));
 	
 	// For tracked asset events, the buy position is always the first option (min option ID)

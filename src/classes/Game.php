@@ -542,6 +542,7 @@ class Game {
 		$last_block_id = $this->blockchain->last_block_id();
 		$coins_per_vote = $this->blockchain->app->coins_per_vote($this->db_game);
 		$show_initial = false;
+		$reference_currency = $this->blockchain->app->get_reference_currency();
 		
 		$db_events = $this->blockchain->app->run_query("SELECT e.*, winner.name AS winner_name FROM events e LEFT JOIN options winner ON e.winning_option_id=winner.option_id WHERE e.game_id=:game_id AND e.event_index >= :from_event_index AND e.event_index <= :to_event_index ORDER BY e.event_index DESC;", [
 			'game_id' => $this->db_game['game_id'],
@@ -601,7 +602,7 @@ class Game {
 					else $html .= "<font class='yellowtext'>Not Paid</font>";
 					
 					$ref_currency = $this->blockchain->app->get_currency_by_abbreviation($db_event['track_name_short']);
-					$ref_price_info = $this->blockchain->app->exchange_rate_between_currencies(1, $ref_currency['currency_id'], time(), 6);
+					$ref_price_info = $this->blockchain->app->exchange_rate_between_currencies(1, $ref_currency['currency_id'], time(), $reference_currency['currency_id']);
 					$ref_price_usd = max($db_event['track_min_price'], min($db_event['track_max_price'], $ref_price_info['exchange_rate']));
 				}
 				$html .= " &nbsp;&nbsp; ";
@@ -2753,7 +2754,7 @@ class Game {
 				$track_entity = $this->blockchain->app->fetch_entity_by_id($io['entity_id']);
 				
 				if ((string)$io['track_payout_price'] == "") {
-					$track_price_info = $this->blockchain->app->exchange_rate_between_currencies(1, $track_entity['currency_id'], time(), 6);
+					$track_price_info = $this->blockchain->app->exchange_rate_between_currencies(1, $track_entity['currency_id'], time(), $this->blockchain->app->get_reference_currency()['currency_id']);
 					$track_price_usd = $track_price_info['exchange_rate'];
 				}
 				else {

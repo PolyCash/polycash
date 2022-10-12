@@ -126,7 +126,7 @@ class Event {
 		else $ref_time = time();
 		
 		$track_entity = $this->game->blockchain->app->fetch_entity_by_id($this->db_event['track_entity_id']);
-		$track_price_info = $this->game->blockchain->app->exchange_rate_between_currencies(1, $track_entity['currency_id'], $ref_time, 6);
+		$track_price_info = $this->game->blockchain->app->exchange_rate_between_currencies(1, $track_entity['currency_id'], $ref_time, $app->get_reference_currency()['currency_id']);
 		
 		$track_price_usd = $this->game->blockchain->app->to_significant_digits($track_price_info['exchange_rate'], 8);
 		
