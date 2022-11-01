@@ -122,6 +122,7 @@ var GameEvent = function(game, game_event_index, event_id, real_event_index, num
 	this.option_id2option_index = {};
 	
 	this.start_vote = function(option_id) {
+		$('#principal_option_id_'+this.game.instance_id).val(option_id);
 		games[this.game.instance_id].add_option_to_vote(this.game_event_index, option_id);
 	};
 	this.db_id2option_index = function(db_option_id) {
@@ -1916,7 +1917,7 @@ var PageManager = function() {
 		});
 		
 		$("#select_add_output").find('option').remove().end().append($(optionsAsString));
-		$("#principal_option_id").find('option').remove().end().append($(optionsAsString));
+		$("#principal_option_id_"+games[0].instance_id).find('option').remove().end().append($(optionsAsString));
 	}
 	this.account_start_spend_io = function(game_id, io_id, amount, blockchain_coin_name, game_coin_name) {
 		this.account_io_id = io_id;
@@ -2595,7 +2596,7 @@ var PageManager = function() {
 			data: {
 				game_id: games[0].game_id,
 				amount: $('#principal_amount').val(),
-				option_id: $('#principal_option_id').val(),
+				option_id: $('#principal_option_id_'+games[0].instance_id).val(),
 				fee: $('#principal_fee').val(),
 				synchronizer_token: this.synchronizer_token
 			},

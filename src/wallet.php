@@ -395,7 +395,7 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 	echo $game->load_all_event_points_js(0, $user_strategy, $plan_start_round, $plan_stop_round);
 	?>
 	window.onload = function() {
-		thisPageManager.toggle_betting_mode('inflationary');
+		thisPageManager.toggle_betting_mode('principal');
 		thisPageManager.compose_bets_loop();
 		<?php
 		if (!$faucet_io) {
@@ -697,10 +697,10 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 									</div>
 								</div>
 								<div class="form-group">
-									<label for="principal_option_id">Which option do you want to bet for?</label>
+									<label for="principal_option_id_0">Which option do you want to bet for?</label>
 									<div class="row">
 										<div class="col-sm-6">
-											<select class="form-control" id="principal_option_id" name="principal_option_id"></select>
+											<select class="form-control" id="principal_option_id_0" name="principal_option_id"></select>
 										</div>
 									</div>
 								</div>
