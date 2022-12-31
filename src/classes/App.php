@@ -736,35 +736,20 @@ class App {
 		$minutes = floor($seconds / 60);
 		
 		if ($weeks > 0) {
-			if ($weeks == 1) $str = $weeks." week";
-			else $str = $weeks." weeks";
+			$str = $weeks." week".($weeks == 1 ? "" : "s");
 			$days = $days - 7*$weeks;
-			if ($days != 1) $str .= " and ".$days." days";
-			else $str .= " and ".$days." day";
+			if ($days > 0) $str .= " and ".$days." day".($days == 1 ? "" : "s");
 			return $str;
 		}
-		else if ($days > 1) {
-			return $days." days";
-		}
+		else if ($days > 1) return $days." days";
 		else if ($hours > 0) {
-			$str = "";
-			if ($hours != 1) $str .= $hours." hours";
-			else $str .= $hours." hour";
+			$str = $hours." hour".($hours == 1 ? "" : "s");
 			$remainder_min = round(($seconds - (3600*$hours))/60);
-			if ($remainder_min > 0 && $hours < 3) {
-				$str .= " and ".$remainder_min." ";
-				if ($remainder_min == '1') $str .= "minute";
-				else $str .= "minutes";
-			}
+			if ($remainder_min > 0 && $hours < 3) $str .= " and ".$remainder_min." minute".($remainder_min == 1 ? "" : "s");
 			return $str;
 		}
-		else if ($minutes > 0) {
-			return $minutes." minute".($minutes=="1" ? "" : "s");
-		}
-		else {
-			if ($seconds != 1) return $seconds." seconds";
-			else return $seconds." second";
-		}
+		else if ($minutes > 0) return $minutes." minute".($minutes == 1 ? "" : "s");
+		else return $seconds." second".($seconds == 1 ? "" : "s");
 	}
 	
 	public function game_url_identifier($game_name) {
