@@ -246,7 +246,9 @@ and (max-device-width : 480px) {
 	padding: 6px;
 }
 .paragraph {
+	display: block;
 	margin-bottom: 12px;
+	overflow: hidden;
 }
 footer {
     position: fixed;

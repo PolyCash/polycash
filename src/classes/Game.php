@@ -1073,7 +1073,6 @@ class Game {
 	}
 	
 	public function render_game_players() {
-		$networth_sum = 0;
 		$html = "";
 		
 		$user_games = $this->blockchain->app->run_query("SELECT * FROM user_games ug JOIN users u ON ug.user_id=u.user_id WHERE ug.game_id=:game_id GROUP BY ug.user_id ORDER BY u.user_id ASC;", ['game_id'=>$this->db_game['game_id']])->fetchAll();
@@ -1082,7 +1081,9 @@ class Game {
 		
 		foreach ($user_games as $user_game) {
 			$html .= '<div class="row">';
-			$html .= '<div class="col-sm-4"><a href="" onclick="thisPageManager.openChatWindow('.$user_game['user_id'].'); return false;">Player'.$user_game['user_id'].'</a></div>';
+			$html .= '<div class="col-sm-4">';
+			$html .= '<a href="" onclick="thisPageManager.openChatWindow('.$user_game['user_id'].'); return false;">Player'.$user_game['user_id'].'</a>';
+			$html .= '</div>';
 			$html .= '</div>';
 		}
 		
