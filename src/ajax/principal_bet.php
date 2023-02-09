@@ -89,7 +89,8 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 					$transaction_id = $game->blockchain->create_transaction("transaction", $io_amounts, false, $io_ids, $address_ids, $fee_int, $error_message);
 					
 					if ($transaction_id) {
-						$app->output_message(1, "Great, your transaction was submitted. <a href=\"/explorer/blockchains/".$game->blockchain->db_blockchain['url_identifier']."/transactions/".$transaction_id."/\">View Transaction</a>", false);
+						$transaction = $app->fetch_transaction_by_id($transaction_id);
+						$app->output_message(1, "Great, your transaction was submitted. <a href=\"/explorer/games/".$game->db_game['url_identifier']."/transactions/".$transaction['tx_hash']."\">View Transaction</a>", false);
 					}
 					else {
 						$app->output_message(8, "TX Error: ".$error_message, false);
