@@ -70,7 +70,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 				$io_nonfee_amount = $io_amount_in-$fee_int;
 				$io_nondestroy_amount = $io_nonfee_amount - $burn_amount;
 				
-				if ($io_nonfee_amount > 0) {
+				if ($io_nondestroy_amount > 0) {
 					$io_separator_frac = 0.25;
 					$error_message = false;
 					
@@ -95,7 +95,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 						$app->output_message(8, "TX Error: ".$error_message, false);
 					}
 				}
-				else $app->output_message(7, "Not enough ".$game->blockchain->db_blockchain['coin_name_plural'].": ".$app->format_bignum($io_amount_in/pow(10, $game->blockchain->db_blockchain['decimal_places']))." available.", false);
+				else $app->output_message(7, "Transaction failed: you don't have enough ".$game->db_game['coin_name_plural'].".", false);
 			}
 			else $app->output_message(5, "Transaction failed: no destroy address found in this account.", false);
 		}
