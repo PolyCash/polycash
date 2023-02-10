@@ -12,16 +12,24 @@
 <footer class="footer" id="chatWindows"></footer>
 <footer class="footer status_footer">
 	<div class="status_footer_right">
-		<div class="status_footer_section">
-			Loaded in <?php echo round(microtime(true)-$pageload_start_time, 2); ?> sec.
-		</div>
 		<?php
 		if (empty($thisuser)) $thisuser = false;
 		
-		if (!empty($game)) { ?>
+		$display_sync_games = [];
+		
+		if (AppSettings::getParam('display_sync_game_ids')) {
+			$display_sync_game_ids = explode(",", AppSettings::getParam('display_sync_game_ids'));
+			foreach ($display_sync_game_ids as $display_sync_game_id) {
+				$display_sync_game = $app->fetch_game_by_id(AppSettings::getParam('display_sync_game_ids'));
+				$display_sync_blockchain = new Blockchain($app, $display_sync_game['blockchain_id']);
+				array_push($display_sync_games, new Game($display_sync_blockchain, $display_sync_game_id));
+			}
+		}
+		
+		foreach ($display_sync_games as $display_sync_game) { ?>
 			<div class="status_footer_section">
 			<?php
-			$game_peers = $game->fetch_all_peers();
+			$game_peers = $display_sync_game->fetch_all_peers();
 			
 			$num_in_sync = 0;
 			$num_expired = 0;
@@ -40,23 +48,23 @@
 			else if ($num_in_sync > 0) $text_class = "bg-success";
 			else $text_class = "bg-danger";
 			
-			echo '<div class="'.$text_class.' footer_peer_count" title="'.count($game_peers).' peer'.(count($game_peers) == 1 ? '' : 's').'" onClick="thisPageManager.open_public_peer_details('.$game->db_game['game_id'].'); return false;">'.count($game_peers).'</div>';
+			echo '<div class="'.$text_class.' footer_peer_count" title="'.count($game_peers).' peer'.(count($game_peers) == 1 ? '' : 's').'" onClick="thisPageManager.open_public_peer_details('.$display_sync_game->db_game['game_id'].'); return false;">'.count($game_peers).'</div>';
 			
-			echo '<a href="/'.$game->db_game['url_identifier'].'/">'.$game->db_game['name']."</a>\n";
+			echo '<a href="/'.$display_sync_game->db_game['url_identifier'].'/">'.$display_sync_game->db_game['name']."</a>\n";
 			
-			if ($app->user_can_edit_game($thisuser, $game)) {
+			if ($app->user_can_edit_game($thisuser, $display_sync_game)) {
 				$show_internal_params = false;
 				
-				if ($game->db_game['cached_definition_hash'] != $game->db_game['defined_cached_definition_hash']) {
-					$actual_game_def_hash_3 = substr($game->db_game['cached_definition_hash'], 0, 3);
-					$defined_game_def_hash_3 = substr($game->db_game['defined_cached_definition_hash'], 0, 3);
+				if ($display_sync_game->db_game['cached_definition_hash'] != $display_sync_game->db_game['defined_cached_definition_hash']) {
+					$actual_game_def_hash_3 = substr($display_sync_game->db_game['cached_definition_hash'], 0, 3);
+					$defined_game_def_hash_3 = substr($display_sync_game->db_game['defined_cached_definition_hash'], 0, 3);
 					
 					echo "<font style=\"font-size: 75%;\">";
 					echo " &nbsp;&nbsp; Pending ";
-					echo '<a href="/explorer/games/'.$game->db_game['url_identifier'].'/definition/?definition_mode=actual">'.$actual_game_def_hash_3."</a>";
+					echo '<a href="/explorer/games/'.$display_sync_game->db_game['url_identifier'].'/definition/?definition_mode=actual">'.$actual_game_def_hash_3."</a>";
 					echo " &rarr; ";
-					echo '<a href="/explorer/games/'.$game->db_game['url_identifier'].'/definition/?definition_mode=defined">'.$defined_game_def_hash_3."</a>\n";
-					echo " &nbsp;&nbsp; <a id=\"apply_def_link\" href=\"\" onclick=\"thisPageManager.apply_game_definition(".$game->db_game['game_id']."); return false;\">Apply Changes</a>";
+					echo '<a href="/explorer/games/'.$display_sync_game->db_game['url_identifier'].'/definition/?definition_mode=defined">'.$defined_game_def_hash_3."</a>\n";
+					echo " &nbsp;&nbsp; <a id=\"apply_def_link\" href=\"\" onclick=\"thisPageManager.apply_game_definition(".$display_sync_game->db_game['game_id']."); return false;\">Apply Changes</a>";
 					echo "</font>\n";
 				}
 			}
@@ -88,11 +96,11 @@
 </footer>
 
 <?php
-if (!empty($game)) {
+foreach ($display_sync_games as $display_sync_game) {
 	?>
-	<div style="display: none;" class="modal fade" id="game<?php echo $game->db_game['game_id']; ?>_public_peer_details_modal">
+	<div style="display: none;" class="modal fade" id="game<?php echo $display_sync_game->db_game['game_id']; ?>_public_peer_details_modal">
 		<div class="modal-dialog modal-lg">
-			<div class="modal-content" id="game<?php echo $game->db_game['game_id']; ?>_public_peer_details_inner"></div>
+			<div class="modal-content" id="game<?php echo $display_sync_game->db_game['game_id']; ?>_public_peer_details_inner"></div>
 		</div>
 	</div>
 	<?php

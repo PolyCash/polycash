@@ -32,5 +32,6 @@
 	"coinbase_secret": "",
 	"coinbase_passphrase": "",
 	"coinbase_deposit_btc_address": "",
-	"coinbase_deposit_ltc_address": ""
+	"coinbase_deposit_ltc_address": "",
+	"display_sync_game_ids": ""
 }
