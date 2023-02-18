@@ -55,26 +55,9 @@ if ($app->running_as_admin()) {
 			while ($db_blockchain = $sync_blockchains->fetch()) {
 				$blockchain = new Blockchain($app, $db_blockchain['blockchain_id']);
 				$blockchain->load_coin_rpc();
-				$error = false;
 				
-				if ($db_blockchain['p2p_mode'] == "rpc") {
-					if ($blockchain->coin_rpc) {
-						try {
-							$blockchain->coin_rpc->getwalletinfo();
-						} catch (Exception $e) {
-							$error = true;
-						}
-					}
-					else $error = true;
-					
-					if ($print_debug && $error) echo "Error, skipped ".$db_blockchain['blockchain_name']." because RPC connection failed.\n\n";
-				}
-				
-				if (!$error) {
-					$any_success = true;
-					$blockchain->sync_blockchain($print_debug);
-					if ($print_debug) echo "\n";
-				}
+				$any_success = true;
+				$blockchain->sync_blockchain($print_debug);
 			}
 			
 			$loop_stop_time = microtime(true);

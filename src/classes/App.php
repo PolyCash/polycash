@@ -103,6 +103,7 @@ class App {
 	}
 	
 	public function log_message($message) {
+		$this->print_debug($message);
 		$this->run_insert_query("log_messages", ['message' => $message]);
 	}
 	

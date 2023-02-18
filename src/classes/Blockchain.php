@@ -1425,7 +1425,7 @@ class Blockchain {
 				}
 				
 				if ($print_debug) $this->app->print_debug("Checking for fork on block #".$last_block['block_id']);
-				$this->resolve_potential_fork_on_block($last_block);
+				$this->resolve_potential_fork_on_block($last_block, $print_debug);
 			}
 			
 			if ($last_block['block_id']%10 == 0) $this->set_average_seconds_per_block(false);
@@ -1646,30 +1646,38 @@ class Blockchain {
 		while ($keep_looping);
 	}
 	
-	public function resolve_potential_fork_on_block(&$db_block) {
+	public function resolve_potential_fork_on_block(&$db_block, $print_debug=false) {
 		$this->load_coin_rpc();
-		$rpc_block = $this->coin_rpc->getblock($db_block['block_hash']);
 		
-		if (isset($rpc_block['confirmations']) && $rpc_block['confirmations'] < 0) {
-			$this->app->log_message("Detected a chain fork at ".$this->db_blockchain['blockchain_name']." block #".$db_block['block_id']);
+		if ($this->coin_rpc) {
+			$rpc_block = $this->coin_rpc->getblock($db_block['block_hash']);
 			
-			$delete_block_height = $db_block['block_id'];
-			$rpc_delete_block = $rpc_block;
-			$keep_looping = true;
-			do {
-				$rpc_prev_block = $this->coin_rpc->getblock($rpc_delete_block['previousblockhash']);
-				if ($rpc_prev_block['confirmations'] < 0) {
-					$rpc_delete_block = $rpc_prev_block;
-					$delete_block_height--;
+			if (isset($rpc_block['confirmations'])) {
+				if ($rpc_block['confirmations'] < 0) {
+					$this->app->log_message("Detected a chain fork at ".$this->db_blockchain['blockchain_name']." block #".$db_block['block_id']);
+					
+					$delete_block_height = $db_block['block_id'];
+					$rpc_delete_block = $rpc_block;
+					$keep_looping = true;
+					do {
+						$rpc_prev_block = $this->coin_rpc->getblock($rpc_delete_block['previousblockhash']);
+						if ($rpc_prev_block['confirmations'] < 0) {
+							$rpc_delete_block = $rpc_prev_block;
+							$delete_block_height--;
+						}
+						else $keep_looping = false;
+					}
+					while ($keep_looping);
+					
+					$this->app->log_message("Deleting blocks #".$delete_block_height." and above.");
+					
+					$this->delete_blocks_from_height($delete_block_height);
 				}
-				else $keep_looping = false;
+				else if ($print_debug) $this->app->print_debug("No fork detected.");
 			}
-			while ($keep_looping);
-			
-			$this->app->log_message("Deleting blocks #".$delete_block_height." and above.");
-			
-			$this->delete_blocks_from_height($delete_block_height);
+			else if ($print_debug) $this->app->print_debug("Skipping fork check, coin daemon failed to return the number of confirmations.");
 		}
+		else if ($print_debug) $this->app->print_debug("Skipping fork check, coin daemon failed to load.");
 	}
 	
 	public function load_unconfirmed_transactions($max_execution_time) {
@@ -2786,6 +2794,8 @@ class Blockchain {
 				$this->load_coin_rpc();
 				
 				$this->load_new_blocks($print_debug);
+				
+				if (empty($this->coin_rpc)) return [true, "Canceled light sync, coin daemon failed to load."];
 				
 				$last_block_id = $this->last_block_id();
 				$mining_block_id = $last_block_id+1;

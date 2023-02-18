@@ -32,10 +32,10 @@ class jsonRPCClient {
 		$response_raw = curl_exec($ch);
 		curl_close($ch);
 		
-		if ($response_raw === false) return false;
+		if ($response_raw === false || $response_raw === "") return false;
 		else {
 			if (!$response = json_decode($response_raw,true)) {
-				throw new Exception("RPC call $method failed");
+				throw new Exception("RPC call $method failed.");
 			}
 			
 			if (!is_null($response['error'])) return $response['error'];
