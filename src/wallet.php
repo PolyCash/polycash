@@ -395,7 +395,7 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 	echo $game->load_all_event_points_js(0, $user_strategy, $plan_start_round, $plan_stop_round);
 	?>
 	window.onload = function() {
-		thisPageManager.toggle_betting_mode('principal');
+		thisPageManager.toggle_betting_mode('<?php echo $user_game['betting_mode']; ?>');
 		thisPageManager.compose_bets_loop();
 		<?php
 		if (!$faucet_io) {

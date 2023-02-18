@@ -122,8 +122,9 @@ var GameEvent = function(game, game_event_index, event_id, real_event_index, num
 	this.option_id2option_index = {};
 	
 	this.start_vote = function(option_id) {
-		$('#principal_option_id_'+this.game.instance_id).val(option_id);
-		games[this.game.instance_id].add_option_to_vote(this.game_event_index, option_id);
+		if (thisPageManager.betting_mode == "principal") $('#principal_option_id_'+this.game.instance_id).val(option_id);
+		else if (thisPageManager.betting_mode == "inflationary") games[this.game.instance_id].add_option_to_vote(this.game_event_index, option_id);
+		else console.log("Started a bet but betting_mode was "+thisPageManager.betting_mode);
 	};
 	this.db_id2option_index = function(db_option_id) {
 		for (var i=0; i<this.options.length; i++) {
