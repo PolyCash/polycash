@@ -689,7 +689,7 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 									<label for="principal_amount">How much do you want to bet?</label>
 									<div class="row">
 										<div class="col-sm-6">
-											<input class="form-control" type="text" id="principal_amount" name="principal_amount" style="text-align: right;" />
+											<input class="form-control" type="text" id="principal_amount" name="principal_amount" style="text-align: right;" required />
 										</div>
 										<div class="col-sm-6 form-control-static">
 											<?php echo $game->db_game['coin_name_plural']; ?>
