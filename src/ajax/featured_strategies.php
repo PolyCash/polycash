@@ -26,7 +26,10 @@ if ($game && $thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 				$pct_increase = null;
 				
 				if ($featured_strategy['account_id'] > 0 && $featured_strategy['reference_starting_block'] <= $game->blockchain->last_block_id()) {
-					$ref_block = $app->run_query("SELECT * FROM blocks WHERE time_mined < ".(time()-(3600*24*7))." ORDER BY block_id DESC LIMIT 1;")->fetch();
+					$ref_block = $app->run_query("SELECT * FROM blocks WHERE blockchain_id=:blockchain_id AND time_mined < :time_mined ORDER BY block_id DESC LIMIT 1;", [
+						'blockchain_id' => $game->blockchain->db_blockchain['blockchain_id'],
+						'time_mined' => time()-(3600*24*7),
+					])->fetch();
 					
 					if ($ref_block) {
 						$start_bal_block = $game->blockchain->fetch_block_by_id(max($ref_block['block_id'], $featured_strategy['reference_starting_block']));
