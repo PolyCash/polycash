@@ -1412,20 +1412,23 @@ class Blockchain {
 		
 		if ($last_block) {
 			if ($this->db_blockchain['p2p_mode'] == "rpc") {
-				if ($last_block['block_hash'] == "") {
-					$last_block_hash = $this->coin_rpc->getblockhash((int) $last_block['block_id']);
-					
-					if (!is_string($last_block_hash)) {
-						if ($print_debug) $this->app->print_debug("Coin daemon returned an invalid block hash at height ".$last_block['block_id']);
-						return false;
+				if ($this->coin_rpc) {
+					if ($last_block['block_hash'] == "") {
+						$last_block_hash = $this->coin_rpc->getblockhash((int) $last_block['block_id']);
+						
+						if (!is_string($last_block_hash)) {
+							if ($print_debug) $this->app->print_debug("Coin daemon returned an invalid block hash at height ".$last_block['block_id']);
+							return false;
+						}
+						
+						$coind_headers_error = $this->coind_add_block($last_block_hash, $last_block['block_id'], TRUE, $print_debug);
+						$last_block = $this->fetch_block_by_internal_id($last_block['internal_block_id']);
 					}
 					
-					$coind_headers_error = $this->coind_add_block($last_block_hash, $last_block['block_id'], TRUE, $print_debug);
-					$last_block = $this->fetch_block_by_internal_id($last_block['internal_block_id']);
+					if ($print_debug) $this->app->print_debug("Checking for fork on block #".$last_block['block_id']);
+					$this->resolve_potential_fork_on_block($last_block, $print_debug);
 				}
-				
-				if ($print_debug) $this->app->print_debug("Checking for fork on block #".$last_block['block_id']);
-				$this->resolve_potential_fork_on_block($last_block, $print_debug);
+				else if ($print_debug) $this->app->print_debug("Skipping fork check.. RPC client did not load.");
 			}
 			
 			if ($last_block['block_id']%10 == 0) $this->set_average_seconds_per_block(false);
@@ -1654,24 +1657,36 @@ class Blockchain {
 			
 			if (isset($rpc_block['confirmations'])) {
 				if ($rpc_block['confirmations'] < 0) {
-					$this->app->log_message("Detected a chain fork at ".$this->db_blockchain['blockchain_name']." block #".$db_block['block_id']);
+					$ref_time = microtime(true);
+					$blockchaininfo = $this->coin_rpc->getblockchaininfo();
+					if ($print_debug) $this->app->print_debug("Ran getblockchaininfo in ".round((microtime(true)-$ref_time), 6)." sec");
 					
-					$delete_block_height = $db_block['block_id'];
-					$rpc_delete_block = $rpc_block;
-					$keep_looping = true;
-					do {
-						$rpc_prev_block = $this->coin_rpc->getblock($rpc_delete_block['previousblockhash']);
-						if ($rpc_prev_block['confirmations'] < 0) {
-							$rpc_delete_block = $rpc_prev_block;
-							$delete_block_height--;
-						}
-						else $keep_looping = false;
+					if (empty($blockchaininfo)) {
+						if ($print_debug) $this->app->print_debug("Skipping fork check, getblockchaininfo failed.");
 					}
-					while ($keep_looping);
-					
-					$this->app->log_message("Deleting blocks #".$delete_block_height." and above.");
-					
-					$this->delete_blocks_from_height($delete_block_height);
+					else if ($blockchaininfo['initialblockdownload']) {
+						if ($print_debug) $this->app->print_debug("Not a fork, blockchain is in initial sync.");
+					}
+					else {
+						$this->app->log_message("Detected a chain fork at ".$this->db_blockchain['blockchain_name']." block #".$db_block['block_id']);
+						
+						$delete_block_height = $db_block['block_id'];
+						$rpc_delete_block = $rpc_block;
+						$keep_looping = true;
+						do {
+							$rpc_prev_block = $this->coin_rpc->getblock($rpc_delete_block['previousblockhash']);
+							if ($rpc_prev_block['confirmations'] < 0) {
+								$rpc_delete_block = $rpc_prev_block;
+								$delete_block_height--;
+							}
+							else $keep_looping = false;
+						}
+						while ($keep_looping);
+						
+						$this->app->log_message("Deleting blocks #".$delete_block_height." and above.");
+						
+						$this->delete_blocks_from_height($delete_block_height);
+					}
 				}
 				else if ($print_debug) $this->app->print_debug("No fork detected.");
 			}
