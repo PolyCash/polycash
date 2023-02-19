@@ -250,7 +250,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 			if ($target_balance >= 0) {
 				if ($target_balance == 0) $target_balance = "";
 				
-				$app->set_target_balance($target_account['account_id'], $target_balance);
+				$app->set_target_balance($target_account, $target_balance);
 			}
 		}
 	}
@@ -259,12 +259,11 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 		$settings_account = $app->fetch_account_by_id($settings_account_id);
 		
 		if (!empty($settings_account) && $settings_account['user_id'] == $thisuser->db_user['user_id']) {
-			$app->run_query("UPDATE currency_accounts SET faucet_donations_on=:faucet_donations_on, faucet_target_balance=:faucet_target_balance, faucet_amount_each=:faucet_amount_each WHERE account_id=:account_id;", [
-				'faucet_donations_on' => $_REQUEST['faucet_donations_on'],
-				'faucet_target_balance' => $_REQUEST['faucet_target_balance'],
-				'faucet_amount_each' => $_REQUEST['faucet_amount_each'],
-				'account_id' => $settings_account['account_id'],
-			]);
+			$updateParams = [];
+			foreach (CurrencyAccount::$fieldsInfo as $fieldName => $fieldInfo) {
+				if (!empty($fieldInfo['editableInSettings']) && isset($_REQUEST[$fieldName])) $updateParams[$fieldName] = $_REQUEST[$fieldName];
+			}
+			CurrencyAccount::updateAccount($app, $settings_account, $updateParams);
 		}
 	}
 }
@@ -288,7 +287,33 @@ if (!empty($_REQUEST['account_id'])) {
 }
 else $selected_account_id = false;
 
+$account_params = [
+	'user_id' => $thisuser->db_user['user_id']
+];
+$account_q = "SELECT ca.*, c.*, b.url_identifier AS blockchain_url_identifier, k.pub_key, ug.user_game_id FROM currency_accounts ca JOIN currencies c ON ca.currency_id=c.currency_id JOIN blockchains b ON c.blockchain_id=b.blockchain_id LEFT JOIN addresses a ON ca.current_address_id=a.address_id LEFT JOIN address_keys k ON a.address_id=k.address_id LEFT JOIN user_games ug ON ug.account_id=ca.account_id WHERE ca.user_id=:user_id";
+if ($selected_account_id) {
+	$account_q .= " AND ca.account_id=:account_id";
+	$account_params['account_id'] = $selected_account_id;
+}
+$accounts = $app->run_query($account_q, $account_params)->fetchAll();
+
+if (empty($accounts[0])) {
+	include(AppSettings::srcPath().'/includes/html_start.php');
+	?>
+	<div class="container-fluid">
+		<div class="panel panel-default" style="margin-top: 15px;">
+			<div class="panel-body">
+				Please specify a valid account ID.
+			</div>
+		</div>
+	</div>
+	<?php
+	include(AppSettings::srcPath().'/includes/html_stop.php');
+	die();
+}
+
 include(AppSettings::srcPath().'/includes/html_start.php');
+
 ?>
 <div class="container-fluid">
 	<?php
@@ -301,16 +326,6 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 		<div class="panel panel-info" style="margin-top: 15px;">
 			<div class="panel-heading">
 				<?php
-				$account_params = [
-					'user_id' => $thisuser->db_user['user_id']
-				];
-				$account_q = "SELECT ca.*, c.*, b.url_identifier AS blockchain_url_identifier, k.pub_key, ug.user_game_id FROM currency_accounts ca JOIN currencies c ON ca.currency_id=c.currency_id JOIN blockchains b ON c.blockchain_id=b.blockchain_id LEFT JOIN addresses a ON ca.current_address_id=a.address_id LEFT JOIN address_keys k ON a.address_id=k.address_id LEFT JOIN user_games ug ON ug.account_id=ca.account_id WHERE ca.user_id=:user_id";
-				if ($selected_account_id) {
-					$account_q .= " AND ca.account_id=:account_id";
-					$account_params['account_id'] = $selected_account_id;
-				}
-				$accounts = $app->run_query($account_q, $account_params)->fetchAll();
-				
 				$show_balances = false;
 				if (count($accounts) <= 50 || !empty($_REQUEST['show_balances'])) $show_balances = true;
 				
@@ -618,10 +633,18 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 							</div>';
 						?>
 						<div id="settings_<?php echo $account['account_id']; ?>" class="tab-pane<?php echo $account_selected_tab == "settings" ? ' active' : ' fade'; ?>">
-							<?php if ($account_game) { ?>
-								<form action="/accounts/?account_id=<?php echo $account['account_id']; ?>" method="post">
-									<input type="hidden" name="action" value="save_settings" />
-									<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
+							<form action="/accounts/?account_id=<?php echo $account['account_id']; ?>" method="post">
+								<input type="hidden" name="action" value="save_settings" />
+								<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
+								
+								<div class="form-group">
+									<label for="backups_enabled">Would you like to backup and export all addresses for this account?</label>
+									<select class="form-control" name="backups_enabled">
+										<option value="0">Disable backups</option>
+										<option value="1" <?php if ($account['backups_enabled'] == 1) echo 'selected="selected"'; ?>>Enable backups</option>
+									</select>
+								</div>
+								<?php if ($account_game) { ?>
 									<div class="form-group">
 										<label for="faucet_donations_on">Would you like to make recurring donations to the faucet account for <?php echo $account_game->db_game['name']; ?>?</label>
 										<select class="form-control" id="faucet_donations_on" name="faucet_donations_on" onChange="faucet_donations_on_changed(this);">
@@ -639,16 +662,16 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 											<input type="text" class="form-control" id="faucet_amount_each" name="faucet_amount_each" value="<?php echo $account['faucet_amount_each']; ?>" />
 										</div>
 									</div>
-									<button class="btn btn-sm btn-primary">Save Settings</button>
-								</form>
-								<script type="text/javascript">
-								function faucet_donations_on_changed(selectEl) {
-									if (selectEl.value == 0) document.getElementById('faucet_donation_params').style.display = "none";
-									else document.getElementById('faucet_donation_params').style.display = "block";
-								}
-								faucet_donations_on_changed(document.getElementById('faucet_donations_on'));
-								</script>
-							<?php } ?>
+									<script type="text/javascript">
+									function faucet_donations_on_changed(selectEl) {
+										if (selectEl.value == 0) document.getElementById('faucet_donation_params').style.display = "none";
+										else document.getElementById('faucet_donation_params').style.display = "block";
+									}
+									faucet_donations_on_changed(document.getElementById('faucet_donations_on'));
+									</script>
+								<?php } ?>
+								<button class="btn btn-sm btn-primary">Save Settings</button>
+							</form>
 						</div>
 						<?php
 						echo "</div>\n";

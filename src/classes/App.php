@@ -3349,7 +3349,9 @@ class App {
 			'game_id' => $game->db_game['game_id']
 		])->fetch();
 		
-		if ($address_set) {
+		$account = $this->fetch_account_by_id($account_id);
+		
+		if ($address_set && $account) {
 			$this->refresh_address_set_indices($address_set);
 			
 			$this->run_query("UPDATE address_sets SET applied=1 WHERE address_set_id=:address_set_id;", ['address_set_id'=>$address_set['address_set_id']]);
@@ -3359,9 +3361,8 @@ class App {
 				'address_set_id' => $address_set['address_set_id']
 			]);
 			
-			$this->run_query("UPDATE currency_accounts SET has_option_indices_until=:has_option_indices_until WHERE account_id=:account_id;", [
+			CurrencyAccount::updateAccount($this, $account, [
 				'has_option_indices_until' => $address_set['has_option_indices_until'],
-				'account_id' => $account_id
 			]);
 		}
 	}
@@ -3754,9 +3755,10 @@ class App {
 	}
 	
 	public function set_last_account_notified_value($account_id, $account_value) {
-		$this->run_query("UPDATE currency_accounts SET last_notified_account_value=:account_value WHERE account_id=:account_id;", [
+		$account = $this->fetch_account_by_id($account_id);
+		
+		CurrencyAccount::updateAccount($this, $account, [
 			'account_value' => $account_value,
-			'account_id' => $account_id
 		]);
 	}
 	
@@ -3771,10 +3773,9 @@ class App {
 		return $this->run_query("SELECT * FROM currency_invoice_ios WHERE invoice_id=:invoice_id;", ['invoice_id' => $invoice_id])->fetchAll();
 	}
 	
-	public function set_target_balance($account_id, $target_balance) {
-		$this->run_query("UPDATE currency_accounts SET target_balance=:target_balance WHERE account_id=:account_id;", [
+	public function set_target_balance(&$account, $target_balance) {
+		CurrencyAccount::updateAccount($this, $account, [
 			'target_balance' => $target_balance,
-			'account_id' => $account_id
 		]);
 	}
 	

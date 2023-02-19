@@ -24,10 +24,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 			
 			if ($address_key) {
 				if ($address_key['is_separator_address'] == 0 && $address_key['is_destroy_address'] == 0 && $address_key['is_passthrough_address'] == 0) {
-					$app->run_query("UPDATE currency_accounts SET current_address_id=:address_id WHERE account_id=:account_id;", [
-						'address_id' => $address_key['address_id'],
-						'account_id' => $account['account_id']
-					]);
+					CurrencyAccount::updateAccount($app, $account, ['current_address_id' => $address_key['address_id']]);
 					
 					$app->output_message(6, "This address has been set as primary for this account.", false);
 				}
