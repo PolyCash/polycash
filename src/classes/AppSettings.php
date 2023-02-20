@@ -166,5 +166,9 @@ class AppSettings {
 		if (empty(self::$settings->sqlite_db)) return "FLOOR(".$str.")";
 		else return "CAST(".$str." AS INT)";
 	}
+	
+	public static function defaultFromEmailAddress() {
+		return "no-reply@".explode(":", AppSettings::getParam('site_domain'))[0];
+	}
 }
 ?>

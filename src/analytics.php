@@ -1,7 +1,10 @@
 <?php
 require(AppSettings::srcPath()."/includes/connect.php");
 require(AppSettings::srcPath()."/includes/get_session.php");
+require(AppSettings::srcPath()."/includes/must_log_in.php");
+
 require(AppSettings::srcPath()."/classes/Analytics.php");
+
 $nav_tab_selected = "analytics";
 $pagetitle = AppSettings::getParam('site_name')." - Key Performance Indicators";
 
@@ -9,13 +12,7 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 ?>
 <div class="container-fluid">
 	<?php
-	if (!$thisuser) {
-		$redirect_url = $app->get_redirect_url($_SERVER['REQUEST_URI']);
-		$redirect_key = $redirect_url['redirect_key'];
-		
-		include(AppSettings::srcPath()."/includes/html_login.php");
-	}
-	else if (!$app->user_is_admin($thisuser)) {
+	if (!$app->user_is_admin($thisuser)) {
 		?>
 		You must be logged in as admin to manage currencies.
 		<?php

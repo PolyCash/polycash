@@ -420,9 +420,8 @@ else {
 					$claim_account = $app->fetch_account_by_id($account_id);
 					
 					if (empty($claim_account['user_id']) && $claim_account['game_id'] == $game->db_game['game_id'] && ($claim_account['is_game_sale_account'] || $claim_account['is_blockchain_sale_account'])) {
-						$app->run_query("UPDATE currency_accounts SET user_id=:user_id WHERE account_id=:account_id;", [
+						CurrencyAccount::updateAccount($app, $claim_account, [
 							'user_id' => $thisuser->db_user['user_id'],
-							'account_id' => $claim_account['account_id']
 						]);
 					}
 				}

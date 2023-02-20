@@ -107,7 +107,7 @@ if ($app->running_as_admin()) {
 											$priv_key = $blockchain->coin_rpc->dumpprivkey($address_key['pub_key']);
 											
 											if ($priv_key && is_string($priv_key)) {
-												$app->run_query("UPDATE address_keys SET priv_key=:priv_key WHERE address_key_id=:address_key_id;", [
+												$app->run_query("UPDATE address_keys SET priv_key=:priv_key, backed_up_at=NOW() WHERE address_key_id=:address_key_id;", [
 													'priv_key' => $priv_key,
 													'address_key_id' => $address_key['address_key_id']
 												]);

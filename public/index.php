@@ -27,6 +27,9 @@ else if ($uri_parts[1] == "unsubscribe") {
 else if ($uri_parts[1] == "wallet") {
 	include($src_path."/wallet.php");
 }
+else if ($uri_parts[1] == "accounts" && !empty($uri_parts[2]) && $uri_parts[2] == "backups") {
+	include($src_path."/backup_history.php");
+}
 else if ($uri_parts[1] == "accounts") {
 	include($src_path."/accounts.php");
 }

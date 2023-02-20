@@ -443,6 +443,11 @@ class App {
 		if (is_resource($target_balances_process)) $process_count++;
 		else $html .= "Failed to start a process for peer synchronization.\n";
 		
+		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/process_address_backups.php"';
+		$target_balances_process = $this->run_shell_command($cmd, $print_debug);
+		if (is_resource($target_balances_process)) $process_count++;
+		else $html .= "Failed to start a process for address backups.\n";
+		
 		$html .= "Started ".$process_count." background processes.\n";
 		return $html;
 	}
@@ -2777,7 +2782,7 @@ class App {
 		$message .= "<p><a href=\"".$login_url."\">".$login_url."</a></p>\n";
 		$message .= "<p>If you didn't try to sign in, please delete this email.</p>\n";
 		
-		$delivery_id = $this->mail_async($username, AppSettings::getParam('site_name'), "no-reply@".AppSettings::getParam('site_domain'), $subject, $message, "", "", "");
+		$delivery_id = $this->mail_async($username, AppSettings::getParam('site_name'), AppSettings::defaultFromEmailAddress(), $subject, $message, "", "", "");
 	}
 	
 	public function first_snippet_between($string, $delim1, $delim2) {
@@ -3349,7 +3354,9 @@ class App {
 			'game_id' => $game->db_game['game_id']
 		])->fetch();
 		
-		if ($address_set) {
+		$account = $this->fetch_account_by_id($account_id);
+		
+		if ($address_set && $account) {
 			$this->refresh_address_set_indices($address_set);
 			
 			$this->run_query("UPDATE address_sets SET applied=1 WHERE address_set_id=:address_set_id;", ['address_set_id'=>$address_set['address_set_id']]);
@@ -3359,9 +3366,8 @@ class App {
 				'address_set_id' => $address_set['address_set_id']
 			]);
 			
-			$this->run_query("UPDATE currency_accounts SET has_option_indices_until=:has_option_indices_until WHERE account_id=:account_id;", [
+			CurrencyAccount::updateAccount($this, $account, [
 				'has_option_indices_until' => $address_set['has_option_indices_until'],
-				'account_id' => $account_id
 			]);
 		}
 	}
@@ -3754,9 +3760,10 @@ class App {
 	}
 	
 	public function set_last_account_notified_value($account_id, $account_value) {
-		$this->run_query("UPDATE currency_accounts SET last_notified_account_value=:account_value WHERE account_id=:account_id;", [
+		$account = $this->fetch_account_by_id($account_id);
+		
+		CurrencyAccount::updateAccount($this, $account, [
 			'account_value' => $account_value,
-			'account_id' => $account_id
 		]);
 	}
 	
@@ -3771,10 +3778,9 @@ class App {
 		return $this->run_query("SELECT * FROM currency_invoice_ios WHERE invoice_id=:invoice_id;", ['invoice_id' => $invoice_id])->fetchAll();
 	}
 	
-	public function set_target_balance($account_id, $target_balance) {
-		$this->run_query("UPDATE currency_accounts SET target_balance=:target_balance WHERE account_id=:account_id;", [
+	public function set_target_balance(&$account, $target_balance) {
+		CurrencyAccount::updateAccount($this, $account, [
 			'target_balance' => $target_balance,
-			'account_id' => $account_id
 		]);
 	}
 	
@@ -3969,6 +3975,36 @@ class App {
 			$migrationsByToHash,
 			$migrationQuantity
 		];
+	}
+	
+	public function array2csv(array &$array)
+	{
+		if (count($array) == 0) return null;
+		
+		ob_start();
+		
+		$df = fopen("php://output", 'w');
+		
+		foreach ($array as $row) {
+			fputcsv($df, $row);
+		}
+		
+		fclose($df);
+		
+		return ob_get_clean();
+	}
+	
+	public function send_csv_headers($filename) {
+		$now = gmdate("D, d M Y H:i:s");
+		header("Cache-Control: max-age=0, no-cache, must-revalidate, proxy-revalidate");
+		header("Last-Modified: {$now} GMT");
+
+		header("Content-Type: application/force-download");
+		header("Content-Type: application/octet-stream");
+		header("Content-Type: application/download");
+
+		header("Content-Disposition: attachment;filename={$filename}");
+		header("Content-Transfer-Encoding: binary");
 	}
 }
 ?>

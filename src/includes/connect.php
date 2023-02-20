@@ -43,6 +43,7 @@ header('Content-Type: text/html; charset=UTF-8');
 
 include(AppSettings::srcPath()."/classes/Api.php");
 include(AppSettings::srcPath()."/classes/App.php");
+include(AppSettings::srcPath()."/classes/CurrencyAccount.php");
 include(AppSettings::srcPath()."/classes/JsonRPCClient.php");
 include(AppSettings::srcPath()."/classes/Blockchain.php");
 include(AppSettings::srcPath()."/classes/BlockchainVerifier.php");

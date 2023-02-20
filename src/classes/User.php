@@ -146,9 +146,8 @@ class User {
 			$address_key = $this->app->new_normal_address_key($currency_id, $account);
 			
 			if ($address_key) {
-				$this->app->run_query("UPDATE currency_accounts SET current_address_id=:current_address_id WHERE account_id=:account_id;", [
+				CurrencyAccount::updateAccount($this->app, $account, [
 					'current_address_id' => $address_key['address_id'],
-					'account_id' => $account['account_id']
 				]);
 			}
 			
@@ -327,9 +326,8 @@ class User {
 			}
 			
 			if ($has_option_indices_until !== false) {
-				$this->app->run_query("UPDATE currency_accounts SET has_option_indices_until=:has_option_indices_until WHERE account_id=:account_id;", [
+				CurrencyAccount::updateAccount($this->app, $account, [
 					'has_option_indices_until' => $has_option_indices_until,
-					'account_id' => $user_game['account_id']
 				]);
 			}
 		}
@@ -384,9 +382,8 @@ class User {
 			$address_key = $this->app->new_normal_address_key($currency['currency_id'], $account);
 			
 			if ($address_key) {
-				$this->app->run_query("UPDATE currency_accounts SET current_address_id=:address_id WHERE account_id=:account_id;", [
-					'address_id' => $address_key['address_id'],
-					'account_id' => $account['account_id']
+				CurrencyAccount::updateAccount($this->app, $account, [
+					'current_address_id' => $address_key['address_id'],
 				]);
 			}
 		}
