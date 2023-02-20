@@ -15,7 +15,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 				'user_game_id' => $user_game['user_game_id']
 			]);
 			
-			$email = $app->normalize_username($_REQUEST['email']);
+			$email = $_REQUEST['email'];
 			if ($email != $thisuser->db_user['notification_email']) {
 				$app->run_query("UPDATE users SET notification_email=:notification_email WHERE user_id=:user_id;", [
 					'notification_email' => $email,
