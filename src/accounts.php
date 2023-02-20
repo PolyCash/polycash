@@ -504,12 +504,10 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 						echo '</a></div>';
 						echo "</div>\n";
 						
-						if (isset($export_message) || $account['backups_enabled']) {
-							if ($account['backups_enabled']) {
-								$backup_addresses = CurrencyAccount::fetchAccountAddressesNeedingBackup($app, $account);
-								$export_addresses = CurrencyAccount::fetchAccountAddressesNeedingExport($app, $account);
-								$last_export_at = CurrencyAccount::getLastExportInAccount($app, $account);
-							}
+						$backup_addresses = CurrencyAccount::fetchAccountAddressesNeedingBackup($app, $account);
+						$export_addresses = CurrencyAccount::fetchAccountAddressesNeedingExport($app, $account);
+						
+						if (isset($export_message) || count($backup_addresses) > 0 || count($export_addresses) > 0) {
 							?>
 							<div style="margin: 20px 0px;">
 								<?php if (isset($export_message)) { ?>
@@ -517,28 +515,18 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 								<?php } ?>
 								<?php if ($account['backups_enabled']) { ?>
 									<?php if (count($backup_addresses) > 0) { ?>
-										<font class="text-warning">You have <?php echo number_format(count($backup_addresses)); ?> addresses that need to be backed up.</font><br/>
+										<font class="text-warning">You have <?php echo number_format(count($backup_addresses)).(count($backup_addresses) == 1 ? " address that needs" : " addresses that need"); ?> to be backed up.</font><br/>
 									<?php } ?>
 									<?php if (count($export_addresses) > 0) { ?>
 										<form method="post" action="/accounts/?account_id=<?php echo $account['account_id']; ?>">
 											<input type="hidden" name="account_id" value="<?php echo $account['account_id']; ?>" />
 											<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
 											<input type="hidden" name="action" value="export_addresses" />
-											<font class="text-success">You have <?php echo number_format(count($export_addresses)); ?> addresses ready for backup.</font> &nbsp; 
+											<font class="text-success">You have <?php echo number_format(count($export_addresses)).(count($export_addresses) == 1 ? " address" : " addresses"); ?> ready for backup.</font> &nbsp; 
 											<button class="btn btn-sm btn-success">Save to CSV</button>
 											<br/>
 										</form>
 									<?php } ?>
-								<?php } ?>
-								<?php if (isset($last_export_at)) { ?>
-									<form method="post" action="/accounts/?account_id=<?php echo $account['account_id']; ?>">
-										<input type="hidden" name="account_id" value="<?php echo $account['account_id']; ?>" />
-										<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
-										<input type="hidden" name="action" value="reset_export_addresses" />
-										Last backed up addresses <?php echo date("M d, Y g:ia", strtotime($last_export_at)); ?>. &nbsp; 
-										<button class="btn btn-sm btn-success">Backup Again</button>
-										<br/>
-									</form>
 								<?php } ?>
 							</div>
 							<?php
@@ -735,6 +723,20 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 							</div>';
 						?>
 						<div id="settings_<?php echo $account['account_id']; ?>" class="tab-pane<?php echo $account_selected_tab == "settings" ? ' active' : ' fade'; ?>">
+							<?php
+							$last_export_at = CurrencyAccount::getLastExportInAccount($app, $account);
+							?>
+							<?php if (isset($last_export_at)) { ?>
+								<form method="post" action="/accounts/?account_id=<?php echo $account['account_id']; ?>" style="margin: 15px 0px;">
+									<input type="hidden" name="account_id" value="<?php echo $account['account_id']; ?>" />
+									<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
+									<input type="hidden" name="action" value="reset_export_addresses" />
+									Last backed up addresses <?php echo date("M d, Y g:ia", strtotime($last_export_at)); ?>. &nbsp; 
+									<button class="btn btn-sm btn-success">Backup Again</button>
+									<br/>
+								</form>
+							<?php } ?>
+							
 							<form action="/accounts/?account_id=<?php echo $account['account_id']; ?>" method="post">
 								<input type="hidden" name="action" value="save_settings" />
 								<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
