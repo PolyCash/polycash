@@ -3041,6 +3041,20 @@ var PageManager = function() {
 			});
 		}
 	};
+	this.open_backup_details = function(backup_id) {
+		$.ajax({
+			url: "/ajax/backup_details.php",
+			type: "GET",
+			dataType: "json",
+			data: {
+				backup_id: backup_id,
+			},
+			success: function(details) {
+				$('#backup_details_modal').modal('show');
+				$('#backup_details_inner').html(details.renderedContent);
+			}
+		});
+	};
 }
 
 var thisPageManager = new PageManager();

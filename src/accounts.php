@@ -1,6 +1,7 @@
 <?php
 require(AppSettings::srcPath().'/includes/connect.php');
 require(AppSettings::srcPath().'/includes/get_session.php');
+require(AppSettings::srcPath()."/includes/must_log_in.php");
 
 $action = "";
 if (!empty($_REQUEST['action'])) $action = $_REQUEST['action'];
@@ -303,6 +304,22 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 						
 						echo $app->array2csv($csv_arr);
 						
+						$backup = CurrencyAccount::recordBackup($app, $thisuser, $export_account, $export_address_key_ids, $_SERVER['REMOTE_ADDR']);
+						
+						if (!empty(AppSettings::getParam('sendgrid_api_key')) && strpos($thisuser->db_user['username'], "@") !== false || strpos($thisuser->db_user['notification_email'], "@") !== false) {
+							$cc = "";
+							if (strpos($thisuser->db_user['username'], "@") !== false) {
+								$to_email = $thisuser->db_user['username'];
+								if (!empty($thisuser->db_user['notification_email']) && strpos($thisuser->db_user['notification_email'], "@") !== false && $thisuser->db_user['notification_email'] != $to_email) $cc = $thisuser->db_user['notification_email'];
+							}
+							else if (strpos($thisuser->db_user['notification_email'], "@") !== false) $to_email = $thisuser->db_user['notification_email'];
+							
+							$subject = "Someone just exported ".count($export_addresses)." private key".(count($export_addresses) == 1 ? "" : "s")." from your account #".$export_account['account_id'];
+							$message = "For more information please follow this link:<br/>".AppSettings::getParam('base_url')."/accounts/backups/?view_backup_id=".$backup['backup_id'];
+							
+							$delivery_id = $app->mail_async($to_email, AppSettings::getParam('site_name'), AppSettings::defaultFromEmailAddress(), $subject, $message, "", $cc, null);
+						}
+						
 						$app->run_query("UPDATE address_keys SET exported_backup_at=NOW() WHERE address_key_id IN (".implode(",", $export_address_key_ids).");");
 						
 						die();
@@ -426,10 +443,13 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 					}
 					else $account_game = false;
 					
-					if ($selected_account_id && $account_game) {
+					if ($selected_account_id) {
 						echo '<p>';
-						echo '<a href="/wallet/'.$account_game->db_game['url_identifier'].'/?action=change_user_game&user_game_id='.$account['user_game_id'].'" class="btn btn-sm btn-success">Play Now</a> ';
-						echo '<a href="/explorer/games/'.$account_game->db_game['url_identifier'].'/my_bets/?user_game_id='.$account['user_game_id'].'" class="btn btn-sm btn-primary">My Bets</a>';
+						if ($account_game) {
+							echo '<a href="/wallet/'.$account_game->db_game['url_identifier'].'/?action=change_user_game&user_game_id='.$account['user_game_id'].'" class="btn btn-sm btn-success">Play Now</a> ';
+							echo '<a href="/explorer/games/'.$account_game->db_game['url_identifier'].'/my_bets/?user_game_id='.$account['user_game_id'].'" class="btn btn-sm btn-primary">My Bets</a> ';
+						}
+						echo '<a href="/accounts/backups" class="btn btn-sm btn-warning">Backup History</a>';
 						echo '</p>';
 					}
 					
@@ -731,7 +751,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 									<input type="hidden" name="account_id" value="<?php echo $account['account_id']; ?>" />
 									<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
 									<input type="hidden" name="action" value="reset_export_addresses" />
-									Last backed up addresses <?php echo date("M d, Y g:ia", strtotime($last_export_at)); ?>. &nbsp; 
+									Last backed up addresses <?php echo date("M d, Y g:ia", strtotime($last_export_at)); ?>. &nbsp; <a href="/accounts/backups">See Details</a>. &nbsp; 
 									<button class="btn btn-sm btn-success">Backup Again</button>
 									<br/>
 								</form>

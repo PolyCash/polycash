@@ -2782,7 +2782,7 @@ class App {
 		$message .= "<p><a href=\"".$login_url."\">".$login_url."</a></p>\n";
 		$message .= "<p>If you didn't try to sign in, please delete this email.</p>\n";
 		
-		$delivery_id = $this->mail_async($username, AppSettings::getParam('site_name'), "no-reply@".AppSettings::getParam('site_domain'), $subject, $message, "", "", "");
+		$delivery_id = $this->mail_async($username, AppSettings::getParam('site_name'), AppSettings::defaultFromEmailAddress(), $subject, $message, "", "", "");
 	}
 	
 	public function first_snippet_between($string, $delim1, $delim2) {

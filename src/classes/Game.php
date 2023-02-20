@@ -939,7 +939,7 @@ class Game {
 		$message .= "<p>To start playing, accept your invitation by following <a href=\"".AppSettings::getParam('base_url')."/wallet/".$this->db_game['url_identifier']."/?invite_key=".$invitation['invitation_key']."\">this link</a>.</p>";
 		$message .= "<p>This message was sent to you by ".AppSettings::getParam('site_name')."</p>";
 		
-		$email_id = $this->blockchain->app->mail_async($to_email, AppSettings::getParam('site_name'), "no-reply@".AppSettings::getParam('site_domain'), $subject, $message, "", "", "");
+		$email_id = $this->blockchain->app->mail_async($to_email, AppSettings::getParam('site_name'), AppSettings::defaultFromEmailAddress(), $subject, $message, "", "", "");
 		
 		$this->blockchain->app->run_query("UPDATE game_invitations SET sent_email_id=:sent_email_id WHERE invitation_id=:invitation_id;", [
 			'sent_email_id' => $email_id,

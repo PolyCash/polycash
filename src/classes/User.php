@@ -383,7 +383,7 @@ class User {
 			
 			if ($address_key) {
 				CurrencyAccount::updateAccount($this->app, $account, [
-					'address_id' => $address_key['address_id'],
+					'current_address_id' => $address_key['address_id'],
 				]);
 			}
 		}

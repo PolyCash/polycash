@@ -56,7 +56,7 @@ while ($db_running_game = $running_games->fetch()) {
 						
 						$delivery_key = $app->random_string(16);
 						
-						$app->mail_async($user_game['notification_email'], AppSettings::getParam('site_name'), "no-reply@".AppSettings::getParam('site_domain'), $subject, $message, "", "", $delivery_key);
+						$app->mail_async($user_game['notification_email'], AppSettings::getParam('site_name'), AppSettings::defaultFromEmailAddress(), $subject, $message, "", "", $delivery_key);
 						
 						$app->run_query("UPDATE user_games SET latest_speedup_reminder_time=".time().", auto_stake_key='".$auto_stake_key."', auto_stake_tx_hash=NULL WHERE user_game_id=:user_game_id;", [
 							'user_game_id' => $user_game['user_game_id']
@@ -121,7 +121,7 @@ while ($db_running_game = $running_games->fetch()) {
 						$message_html .= $faucet_txt."<br/><br/>\n";
 						$message_html .= "To stop receiving these notifications please <a href=\"".AppSettings::getParam('base_url')."/wallet/".$running_game->db_game['url_identifier']."/?action=unsubscribe&delivery_key=".$delivery_key."\">click here to unsubscribe</a></p>\n";
 						
-						$app->mail_async($notify_user['notification_email'], AppSettings::getParam('site_name'), "no-reply@".AppSettings::getParam('site_domain'), $subject, $message_html, "", "", $delivery_key);
+						$app->mail_async($notify_user['notification_email'], AppSettings::getParam('site_name'), AppSettings::defaultFromEmailAddress(), $subject, $message_html, "", "", $delivery_key);
 						
 						$app->set_latest_event_reminder_time($notify_user['user_game_id'], time());
 					}

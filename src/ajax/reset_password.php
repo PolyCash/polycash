@@ -40,7 +40,7 @@ if ($email != "") {
 		$message .= "<p><a href=\"".$reset_link."\">".$reset_link."</a></p>";
 		$message .= "<p>Sent by <a href=\"".AppSettings::getParam('base_url')."\">".AppSettings::getParam('site_name')."</a></p>";
 		
-		$res = $app->mail_async($db_user['notification_email'], AppSettings::getParam('site_name'), "no-reply@".AppSettings::getParam('site_domain'), $subject, $message, "", "", "");
+		$res = $app->mail_async($db_user['notification_email'], AppSettings::getParam('site_name'), AppSettings::defaultFromEmailAddress(), $subject, $message, "", "", "");
 		
 		echo $success_msg;
 	}

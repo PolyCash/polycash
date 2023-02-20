@@ -127,7 +127,7 @@ if ($app->running_as_admin()) {
 			
 			$message_html = "<p>You have bets in ".AppSettings::getParam('site_name')." which were resolved in the past 24 hours.<br/>\nTo stop receiving these notifications please <a href=\"".AppSettings::getParam('base_url')."/wallet/?action=unsubscribe&delivery_key=".$delivery_key."\">click here to unsubscribe</a></p>\n".$html;
 			
-			$app->mail_async($email, AppSettings::getParam('site_name'), "no-reply@".AppSettings::getParam('site_domain'), "Your bets have been paid out", $message_html, "", "", $delivery_key);
+			$app->mail_async($email, AppSettings::getParam('site_name'), AppSettings::defaultFromEmailAddress(), "Your bets have been paid out", $message_html, "", "", $delivery_key);
 			
 			echo "Sent binary notifications to ".$email."<br/>\n";
 		}
@@ -203,7 +203,7 @@ if ($app->running_as_admin()) {
 			
 			$message_html = "<p>You have outstanding positions in ".AppSettings::getParam('site_name')." games.<br/>\nTo stop receiving these notifications please <a href=\"".AppSettings::getParam('base_url')."/wallet/?action=unsubscribe&delivery_key=".$delivery_key."\">click here to unsubscribe</a></p>\n".$html;
 			
-			$app->mail_async($email, AppSettings::getParam('site_name'), "no-reply@".AppSettings::getParam('site_domain'), "Your positions have changed in value", $message_html, "", "", $delivery_key);
+			$app->mail_async($email, AppSettings::getParam('site_name'), AppSettings::defaultFromEmailAddress(), "Your positions have changed in value", $message_html, "", "", $delivery_key);
 			
 			echo "Sent linear notifications to ".$email."<br/>\n";
 		}
