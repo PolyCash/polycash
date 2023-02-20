@@ -29,9 +29,11 @@
 			<td style="vertical-align: top;">Addresses:</td>
 			<td>
 				<?php echo count($address_keys)." address".(count($address_keys) == 1 ? "" : "es"); ?><br/>
-				<?php foreach ($address_keys as $address_key) { ?>
-					<?php echo $address_key['pub_key']; ?><br/>
-				<?php } ?>
+				<div style="max-height: 300px; overflow-y: scroll; overflow-x: hidden; padding: 10px 10px 10px 0px;">
+					<?php foreach ($address_keys as $address_key) { ?>
+						<?php echo $address_key['pub_key']; ?><br/>
+					<?php } ?>
+				</div>
 			</td>
 		</tr>
 	</table>
