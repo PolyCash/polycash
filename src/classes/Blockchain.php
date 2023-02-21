@@ -237,6 +237,12 @@ class Blockchain {
 		
 		if ($this->db_blockchain['p2p_mode'] == "rpc") {
 			$rpc_block = (array)($this->coin_rpc->getblock($block_hash));
+			if (!array_key_exists('tx', $rpc_block)) {
+				if ($print_debug) $this->app->print_debug("getblock $block_hash failed in Blockchain->add_block_fast.");
+				$this->app->dbh->commit();
+				return true;
+			}
+			
 			$num_tx_in_block = count($rpc_block['tx']);
 			$time_mined = $rpc_block['time'];
 		}
@@ -1690,7 +1696,7 @@ class Blockchain {
 				}
 				else if ($print_debug) $this->app->print_debug("No fork detected.");
 			}
-			else if ($print_debug) $this->app->print_debug("Skipping fork check, coin daemon failed to return the number of confirmations.");
+			else if ($print_debug) $this->app->print_debug("Skipping fork check, coin daemon failed to return the number of confirmations on block ".$db_block['block_hash']);
 		}
 		else if ($print_debug) $this->app->print_debug("Skipping fork check, coin daemon failed to load.");
 	}
