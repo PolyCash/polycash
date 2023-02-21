@@ -586,3 +586,17 @@ a.selected {
 	line-height: 21px;
 	cursor: pointer;
 }
+.option_address_link_icon {
+	font-size: 85%;
+	padding: 4px;
+	margin: 0px 5px;
+	cursor: pointer;
+}
+.option_address_link_section {
+	display: inline-block;
+}
+.option_address_dropdown {
+	min-width: 240px ! important;
+	padding: 10px ! important;
+	margin-left: -100px ! important;
+}

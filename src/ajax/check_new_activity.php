@@ -102,8 +102,11 @@ if ($include_betting_events) {
 	$these_events = $game->events_by_block($blockchain_last_block_id+1, $filter_arr);
 	$show_intro_text = false;
 
+	if ($thisuser && !empty($user_game['account_id'])) $account = $app->fetch_account_by_id($user_game['account_id']);
+	else $account = null;
+	
 	for ($render_event_i=0; $render_event_i<count($these_events); $render_event_i++) {
-		$rendered_event = $these_events[$render_event_i]->event_html($thisuser, $show_intro_text, true, $instance_id, $render_event_i);
+		$rendered_event = $these_events[$render_event_i]->event_html($thisuser, $show_intro_text, true, $instance_id, $render_event_i, $account);
 		$rendered_event_hash = hash("sha256", $rendered_event);
 		$rendered_event_hash = substr($rendered_event_hash, 0, 8);
 		$display_event_ids .= $these_events[$render_event_i]->db_event['event_id'].",";

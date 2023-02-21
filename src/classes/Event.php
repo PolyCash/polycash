@@ -98,13 +98,14 @@ class Event {
 		return $output_arr;
 	}
 	
-	public function event_html($user, $show_intro_text, $clickable, $game_instance_id, $game_event_index) {
+	public function event_html($user, $show_intro_text, $clickable, $game_instance_id, $game_event_index, $account=null) {
 		return $this->game->blockchain->app->render_view('event', [
 			'app' => $this->game->blockchain->app,
 			'blockchain' => $this->game->blockchain,
 			'game' => $this->game,
 			'event' => $this,
 			'user' => $user,
+			'account' => $account,
 			'show_intro_text' => $show_intro_text,
 			'clickable' => $clickable,
 			'game_instance_id' => $game_instance_id,
