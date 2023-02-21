@@ -1330,7 +1330,11 @@ class Game {
 		$js = "";
 		
 		$user_id = false;
-		if ($user) $user_game = $this->blockchain->app->fetch_user_game($user->db_user['user_id'], $this->game_id);
+		$account = null;
+		if ($user) {
+			$user_game = $this->blockchain->app->fetch_user_game($user->db_user['user_id'], $this->game_id);
+			$account = $this->blockchain->app->fetch_account_by_id($user_game['account_id']);
+		}
 		
 		if (!$include_content) {
 			$js .= "for (var i=0; i<games[".$game_index."].events.length; i++) {\n";
@@ -1361,7 +1365,7 @@ class Game {
 			}
 			$html .= "<div id='game".$game_index."_event".$i."' class='game_event_inner'><div id='game".$game_index."_event".$i."_display' class='game_event_display'>";
 			
-			$html .= $these_events[$i]->event_html($user, false, true, $game_index, $i);
+			$html .= $these_events[$i]->event_html($user, false, true, $game_index, $i, $account);
 			
 			$html .= "</div><div id='game".$game_index."_event".$i."_my_current_votes'>";
 			if ($user) $html .= $these_events[$i]->my_votes_table($current_round, $user_game);

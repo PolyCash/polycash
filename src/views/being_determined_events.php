@@ -30,12 +30,15 @@
 				<?php
 			}
 			
+			if ($user_game) $account = $game->blockchain->app->fetch_account_by_id($user_game['account_id']);
+			else $account = null;
+			
 			$render_event_i = 0;
 			foreach ($events as $event) {
 				?>
 				<div class="col-sm-6">
 					<div style="width: 100%; padding: 0px 8px; border: 1px solid #aaa; background-color: #fff;">
-						<?php echo $event->event_html($thisuser, false, true, null, $render_event_i); ?>
+						<?php echo $event->event_html($thisuser, false, true, null, $render_event_i, $account); ?>
 						<?php if ($user_game) echo $event->my_votes_table($round_id, $user_game); ?>
 					</div>
 				</div>
