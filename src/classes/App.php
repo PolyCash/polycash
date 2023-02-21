@@ -200,7 +200,7 @@ class App {
 	}
 	
 	public function normalize_username($username) {
-		return $this->make_alphanumeric(strip_tags($username), "$-()/!.,:;#@");
+		return $this->make_alphanumeric(strip_tags($username), "$-()/!.,:;#@+");
 	}
 	
 	public function normalize_password($password, $salt) {
