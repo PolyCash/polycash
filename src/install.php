@@ -2,7 +2,7 @@
 ini_set('memory_limit', '1024M');
 
 $src_path = realpath(dirname(dirname(__FILE__)))."/src";
-require_once($src_path."/classes/AppSettings.php");
+require_once($src_path."/models/AppSettings.php");
 
 $skip_select_db = TRUE;
 require($src_path."/includes/connect.php");

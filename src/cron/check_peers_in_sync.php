@@ -1,6 +1,6 @@
 <?php
 require_once(dirname(dirname(__FILE__))."/includes/connect.php");
-require_once(dirname(dirname(__FILE__))."/classes/CoinbaseClient.php");
+require_once(dirname(dirname(__FILE__))."/models/CoinbaseClient.php");
 
 $script_start_time = microtime(true);
 

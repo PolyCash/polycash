@@ -1,5 +1,5 @@
 <?php
-require_once(dirname(__FILE__)."/classes/AppSettings.php");
+require_once(dirname(__FILE__)."/models/AppSettings.php");
 /*
 To use custom logic, install this PHP script on a webserver
 Then enter it's URL into your user account under the Strategy tab.

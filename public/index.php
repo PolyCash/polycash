@@ -1,7 +1,7 @@
 <?php
 $src_path = realpath(dirname(dirname(__FILE__)))."/src";
-require($src_path."/classes/Router.php");
-require($src_path."/classes/AppSettings.php");
+require($src_path."/models/Router.php");
+require($src_path."/models/AppSettings.php");
 AppSettings::load();
 
 $uri = $_SERVER['REQUEST_URI'];

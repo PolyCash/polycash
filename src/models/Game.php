@@ -1944,6 +1944,8 @@ class Game {
 			if ($print_debug) $this->blockchain->app->print_debug("Coins in existence: ".$ref_supply.", pending bets: ".$pending_bets);
 			
 			$new_pow_reward = round(($ref_supply+$pending_bets)*$initial_reward_per_supply, $this->db_game['decimal_places']);
+			
+			$this->blockchain->app->log_message("Determined POW reward on block #".$adjustment_block.": (".$ref_supply."+".$pending_bets.")*".$initial_reward_per_supply."=".$new_pow_reward);
 		}
 		
 		return $new_pow_reward;

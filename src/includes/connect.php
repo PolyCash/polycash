@@ -1,6 +1,6 @@
 <?php
 $pageload_start_time = microtime(true);
-require_once(dirname(dirname(__FILE__))."/classes/AppSettings.php");
+require_once(dirname(dirname(__FILE__))."/models/AppSettings.php");
 AppSettings::load();
 
 if (!AppSettings::runningFromCommandline() && !empty(AppSettings::getParam('restrict_ip_address'))) {
@@ -41,20 +41,20 @@ date_default_timezone_set(AppSettings::getParam('default_timezone'));
 
 header('Content-Type: text/html; charset=UTF-8');
 
-include(AppSettings::srcPath()."/classes/Api.php");
-include(AppSettings::srcPath()."/classes/App.php");
-include(AppSettings::srcPath()."/classes/CurrencyAccount.php");
-include(AppSettings::srcPath()."/classes/JsonRPCClient.php");
-include(AppSettings::srcPath()."/classes/Blockchain.php");
-include(AppSettings::srcPath()."/classes/BlockchainVerifier.php");
-include(AppSettings::srcPath()."/classes/EscrowAmount.php");
-include(AppSettings::srcPath()."/classes/Event.php");
-include(AppSettings::srcPath()."/classes/Game.php");
-include(AppSettings::srcPath()."/classes/GameDefinition.php");
-include(AppSettings::srcPath()."/classes/PeerVerifier.php");
-include(AppSettings::srcPath()."/classes/User.php");
+include(AppSettings::srcPath()."/models/Api.php");
+include(AppSettings::srcPath()."/models/App.php");
+include(AppSettings::srcPath()."/models/CurrencyAccount.php");
+include(AppSettings::srcPath()."/models/JsonRPCClient.php");
+include(AppSettings::srcPath()."/models/Blockchain.php");
+include(AppSettings::srcPath()."/models/BlockchainVerifier.php");
+include(AppSettings::srcPath()."/models/EscrowAmount.php");
+include(AppSettings::srcPath()."/models/Event.php");
+include(AppSettings::srcPath()."/models/Game.php");
+include(AppSettings::srcPath()."/models/GameDefinition.php");
+include(AppSettings::srcPath()."/models/PeerVerifier.php");
+include(AppSettings::srcPath()."/models/User.php");
 
-if (AppSettings::getParam('pageview_tracking_enabled')) include(AppSettings::srcPath()."/classes/PageviewController.php");
+if (AppSettings::getParam('pageview_tracking_enabled')) include(AppSettings::srcPath()."/models/PageviewController.php");
 
 if (empty($skip_select_db)) $skip_select_db = false;
 $app = new App($skip_select_db);

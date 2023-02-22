@@ -3,7 +3,7 @@ require(AppSettings::srcPath()."/includes/connect.php");
 require(AppSettings::srcPath()."/includes/get_session.php");
 require(AppSettings::srcPath()."/includes/must_log_in.php");
 
-require(AppSettings::srcPath()."/classes/Analytics.php");
+require(AppSettings::srcPath()."/models/Analytics.php");
 
 $nav_tab_selected = "analytics";
 $pagetitle = AppSettings::getParam('site_name')." - Key Performance Indicators";

@@ -2,7 +2,7 @@
 ini_set('memory_limit', '4096M');
 set_time_limit(0);
 require_once(dirname(dirname(__FILE__))."/includes/connect.php");
-require_once(dirname(dirname(__FILE__))."/classes/PeerVerifier.php");
+require_once(dirname(dirname(__FILE__))."/models/PeerVerifier.php");
 
 $allowed_params = ['mode','game_identifier','blockchain_identifier'];
 $app->safe_merge_argv_to_request($argv, $allowed_params);

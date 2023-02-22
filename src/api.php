@@ -67,7 +67,7 @@ if ($uri_parts[1] == "api") {
 		
 		$fh = fopen($fname, 'r');
 		$raw = fread($fh, filesize($fname));
-		$raw = str_replace('require_once(dirname(__FILE__)."/classes/AppSettings.php");', '', $raw);
+		$raw = str_replace('require_once(dirname(__FILE__)."/models/AppSettings.php");', '', $raw);
 		$raw = str_replace('$access_key = AppSettings::getParam(\'operator_key\')', '$access_key = "\''.$example_password.'\'"', $raw);
 		$raw = str_replace('AppSettings::getParam(\'operator_key\')', "'".$example_password."'", $raw);
 		
