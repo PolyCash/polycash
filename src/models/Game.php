@@ -1928,6 +1928,8 @@ class Game {
 		
 		if ($ref_supply_block <= $genesis_tx['block_id']) $new_pow_reward = $this->db_game['initial_pow_reward'];
 		else {
+			$this->blockchain->app->dbh->beginTransaction();
+			
 			$initial_reward_per_supply = $this->db_game['initial_pow_reward']/$this->db_game['genesis_amount'];
 			$ref_supply = $this->coins_in_existence($ref_supply_block, false)/pow(10, $this->db_game['decimal_places']);
 			
@@ -1940,6 +1942,8 @@ class Game {
 				$pending_bets += ((int)$unpaid_bets_info['destroy_amount'])/pow(10, $this->db_game['decimal_places']);
 			}
 			else $pending_bets = 0;
+			
+			$this->blockchain->app->dbh->commit();
 			
 			if ($print_debug) $this->blockchain->app->print_debug("Coins in existence: ".$ref_supply.", pending bets: ".$pending_bets);
 			
