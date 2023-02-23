@@ -908,7 +908,7 @@ class Game {
 		else $display_value = 0;
 		
 		if ($display_value > 0) {
-			$html .= "&nbsp;=&nbsp;".$this->blockchain->app->format_bignum($display_value)." ".$display_currency['short_name_plural'];
+			$html .= "&nbsp;=&nbsp;".$this->blockchain->app->format_bignum($display_value, false)." ".$display_currency['short_name_plural'];
 		}
 		
 		$html .= ")</font>";

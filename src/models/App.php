@@ -591,19 +591,19 @@ class App {
 		}
 	}
 	
-	public function to_significant_digits($number, $significant_digits) {
+	public function to_significant_digits($number, $significant_digits, $err_lower=true) {
 		if ($number == 0) return 0;
 		$number_digits = floor(log10($number));
-		$returnval = (pow(10, $number_digits - $significant_digits + 1)) * floor($number/(pow(10, $number_digits - $significant_digits + 1)));
-		return $returnval;
+		if ($err_lower) return (pow(10, $number_digits - $significant_digits + 1)) * floor($number/(pow(10, $number_digits - $significant_digits + 1)));
+		else return (pow(10, $number_digits - $significant_digits + 1)) * round($number/(pow(10, $number_digits - $significant_digits + 1)));
 	}
 
-	public function format_bignum($number) {
+	public function format_bignum($number, $err_lower=true) {
 		if ($number >= 0) $sign = "";
 		else $sign = "-";
 		
 		$number = abs($number);
-		if ($number > 1) $number = $this->to_significant_digits($number, 5);
+		if ($number > 1) $number = $this->to_significant_digits($number, 5, $err_lower);
 		
 		if ($number >= pow(10, 9)) {
 			return $sign.($number/pow(10, 9))."B";
@@ -628,8 +628,8 @@ class App {
 		if ($number >= 50) $min_decimals = 0;
 		else $min_decimals = 2;
 
-		$max_decimals = 15;
-		$number = $this->to_significant_digits($number, $max_decimals-1);
+		$max_decimals = 12;
+		$number = $this->to_significant_digits($number, $max_decimals-1, false);
 		
 		$decimal_places = $min_decimals;
 		$keep_looping = true;
