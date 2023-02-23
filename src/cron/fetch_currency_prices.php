@@ -10,12 +10,14 @@ if ($app->running_as_admin()) {
 	$fetch_frequency_sec = AppSettings::getParam('currency_price_refresh_seconds');
 	if (empty($fetch_frequecy_sec)) $fetch_frequecy_sec = 5*60;
 	
-	$usd_per_btc_info = $app->exchange_rate_between_currencies(1, 6, time(), 6);
+	$last_price_refresh_at = $app->get_site_constant("last_price_refresh_at");
 	
-	if (time()-$usd_per_btc_info['time'] >= $fetch_frequency_sec || !empty($_REQUEST['force'])) {
+	if (empty($last_price_refresh_at) || $last_price_refresh_at < time()-$fetch_frequency_sec || !empty($_REQUEST['force'])) {
 		$app->update_all_currency_prices();
 		
-		echo "Done fetching currency prices at ".round(microtime(true)-$script_start_time, 2)." seconds.<br/>\n";
+		$app->set_site_constant("last_price_refresh_at", time());
+		
+		echo "Done fetching currency prices at ".round(microtime(true)-$script_start_time, 2)." seconds.\n";
 	}
 	else echo "Skipping.. currency prices are updated only every ".$fetch_frequency_sec." seconds.\n";
 }

@@ -180,7 +180,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 							
 							$html .= '<div class="form-group">';
 							$html .= '<label for="join_tx_fee">Transaction fee:</label>';
-							$html .= '<input id="join_tx_fee" type="text" class="form-control" value="'.($db_game ? $db_game['default_transaction_fee'] : "").'" />';
+							$html .= '<input id="join_tx_fee" type="text" class="form-control" value="'.(isset($db_game) ? $db_game['default_transaction_fee'] : "").'" />';
 							$html .= "</div>\n";
 							
 							$html .= '<button class="btn btn-primary">Join UTXOs</button>'."\n";
