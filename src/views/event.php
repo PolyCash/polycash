@@ -380,7 +380,7 @@ for ($i=0; $i<count($round_stats); $i++) {
 		<?php } ?>
 		
 		<?php
-		if ($account && $last_block_id < $event->db_event['event_final_block'] && $last_block_id >= $event->db_event['event_starting_block']) {
+		if ($account && $last_block_id < $event->db_event['event_final_block'] && $last_block_id+1 >= $event->db_event['event_starting_block']) {
 			$addresses = $app->fetch_addresses_in_account($account, $round_stats[$i]['option_index'], 1);
 			if (!empty($addresses[0])) {
 				?>
