@@ -396,16 +396,19 @@ class Game {
 			'block_id' => $block_height
 		]);
 		
+		$this->blockchain->app->run_query("DELETE FROM transaction_game_ios WHERE game_id=:game_id AND game_io_index IS NULL;", [
+			'game_id' => $this->db_game['game_id']
+		]);
+		
 		$prev_block = $this->fetch_game_block_by_height($block_height-1);
-		if ($prev_block) {
-			$this->blockchain->app->run_query("DELETE FROM transaction_game_ios WHERE game_id=:game_id AND game_io_index IS NULL;", [
-				'game_id' => $this->db_game['game_id']
-			]);
-			$this->blockchain->app->run_query("DELETE FROM transaction_game_ios WHERE game_id=:game_id AND game_io_index > :game_io_index;", [
-				'game_id' => $this->db_game['game_id'],
-				'game_io_index' => $prev_block['max_game_io_index']
-			]);
-		}
+		
+		if ($prev_block) $delete_from_gio_index = $prev_block['max_game_io_index'] + 1;
+		else $delete_from_gio_index = 0;
+		
+		$this->blockchain->app->run_query("DELETE FROM transaction_game_ios WHERE game_id=:game_id AND game_io_index >= :game_io_index;", [
+			'game_id' => $this->db_game['game_id'],
+			'game_io_index' => $delete_from_gio_index,
+		]);
 		
 		$this->blockchain->app->run_query("UPDATE transaction_game_ios SET spend_round_id=NULL WHERE game_id=:game_id AND spend_round_id >= :round_id;", [
 			'game_id' => $this->db_game['game_id'],
@@ -1725,7 +1728,7 @@ class Game {
 		$definitive_peer = $this->get_definitive_peer();
 		
 		if ($definitive_peer) {
-			$imageless_options = $this->blockchain->app->run_query("SELECT en.*, op.event_option_index, ev.event_index FROM options op JOIN events ev ON op.event_id=ev.event_id JOIN entities en ON op.entity_id=en.entity_id WHERE ev.game_id=:game_id AND op.image_id IS NULL GROUP BY en.entity_id;", [
+			$imageless_options = $this->blockchain->app->run_query("SELECT en.*, op.event_option_index, ev.event_index, op.name FROM options op JOIN events ev ON op.event_id=ev.event_id JOIN entities en ON op.entity_id=en.entity_id WHERE ev.game_id=:game_id AND op.image_id IS NULL GROUP BY en.entity_id;", [
 				'game_id' => $this->db_game['game_id']
 			]);
 			
@@ -1807,7 +1810,7 @@ class Game {
 						$this->blockchain->app->log_message("Syncing ".$this->db_game['name']." from ".$api_url);
 						$ref_user = false;
 						$db_new_game = false;
-						GameDefinition::set_game_from_definition($this->blockchain->app, $api_response->definition, $ref_user, $error_message, $db_new_game, true);
+						list($mod_game, $mod_game_is_new, $set_game_error) = GameDefinition::set_game_from_definition($this->blockchain->app, $api_response->definition, $ref_user, $error_message, $db_new_game, true);
 					}
 				}
 				else $error_message .= "Sync canceled: definitive peer tried to change the game identifier.\n";
@@ -1835,7 +1838,7 @@ class Game {
 		if (!empty($extra_info['pending_reset'])) {
 			if ($print_debug) $this->blockchain->app->print_debug("Resetting the game..");
 			
-			if (array_key_exists("reset_from_block", $extra_info)) {
+			if (array_key_exists("reset_from_block", $extra_info) && $extra_info['reset_from_block'] > $this->db_game['game_starting_block']) {
 				$reset_from_block = $extra_info['reset_from_block'];
 				$this->reset_blocks_from_block($reset_from_block);
 				$this->set_loaded_until_block($reset_from_block-1);
@@ -1872,7 +1875,6 @@ class Game {
 		// Sync with peer
 		if (!empty($this->db_game['definitive_game_peer_id']) && $this->db_game['loaded_until_block'] == $this->blockchain->last_block_id()) {
 			$sync_definitive_message = $this->sync_with_definitive_peer($print_debug);
-			
 			if ($this->db_game['finite_events'] == 1) $ensure_block_id = max($ensure_block_id, $this->max_gde_starting_block());
 			$this->ensure_events_until_block($ensure_block_id, $print_debug);
 			

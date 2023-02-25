@@ -405,9 +405,6 @@ class GameDefinition {
 		
 		$event_verbatim_vars = $game->blockchain->app->event_verbatim_vars();
 		
-		if (!empty($new_game_obj['events']) && count($new_game_obj['events']) > 0) $event_array_pos_to_index_offset = $new_game_obj['events'][0]->event_index;
-		else $event_array_pos_to_index_offset = 0;
-		
 		$num_initial_events = 0;
 		if (!empty($initial_game_obj['events'])) $num_initial_events = count($initial_game_obj['events']);
 		$num_new_events = 0;
@@ -431,7 +428,7 @@ class GameDefinition {
 			}
 		}
 		
-		$set_events_from_index = $game->blockchain->app->min_excluding_false(array($reset_event_index, $matched_events+1));
+		$set_events_from_index = $game->blockchain->app->min_excluding_false(array($reset_event_index, $matched_events));
 		
 		if ($set_events_from_index !== false) {
 			$log_message .= "Resetting events from #".$set_events_from_index."\n";
@@ -439,14 +436,12 @@ class GameDefinition {
 			$events_earliest_affected_block = $game->event_index_to_affected_block($set_events_from_index);
 			$reset_block = $game->blockchain->app->min_excluding_false([$reset_block, $events_earliest_affected_block]);
 			
-			$set_events_from_pos = $set_events_from_index-$event_array_pos_to_index_offset;
+			$set_events_from_pos = $set_events_from_index;
 			
 			if (!is_numeric($reset_block)) $reset_block = $new_game_obj['events'][$set_events_from_pos]->event_starting_block;
 			
 			if (!empty($new_game_obj['events']) && count($new_game_obj['events']) > 0) {
-				for ($event_pos=$set_events_from_pos; $event_pos<=count($new_game_obj['events']); $event_pos++) {
-					$event_index = $event_pos+$event_array_pos_to_index_offset;
-					
+				for ($event_pos=$set_events_from_pos; $event_pos<count($new_game_obj['events']); $event_pos++) {
 					if (!empty($new_game_obj['events'][$event_pos])) {
 						$gde = get_object_vars($new_game_obj['events'][$event_pos]);
 						$game->blockchain->app->check_set_gde($game, $gde, $event_verbatim_vars, $sports_entity_type['entity_type_id'], $leagues_entity_type['entity_type_id'], $general_entity_type['entity_type_id']);
@@ -668,6 +663,6 @@ class GameDefinition {
 			else $error_message .= "Failed to import game, you don't have the ".$game_def->module." module installed.\n";
 		}
 		
-		return [$game, $is_new_game];
+		return [$game, $is_new_game, $error_message];
 	}
 }
