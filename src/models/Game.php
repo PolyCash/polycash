@@ -396,16 +396,19 @@ class Game {
 			'block_id' => $block_height
 		]);
 		
+		$this->blockchain->app->run_query("DELETE FROM transaction_game_ios WHERE game_id=:game_id AND game_io_index IS NULL;", [
+			'game_id' => $this->db_game['game_id']
+		]);
+		
 		$prev_block = $this->fetch_game_block_by_height($block_height-1);
-		if ($prev_block) {
-			$this->blockchain->app->run_query("DELETE FROM transaction_game_ios WHERE game_id=:game_id AND game_io_index IS NULL;", [
-				'game_id' => $this->db_game['game_id']
-			]);
-			$this->blockchain->app->run_query("DELETE FROM transaction_game_ios WHERE game_id=:game_id AND game_io_index > :game_io_index;", [
-				'game_id' => $this->db_game['game_id'],
-				'game_io_index' => $prev_block['max_game_io_index']
-			]);
-		}
+		
+		if ($prev_block) $delete_from_gio_index = $prev_block['max_game_io_index'] + 1;
+		else $delete_from_gio_index = 0;
+		
+		$this->blockchain->app->run_query("DELETE FROM transaction_game_ios WHERE game_id=:game_id AND game_io_index >= :game_io_index;", [
+			'game_id' => $this->db_game['game_id'],
+			'game_io_index' => $delete_from_gio_index,
+		]);
 		
 		$this->blockchain->app->run_query("UPDATE transaction_game_ios SET spend_round_id=NULL WHERE game_id=:game_id AND spend_round_id >= :round_id;", [
 			'game_id' => $this->db_game['game_id'],
