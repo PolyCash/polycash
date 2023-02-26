@@ -95,7 +95,12 @@ if ($user_game) {
 				if (!empty($_REQUEST['amount_mode']) && $_REQUEST['amount_mode'] == "inflation_only") $amount_mode = "inflation_only";
 				
 				if ($amount_mode == "per_event") {
-					$coins_per_event = round($_REQUEST['coins_per_event']*pow(10, $game->db_game['decimal_places']));
+					if (isset($_REQUEST['coins_per_event'])) $coins_per_event = round($_REQUEST['coins_per_event']*pow(10, $game->db_game['decimal_places']));
+					else {
+						$frac_mature_bal = 0.05;
+						$mature_balance = $user->mature_balance($game, $user_game);
+						$coins_per_event = floor($mature_balance*$frac_mature_bal/count($selected_events));
+					}
 				}
 				else {
 					list($user_votes, $votes_value) = $user->user_current_votes($game, $blockchain->last_block_id(), $round_id, $user_game);
@@ -147,7 +152,7 @@ if ($user_game) {
 					$io_nonfee_amount = $io_amount_sum-$fee_amount;
 					$burn_io_amount = ceil($io_nonfee_amount*$burn_game_amount/$game_amount_sum);
 					$nonburn_io_amount = $io_nonfee_amount-$burn_io_amount;
-					$io_amount_per_event = floor($nonburn_io_amount/$num_events);
+					$io_amount_per_event = floor($nonburn_io_amount/count($selected_events));
 					
 					$io_amounts = array($burn_io_amount);
 					$address_ids = array($burn_address['address_id']);
