@@ -20,9 +20,11 @@
 		if (AppSettings::getParam('display_sync_game_ids')) {
 			$display_sync_game_ids = explode(",", AppSettings::getParam('display_sync_game_ids'));
 			foreach ($display_sync_game_ids as $display_sync_game_id) {
-				$display_sync_game = $app->fetch_game_by_id(AppSettings::getParam('display_sync_game_ids'));
-				$display_sync_blockchain = new Blockchain($app, $display_sync_game['blockchain_id']);
-				array_push($display_sync_games, new Game($display_sync_blockchain, $display_sync_game_id));
+				$display_sync_game = $app->fetch_game_by_id($display_sync_game_id);
+				if (!empty($display_sync_game)) {
+					$display_sync_blockchain = new Blockchain($app, $display_sync_game['blockchain_id']);
+					array_push($display_sync_games, new Game($display_sync_blockchain, $display_sync_game_id));
+				}
 			}
 		}
 		
