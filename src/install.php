@@ -114,6 +114,8 @@ if ($app->running_as_admin()) {
 									$blockchain = new Blockchain($app, $db_blockchain['blockchain_id']);
 									$new_game_def_txt = GameDefinition::game_def_to_text($game_def->game_def);
 									
+									if (method_exists($game_def, "ensure_currencies")) $game_def->ensure_currencies();
+									
 									$error_message = "";
 									$db_game = false;
 									list($new_game, $is_new_game) = GameDefinition::set_game_from_definition($app, $new_game_def_txt, $thisuser, $error_message, $db_game, false);

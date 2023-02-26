@@ -93,6 +93,8 @@ class VirtualStockMarketGameDefinition {
 	}
 	
 	public function ensure_currencies() {
+		$general_entity_type = $this->app->check_set_entity_type("general entity");
+		
 		foreach ($this->currency_name_to_code as $currency_name => $currency_code) {
 			$existing_currency = $this->app->fetch_currency_by_name($currency_name);
 			if (!$existing_currency) {
@@ -103,13 +105,19 @@ class VirtualStockMarketGameDefinition {
 					'abbreviation' => $currency_code,
 					'symbol' => '',
 				]);
+				$existing_currency = $this->app->fetch_currency_by_id($this->app->last_insert_id());
+			}
+			$track_entity = $this->app->check_set_entity($general_entity_type['entity_type_id'], $currency_name);
+			if (empty($track_entity['currency_id'])) {
+				$this->app->run_query("UPDATE entities SET currency_id=:currency_id WHERE entity_id=:entity_id;", [
+					'currency_id' => $existing_currency['currency_id'],
+					'entity_id' => $track_entity['entity_id'],
+				]);
 			}
 		}
 	}
 	
 	public function load_currencies(&$game) {
-		$this->ensure_currencies();
-		
 		$this->currencies = [];
 		$this->name2currency_index = [];
 		

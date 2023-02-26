@@ -38,6 +38,13 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 							$definition = $_REQUEST['definition'];
 							
 							if ($import_mode == "game") {
+								$definition_arr = json_decode($definition, true);
+								if (isset($definition_arr['module'])) {
+									$module_class = $definition_arr['module'].'GameDefinition';
+									$game_def = new $module_class($app);
+									if (method_exists($game_def, "ensure_currencies")) $game_def->ensure_currencies();
+								}
+								
 								list($new_game, $is_new_game) = GameDefinition::set_game_from_definition($app, $definition, $thisuser, $error_message, $db_new_game, false);
 								
 								if (!empty($error_message)) echo "<p>".$error_message."</p>\n";
