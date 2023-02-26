@@ -429,7 +429,7 @@ var Game = function(pageManager, game_id, last_block_id, last_transaction_id, ma
 							$('#game'+this.instance_id+'_chart_js').html('<script type="text/javascript">'+check_activity_response.chart_js+'</script>');
 						}
 						
-						if (check_activity_response.being_determined_hash != this.being_determined_hash) {
+						if (this.include_being_determined_events && check_activity_response.being_determined_hash != this.being_determined_hash) {
 							$('#game'+this.instance_id+'_events_being_determined').show();
 							$('#game'+this.instance_id+'_events_being_determined').html(check_activity_response.being_determined_content);
 							this.being_determined_hash = check_activity_response.being_determined_hash;
