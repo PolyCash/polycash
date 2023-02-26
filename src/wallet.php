@@ -660,7 +660,7 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 										<b>Inputs:</b><div style="display: none; margin-left: 20px;" id="input_amount_sum"></div><div style="display: inline-block; margin-left: 20px;" id="input_vote_sum"></div><br/>
 										<p>
 											How many <?php echo $game->db_game['coin_name_plural']; ?> do you want to bet?
-											<input class="form-control input-sm" id="compose_burn_amount" placeholder="0" /><font id="max_burn_amount"></font>
+											<input class="form-control input-sm" id="compose_burn_amount" placeholder="0" onKeyDown="setTimeout(function(){thisPageManager.set_input_amount_sums(); thisPageManager.refresh_output_amounts();}, 50);" /><font id="max_burn_amount"></font>
 										</p>
 										<p id="compose_input_start_msg"></p>
 									</div>

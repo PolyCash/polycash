@@ -1057,11 +1057,15 @@ var PageManager = function() {
 				var option_effective_coins = option_effective_votes*games[0].coins_per_vote + this_option.effective_burn_amount + this_option.unconfirmed_effective_burn_amount + this_option.hypothetical_burn_amount;
 				
 				var expected_payout = Math.floor(this_event.payout_rate*event_payout*(output_effective_coins/option_effective_coins));
-				var payout_factor = expected_payout/output_cost;
 				
 				output_val_disp = this.format_coins(output_cost/Math.pow(10,games[0].decimal_places));
 				output_val_disp += " &rarr; "+this.format_coins(expected_payout/Math.pow(10,games[0].decimal_places));
-				output_val_disp += " "+games[0].coin_name_plural+" (x"+this.format_coins(payout_factor)+")";
+				output_val_disp += " "+games[0].coin_name_plural;
+				
+				if (output_cost > 0) {
+					var payout_factor = expected_payout/output_cost;
+					output_val_disp += " (x"+this.format_coins(payout_factor)+")";
+				}
 				
 				$('#output_amount_disp_'+i).html(output_val_disp);
 				
@@ -1397,7 +1401,7 @@ var PageManager = function() {
 	this.compose_bets_loop = function() {
 		if (this.output_amounts_need_update) this.refresh_output_amounts();
 		this.output_amounts_need_update = false;
-		setTimeout(function() {this.compose_bets_loop()}.bind(this), 400);
+		setTimeout(function() {this.compose_bets_loop()}.bind(this), 1000);
 	}
 	this.confirm_compose_bets = function() {
 		if (this.bet_inputs.length > 0) {
