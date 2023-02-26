@@ -59,7 +59,7 @@ class VirtualStockMarketGameDefinition {
 			"escrow_address": "Xc3cmFFv7kcJrGaZmUmw3U3AWVyww3QUFW",
 			"genesis_tx_hash": "8efcdcb813c266425f1ad965f310b9ea84598f257ae061e348605f40674ecfdc",
 			"genesis_amount": 500000000,
-			"game_starting_block": 110601,
+			"game_starting_block": 158601,
 			"default_payout_rate": 0.9999,
 			"default_vote_effectiveness_function": "constant",
 			"default_effectiveness_param1": 0,
@@ -183,7 +183,7 @@ class VirtualStockMarketGameDefinition {
 				$price_max_target = $price_usd*1.33;
 				$price_min_target = $price_usd*0.70;
 				
-				$log10 = floor(log10($price_max_target)*2)/2;
+				$log10 = floor(log10($price_max_target));
 				$round_targets_to = $price_usd == 0 ? 1 : pow(10, $log10-1);
 				
 				$price_min = floor($price_min_target/$round_targets_to)*$round_targets_to;

@@ -1327,14 +1327,14 @@ class App {
 			list($vote_supply, $vote_supply_value) = $game->vote_supply($last_block_id, $current_round, $coins_per_vote, true);
 			$coins_in_existence = $game->coins_in_existence(false, true);
 			
-			$circulation_amount_disp = $this->format_bignum($coins_in_existence/pow(10,$db_game['decimal_places']));
+			$circulation_amount_disp = $this->format_bignum($coins_in_existence/pow(10,$db_game['decimal_places']), false);
 			$html .= '<div class="row"><div class="col-sm-5">'.ucfirst($game->db_game['coin_name_plural']).' in circulation:</div><div class="col-sm-7">';
 			$html .= $circulation_amount_disp.' ';
 			if ($circulation_amount_disp == "1") $html .= $db_game['coin_name'];
 			else $html .= $db_game['coin_name_plural'];
 			$html .= "</div></div>\n";
 			
-			$pending_bets_disp = $this->format_bignum($game_pending_bets/pow(10,$db_game['decimal_places']));
+			$pending_bets_disp = $this->format_bignum($game_pending_bets/pow(10,$db_game['decimal_places']), false);
 			$html .= '<div class="row"><div class="col-sm-5">Pending bets:</div><div class="col-sm-7">';
 			$html .= $pending_bets_disp.' ';
 			if ($pending_bets_disp == "1") $html .= $db_game['coin_name'];
@@ -1342,7 +1342,7 @@ class App {
 			$html .= "</div></div>\n";
 			
 			if ($db_game['exponential_inflation_rate'] != 0) {
-				$unrealized_supply_disp = $this->format_bignum($vote_supply_value/pow(10,$db_game['decimal_places']));
+				$unrealized_supply_disp = $this->format_bignum($vote_supply_value/pow(10,$db_game['decimal_places']), false);
 				$html .= '<div class="row"><div class="col-sm-5">Unrealized '.$game->db_game['coin_name_plural'].':</div><div class="col-sm-7">';
 				$html .= $unrealized_supply_disp.' ';
 				if ($unrealized_supply_disp == "1") $html .= $db_game['coin_name'];
@@ -1351,7 +1351,7 @@ class App {
 			}
 			
 			$total_supply = ($coins_in_existence+$vote_supply_value+$game_pending_bets)/pow(10,$db_game['decimal_places']);
-			$total_supply_disp = $this->format_bignum($total_supply);
+			$total_supply_disp = $this->format_bignum($total_supply, false);
 			$html .= '<div class="row"><div class="col-sm-5">Total supply:</div><div class="col-sm-7">';
 			$html .= $total_supply_disp.' ';
 			if ($total_supply_disp == "1") $html .= $db_game['coin_name'];
@@ -1420,10 +1420,10 @@ class App {
 				$html .= '<div class="row"><div class="col-sm-5">Backed by:</div><div class="col-sm-7">';
 				foreach ($escrow_amounts as $escrow_amount) {
 					if ($escrow_amount['escrow_type'] == "fixed") {
-						$html .= $this->format_bignum($escrow_amount['amount'])." ".$escrow_amount['abbreviation']."<br/>\n";
+						$html .= $this->format_bignum($escrow_amount['amount'], false)." ".$escrow_amount['abbreviation']."<br/>\n";
 					}
 					else {
-						$html .= $this->format_bignum($total_supply*$escrow_amount['relative_amount'])." ".$escrow_amount['abbreviation']."<br/>\n";
+						$html .= $this->format_bignum($total_supply*$escrow_amount['relative_amount'], false)." ".$escrow_amount['abbreviation']."<br/>\n";
 					}
 				}
 				$html .= "</div></div>\n";
