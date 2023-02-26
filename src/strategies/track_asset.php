@@ -1,6 +1,9 @@
 <?php
-require(AppSettings::srcPath()."/includes/connect.php");
+require(dirname(__DIR__)."/includes/connect.php");
 require(AppSettings::srcPath()."/includes/get_session.php");
+
+$allowed_params = ['api_key', 'amount_mode', 'coins_per_event', 'force'];
+$app->safe_merge_argv_to_request($argv, $allowed_params);
 
 $user_game = $app->fetch_user_game_by_api_key($_REQUEST['api_key']);
 
@@ -39,6 +42,7 @@ if ($user_game) {
 			$num_events = count($db_events);
 			
 			if ($num_events > 0) {
+				$reference_currency = $app->get_reference_currency();
 				$selected_events = [];
 				$events_by_ratio_diff = [];
 				$event_info_by_id = [];
@@ -56,25 +60,26 @@ if ($user_game) {
 					$sell_burn_stake = $options[1]['effective_destroy_score']+$options[1]['unconfirmed_effective_destroy_score'];
 					$sell_stake = $sell_inflation_stake+$sell_burn_stake;
 					
-					$market_price_info = $app->exchange_rate_between_currencies(1, $this_currency['currency_id'], time(), 6);
-					$market_price = $market_price_info['exchange_rate'];
-					
-					$market_ratio = ($market_price-$db_events[$event_i]['track_min_price'])/($db_events[$event_i]['track_max_price']-$db_events[$event_i]['track_min_price']);
-					
-					if ($buy_stake + $sell_stake == 0) {
-						$event_info_by_id[$db_events[$event_i]['event_id']] = ['buy_stake'=>$buy_stake, 'sell_stake'=>$sell_stake, 'currency'=>$this_currency, 'market_ratio'=>$market_ratio];
+					$market_price_info = $app->exchange_rate_between_currencies(1, $this_currency['currency_id'], time(), $reference_currency['currency_id']);
+					if (isset($market_price_info['exchange_rate']) && $market_price_info['time'] >= time()-3600) {
+						$market_price = $market_price_info['exchange_rate'];
+						$market_ratio = ($market_price-$db_events[$event_i]['track_min_price'])/($db_events[$event_i]['track_max_price']-$db_events[$event_i]['track_min_price']);
 						
-						array_push($selected_events, $db_events[$event_i]);
-					}
-					else {
-						$our_ratio = $buy_stake/($buy_stake+$sell_stake);
-						$our_price = $our_ratio*($db_events[$event_i]['track_max_price']-$db_events[$event_i]['track_min_price'])+$db_events[$event_i]['track_min_price'];
-						
-						$ratio_diff = abs($our_ratio-$market_ratio);
-						
-						$events_by_ratio_diff[(string)$ratio_diff] = $db_events[$event_i];
-						
-						$event_info_by_id[$db_events[$event_i]['event_id']] = ['buy_stake'=>$buy_stake, 'sell_stake'=>$sell_stake, 'currency'=>$this_currency, 'our_ratio'=>$our_ratio, 'market_ratio'=>$market_ratio];
+						if ($buy_stake + $sell_stake == 0) {
+							$event_info_by_id[$db_events[$event_i]['event_id']] = ['buy_stake'=>$buy_stake, 'sell_stake'=>$sell_stake, 'currency'=>$this_currency, 'market_ratio'=>$market_ratio];
+							
+							array_push($selected_events, $db_events[$event_i]);
+						}
+						else {
+							$our_ratio = $buy_stake/($buy_stake+$sell_stake);
+							$our_price = $our_ratio*($db_events[$event_i]['track_max_price']-$db_events[$event_i]['track_min_price'])+$db_events[$event_i]['track_min_price'];
+							
+							$ratio_diff = abs($our_ratio-$market_ratio);
+							
+							$events_by_ratio_diff[(string)$ratio_diff] = $db_events[$event_i];
+							
+							$event_info_by_id[$db_events[$event_i]['event_id']] = ['buy_stake'=>$buy_stake, 'sell_stake'=>$sell_stake, 'currency'=>$this_currency, 'our_ratio'=>$our_ratio, 'market_ratio'=>$market_ratio];
+						}
 					}
 				}
 				
@@ -90,10 +95,7 @@ if ($user_game) {
 				if (!empty($_REQUEST['amount_mode']) && $_REQUEST['amount_mode'] == "inflation_only") $amount_mode = "inflation_only";
 				
 				if ($amount_mode == "per_event") {
-					$frac_mature_bal = 0.1;
-					
-					$mature_balance = $user->mature_balance($game, $user_game);
-					$coins_per_event = floor($mature_balance*$frac_mature_bal/count($selected_events));
+					$coins_per_event = round($_REQUEST['coins_per_event']*pow(10, $game->db_game['decimal_places']));
 				}
 				else {
 					list($user_votes, $votes_value) = $user->user_current_votes($game, $blockchain->last_block_id(), $round_id, $user_game);
