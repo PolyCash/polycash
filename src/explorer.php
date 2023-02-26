@@ -1180,7 +1180,8 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					echo '/addresses/'.$io['address'].'">'.$io['address']."</a><br/>\n";
 					
 					if ($game) {
-						echo "Amount: &nbsp;&nbsp; ".$game->display_coins($io['colored_amount'])."<br/>";
+						$formatted_amount = number_format($io['colored_amount']/pow(10, $game->db_game['decimal_places']), $game->db_game['decimal_places']);
+						echo "Amount: &nbsp;&nbsp; ".$formatted_amount." ".($formatted_amount == 1 ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural'])."<br/>";
 						echo "Status: &nbsp;&nbsp; ".ucwords($io['spend_status']);
 						
 						if ($io['is_resolved'] == 1) echo ", Resolved";

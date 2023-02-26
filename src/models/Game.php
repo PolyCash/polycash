@@ -26,8 +26,8 @@ class Game {
 		if (!$this->db_game) throw new Exception("Error, could not load game #".$this->game_id);
 	}
 	
-	public function display_coins($amount_int, $as_abbreviation=false, $skip_name=false) {
-		$display_amount = $this->blockchain->app->format_bignum($amount_int/pow(10, $this->db_game['decimal_places']));
+	public function display_coins($amount_int, $as_abbreviation=false, $skip_name=false, $err_lower=true) {
+		$display_amount = $this->blockchain->app->format_bignum($amount_int/pow(10, $this->db_game['decimal_places']), $err_lower);
 		$str = $display_amount;
 		if (!$skip_name) {
 			$str .= " ";
@@ -2591,7 +2591,7 @@ class Game {
 				else $html .= $db_transaction['tx_hash'];
 				$html .= "/".$io['game_out_index']."\">";
 			}
-			$html .= $this->display_coins($io['colored_amount']);
+			$html .= $this->display_coins($io['colored_amount'], false, false, false);
 			if ($selected_game_io_id == $io['game_io_id']) $html .= "</b>";
 			else $html .= "</a>\n";
 			
@@ -2607,7 +2607,7 @@ class Game {
 				$frac_of_contract = $io['contract_parts']/$io['total_contract_parts'];
 				
 				if ($io['payout_rule'] == "binary") {
-					$html .= $this->display_coins($frac_of_contract*($io['destroy_amount']+$inflation_stake));
+					$html .= $this->display_coins($frac_of_contract*($io['destroy_amount']+$inflation_stake), false, false, false);
 					
 					$html .= " &nbsp;&nbsp; x".$this->blockchain->app->round_to($odds, 2, 4, true)." ";
 					
@@ -2627,12 +2627,12 @@ class Game {
 				}
 				else {
 					if ($io['event_option_index'] != 0) $html .= '-';
-					$html .= $this->blockchain->app->format_bignum($equivalent_contracts/pow(10, $this->db_game['decimal_places'])).' '.$io['track_name_short'].' ';
+					$html .= $this->blockchain->app->format_bignum($equivalent_contracts/pow(10, $this->db_game['decimal_places']), false).' '.$io['track_name_short'].' ';
 					
 					if ($borrow_delta != 0) {
 						if ($borrow_delta > 0) $html .= '<font class="greentext">+ ';
 						else $html .= '<font class="redtext">- ';
-						$html .= $this->blockchain->app->format_bignum(abs($borrow_delta/pow(10, $this->db_game['decimal_places'])));
+						$html .= $this->blockchain->app->format_bignum(abs($borrow_delta/pow(10, $this->db_game['decimal_places'])), false);
 						$html .= "</font>\n";
 					}
 				}
@@ -2642,32 +2642,32 @@ class Game {
 					$html .= '<div style="display: none; border: 1px solid #ccc; padding: 5px;" id="gio_details_'.$io['game_io_id'].'">';
 					
 					$html .= "Paid ".$this->display_coins($io['destroy_amount']+$inflation_stake);
-					$html .= ' @ $'.$this->blockchain->app->format_bignum($asset_price_usd);
-					$html .= '<br/>'.$this->blockchain->app->format_bignum($equivalent_contracts/pow(10, $this->db_game['decimal_places'])).' '.$io['track_name_short'].' @ $'.$this->blockchain->app->format_bignum($bought_price_usd);
-					if ($bought_leverage != 1) $html .= ' &nbsp; ('.$this->blockchain->app->format_bignum($bought_leverage).'X leverage)';
+					$html .= ' @ $'.$this->blockchain->app->format_bignum($asset_price_usd, false);
+					$html .= '<br/>'.$this->blockchain->app->format_bignum($equivalent_contracts/pow(10, $this->db_game['decimal_places']), false).' '.$io['track_name_short'].' @ $'.$this->blockchain->app->format_bignum($bought_price_usd, false);
+					if ($bought_leverage != 1) $html .= ' &nbsp; ('.$this->blockchain->app->format_bignum($bought_leverage, false).'X leverage)';
 					$html .= '<br/><br/>';
 					
 					if ($io['is_resolved'] == 1) $html .= 'Paid out';
 					else $html .= 'Now valued';
 					$html .= ' at <font class="greentext">'.$this->display_coins($fair_io_value-$payout_fees)."</font>\n";
 					$html .= "@ ";
-					$html .= "$".$this->blockchain->app->format_bignum($track_pay_price);
-					if ($track_price_usd != $track_pay_price) $html .= " ($".$this->blockchain->app->format_bignum($track_price_usd).")";
+					$html .= "$".$this->blockchain->app->format_bignum($track_pay_price, false);
+					if ($track_price_usd != $track_pay_price) $html .= " ($".$this->blockchain->app->format_bignum($track_price_usd, false).")";
 					$html .= "<br/>\n";
 					if ($io['event_option_index'] != 0) $html .= '-';
-					$html .= $this->blockchain->app->format_bignum($equivalent_contracts/pow(10, $this->db_game['decimal_places'])).' '.$io['track_name_short'].' ';
+					$html .= $this->blockchain->app->format_bignum($equivalent_contracts/pow(10, $this->db_game['decimal_places']), false).' '.$io['track_name_short'].' ';
 					
 					if ($borrow_delta != 0) {
 						if ($borrow_delta > 0) $html .= '<font class="greentext">+ ';
 						else $html .= '<font class="redtext">- ';
-						$html .= $this->blockchain->app->format_bignum(abs($borrow_delta/pow(10, $this->db_game['decimal_places'])));
+						$html .= $this->blockchain->app->format_bignum(abs($borrow_delta/pow(10, $this->db_game['decimal_places'])), false);
 						$html .= "</font>\n";
 					}
-					if ($current_leverage && $current_leverage != 1) $html .= " &nbsp; (".$this->blockchain->app->format_bignum($current_leverage)."X leverage)\n";
+					if ($current_leverage && $current_leverage != 1) $html .= " &nbsp; (".$this->blockchain->app->format_bignum($current_leverage, false)."X leverage)\n";
 					$html .= "<br/>\n";
 					
 					if ($payout_fees > 0) {
-						$payout_fees_disp = $this->display_coins($payout_fees, false, true);
+						$payout_fees_disp = $this->display_coins($payout_fees, false, true, false);
 						$html .= "<font class=\"redtext\">".$payout_fees_disp."</font> ".($payout_fees_disp=="1" ? $this->db_game['coin_name'] : $this->db_game['coin_name_plural'])." in fees<br/>\n";
 					}
 					
