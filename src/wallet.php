@@ -550,7 +550,7 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 				}
 				?>
 				
-				<a class="btn btn-sm btn-primary" href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/my_bets/">My Bets</a>
+				<a class="btn btn-sm btn-primary" href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/my_bets/"><i class="fas fa-chart-line"></i> &nbsp; My Bets</a>
 			</div>
 			
 			<div id="apply_my_strategy_status" class="greentext" style="margin-top: 10px; display: none;"></div>
