@@ -33,8 +33,6 @@ class BetcoinGameDefinition {
 			"final_round": null,
 			"buyin_policy": "for_sale",
 			"game_buyin_cap": 0,
-			"sellout_policy": "off",
-			"sellout_confirmations": 0,
 			"coin_name": "betcoin",
 			"coin_name_plural": "betcoins",
 			"coin_abbreviation": "BET",

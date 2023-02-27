@@ -51,8 +51,6 @@ class VirtualStockMarketGameDefinition {
 			"final_round": null,
 			"buyin_policy": "for_sale",
 			"game_buyin_cap": 0,
-			"sellout_policy": "off",
-			"sellout_confirmations": 0,
 			"coin_name": "mime",
 			"coin_name_plural": "mimecoins",
 			"coin_abbreviation": "MIME",
