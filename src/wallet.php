@@ -526,28 +526,33 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 				}
 				?>
 			</div>
-			<?php
-			if ($game->db_game['buyin_policy'] != "none") { ?>
-				<button class="btn btn-sm btn-success" style="margin-top: 8px;" onclick="thisPageManager.manage_buyin('initiate');"><i class="fas fa-arrow-down"></i> &nbsp; Deposit</button>
+			<div style="margin-top: 8px;">
 				<?php
-			}
-			if ($game->db_game['sellout_policy'] == "on") { ?>
-				<button class="btn btn-sm btn-warning" style="margin-top: 8px;" onclick="thisPageManager.manage_sellout('initiate');"><i class="fas fa-arrow-up"></i> &nbsp; Withdraw</button>
-				<?php
-			}
-			
-			if (count($game->fetch_featured_strategies()->fetchAll()) > 0) {
+				if ($game->db_game['buyin_policy'] != "none") { ?>
+					<button class="btn btn-sm btn-success" onclick="thisPageManager.manage_buyin('initiate');"><i class="fas fa-arrow-down"></i> &nbsp; Deposit</button>
+					<?php
+				}
+				if ($game->db_game['sellout_policy'] == "on") { ?>
+					<button class="btn btn-sm btn-warning" onclick="thisPageManager.manage_sellout('initiate');"><i class="fas fa-arrow-up"></i> &nbsp; Withdraw</button>
+					<?php
+				}
+				
+				if (count($game->fetch_featured_strategies()->fetchAll()) > 0) {
+					?>
+					<button class="btn btn-sm btn-info" onclick="thisPageManager.apply_my_strategy();"><i class="fas fa-hand-point-up"></i> &nbsp; Apply my strategy now</button>
+					<button class="btn btn-sm btn-danger" onclick="thisPageManager.show_featured_strategies(); return false;"><i class="fas fa-list"></i> &nbsp; Change my strategy</button>
+					<?php
+				}
+				
+				if ($game->db_game['faucet_policy'] == "on") { ?>
+					<button class="btn btn-sm btn-default" onclick="thisPageManager.check_faucet(<?php echo $game->db_game['game_id']; ?>);"><i class="fas fa-tint"></i> &nbsp; Check Faucet</button>
+					<?php
+				}
 				?>
-				<button class="btn btn-sm btn-info" style="margin-top: 8px;" onclick="thisPageManager.apply_my_strategy();"><i class="fas fa-hand-point-up"></i> &nbsp; Apply my strategy now</button>
-				<button class="btn btn-sm btn-danger" style="margin-top: 8px;" onclick="thisPageManager.show_featured_strategies(); return false;"><i class="fas fa-list"></i> &nbsp; Change my strategy</button>
-				<?php
-			}
+				
+				<a class="btn btn-sm btn-primary" href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/my_bets/">My Bets</a>
+			</div>
 			
-			if ($game->db_game['faucet_policy'] == "on") { ?>
-				<button class="btn btn-sm btn-default" style="margin-top: 8px;" onclick="thisPageManager.check_faucet(<?php echo $game->db_game['game_id']; ?>);"><i class="fas fa-tint"></i> &nbsp; Check Faucet</button>
-				<?php
-			}
-			?>
 			<div id="apply_my_strategy_status" class="greentext" style="margin-top: 10px; display: none;"></div>
 		</div>
 	</div>
@@ -636,13 +641,9 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 						<div id="betting_mode_inflationary" style="display: none;">
 							<p style="float: right; clear: both;"><a href="" onclick="thisPageManager.toggle_betting_mode('principal'); return false;">Switch to single betting mode</a></p>
 							
-							<p>
-								<a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/my_bets/">My Bets</a>
-							</p>
-							
-							<p>
+							<div style="clear: both;">
 								To start a bet, click on your coins below.
-							</p>
+							</div>
 							
 							<div id="select_input_buttons" class="input_buttons_holder"><?php
 								echo $game->select_input_buttons($user_game);
@@ -681,8 +682,6 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 						</div>
 						<div id="betting_mode_principal" style="display: none;">
 							<p style="float: right;"><a href="" onclick="thisPageManager.toggle_betting_mode('inflationary'); return false;">Switch to multiple betting mode</a></p>
-							
-							<a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/my_bets/">My Bets</a>
 							
 							<form method="get" onsubmit="thisPageManager.submit_principal_bet(); return false;" style="clear: both;">
 								<div class="form-group">

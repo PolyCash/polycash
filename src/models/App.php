@@ -3122,8 +3122,8 @@ class App {
 		if ($div_td == 'div') $this_bet_html .= "<div class=\"col-md-3\">";
 		else $this_bet_html .= "<td>";
 		$this_bet_html .= $bet['track_name_short']." ";
-		if ($track_performance_pct >= 0) $this_bet_html .= '<font class="greentext">+'.$this->to_significant_digits($track_performance_pct, 4).'%</font>';
-		else $this_bet_html .= '<font class="redtext">-'.$this->to_significant_digits(abs($track_performance_pct), 4).'%</font>';
+		if ($track_performance_pct >= 0) $this_bet_html .= '<font class="greentext">+'.$this->format_percentage($this->to_significant_digits($track_performance_pct, 4)).'%</font>';
+		else $this_bet_html .= '<font class="redtext">-'.$this->format_percentage($this->to_significant_digits(abs($track_performance_pct), 4)).'%</font>';
 		
 		$this_bet_html .= " &nbsp; ($".$this->format_bignum($bought_price_usd);
 		$this_bet_html .= " &rarr; $".$this->format_bignum($track_pay_price);
@@ -3137,7 +3137,7 @@ class App {
 		if ($bet_net_delta >= 0) $this_bet_html .= '<font class="greentext">+';
 		else $this_bet_html .= '<font class="redtext">-';
 		$this_bet_html .= $this->format_bignum(abs($bet_net_delta)/pow(10, $game->db_game['decimal_places']));
-		$this_bet_html .= " &nbsp; (".$this->to_significant_digits(100*abs($bet_net_delta/$effective_paid), 4)."%";
+		$this_bet_html .= " &nbsp; (".$this->format_percentage($this->to_significant_digits(100*abs($bet_net_delta/$effective_paid), 4))."%";
 		$this_bet_html .= ")</font>";
 		if ($div_td == 'div') $this_bet_html .= "</div>\n";
 		else $this_bet_html .= "&nbsp;&nbsp;</td>\n";
