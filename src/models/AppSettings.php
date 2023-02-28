@@ -170,5 +170,9 @@ class AppSettings {
 	public static function defaultFromEmailAddress() {
 		return "no-reply@".explode(":", AppSettings::getParam('site_domain'))[0];
 	}
+	
+	public static function recommendedSeparatorFrac($burn_io_amount,$io_nonfee_amount) {
+		return min(0.5, max(0.001, round($burn_io_amount/$io_nonfee_amount, 8)));
+	}
 }
 ?>

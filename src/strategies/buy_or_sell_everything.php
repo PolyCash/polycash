@@ -1,6 +1,9 @@
 <?php
-require(AppSettings::srcPath()."/includes/connect.php");
+require(dirname(__DIR__)."/includes/connect.php");
 require(AppSettings::srcPath()."/includes/get_session.php");
+
+$allowed_params = ['api_key', 'sell', 'force', 'amount_mode'];
+$app->safe_merge_argv_to_request($argv, $allowed_params);
 
 $user_game = $app->fetch_user_game_by_api_key($_REQUEST['api_key']);
 
@@ -146,12 +149,13 @@ if ($user_game) {
 					
 					$burn_address = $app->fetch_addresses_in_account($account, 0, 1)[0];
 					$separator_addresses = $app->fetch_addresses_in_account($account, 1, count($selected_events));
-					$separator_frac = 0.25;
 					
 					$io_nonfee_amount = $io_amount_sum-$fee_amount;
 					$burn_io_amount = ceil($io_nonfee_amount*$burn_game_amount/$game_amount_sum);
 					$nonburn_io_amount = $io_nonfee_amount-$burn_io_amount;
 					$io_amount_per_event = floor($nonburn_io_amount/$num_events);
+					
+					$separator_frac = AppSettings::recommendedSeparatorFrac($burn_io_amount, $io_nonfee_amount);
 					
 					$io_amounts = array($burn_io_amount);
 					$address_ids = array($burn_address['address_id']);

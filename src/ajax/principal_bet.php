@@ -72,7 +72,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 					$io_nondestroy_amount = $io_nonfee_amount - $burn_amount;
 					
 					if ($io_nondestroy_amount > 0) {
-						$io_separator_frac = 0.25;
+						$io_separator_frac = AppSettings::recommendedSeparatorFrac($burn_amount, $io_nonfee_amount);
 						$error_message = false;
 						
 						$io_amounts = [$burn_amount];

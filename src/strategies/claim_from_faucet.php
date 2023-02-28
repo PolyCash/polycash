@@ -1,6 +1,9 @@
 <?php
-require(AppSettings::srcPath()."/includes/connect.php");
+require(dirname(__DIR__)."/includes/connect.php");
 require(AppSettings::srcPath()."/includes/get_session.php");
+
+$allowed_params = ['api_key', 'force'];
+$app->safe_merge_argv_to_request($argv, $allowed_params);
 
 $user_game = $app->fetch_user_game_by_api_key($_REQUEST['api_key']);
 

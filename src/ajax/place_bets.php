@@ -104,7 +104,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 	
 	// Now create the transaction
 	$separator_addresses = $app->fetch_addresses_in_account($account, 1, count($option_ids));
-	$separator_frac = 0.25;
+	$separator_frac = AppSettings::recommendedSeparatorFrac($burn_amount, $amount_sum);
 	$new_amounts = [];
 	$new_address_ids = [];
 	

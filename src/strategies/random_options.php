@@ -1,6 +1,9 @@
 <?php
-require(AppSettings::srcPath()."/includes/connect.php");
+require(dirname(__DIR__)."/includes/connect.php");
 require(AppSettings::srcPath()."/includes/get_session.php");
+
+$allowed_params = ['api_key', 'force', 'amount_mode', 'aggressiveness'];
+$app->safe_merge_argv_to_request($argv, $allowed_params);
 
 $user_game = $app->fetch_user_game_by_api_key($_REQUEST['api_key']);
 
@@ -109,7 +112,7 @@ if ($user_game) {
 					
 					$io_nondestroy_amount = $io_nonfee_amount-$burn_amount;
 					$io_nondestroy_per_event = floor($io_nondestroy_amount/$num_events);
-					$io_separator_frac = 0.25;
+					$io_separator_frac = AppSettings::recommendedSeparatorFrac($burn_amount, $io_nonfee_amount);
 					
 					$io_amounts = array($burn_amount);
 					$address_ids = array($burn_address['address_id']);
