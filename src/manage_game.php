@@ -633,6 +633,15 @@ else {
 												<option value="linear_decrease">Linearly decreasing vote effectiveness</option>
 											</select>
 										</div>
+										<div class="form-group">
+											<label for="game_form_buyin_policy">Buy-in policy:</label>
+											<select class="form-control" id="game_form_buyin_policy" onchange="thisPageManager.game_form_buyin_policy_changed();">
+												<option value="none">No additional buy-ins</option>
+												<option value="unlimited">Unlimited buy-ins</option>
+												<option value="game_cap">Buy-in cap for the whole game</option>
+												<option value="for_sale">Allow each node to sell their own coins</option>
+											</select>
+										</div>
 										<div id="game_form_game_buyin_cap_disp">
 											<label for="game_form_game_buyin_cap">Game-wide buy-in cap:</label>
 											<input class="form-control" style="text-align: right;" type="text" id="game_form_game_buyin_cap" />
