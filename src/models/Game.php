@@ -391,10 +391,6 @@ class Game {
 			'game_id' => $this->db_game['game_id'],
 			'block_id' => $block_height
 		]);
-		$this->blockchain->app->run_query("DELETE FROM game_sellouts WHERE game_id=:game_id AND in_block_id >= :block_id;", [
-			'game_id' => $this->db_game['game_id'],
-			'block_id' => $block_height
-		]);
 		
 		$this->blockchain->app->run_query("DELETE FROM transaction_game_ios WHERE game_id=:game_id AND game_io_index IS NULL;", [
 			'game_id' => $this->db_game['game_id']
@@ -500,7 +496,6 @@ class Game {
 		$this->blockchain->app->dbh->beginTransaction();
 		
 		$this->blockchain->app->run_query("DELETE FROM game_blocks WHERE game_id=:game_id;", ['game_id'=>$this->db_game['game_id']]);
-		$this->blockchain->app->run_query("DELETE FROM game_sellouts WHERE game_id=:game_id;", ['game_id'=>$this->db_game['game_id']]);
 		
 		$delete_limit = 20000;
 		$max_io_index = $this->max_game_io_index();
@@ -880,13 +875,6 @@ class Game {
 		$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], false, null);
 		
 		$value = $this->blockchain->address_balance_at_block($escrow_address, $block_id);
-		
-		$liabilities = (int)($this->blockchain->app->run_query("SELECT SUM(amount_out) FROM game_sellouts WHERE game_id=:game_id AND (out_block_id IS NULL OR out_block_id > :block_id);", [
-			'game_id' => $this->db_game['game_id'],
-			'block_id' => $block_id
-		])->fetch()['SUM(amount_out)']);
-		
-		$value = $value - $liabilities;
 		
 		return $value;
 	}
