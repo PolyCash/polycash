@@ -357,6 +357,8 @@ else {
 					$min_sec_between_claims = (int) $_REQUEST['min_sec_between_claims'];
 					$bonus_claims = (int) $_REQUEST['bonus_claims'];
 					$default_transaction_fee = (float) $_REQUEST['default_transaction_fee'];
+					$sellout_policy = (string) $_REQUEST['sellout_policy'];
+					$sellout_confirmations = (int) $_REQUEST['sellout_confirmations'];
 					$min_buyin_amount = (float) $_REQUEST['min_buyin_amount'];
 					$min_sellout_amount = (float) $_REQUEST['min_sellout_amount'];
 					$bulk_add_blocks = (int) $_REQUEST['bulk_add_blocks'];
@@ -382,7 +384,7 @@ else {
 						}
 					}
 					
-					$app->run_query("UPDATE games SET featured=:featured, public_players=:public_players, faucet_policy=:faucet_policy, hide_module=:hide_module, definitive_game_peer_id=:definitive_game_peer_id, every_event_bet_reminder_minutes=:every_event_bet_reminder_minutes, sec_per_faucet_claim=:sec_per_faucet_claim, min_sec_between_claims=:min_sec_between_claims, bonus_claims=:bonus_claims, default_transaction_fee=:default_transaction_fee, min_buyin_amount=:min_buyin_amount, min_sellout_amount=:min_sellout_amount, bulk_add_blocks=:bulk_add_blocks WHERE game_id=:game_id;", [
+					$app->run_query("UPDATE games SET featured=:featured, public_players=:public_players, faucet_policy=:faucet_policy, hide_module=:hide_module, definitive_game_peer_id=:definitive_game_peer_id, every_event_bet_reminder_minutes=:every_event_bet_reminder_minutes, sec_per_faucet_claim=:sec_per_faucet_claim, min_sec_between_claims=:min_sec_between_claims, bonus_claims=:bonus_claims, default_transaction_fee=:default_transaction_fee, min_buyin_amount=:min_buyin_amount, min_sellout_amount=:min_sellout_amount, bulk_add_blocks=:bulk_add_blocks, sellout_policy=:sellout_policy, sellout_confirmations=:sellout_confirmations WHERE game_id=:game_id;", [
 						'featured' => $featured,
 						'public_players' => $public_players,
 						'faucet_policy' => $faucet_policy,
@@ -396,7 +398,9 @@ else {
 						'default_transaction_fee' => $default_transaction_fee,
 						'min_buyin_amount' => $min_buyin_amount,
 						'min_sellout_amount' => $min_sellout_amount,
-						'bulk_add_blocks' => $bulk_add_blocks
+						'bulk_add_blocks' => $bulk_add_blocks,
+						'sellout_policy' => $sellout_policy,
+						'sellout_confirmations' => $sellout_confirmations,
 					]);
 					
 					$game->db_game['featured'] = $featured;
@@ -411,6 +415,8 @@ else {
 					$game->db_game['min_buyin_amount'] = $min_buyin_amount;
 					$game->db_game['min_sellout_amount'] = $min_sellout_amount;
 					$game->db_game['bulk_add_blocks'] = $bulk_add_blocks;
+					$game->db_game['sellout_policy'] = $sellout_policy;
+					$game->db_game['sellout_confirmations'] = $sellout_confirmations;
 					
 					$messages .= "Game internal settings have been updated.<br/>\n";
 				}
@@ -819,6 +825,17 @@ else {
 										<div class="form-group">
 											<label for="min_buyin_amount">What's the minimum <?php echo $game->db_game['coin_name']; ?> amount for buy-in transactions? (Helps prevent buy-ins that fail due to dust restrictions)</label>
 											<input type="text" class="form-control" name="min_buyin_amount" id="min_buyin_amount" value="<?php echo $game->db_game['min_buyin_amount']; ?>" />
+										</div>
+										<div class="form-group">
+											<label for="sellout_policy">Sellout policy:</label>
+											<select class="form-control" name="sellout_policy" id="sellout_policy">
+												<option value="on"<?php echo $game->db_game['sellout_policy'] == "on" ? ' selected="selected"' : ''; ?>>Sellouts enabled</option>
+												<option value="off"<?php echo $game->db_game['sellout_policy'] == "off" ? ' selected="selected"' : ''; ?>>Sellouts disabled</option>
+											</select>
+										</div>
+										<div class="form-group">
+											<label for="sellout_confirmations">How many confirmations are required to process sellouts?</label>
+											<input type="text" class="form-control" name="sellout_confirmations" id="sellout_confirmations" value="<?php echo $game->db_game['sellout_confirmations']; ?>" />
 										</div>
 										<div class="form-group">
 											<label for="min_sellout_amount">What's the minimum <?php echo $game->db_game['coin_name']; ?> amount for sell-out transactions?</label>

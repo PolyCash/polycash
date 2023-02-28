@@ -1694,8 +1694,6 @@ class App {
 			['int', 'final_round', true],
 			['string', 'buyin_policy', true],
 			['float', 'game_buyin_cap', true],
-			['string', 'sellout_policy', true],
-			['int', 'sellout_confirmations', true],
 			['string', 'coin_name', true],
 			['string', 'coin_name_plural', true],
 			['string', 'coin_abbreviation', true],

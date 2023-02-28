@@ -29,8 +29,6 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 				"final_round": null,
 				"buyin_policy": "for_sale",
 				"game_buyin_cap": 0,
-				"sellout_policy": "on",
-				"sellout_confirmations": 0,
 				"coin_name": "coin",
 				"coin_name_plural": "coins",
 				"coin_abbreviation": "COIN",
