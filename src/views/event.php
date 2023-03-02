@@ -307,7 +307,7 @@ for ($i=0; $i<count($round_stats); $i++) {
 	if ($event->db_event['event_winning_rule'] == "max_below_cap" && !$winning_option_id && $option_votes <= $max_sum_votes && $option_votes > 0) $winning_option_id = $round_stats[$i]['option_id'];
 	
 	if ($option_effective_coins > 0 && $event_effective_coins > 0) {
-		$pct_votes = 100*(floor(1000*$option_effective_coins/$event_effective_coins)/1000);
+		$pct_votes = 100*($app->to_significant_digits($option_effective_coins/$event_effective_coins, 3, false));
 		$odds = $event->db_event['payout_rate']*$event_effective_coins/$option_effective_coins;
 		$odds_disp = "x".$app->round_to($odds, 2, 4, true);
 	}
