@@ -1566,7 +1566,8 @@ class Blockchain {
 		$load_at_once = 20;
 		
 		$last_complete_block_id = $this->db_blockchain['last_complete_block'];
-		$load_from_block = $last_complete_block_id+1;
+		if ((string)$last_complete_block_id === "") $load_from_block = $this->db_blockchain['first_required_block'];
+		else $load_from_block = $last_complete_block_id+1;
 		$load_to_block = $load_from_block+$load_at_once-1;
 		
 		if ($this->db_blockchain['p2p_mode'] == "web_api") {
@@ -1581,7 +1582,8 @@ class Blockchain {
 			$blocks_loaded = 0;
 			
 			$last_complete_block_id = $this->db_blockchain['last_complete_block'];
-			$load_from_block = $last_complete_block_id+1;
+			if ((string)$last_complete_block_id === "") $load_from_block = $this->db_blockchain['first_required_block'];
+			else $load_from_block = $last_complete_block_id+1;
 			$load_to_block = $load_from_block+$load_at_once-1;
 			
 			$load_blocks = $this->app->run_query("SELECT * FROM blocks WHERE blockchain_id=:blockchain_id AND block_id >= :from_block_id  AND block_id <= :to_block_id;", [
@@ -1890,7 +1892,7 @@ class Blockchain {
 		$log_text = "";
 		$prev_link_target = false;
 		if ($explore_mode == "unconfirmed") $prev_link_target = "blocks/".$this->last_block_id();
-		else if ($block['block_id'] > 1) $prev_link_target = "blocks/".($block['block_id']-1);
+		else if ($block['block_id'] > $this->db_blockchain['first_required_block']) $prev_link_target = "blocks/".($block['block_id']-1);
 		if ($prev_link_target) $log_text .= '<a href="/explorer/blockchains/'.$this->db_blockchain['url_identifier'].'/'.$prev_link_target.'" style="margin-right: 30px;">&larr; Previous Block</a>';
 		
 		$next_link_target = false;
