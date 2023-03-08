@@ -172,7 +172,7 @@ class AppSettings {
 	}
 	
 	public static function recommendedSeparatorFrac($burn_io_amount,$io_nonfee_amount) {
-		return min(0.5, max(0.001, round($burn_io_amount/$io_nonfee_amount, 8)));
+		return min(0.5, max(0.001, round($burn_io_amount/$io_nonfee_amount, 16)));
 	}
 }
 ?>
