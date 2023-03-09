@@ -103,7 +103,6 @@ class App {
 	}
 	
 	public function log_message($message) {
-		$this->print_debug($message);
 		$this->run_insert_query("log_messages", ['message' => $message]);
 	}
 	
@@ -1059,6 +1058,10 @@ class App {
 							$failed = true;
 						}
 						if (empty($address_text)) $failed = true;
+						else if (isset($address_text['message'])) {
+							$failed = true;
+							$this->log_message("Address generation failed: ".$address_text['message']);
+						}
 					}
 					else $failed = true;
 				}

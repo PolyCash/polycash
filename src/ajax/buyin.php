@@ -46,10 +46,10 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 				
 				$invoice = $app->fetch_invoice_by_id($invoice_id);
 				
-				if ($invoice['pay_currency_id'] != $buyin_currency['currency_id']) $invoice = null;
+				if (isset($invoice) && $invoice['pay_currency_id'] != $buyin_currency['currency_id']) $invoice = null;
 			}
 			
-			if (!$invoice) {
+			if (empty($invoice)) {
 				if ($pay_to_account) {
 					$invoice_type = "buyin";
 					if ($game->db_game['buyin_policy'] == "for_sale") $invoice_type = "sale_buyin";
@@ -218,7 +218,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 			}
 		}
 		
-		list($num_buyin_invoices, $buyin_invoices_html) = $game->display_buyins_by_user_game($user_game['user_game_id']);
+		list($num_buyin_invoices, $buyin_invoices_html) = $game->display_buyins_by_user_game($user_game['user_game_id'], $buyin_blockchain);
 		
 		$invoices_html = '<p style="margin-top: 10px;">Please wait for your '.$buyin_blockchain->db_blockchain['blockchain_name'].' payment to be confirmed before '.$game->db_game['coin_name_plural'].' will be deposited to your account.</p>'."\n";
 		

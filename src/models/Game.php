@@ -3426,12 +3426,15 @@ class Game {
 		]);
 	}
 	
-	public function display_buyins_by_user_game($user_game_id) {
+	public function display_buyins_by_user_game($user_game_id, $buyin_blockchain) {
 		$html = "";
 		
 		$html .= '<div class="row header_row"><div class="col-sm-3">Amount Deposited</div><div class="col-sm-3">Amount Received</div><div class="col-sm-6">Deposit Address</div></div>'."\n";
 		
-		$invoices = $this->blockchain->app->run_query("SELECT * FROM currency_invoices i JOIN addresses a ON i.address_id=a.address_id JOIN currencies c ON i.pay_currency_id=c.currency_id JOIN blockchains b ON  c.blockchain_id=b.blockchain_id WHERE i.invoice_type IN ('sale_buyin','join_buyin','buyin') AND i.user_game_id=:user_game_id ORDER BY i.invoice_id DESC;", ['user_game_id'=>$user_game_id])->fetchAll();
+		$invoices = $this->blockchain->app->run_query("SELECT * FROM currency_invoices i JOIN addresses a ON i.address_id=a.address_id JOIN currencies c ON i.pay_currency_id=c.currency_id JOIN blockchains b ON  c.blockchain_id=b.blockchain_id WHERE i.invoice_type IN ('sale_buyin','join_buyin','buyin') AND i.user_game_id=:user_game_id AND c.blockchain_id=:blockchain_id ORDER BY i.invoice_id DESC;", [
+			'user_game_id' => $user_game_id,
+			'blockchain_id' => $buyin_blockchain->db_blockchain['blockchain_id'],
+		])->fetchAll();
 		$num_invoices = count($invoices);
 		
 		if ($num_invoices == 0) {
