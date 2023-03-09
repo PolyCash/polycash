@@ -883,11 +883,7 @@ class Game {
 		$value_disp = $this->display_coins($account_value, false, true);
 		$html = '<font class="greentext"><a href="/accounts/?account_id='.$user_game['account_id'].'">'.$value_disp.'</a></font> '.($value_disp=="1" ? $this->db_game['coin_name'] : $this->db_game['coin_name_plural']);
 		
-		$html .= ' <font style="font-size: 12px;">(';
-		
 		$coins_in_existence = $this->coins_in_existence(false, true)+$game_pending_bets;
-		if ($coins_in_existence > 0) $html .= $this->blockchain->app->format_bignum(100*$account_value/$coins_in_existence)."%";
-		else $html .= "0%";
 		
 		$display_currency = $this->blockchain->app->fetch_currency_by_id($user_game['display_currency_id']);
 		
@@ -899,10 +895,11 @@ class Game {
 		else $display_value = 0;
 		
 		if ($display_value > 0) {
-			$html .= "&nbsp;=&nbsp;".$this->blockchain->app->format_bignum($display_value, false)." ".$display_currency['short_name_plural'];
+			$html .= ' <font class="account_escrow_value">(';
+			$escrow_display_value = $this->blockchain->app->format_bignum($display_value, false);
+			$html .= $escrow_display_value." ".($escrow_display_value == "1" ? $display_currency['short_name'] : $display_currency['short_name_plural']);
+			$html .= ")</font>";
 		}
-		
-		$html .= ")</font>";
 		
 		return $html;
 	}
