@@ -980,6 +980,16 @@ class Blockchain {
 		
 		if (!$successfully_processed_inputs) return false;
 		
+		if ((string) $block_height !== "" && count($spend_io_ids) > 0) {
+			$spend_io_chunks = array_chunk($spend_io_ids, 1000);
+			
+			foreach ($spend_io_chunks as $spend_io_index => $spend_io_chunk) {
+				$this->app->run_query("UPDATE transaction_ios SET spend_block_id=:block_height WHERE io_id IN (".implode(",", $spend_io_chunk).");", [
+					'block_height' => $block_height,
+				]);
+			}
+		}
+		
 		// Step 2, process outputs
 		$output_io_ids = [];
 		$output_io_indices = [];
