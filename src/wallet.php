@@ -225,10 +225,7 @@ if ($_REQUEST['action'] == "change_user_game") {
 $user_game = $thisuser->ensure_user_in_game($game, false);
 
 if (($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['action'] == "save_voting_strategy_fees") && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'])) {
-	$voting_strategy = $_REQUEST['voting_strategy'];
 	$voting_strategy_id = intval($_REQUEST['voting_strategy_id']);
-	$api_url = "";
-	if ($voting_strategy == "hit_url") $api_url = $app->strong_strip_tags($_REQUEST['hit_api_url']);
 	
 	if ($voting_strategy_id > 0) {
 		$user_strategy = $app->fetch_strategy_by_id($voting_strategy_id);
@@ -263,6 +260,10 @@ if (($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['action'] == "sa
 		$message = "Great, your transaction fee has been updated!";
 	}
 	else {
+		$voting_strategy = $_REQUEST['voting_strategy'];
+		$api_url = "";
+		if ($voting_strategy == "hit_url") $api_url = $app->strong_strip_tags($_REQUEST['hit_api_url']);
+		
 		if (in_array($voting_strategy, ['manual', 'api', 'by_plan', 'by_entity','hit_url','featured'])) {
 			$update_strategy_params = [
 				'voting_strategy' => $voting_strategy,
