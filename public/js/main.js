@@ -1309,7 +1309,7 @@ var PageManager = function() {
 		if ($('#game_form_pow_reward_type').val() == "none") $('#game_form_pow_fixed').hide();
 		else $('#game_form_pow_fixed').slideDown('fast');
 		
-		if ($('#game_form_pow_reward_type').val() == "pegged_to_supply") $('#game_form_pow_pegged').slideDown('fast');
+		if ($('#game_form_pow_reward_type').val() == "pegged_to_supply" || $('#game_form_pow_reward_type').val() == "exponential") $('#game_form_pow_pegged').slideDown('fast');
 		else $('#game_form_pow_pegged').hide();
 	}
 	this.game_form_start_condition_changed = function() {

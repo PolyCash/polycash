@@ -3619,7 +3619,7 @@ class App {
 	}
 	
 	public function fetch_recycle_ios_in_account($account_id, $quantity) {
-		$fetch_q = "SELECT * FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id WHERE k.account_id=:account_id AND k.option_index=0 AND io.spend_status IN ('unspent','unconfirmed') AND io.is_coinbase=0 ORDER BY io.amount DESC";
+		$fetch_q = "SELECT io.*, k.* FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id JOIN transactions t ON t.transaction_id=io.create_transaction_id WHERE k.account_id=:account_id AND k.option_index=0 AND io.spend_status IN ('unspent','unconfirmed') AND io.is_coinbase=0 ORDER BY io.amount DESC";
 		
 		$fetch_params = [
 			'account_id' => $account_id
