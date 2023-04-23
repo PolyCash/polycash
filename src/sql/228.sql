@@ -1,0 +1,1 @@
+ALTER TABLE games MODIFY COLUMN pow_reward_type ENUM('none','fixed','exponential','pegged_to_supply');

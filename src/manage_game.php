@@ -603,6 +603,7 @@ else {
 											<select id="game_form_pow_reward_type" class="form-control" onchange="thisPageManager.game_form_pow_reward_type_changed(this);">
 												<option value="none">No POW rewards</option>
 												<option value="fixed">Fixed reward per block</option>
+												<option value="exponential">Exponentially increasing rewards</option>
 												<option value="pegged_to_supply">Pegged to supply</option>
 											</select>
 										</div>

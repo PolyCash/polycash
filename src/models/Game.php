@@ -1907,6 +1907,26 @@ class Game {
 		])->fetch();
 	}
 	
+	public function exponential_pow_reward($adjustment_block, $genesis_tx, $print_debug=false) {
+		if ($print_debug) $this->blockchain->app->print_debug("Adjusting exponential pow reward on block #".$adjustment_block);
+		
+		if ($adjustment_block <= $genesis_tx['block_id']) $new_pow_reward = $this->db_game['initial_pow_reward'];
+		else {
+			$firstround_pos_rewards = $this->db_game['genesis_amount']*$this->db_game['exponential_inflation_rate'];
+			$firstround_pow_rewards = $this->db_game['initial_pow_reward']*$this->db_game['round_length'];
+			$pow_inflation_per_pos_inflation = $firstround_pow_rewards/$firstround_pos_rewards;
+			$est_amt_burned_as_frac_of_inflation = 0.2;
+			$rounds_per_reward_period = (int) ($this->db_game['blocks_per_pow_reward_ajustment']/$this->db_game['round_length']);
+			$inflation_per_round = ($this->db_game['exponential_inflation_rate']*(1+$pow_inflation_per_pos_inflation))*(1-$est_amt_burned_as_frac_of_inflation);
+			$inflation_per_reward_period = pow(1+$inflation_per_round, $rounds_per_reward_period)-1;
+			$this_reward_period = ($adjustment_block-$this->db_game['game_starting_block'])/$this->db_game['blocks_per_pow_reward_ajustment'];
+			$inflation_total = pow(1+$inflation_per_reward_period, $this_reward_period)-1;
+			$new_pow_reward = round((1+$inflation_total)*$this->db_game['initial_pow_reward'], $this->db_game['decimal_places']);
+		}
+		
+		return $new_pow_reward;
+	}
+	
 	public function pegged_pow_reward($adjustment_block, $genesis_tx, $print_debug=false) {
 		$ref_supply_subtract_blocks = 1;
 		$ref_supply_block = $adjustment_block-$ref_supply_subtract_blocks;
@@ -2018,7 +2038,7 @@ class Game {
 				}
 			}
 			
-			if (in_array($this->db_game['pow_reward_type'], ["fixed","pegged_to_supply"]) && $this->db_game['initial_pow_reward'] > 0) {
+			if (in_array($this->db_game['pow_reward_type'], ["fixed","exponential","pegged_to_supply"]) && $this->db_game['initial_pow_reward'] > 0) {
 				if ($this->db_game['pow_reward_type'] == "fixed") $pow_reward_int = (int)($this->db_game['initial_pow_reward']*pow(10, $this->db_game['decimal_places']));
 				else {
 					if ((string)$this->db_game['current_pow_reward'] === "") {
@@ -2035,7 +2055,8 @@ class Game {
 					if ($adjustment_block !== null) {
 						$genesis_tx = $this->blockchain->fetch_transaction_by_hash($this->db_game['genesis_tx_hash']);
 						
-						$new_pow_reward = $this->pegged_pow_reward($adjustment_block, $genesis_tx, $print_debug);
+						if ($this->db_game['pow_reward_type'] == "exponential") $new_pow_reward = $this->exponential_pow_reward($adjustment_block, $genesis_tx, $print_debug);
+						else if ($this->db_game['pow_reward_type'] == "pegged_to_supply") $new_pow_reward = $this->pegged_pow_reward($adjustment_block, $genesis_tx, $print_debug);
 						
 						if ($print_debug) $this->blockchain->app->print_debug("Changed POW reward to ".$new_pow_reward." based on block #".$adjustment_block);
 						
