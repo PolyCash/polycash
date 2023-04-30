@@ -55,7 +55,7 @@ if ($app->running_as_admin()) {
 		
 		$export_start_time = microtime(true);
 		
-		$users_needing_backup = $app->run_query("SELECT u.* FROM users u JOIN currency_accounts a ON a.user_id=u.user_id JOIN address_keys k ON a.account_id=k.account_id JOIN currencies c ON a.currency_id=c.currency_id WHERE u.backups_enabled=1 AND c.blockchain_id IS NOT NULL AND k.backed_up_at IS NOT NULL AND k.exported_backup_at IS NULL GROUP BY u.user_id ORDER BY u.user_id ASC;")->fetchAll(PDO::FETCH_ASSOC);
+		$users_needing_backup = $app->run_query("SELECT u.* FROM users u JOIN currency_accounts a ON a.user_id=u.user_id JOIN address_keys k ON a.account_id=k.account_id JOIN currencies c ON a.currency_id=c.currency_id WHERE u.backups_enabled=1 AND u.unsubscribed=0 AND u.time_created <= ".(time() - (60*15))." AND c.blockchain_id IS NOT NULL AND k.backed_up_at IS NOT NULL AND k.exported_backup_at IS NULL GROUP BY u.user_id ORDER BY u.user_id ASC;")->fetchAll(PDO::FETCH_ASSOC);
 		
 		if ($print_debug) $app->print_debug("Exporting address backups for ".count($users_needing_backup)." users.");
 		

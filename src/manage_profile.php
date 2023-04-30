@@ -17,13 +17,15 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 		
 		if (!empty($_REQUEST['action']) && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'])) {
 			if ($_REQUEST['action'] == "save_settings") {
-				$app->run_query("UPDATE users SET notification_email=:notification_email, backups_enabled=:backups_enabled WHERE user_id=:user_id;", [
+				$backups_enabled = (int) $_REQUEST['backups_enabled'];
+				$app->run_query("UPDATE users SET notification_email=:notification_email, backups_enabled=:backups_enabled, unsubscribed=:unsubscribed WHERE user_id=:user_id;", [
 					'notification_email' => $_REQUEST['notification_email'],
-					'backups_enabled' => (int) $_REQUEST['backups_enabled'],
+					'backups_enabled' => $backups_enabled,
+					'unsubscribed' => $backups_enabled ? 0 : $thisuser->db_user['unsubscribed'],
 					'user_id' => $thisuser->db_user['user_id'],
 				]);
 				$thisuser->db_user['notification_email'] = $_REQUEST['notification_email'];
-				$thisuser->db_user['backups_enabled'] = (int) $_REQUEST['backups_enabled'];
+				$thisuser->db_user['backups_enabled'] = $backups_enabled;
 				
 				$message = "Your account settings were successfully updated.";
 				$message_class = "success";

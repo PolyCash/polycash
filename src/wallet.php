@@ -25,6 +25,10 @@ if ($_REQUEST['action'] == "unsubscribe") {
 		}
 		
 		$app->run_query($unsubscribe_q, $unsubscribe_params);
+		
+		$app->run_query("UPDATE users SET unsubscribed=1, backups_enabled=0 WHERE u.username=:email OR u.notification_email=:email;", [
+			'email' => $delivery['to_email'],
+		]);
 	}
 	?>
 	<div style="padding: 15px;">
