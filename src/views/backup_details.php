@@ -24,6 +24,10 @@
 			<td><?php echo $user['username']; ?></td>
 		</tr>
 		<tr>
+			<td>Delivered to:</td>
+			<td><?php echo $backup['deliver_to_email']; ?></td>
+		</tr>
+		<tr>
 			<td style="vertical-align: top;">Addresses:</td>
 			<td>
 				<?php foreach ($accounts as $account) { ?>

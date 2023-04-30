@@ -26,8 +26,8 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 				?>
 				<div class="row">
 					<div class="col-sm-2"><?php echo date("M j, Y g:ia", strtotime($export['exported_at'])); ?></div>
-					<div class="col-sm-2">Accounts <?php echo implode(", ", $extra_info['account_ids']); ?></a></div>
-					<div class="col-sm-2">User: <?php echo $export['username']; ?></div>
+					<div class="col-sm-2">Accounts: <?php echo implode(", ", $extra_info['account_ids']); ?></a></div>
+					<div class="col-sm-4">Sent to: <?php echo $export['deliver_to_email']; ?></div>
 					<div class="col-sm-2"><?php echo $num_addresses." new address".($num_addresses == 1 ? "" : "es"); ?></div>
 					<div class="col-sm-2"><a href="" onClick="thisPageManager.open_backup_details(<?php echo $export['export_id']; ?>); return false;">See Details</a></div>
 				</div>

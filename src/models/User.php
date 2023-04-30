@@ -448,10 +448,11 @@ class User {
 		])->fetchAll(PDO::FETCH_ASSOC);
 	}
 	
-	public static function recordBackupExport(&$app, &$user_arr, &$extra_info, $ip_address) {
-		$app->run_query("INSERT INTO backup_address_exports SET user_id=:user_id, ip_address=:ip_address, extra_info=:extra_info, exported_at=NOW();", [
+	public static function recordBackupExport(&$app, &$user_arr, &$extra_info, $ip_address, $deliver_to_email) {
+		$app->run_query("INSERT INTO backup_address_exports SET user_id=:user_id, ip_address=:ip_address, extra_info=:extra_info, deliver_to_email=:deliver_to_email, exported_at=NOW();", [
 			'user_id' => $user_arr['user_id'],
 			'ip_address' => $ip_address,
+			'deliver_to_email' => $deliver_to_email,
 			'extra_info' => json_encode($extra_info),
 		]);
 		

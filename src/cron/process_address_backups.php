@@ -117,7 +117,7 @@ if ($app->running_as_admin()) {
 						'address_key_ids' => $new_address_key_ids_by_account,
 					];
 					
-					$backup = User::recordBackupExport($app, $backup_user, $backup_extra_info, null);
+					$backup = User::recordBackupExport($app, $backup_user, $backup_extra_info, null, $to_email);
 					
 					if (count($new_address_key_ids) > 0) {
 						$app->run_query("UPDATE address_keys SET exported_backup_at=NOW() WHERE address_key_id IN (".implode(",", $new_address_key_ids).");");
