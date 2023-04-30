@@ -267,84 +267,6 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 			CurrencyAccount::updateAccount($app, $settings_account, $updateParams);
 		}
 	}
-	else if ($action == "export_addresses") {
-		$export_account = $app->fetch_account_by_id($_REQUEST['account_id']);
-		
-		if (!empty($export_account) && $export_account['user_id'] == $thisuser->db_user['user_id']) {
-			if ($export_account['backups_enabled']) {
-				$export_currency = $app->fetch_currency_by_id($export_account['currency_id']);
-				
-				if (!empty($export_currency['blockchain_id']) && $export_blockchain = $app->fetch_blockchain_by_id($export_currency['blockchain_id'])) {
-					$export_blockchain = new Blockchain($app, $export_blockchain['blockchain_id']);
-					if (!empty($export_account['game_id'])) $export_game = new Game($export_blockchain, $export_account['game_id']);
-					
-					$export_addresses = CurrencyAccount::fetchAccountAddressesNeedingExport($app, $export_account);
-					
-					if (count($export_addresses) > 0) {
-						$export_fname = "Account-".$export_account['account_id']."-";
-						$export_fname .= isset($export_game) ? $export_game->db_game['name']."-".$export_blockchain->db_blockchain['blockchain_name'] : $export_blockchain->db_blockchain['blockchain_name'];
-						$export_fname .= "-".count($export_addresses)."-address-keys-".date("Y-m-d").".csv";
-						$game_display_name = isset($export_game) ? $export_game->db_game['name']." (".$export_blockchain->db_blockchain['blockchain_name'].")" : $export_blockchain->db_blockchain['blockchain_name'];
-						
-						$csv_arr = [
-							["Address keys for ".$game_display_name." account #".$export_account['account_id'].", exported ".date("Y-m-d")],
-							["Address", "Private Key"],
-						];
-						
-						$export_address_key_ids = [];
-						foreach ($export_addresses as $export_address) {
-							array_push($csv_arr, [
-								$export_address['pub_key'],
-								$export_address['priv_key'],
-							]);
-							array_push($export_address_key_ids, $export_address['address_key_id']);
-						}
-						
-						$app->send_csv_headers($export_fname);
-						
-						echo $app->array2csv($csv_arr);
-						
-						$backup = CurrencyAccount::recordBackup($app, $thisuser, $export_account, $export_address_key_ids, $_SERVER['REMOTE_ADDR']);
-						
-						if (!empty(AppSettings::getParam('sendgrid_api_key')) && strpos($thisuser->db_user['username'], "@") !== false || strpos($thisuser->db_user['notification_email'], "@") !== false) {
-							$cc = "";
-							if (strpos($thisuser->db_user['username'], "@") !== false) {
-								$to_email = $thisuser->db_user['username'];
-								if (!empty($thisuser->db_user['notification_email']) && strpos($thisuser->db_user['notification_email'], "@") !== false && $thisuser->db_user['notification_email'] != $to_email) $cc = $thisuser->db_user['notification_email'];
-							}
-							else if (strpos($thisuser->db_user['notification_email'], "@") !== false) $to_email = $thisuser->db_user['notification_email'];
-							
-							$subject = "Someone just exported ".count($export_addresses)." private key".(count($export_addresses) == 1 ? "" : "s")." from your account #".$export_account['account_id'];
-							$message = "For more information please follow this link:<br/>".AppSettings::getParam('base_url')."/accounts/backups/?view_backup_id=".$backup['backup_id'];
-							
-							$delivery_id = $app->mail_async($to_email, AppSettings::getParam('site_name'), AppSettings::defaultFromEmailAddress(), $subject, $message, "", $cc, null);
-						}
-						
-						$app->run_query("UPDATE address_keys SET exported_backup_at=NOW() WHERE address_key_id IN (".implode(",", $export_address_key_ids).");");
-						
-						die();
-					}
-					else $export_message = "You don't have any addresses ready for export.";
-				}
-				else $export_message = "Failed to load the blockchain for that account.";
-			}
-			else $export_message = "Backups are not enabled for this account.";
-		}
-		else $export_message = "Sorry, you don't have access to that account.";
-	}
-	else if ($action == "reset_export_addresses") {
-		$export_account = $app->fetch_account_by_id($_REQUEST['account_id']);
-		
-		if (!empty($export_account) && $export_account['user_id'] == $thisuser->db_user['user_id']) {
-			if ($export_account['backups_enabled']) {
-				$app->run_query("UPDATE address_keys SET exported_backup_at=NULL WHERE account_id=:account_id;", [
-					'account_id' => $export_account['account_id'],
-				]);
-			}
-			else $export_message = "Backups are not enabled for this account.";
-		}
-		else $export_message = "Sorry, you don't have access to that account.";
-	}
 }
 
 $pagetitle = "My Accounts";
@@ -523,34 +445,6 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 						
 						echo '</a></div>';
 						echo "</div>\n";
-						
-						$backup_addresses = CurrencyAccount::fetchAccountAddressesNeedingBackup($app, $account);
-						$export_addresses = CurrencyAccount::fetchAccountAddressesNeedingExport($app, $account);
-						
-						if (isset($export_message) || count($backup_addresses) > 0 || count($export_addresses) > 0) {
-							?>
-							<div style="margin: 20px 0px;">
-								<?php if (isset($export_message)) { ?>
-									<font class="text-danger"><?php echo $export_message; ?></font><br/>
-								<?php } ?>
-								<?php if ($account['backups_enabled']) { ?>
-									<?php if (count($backup_addresses) > 0) { ?>
-										<font class="text-warning">You have <?php echo number_format(count($backup_addresses)).(count($backup_addresses) == 1 ? " address that needs" : " addresses that need"); ?> to be backed up.</font><br/>
-									<?php } ?>
-									<?php if (count($export_addresses) > 0) { ?>
-										<form method="post" action="/accounts/?account_id=<?php echo $account['account_id']; ?>">
-											<input type="hidden" name="account_id" value="<?php echo $account['account_id']; ?>" />
-											<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
-											<input type="hidden" name="action" value="export_addresses" />
-											<font class="text-success">You have <?php echo number_format(count($export_addresses)).(count($export_addresses) == 1 ? " address" : " addresses"); ?> ready for backup.</font> &nbsp; 
-											<button class="btn btn-sm btn-success">Save to CSV</button>
-											<br/>
-										</form>
-									<?php } ?>
-								<?php } ?>
-							</div>
-							<?php
-						}
 						
 						echo '<div class="row" id="account_details_'.$account['account_id'].'"';
 						if ($selected_account_id == $account['account_id']) {}
@@ -747,27 +641,13 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 							$last_export_at = CurrencyAccount::getLastExportInAccount($app, $account);
 							?>
 							<?php if (isset($last_export_at)) { ?>
-								<form method="post" action="/accounts/?account_id=<?php echo $account['account_id']; ?>" style="margin: 15px 0px;">
-									<input type="hidden" name="account_id" value="<?php echo $account['account_id']; ?>" />
-									<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
-									<input type="hidden" name="action" value="reset_export_addresses" />
-									Last backed up addresses <?php echo date("M d, Y g:ia", strtotime($last_export_at)); ?>. &nbsp; <a href="/accounts/backups">See Details</a>. &nbsp; 
-									<button class="btn btn-sm btn-success">Backup Again</button>
-									<br/>
-								</form>
+								Last backed up addresses <?php echo date("M d, Y g:ia", strtotime($last_export_at)); ?>. &nbsp; <a href="/accounts/backups">See Details</a>.<br/>
 							<?php } ?>
 							
 							<form action="/accounts/?account_id=<?php echo $account['account_id']; ?>" method="post">
 								<input type="hidden" name="action" value="save_settings" />
 								<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
 								
-								<div class="form-group">
-									<label for="backups_enabled">Would you like to backup and export all addresses for this account?</label>
-									<select class="form-control" name="backups_enabled">
-										<option value="0">Disable backups</option>
-										<option value="1" <?php if ($account['backups_enabled'] == 1) echo 'selected="selected"'; ?>>Enable backups</option>
-									</select>
-								</div>
 								<?php if ($account_game) { ?>
 									<div class="form-group">
 										<label for="faucet_donations_on">Would you like to make recurring donations to the faucet account for <?php echo $account_game->db_game['name']; ?>?</label>

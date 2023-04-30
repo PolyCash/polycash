@@ -536,7 +536,7 @@ class App {
 		return $this->run_query("SELECT * FROM redirect_urls WHERE redirect_key=:redirect_key;", ['redirect_key'=>$redirect_key])->fetch();
 	}
 	
-	public function mail_async($email, $from_name, $from, $subject, $message, $bcc, $cc, $delivery_key) {
+	public function mail_async($email, $from_name, $from, $subject, $message, $bcc, $cc, $delivery_key, $attachment_type=null, $attachment_content=null) {
 		if (empty($delivery_key)) $delivery_key = $this->random_string(16);
 		
 		$this->run_insert_query("async_email_deliveries", [
@@ -548,7 +548,9 @@ class App {
 			'bcc' => $bcc,
 			'cc' => $cc,
 			'delivery_key' => $delivery_key,
-			'time_created' => time()
+			'time_created' => time(),
+			'attachment_type' => $attachment_type,
+			'attachment_content' => $attachment_content,
 		]);
 		$delivery_id = $this->last_insert_id();
 		
@@ -4006,6 +4008,12 @@ class App {
 
 		header("Content-Disposition: attachment;filename={$filename}");
 		header("Content-Transfer-Encoding: binary");
+	}
+	
+	public function fetchAddressKeysByIdArr(&$account, $address_key_ids) {
+		return $this->run_query("SELECT * FROM address_keys WHERE account_id=:account_id AND address_key_id IN (".implode(",", $address_key_ids).") ORDER BY option_index ASC, address_id ASC;", [
+			'account_id' => $account['account_id'],
+		])->fetchAll(PDO::FETCH_ASSOC);
 	}
 }
 ?>
