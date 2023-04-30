@@ -9,7 +9,7 @@
 	<table>
 		<tr>
 			<td style="min-width: 200px;">Backup exported at:</td>
-			<td><?php echo date("M j, Y g:ia", strtotime($backup['exported_at'])); ?></td>
+			<td><?php echo date("M j, Y g:ia", $backup['exported_at']); ?></td>
 		</tr>
 		<tr>
 			<td>Accounts:</td>
@@ -31,7 +31,7 @@
 			<td style="vertical-align: top;">Addresses:</td>
 			<td>
 				<?php foreach ($accounts as $account) { ?>
-					Exported <?php echo count($addresses_by_account_id[$account['account_id']])." new address".(count($addresses_by_account_id[$account['account_id']]) == 1 ? "" : "es"); ?> in <a target="_blank" href="/accounts/?account_id=<?php echo $account['account_id']; ?>">account #<?php echo $account['account_id']; ?></a><br/>
+					Exported <?php echo number_format(count($addresses_by_account_id[$account['account_id']]))." new address".(count($addresses_by_account_id[$account['account_id']]) == 1 ? "" : "es"); ?> in <a target="_blank" href="/accounts/?account_id=<?php echo $account['account_id']; ?>">account #<?php echo $account['account_id']; ?></a><br/>
 					<div style="max-height: 300px; overflow-y: scroll; overflow-x: hidden; padding: 10px 10px 10px 0px;">
 						<?php foreach ($addresses_by_account_id[$account['account_id']] as $address_key) { ?>
 							<?php echo $address_key['pub_key']; ?><br/>

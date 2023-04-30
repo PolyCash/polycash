@@ -3055,7 +3055,8 @@ var PageManager = function() {
 			},
 			success: function(details) {
 				$('#backup_details_modal').modal('show');
-				$('#backup_details_inner').html(details.renderedContent);
+				if (details.renderedContent) $('#backup_details_inner').html(details.renderedContent);
+				else $('#backup_details_inner').html('<div class="modal-body">'+details.message+'</div>');
 			}
 		});
 	};
