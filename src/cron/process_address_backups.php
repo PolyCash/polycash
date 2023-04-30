@@ -65,16 +65,14 @@ if ($app->running_as_admin()) {
 			$lastExportAt = User::getLastAddressExportAt($app, $backup_user['user_id']);
 			
 			if ($lastExportAt === null || $lastExportAt <= time()-(60*5)) {
-				if (!empty($backup_user['notification_email']) && strpos($backup_user['notification_email'], "@") !== false) $to_email = $backup_user['notification_email'];
-				else if (strpos($backup_user['username'], "@") !== false) $to_email = $thisuser->db_user['username'];
-				else $to_email = null;
+				$to_email = User::getToEmailAddress($backup_user);
 				
 				if ($to_email !== null) {
 					$backup_accounts = $app->run_query("SELECT a.*, b.blockchain_name FROM currency_accounts a JOIN address_keys k ON a.account_id=k.account_id JOIN currencies c ON a.currency_id=c.currency_id JOIN blockchains b ON c.blockchain_id=b.blockchain_id WHERE a.user_id=:user_id AND c.blockchain_id IS NOT NULL AND k.backed_up_at IS NOT NULL AND k.exported_backup_at IS NULL GROUP BY a.account_id ORDER BY a.account_id ASC;", [
 						'user_id' => $backup_user['user_id'],
 					])->fetchAll(PDO::FETCH_ASSOC);
 					
-					if ($print_debug) $app->print_debug("Exporting backups on ".count($backup_accounts)." accounts for user #".$backup_user['user_id']);
+					if ($print_debug) $app->print_debug("Exporting backups on ".number_format(count($backup_accounts))." accounts for user #".$backup_user['user_id']);
 					
 					$message = "";
 					
@@ -93,7 +91,7 @@ if ($app->running_as_admin()) {
 						if (!empty($backup_account['game_id'])) $account_game = $app->fetch_game_by_id($backup_account['game_id']);
 						else $account_game = null;
 						
-						$message .= $backup_account['blockchain_name'].($account_game ? " - ".$account_game['name'] : '')." account #".$backup_account['account_id']." (".count($backup_addresses)." address".(count($backup_addresses) == 1 ? "" : "es").")<br/>\n";
+						$message .= $backup_account['blockchain_name'].($account_game ? " - ".$account_game['name'] : '')." account <a href='".AppSettings::getParam('base_url')."/accounts/?account_id=".$backup_account['account_id']."'>#".$backup_account['account_id']."</a> (".number_format(count($backup_addresses))." address".(count($backup_addresses) == 1 ? "" : "es").")<br/>\n";
 						
 						$new_address_key_ids_by_account[$backup_account['account_id']] = [];
 						
@@ -125,7 +123,7 @@ if ($app->running_as_admin()) {
 					
 					$subject = "Export of private keys for ".AppSettings::getParam("site_domain");
 					
-					$message = "<p>This backup includes private keys for ".count($new_address_key_ids)." new address".(count($new_address_key_ids) == 1 ? "" : "es").".</p><p>".$message."</p><p>Backup details are available here:<br/>".AppSettings::getParam('base_url')."/accounts/backups/?view_backup_id=".$backup['export_id']."</p>\n";
+					$message = "<p>This is a backup for your user account <b>".$backup_user['username']."</b> on the ".AppSettings::getParam("site_domain")." server (User ID: #".$backup_user['user_id']."). This backup includes private keys for ".number_format(count($new_address_key_ids))." new address".(count($new_address_key_ids) == 1 ? "" : "es").".</p><p>".$message."</p><p>Do not delete this email.<br/>Please archive this email for your records or transfer the attached file somewhere for safekeeping.</p><p>Details of this backup are available here:<br/>".AppSettings::getParam('base_url')."/accounts/backups/?view_backup_id=".$backup['export_id']."</p>\n";
 					
 					$csv_raw = $app->array2csv($csv_arr);
 					

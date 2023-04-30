@@ -2181,11 +2181,11 @@ class App {
 		])->fetch();
 	}
 	
-	public function render_error_message(&$error_message, $error_class) {
+	public function render_error_message(&$error_message, $error_class="success") {
 		if ($error_class == "nostyle") return $error_message;
 		else {
 			$html = '
-			<div class="alert alert-dismissible alert-success">
+			<div class="alert alert-dismissible alert-'.$error_class.'">
 				<button type="button" class="close" data-dismiss="alert">&times;</button>
 				'.$error_message.'
 			</div>';

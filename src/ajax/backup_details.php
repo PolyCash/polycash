@@ -23,7 +23,7 @@ if ($thisuser) {
 				])
 			]);
 		}
-		else $app->output_message(4, "You don't have access to that account.");
+		else $app->output_message(4, "You're not logged in to the right account for that backup.");
 	}
 	else $app->output_message(3, "Please supply a valid backup ID.");
 }

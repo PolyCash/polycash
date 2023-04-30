@@ -449,14 +449,23 @@ class User {
 	}
 	
 	public static function recordBackupExport(&$app, &$user_arr, &$extra_info, $ip_address, $deliver_to_email) {
-		$app->run_query("INSERT INTO backup_address_exports SET user_id=:user_id, ip_address=:ip_address, extra_info=:extra_info, deliver_to_email=:deliver_to_email, exported_at=NOW();", [
+		$app->run_query("INSERT INTO backup_address_exports SET user_id=:user_id, ip_address=:ip_address, extra_info=:extra_info, deliver_to_email=:deliver_to_email, exported_at=:exported_at;", [
 			'user_id' => $user_arr['user_id'],
 			'ip_address' => $ip_address,
 			'deliver_to_email' => $deliver_to_email,
 			'extra_info' => json_encode($extra_info),
+			'exported_at' => time(),
 		]);
 		
 		return User::fetchBackupExportById($app, $app->last_insert_id());
+	}
+	
+	public static function getToEmailAddress($db_user) {
+		if (!empty($db_user['notification_email']) && strpos($db_user['notification_email'], "@") !== false) $to_email = $db_user['notification_email'];
+		else if (strpos($db_user['username'], "@") !== false) $to_email = $db_user['username'];
+		else $to_email = null;
+		
+		return $to_email;
 	}
 }
 ?>
