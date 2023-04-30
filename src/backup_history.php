@@ -3,7 +3,7 @@ require(AppSettings::srcPath().'/includes/connect.php');
 require(AppSettings::srcPath().'/includes/get_session.php');
 require(AppSettings::srcPath().'/includes/must_log_in.php');
 
-$backups = CurrencyAccount::fetchAllBackupsByUser($app, $thisuser);
+$exports = $thisuser->fetchAllBackupExportsByUser();
 
 $pagetitle = "Backup History";
 
@@ -14,19 +14,22 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 	
 	<div class="panel panel-info">
 		<div class="panel-heading">
-			Address private keys have been exported from your account <?php echo number_format(count($backups))." time".(count($backups) == 1 ? "" : "s"); ?>.
+			Address private keys have been exported from your account <?php echo number_format(count($exports))." time".(count($exports) == 1 ? "" : "s"); ?>.
 		</div>
 		<div class="panel-body">
-			<?php foreach ($backups as $backup) {
-				$address_key_ids = json_decode($backup['extra_info'], true)['address_key_ids'];
+			<?php foreach ($exports as $export) {
+				$extra_info = json_decode($export['extra_info'], true);
+				$num_addresses = 0;
+				foreach ($extra_info['address_key_ids'] as $account_id => $address_key_ids) {
+					$num_addresses += count($address_key_ids);
+				}
 				?>
 				<div class="row">
-					<div class="col-sm-2"><?php echo date("M j, Y g:ia", strtotime($backup['exported_at'])); ?></div>
-					<div class="col-sm-2"><a href="/accounts/?account_id=<?php echo $backup['account_id']; ?>">Account #<?php echo $backup['account_id']; ?></a></div>
-					<div class="col-sm-2">User: <?php echo $backup['username']; ?></div>
-					<div class="col-sm-2">IP: <a target="_blank" href="https://www.iplocation.net/ip-lookup/<?php echo $backup['ip_address']; ?>"><?php echo $backup['ip_address']; ?></a></div>
-					<div class="col-sm-2"><?php echo count($address_key_ids)." address".(count($address_key_ids) == 1 ? "" : "es"); ?></div>
-					<div class="col-sm-2"><a href="" onClick="thisPageManager.open_backup_details(<?php echo $backup['backup_id']; ?>); return false;">See Details</a></div>
+					<div class="col-sm-2"><?php echo date("M j, Y g:ia", strtotime($export['exported_at'])); ?></div>
+					<div class="col-sm-2">Accounts <?php echo implode(", ", $extra_info['account_ids']); ?></a></div>
+					<div class="col-sm-2">User: <?php echo $export['username']; ?></div>
+					<div class="col-sm-2"><?php echo $num_addresses." new address".($num_addresses == 1 ? "" : "es"); ?></div>
+					<div class="col-sm-2"><a href="" onClick="thisPageManager.open_backup_details(<?php echo $export['export_id']; ?>); return false;">See Details</a></div>
 				</div>
 			<?php } ?>
 		</div>

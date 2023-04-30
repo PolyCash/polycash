@@ -75,6 +75,17 @@ if ($app->running_as_admin()) {
 				]]
 			];
 			
+			if (!empty($delivery['attachment_content'])) {
+				$sendgrid_payload['attachments'] = [
+					[
+						"content" => base64_encode($delivery['attachment_content']),
+						"filename" => "attachment.".$delivery['attachment_type'],
+						"type" => "text/".$delivery['attachment_type'],
+						"disposition" => "attachment",
+					],
+				];
+			}
+			
 			$curl_handle = curl_init($sendgrid_api_url);
 			
 			curl_setopt_array($curl_handle, [

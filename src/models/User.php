@@ -426,5 +426,36 @@ class User {
 		
 		@session_regenerate_id();
 	}
+	
+	public static function getLastAddressExportAt(&$app, $userId) {
+		$info = $app->run_query("SELECT * FROM backup_address_exports WHERE user_id=:user_id ORDER BY exported_at DESC LIMIT 1;", [
+			'user_id' => $userId,
+		])->fetch();
+		
+		if (!empty($info['exported_at'])) return (int) $info['exported_at'];
+		else return null;
+	}
+	
+	public static function fetchBackupExportById(&$app, $export_id) {
+		return $app->run_query("SELECT * FROM backup_address_exports WHERE export_id=:export_id;", [
+			'export_id' => $export_id
+		])->fetch();
+	}
+	
+	public function fetchAllBackupExportsByUser() {
+		return $this->app->run_query("SELECT e.*, u.username FROM backup_address_exports e JOIN users u ON e.user_id=u.user_id WHERE e.user_id=:user_id ORDER BY e.exported_at DESC;", [
+			'user_id' => $this->db_user['user_id'],
+		])->fetchAll(PDO::FETCH_ASSOC);
+	}
+	
+	public static function recordBackupExport(&$app, &$user_arr, &$extra_info, $ip_address) {
+		$app->run_query("INSERT INTO backup_address_exports SET user_id=:user_id, ip_address=:ip_address, extra_info=:extra_info, exported_at=NOW();", [
+			'user_id' => $user_arr['user_id'],
+			'ip_address' => $ip_address,
+			'extra_info' => json_encode($extra_info),
+		]);
+		
+		return User::fetchBackupExportById($app, $app->last_insert_id());
+	}
 }
 ?>
