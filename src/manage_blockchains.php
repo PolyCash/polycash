@@ -22,6 +22,9 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 		<?php
 	}
 	else {
+		$message = null;
+		$message_class = null;
+		
 		if (!empty($_REQUEST['action']) && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'])) {
 			$first_required_block = (string) @($_REQUEST['first_required_block'] == "" ? null : (int) $_REQUEST['first_required_block']);
 			
@@ -29,10 +32,14 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 				$p2p_mode = $_REQUEST['p2p_mode'];
 				if (!in_array($p2p_mode, ['rpc', 'none', 'web'])) $p2p_mode = "none";
 				
+				$sync_mode = $_REQUEST['sync_mode'];
+				if ($sync_mode != "no_db") $sync_mode = "full";
+				
 				$blockchain_name = $_REQUEST['blockchain_name'];
 				$url_identifier = $_REQUEST['url_identifier'];
 				$coin_name = $_REQUEST['coin_name'];
 				$coin_name_plural = $_REQUEST['coin_name_plural'];
+				$abbreviation = $_REQUEST['abbreviation'];
 				
 				$seconds_per_block = (int) $_REQUEST['seconds_per_block'];
 				$decimal_places = (int) $_REQUEST['decimal_places'];
@@ -41,10 +48,12 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 				$new_blockchain_def = json_encode([
 					'peer' => 'none',
 					'p2p_mode' => $p2p_mode,
+					'sync_mode' => $sync_mode,
 					'blockchain_name' => $blockchain_name,
 					'url_identifier' => $url_identifier,
 					'coin_name' => $coin_name,
 					'coin_name_plural' => $coin_name_plural,
+					'abbreviation' => $abbreviation,
 					'seconds_per_block' => $seconds_per_block,
 					'decimal_places' => $decimal_places,
 					'initial_pow_reward' => $initial_pow_reward
@@ -55,9 +64,13 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 				$app->blockchain_ensure_currencies();
 				
 				if ($new_blockchain_id) {
-					echo "Great, your blockchain has been created!<br/>\n";
+					$message_class = "success";
+					$message = "Great, your blockchain has been created!";
 				}
-				else echo $new_blockchain_message."<br/>\n";
+				else {
+					$message_class = "warning";
+					$message = $new_blockchain_message;
+				}
 			}
 			else {
 				$blockchain_id = (int) $_REQUEST['blockchain_id'];
@@ -71,9 +84,14 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 							'rpc_username' => $_REQUEST['rpc_username'],
 							'rpc_password' => $_REQUEST['rpc_password'],
 							'rpc_port' => $_REQUEST['rpc_port'],
+							'online' => (int) $_REQUEST['online'],
+							'sync_mode' => $_REQUEST['sync_mode'],
 							'first_required_block' => $first_required_block,
 							'last_complete_block' => (string) $first_required_block == "" ? null : ($_REQUEST['first_required_block']-1),
 						]);
+						
+						$message_class = "success";
+						$message = "Blockchain parameters have been successfully updated.";
 					}
 					else if (in_array($_REQUEST['action'], ['enable','disable'])) {
 						$online = $_REQUEST['action'] == "enable" ? 1 : 0;
@@ -82,6 +100,9 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 							'online' => $online,
 							'blockchain_id' => $existing_blockchain_arr['blockchain_id']
 						]);
+						
+						$message_class = "success";
+						$message = $existing_blockchain_arr['blockchain_name']." was successfully ".$_REQUEST['action']."d.";
 					}
 					else if (in_array($_REQUEST['action'], ["start_mining", "stop_mining"])) {
 						if ($existing_blockchain_arr['p2p_mode'] == "rpc") {
@@ -89,6 +110,9 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 								'is_rpc_mining' => $_REQUEST['action'] == "start_mining" ? 1 : 0,
 								'blockchain_id' => $existing_blockchain_arr['blockchain_id']
 							]);
+							
+							$message_class = "success";
+							$message = "Mining has been ".($_REQUEST['action'] == "start_mining" ? "started" : "stopped")." for ".$existing_blockchain_arr['blockchain_name'].".";
 						}
 						else die("Invalid action supplied.");
 					}
@@ -99,6 +123,8 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 		}
 		
 		$blockchain_arr = $app->run_query("SELECT * FROM blockchains ORDER BY blockchain_id ASC;")->fetchAll();
+		
+		if (!empty($message)) echo '<div style="margin-top: 15px;">'.$app->render_error_message($message, $message_class).'</div>';
 		?>
 		<div class="panel panel-default" style="margin-top: 15px;">
 			<div class="panel-heading">
@@ -132,7 +158,10 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 								else {
 									echo "Web &nbsp; ";
 									if ($blockchain->db_blockchain['p2p_mode'] == "none") echo "(Authoritative)";
-									else echo "(".$blockchain->authoritative_peer['base_url'].")";
+									else {
+										if (empty($blockchain->authoritative_peer)) echo "(Peer Missing)";
+										else echo "(".$blockchain->authoritative_peer['base_url'].")";
+									}
 								}
 								?></td>
 								<td>
@@ -265,6 +294,28 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 														</div>
 														
 														<div class="form-group">
+															<label for="online_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>">
+																Status
+															</label>
+															<select class="form-control input-sm" name="online" id="online_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>" required >
+																<option value="">-- Please Select --</option>
+																<option value="1">Enabled</option>
+																<option value="0">Disabled</option>
+															</select>
+														</div>
+														
+														<div class="form-group">
+															<label for="sync_mode_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>">
+																Sync mode
+															</label>
+															<select class="form-control input-sm" name="sync_mode" id="sync_mode_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>" required >
+																<option value="">-- Please Select --</option>
+																<option value="full"<?php if ($blockchain->db_blockchain['sync_mode'] == "full") echo ' selected="selected"'; ?>>Full (for running games)</option>
+																<option value="no_db"<?php if ($blockchain->db_blockchain['sync_mode'] == "no_db") echo ' selected="selected"'; ?>>No db (for payments only)</option>
+															</select>
+														</div>
+														
+														<div class="form-group">
 															<label for="first_required_block_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>">
 																Sync from block
 															</label>
@@ -329,9 +380,9 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 										<label for="new_p2p_mode">What P2P mode will this blockchain use?</label>
 										<select class="form-control" name="p2p_mode" id="new_p2p_mode" required="required">
 											<option value="">-- Please Select --</option>
-											<option value="rpc">Use a coin daemon and connect via RPC</option>
+											<option value="rpc" selected="selected">Use a coin daemon and connect via RPC</option>
 											<option value="web">Read blocks from a trusted peer via web api</option>
-											<option value="none" selected="selected">Mine all my own blocks &amp; allow peers to read via web api</option>
+											<option value="none">Mine all my own blocks &amp; allow peers to read via web api</option>
 										</select>
 									</div>
 									
@@ -356,6 +407,11 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 									</div>
 									
 									<div class="form-group">
+										<label for="new_abbreviation">What is the abbreviation for this coin?</label>
+										<input class="form-control" name="abbreviation" id="new_abbreviation" placeholder="BTC" required="required" />
+									</div>
+									
+									<div class="form-group">
 										<label for="new_seconds_per_block">How many seconds does it take to mine a block on average?</label>
 										<input class="form-control" name="seconds_per_block" id="new_seconds_per_block" placeholder="600" required="required" />
 									</div>
@@ -363,6 +419,17 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 									<div class="form-group">
 										<label for="new_seconds_per_block">How many decimal places can a coin be divided into?</label>
 										<input class="form-control" name="decimal_places" id="new_decimal_places" placeholder="8" value="8" required="required" />
+									</div>
+									
+									<div class="form-group">
+										<label for="new_sync_mode">
+											What sync mode should this blockchain use?
+										</label>
+										<select class="form-control" name="sync_mode" id="new_sync_mode" required>
+											<option value="">-- Please Select --</option>
+											<option value="full">Full (for running games)</option>
+											<option value="no_db">No db (for payments only)</option>
+										</select>
 									</div>
 									
 									<div class="form-group">

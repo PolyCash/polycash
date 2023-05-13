@@ -46,7 +46,7 @@ if ($app->running_as_admin()) {
 			
 			$sync_blockchain_q = "SELECT * FROM blockchains WHERE ";
 			if ($only_blockchain_id) $sync_blockchain_q .= "blockchain_id=".$only_blockchain_id;
-			else $sync_blockchain_q .= " online=1 AND p2p_mode IN ('rpc','web_api')";
+			else $sync_blockchain_q .= " online=1 AND p2p_mode IN ('rpc','web_api') AND sync_mode='full'";
 			$sync_blockchain_q .= ";";
 			
 			$sync_blockchains = $app->run_query($sync_blockchain_q);

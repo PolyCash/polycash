@@ -353,7 +353,7 @@ class App {
 		
 		$script_path_name = AppSettings::srcPath();
 		
-		$sync_blockchains = $this->run_query("SELECT * FROM blockchains WHERE online=1 AND p2p_mode IN ('rpc','web_api');");
+		$sync_blockchains = $this->run_query("SELECT * FROM blockchains WHERE online=1 AND p2p_mode IN ('rpc','web_api') AND sync_mode='full';");
 		
 		while ($sync_blockchain = $sync_blockchains->fetch()) {
 			$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/load_blocks.php" blockchain_id='.$sync_blockchain['blockchain_id'];
@@ -1923,6 +1923,10 @@ class App {
 				
 				if ($import_params['p2p_mode'] != "rpc") $import_params['first_required_block'] = 1;
 				
+				if (property_exists($blockchain_def, 'sync_mode')) {
+					$import_params['sync_mode'] = $blockchain_def->sync_mode;
+				}
+				
 				if (property_exists($blockchain_def, 'online')) {
 					$import_params['online'] = $blockchain_def->online;
 				}
@@ -2819,6 +2823,12 @@ class App {
 		
 		if ($make_unique) return array_values(array_unique($urls));
 		else return $urls;
+	}
+	
+	public function fetch_all_addresses_in_account(&$account, $limit=null) {
+		return $this->run_query("SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id=:account_id ORDER BY a.option_index ASC".($limit === null ? "" : " LIMIT ".$limit).";", [
+			'account_id' => $account['account_id']
+		])->fetchAll(PDO::FETCH_ASSOC);
 	}
 	
 	public function fetch_addresses_in_account(&$account, $option_index, $quantity) {

@@ -1403,6 +1403,11 @@ class Blockchain {
 	}
 	
 	public function sync_blockchain($print_debug) {
+		if ($this->db_blockchain['sync_mode'] == "no_db") {
+			if ($print_debug) $this->app->print_debug("Block loading is not enabled for ".$this->db_blockchain['blockchain_name'].".");
+			return false;
+		}
+		
 		$last_block_id = $this->db_blockchain['last_complete_block'];
 		
 		if ($last_block_id < 0) {
@@ -2151,13 +2156,21 @@ class Blockchain {
 	}
 	
 	public function total_paid_to_address(&$db_address, $confirmed_only) {
-		$balance_q = "SELECT SUM(io.amount) FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE t.blockchain_id=:blockchain_id AND io.address_id=:address_id";
-		if ($confirmed_only) $balance_q .= " AND t.block_id IS NOT NULL";
-		
-		return $this->app->run_query($balance_q, [
-			'blockchain_id' => $this->db_blockchain['blockchain_id'],
-			'address_id' => $db_address['address_id']
-		])->fetch()['SUM(io.amount)'];
+		if ($this->db_blockchain['sync_mode'] == "full") {
+			$balance_q = "SELECT SUM(io.amount) FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE t.blockchain_id=:blockchain_id AND io.address_id=:address_id";
+			if ($confirmed_only) $balance_q .= " AND t.block_id IS NOT NULL";
+			
+			return $this->app->run_query($balance_q, [
+				'blockchain_id' => $this->db_blockchain['blockchain_id'],
+				'address_id' => $db_address['address_id']
+			])->fetch()['SUM(io.amount)'];
+		}
+		else {
+			$this->load_coin_rpc();
+			$receivedbyaddress = $this->coin_rpc->getreceivedbyaddress($db_address['address'], $confirmed_only ? 1 : 0);
+			if ($receivedbyaddress === null || $receivedbyaddress === false) return 0;
+			else return $receivedbyaddress*pow(10, $this->db_blockchain['decimal_places']);
+		}
 	}
 	
 	public function address_balance_at_block(&$db_address, $block_id) {
@@ -2246,12 +2259,111 @@ class Blockchain {
 		}
 	}
 
+	public function rpc_account_balance(&$account, $min_confirmations, $immature_only=false) {
+		$tx_out_info = $this->rpc_spendable_ios_in_account($account, $min_confirmations, $immature_only ? ["immature"] : null);
+		
+		if ($tx_out_info !== null) {
+			$balance_float = 0;
+			
+			foreach ($tx_out_info as $txo_identifier => $txo_info) {
+				$balance_float += $txo_info['value'];
+			}
+			
+			return $balance_float*pow(10, $this->db_blockchain['decimal_places']);
+		}
+		else return null;
+	}
+	
+	public function rpc_spendable_ios_in_account(&$account, $min_confirmations, $only_categories=null) {
+		$this->load_coin_rpc();
+		
+		$transactions = $this->coin_rpc->listtransactions();
+		
+		if ($transactions !== false && $transactions !== null) {
+			$all_addresses = $this->app->fetch_all_addresses_in_account($account);
+			$account_addresses_map = [];
+			foreach ($all_addresses as $account_address) {
+				$account_addresses_map[$account_address['address']] = true;
+			}
+			
+			$relevant_tx_hashes = [];
+			$acceptable_categories = ['send', 'receive', 'generate', 'immature'];
+			if ($only_categories !== null) $acceptable_categories = $only_categories;
+			
+			foreach ($transactions as $transaction) {
+				if (isset($transaction['address']) && !empty($account_addresses_map[$transaction['address']])) {
+					if (in_array($transaction['category'], $acceptable_categories)) {
+						$relevant_tx_hashes[$transaction['txid']] = true;
+					}
+				}
+			}
+			
+			$relevant_tx_hashes = array_keys($relevant_tx_hashes);
+			
+			$raw_tx_by_hash = [];
+			$tx_out_info = [];
+			
+			foreach ($relevant_tx_hashes as $relevant_tx_hash) {
+				$raw_tx = $this->coin_rpc->getrawtransaction($relevant_tx_hash);
+				if ($raw_tx) {
+					$raw_tx_decoded = $this->coin_rpc->decoderawtransaction($raw_tx);
+					$raw_tx_by_hash[$relevant_tx_hash] = $raw_tx_decoded;
+					
+					if (!empty($raw_tx_decoded['vout'])) {
+						foreach ($raw_tx_decoded['vout'] as $vout_index => $vout_info) {
+							if (isset($vout_info['value']) && !empty($vout_info['scriptPubKey']['address']) && !empty($account_addresses_map[$vout_info['scriptPubKey']['address']])) {
+								$tx_out_info[$relevant_tx_hash."-".$vout_index] = [
+									'tx_hash' => $relevant_tx_hash,
+									'out_index' => $vout_index,
+									'address' => $vout_info['scriptPubKey']['address'],
+									'value' => $vout_info['value'],
+									'spent' => false,
+								];
+							}
+						}
+					}
+				}
+			}
+			
+			foreach ($raw_tx_by_hash as $tx_hash => $raw_tx) {
+				if (!empty($raw_tx['vin'])) {
+					foreach ($raw_tx['vin'] as $tx_input) {
+						if (isset($tx_input['txid']) && isset($tx_input['vout'])) {
+							if (isset($tx_out_info[$tx_input['txid']."-".$tx_input['vout']])) {
+								unset($tx_out_info[$tx_input['txid']."-".$tx_input['vout']]);
+							}
+						}
+					}
+				}
+			}
+			
+			return $tx_out_info;
+		}
+		else return null;
+	}
+	
 	public function set_blockchain_creator(&$user) {
 		$this->app->run_query("UPDATE blockchains SET creator_id=:user_id WHERE blockchain_id=:blockchain_id;", [
 			'user_id' => $user->db_user['user_id'],
 			'blockchain_id' => $this->db_blockchain['blockchain_id']
 		]);
 		$this->db_blockchain['creator_id'] = $user->db_user['user_id'];
+	}
+	
+	public function rpc_createrawtransaction($raw_txin, $raw_txout) {
+		$raw_transaction = $this->coin_rpc->createrawtransaction($raw_txin, $raw_txout);
+		try {
+			$signed_raw_transaction = $this->coin_rpc->signrawtransactionwithwallet($raw_transaction);
+		}
+		catch (Exception $e) {
+			$signed_raw_transaction = $this->coin_rpc->signrawtransaction($raw_transaction);
+		}
+		$decoded_transaction = $this->coin_rpc->decoderawtransaction($signed_raw_transaction['hex']);
+		$tx_hash = $decoded_transaction['txid'];
+		
+		$sendraw_response = $this->coin_rpc->sendrawtransaction($signed_raw_transaction['hex']);
+		
+		return [$sendraw_response, $tx_hash];
 	}
 	
 	// Returns the transaction ID if successful or false if not successful
@@ -2441,17 +2553,8 @@ class Blockchain {
 				foreach ($raw_txout as $addr => $amount) {
 					$raw_txout[$addr] = sprintf('%.'.$this->db_blockchain['decimal_places'].'F', $amount);
 				}
-				$raw_transaction = $this->coin_rpc->createrawtransaction($raw_txin, $raw_txout);
-				try {
-					$signed_raw_transaction = $this->coin_rpc->signrawtransactionwithwallet($raw_transaction);
-				}
-				catch (Exception $e) {
-					$signed_raw_transaction = $this->coin_rpc->signrawtransaction($raw_transaction);
-				}
-				$decoded_transaction = $this->coin_rpc->decoderawtransaction($signed_raw_transaction['hex']);
-				$tx_hash = $decoded_transaction['txid'];
 				
-				$sendraw_response = $this->coin_rpc->sendrawtransaction($signed_raw_transaction['hex']);
+				list($sendraw_response, $tx_hash) = $this->rpc_createrawtransaction($raw_txin, $raw_txout);
 				
 				if (isset($sendraw_response['message'])) {
 					$this->app->cancel_transaction($transaction_id ?? null, $affected_input_ids, $created_input_ids);

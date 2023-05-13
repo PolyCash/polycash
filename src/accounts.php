@@ -55,7 +55,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 								$db_address = $app->new_normal_address_key($game_sale_account['currency_id'], $game_sale_account);
 								
 								array_push($address_ids, $db_address['address_id']);
-								array_push($address_key_ids, $addr_key['address_key_id']);
+								array_push($address_key_ids, $db_address['address_key_id']);
 								
 								$addresses_needed--;
 								$loop_count++;
@@ -380,12 +380,24 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 					if (!$selected_account_id) echo '<a href="/accounts/?account_id='.$account['account_id'].'">';
 					echo $account['account_name'];
 					if (!$selected_account_id) echo '</a>';
+					if ($selected_account_id && $blockchain->db_blockchain['sync_mode'] == "no_db") echo "<br/>Transactions can't be viewed for this account.";
 					echo '</div>';
 					
 					if ($show_balances) {
-						$mature_balance = $blockchain->account_balance($account['account_id']);
-						$immature_balance = $blockchain->account_balance($account['account_id'], true);
-						$immature_amount = $blockchain->account_balance($account['account_id'], false, true);
+						$include_unconfirmed = false;
+						$immature_only = false;
+						$min_confirmations = $include_unconfirmed ? 0 : 1;
+						
+						if ($blockchain->db_blockchain['sync_mode'] == "no_db") {
+							$mature_balance = $blockchain->rpc_account_balance($account, 1);
+							$unconfirmed_balance = $blockchain->rpc_account_balance($account, 0);
+							$immature_amount = $blockchain->rpc_account_balance($account, 0, true);
+						}
+						else {
+							$mature_balance = $blockchain->account_balance($account['account_id']);
+							$unconfirmed_balance = $blockchain->account_balance($account['account_id'], true);
+							$immature_amount = $blockchain->account_balance($account['account_id'], false, true);
+						}
 					}
 					
 					echo '<div class="col-sm-2" style="text-align: right">';
@@ -405,7 +417,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 					echo '<div class="col-sm-2" style="text-align: right">';
 					if ($show_balances) {
 						$ready_balance = $mature_balance - $immature_amount;
-						$unready_balance = $immature_balance - $ready_balance;
+						$unready_balance = $unconfirmed_balance - $ready_balance;
 						
 						echo '<font class="text-success">'.$app->format_bignum($ready_balance/pow(10,$blockchain->db_blockchain['decimal_places'])).' '.$account['short_name_plural'].'</font>';
 						
@@ -423,27 +435,30 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 						}
 						echo '</div>';
 						
-						echo '<div class="col-sm-2"><a href="" onclick="thisPageManager.toggle_account_details('.$account['account_id'].'); return false;">Transactions';
-						
-						$transaction_in_params = [
-							'account_id' => $account['account_id']
-						];
-						$transaction_in_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON a.address_id=io.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id=:account_id";
-						if ($account['game_id'] > 0) {
-							$transaction_in_q .= " AND t.blockchain_id=:blockchain_id";
-							$transaction_in_params['blockchain_id'] = $blockchain->db_blockchain['blockchain_id'];
+						if ($blockchain->db_blockchain['sync_mode'] != "no_db") {
+							echo '<div class="col-sm-2"><a href="" onclick="thisPageManager.toggle_account_details('.$account['account_id'].'); return false;">Transactions';
+							
+							$transaction_in_params = [
+								'account_id' => $account['account_id']
+							];
+							$transaction_in_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON a.address_id=io.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id=:account_id";
+							if ($account['game_id'] > 0) {
+								$transaction_in_q .= " AND t.blockchain_id=:blockchain_id";
+								$transaction_in_params['blockchain_id'] = $blockchain->db_blockchain['blockchain_id'];
+							}
+							$transaction_in_q .= " ORDER BY (t.block_id IS NULL) DESC, t.block_id DESC LIMIT 200;";
+							$transaction_in_arr = $app->run_query($transaction_in_q, $transaction_in_params)->fetchAll();
+							
+							$transaction_out_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.spend_transaction_id JOIN addresses a ON a.address_id=io.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id=:account_id";
+							if ($account['game_id'] > 0) $transaction_out_q .= " AND t.blockchain_id=:blockchain_id";
+							$transaction_out_q .= " ORDER BY (t.block_id IS NULL) DESC, t.block_id DESC LIMIT 200;";
+							$transaction_out_arr = $app->run_query($transaction_out_q, $transaction_in_params)->fetchAll();
+							
+							echo ' ('.(count($transaction_in_arr)+count($transaction_out_arr)).')';
+							
+							echo '</a></div>';
 						}
-						$transaction_in_q .= " ORDER BY (t.block_id IS NULL) DESC, t.block_id DESC LIMIT 200;";
-						$transaction_in_arr = $app->run_query($transaction_in_q, $transaction_in_params)->fetchAll();
 						
-						$transaction_out_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.spend_transaction_id JOIN addresses a ON a.address_id=io.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id=:account_id";
-						if ($account['game_id'] > 0) $transaction_out_q .= " AND t.blockchain_id=:blockchain_id";
-						$transaction_out_q .= " ORDER BY (t.block_id IS NULL) DESC, t.block_id DESC LIMIT 200;";
-						$transaction_out_arr = $app->run_query($transaction_out_q, $transaction_in_params)->fetchAll();
-						
-						echo ' ('.(count($transaction_in_arr)+count($transaction_out_arr)).')';
-						
-						echo '</a></div>';
 						echo "</div>\n";
 						
 						echo '<div class="row" id="account_details_'.$account['account_id'].'"';
@@ -458,9 +473,13 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 						
 						echo '
 						<ul class="nav nav-tabs">
-							<li '.($account_selected_tab == "primary_address" ? 'class="active" ' : '').'role="presentation"><a data-toggle="tab" href="#primary_address_'.$account['account_id'].'">Deposit Address</a></li>
-							<li '.($account_selected_tab == "transactions" ? 'class="active" ' : '').'role="presentation"><a data-toggle="tab" href="#transactions_'.$account['account_id'].'">Transactions</a></li>
-							<li '.($account_selected_tab == "addresses" ? 'class="active" ' : '').'role="presentation"><a data-toggle="tab" href="#addresses_'.$account['account_id'].'">Addresses</a></li>
+							<li '.($account_selected_tab == "primary_address" ? 'class="active" ' : '').'role="presentation"><a data-toggle="tab" href="#primary_address_'.$account['account_id'].'">Deposit Address</a></li>';
+							
+						if ($blockchain->db_blockchain['sync_mode'] != "no_db") {
+							echo '<li '.($account_selected_tab == "transactions" ? 'class="active" ' : '').'role="presentation"><a data-toggle="tab" href="#transactions_'.$account['account_id'].'">Transactions</a></li>';
+						}
+						
+						echo '<li '.($account_selected_tab == "addresses" ? 'class="active" ' : '').'role="presentation"><a data-toggle="tab" href="#addresses_'.$account['account_id'].'">Addresses</a></li>
 							<li '.($account_selected_tab == "settings" ? 'class="active" ' : '').'role="presentation"><a data-toggle="tab" href="#settings_'.$account['account_id'].'">Settings</a></li>';
 							
 							if ($app->user_is_admin($thisuser) && $account['is_blockchain_sale_account']) {
@@ -511,91 +530,91 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 							echo "</div>\n";
 						}
 						
-						echo '<div id="transactions_'.$account['account_id'].'" class="tab-pane'.($account_selected_tab == "transactions" ? ' active' : ' fade').'">';
-						
-						echo "<p>Rendering ".(count($transaction_in_arr) + count($transaction_out_arr))." transactions.</p>";
-						
-						foreach ($transaction_in_arr as $transaction) {
-							if ($account_game) $colored_coin_amount = $account_game->game_amount_by_io($transaction['io_id']);
+						if ($blockchain->db_blockchain['sync_mode'] != "no_db") {
+							echo '<div id="transactions_'.$account['account_id'].'" class="tab-pane'.($account_selected_tab == "transactions" ? ' active' : ' fade').'">';
 							
-							echo '<div class="row">';
-							echo '<div class="col-sm-4"><a href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/addresses/'.$transaction['pub_key'].'">';
-							echo $transaction['pub_key'];
-							echo '</a></div>';
+							echo "<p>Rendering ".(count($transaction_in_arr) + count($transaction_out_arr))." transactions.</p>";
 							
-							if ($transaction['is_mature'] == 0 || $transaction['create_block_id'] == "") $io_render_class = "text-warning";
-							else $io_render_class = "text-success";
-							
-							if ($account_game) {
-								echo '<div class="col-sm-2" style="text-align: right;"><a class="'.$io_render_class.'" target="_blank" href="/explorer/games/'.$account_game->db_game['url_identifier'].'/transactions/'.$transaction['tx_hash'].'/">';
-								echo "+".str_replace(" ", "&nbsp;", $account_game->display_coins($colored_coin_amount));
-								echo '</a></div>';
-							}
-							
-							echo '<div class="col-sm-2" style="text-align: right;"><a class="'.$io_render_class.'" target="_blank" href="/explorer/blockchains/'.$account['blockchain_url_identifier'].'/utxo/'.$transaction['tx_hash'].'/'.$transaction['out_index'].'">';
-							echo "+".$app->format_bignum($transaction['amount']/pow(10,$blockchain->db_blockchain['decimal_places']))."&nbsp;".$account['short_name_plural'];
-							echo '</a></div>';
-							
-							echo '<div class="col-sm-2">';
-							if ($transaction['block_id'] == "") echo "<a target=\"_blank\" href=\"/explorer/blockchains/".$account['blockchain_url_identifier']."/transactions/unconfirmed/\">Not yet confirmed</a>";
-							else echo "<a target=\"_blank\" href=\"/explorer/blockchains/".$account['blockchain_url_identifier']."/blocks/".$transaction['block_id']."\">Block&nbsp;#".$transaction['block_id']."</a>";
-							echo "</div>\n";
-							
-							echo '<div class="col-sm-2">';
-							
-							if ($transaction['is_mature'] == 0) {
-								$mature_on_block = $transaction['create_block_id'] + $blockchain->db_blockchain['coinbase_maturity'] - 1;
-								$blocks_til_maturity = $mature_on_block - $last_block_id;
-								echo 'Immature ('.$blocks_til_maturity.' block'.($blocks_til_maturity == 1 ? '' : 's').' left)';
-							}
-							else echo ucwords($transaction['spend_status']);
-							
-							if ($transaction['spend_status'] != "spent" && $transaction['is_mature']) {
-								echo "&nbsp;&nbsp;<a href=\"\" onclick=\"thisPageManager.account_start_spend_io(";
-								if ($account_game) echo $account_game->db_game['game_id'];
-								else echo 'false';
+							foreach ($transaction_in_arr as $transaction) {
+								if ($account_game) $colored_coin_amount = $account_game->game_amount_by_io($transaction['io_id']);
 								
-								echo ', '.$transaction['io_id'].", ".($transaction['amount']/pow(10,$blockchain->db_blockchain['decimal_places'])).", '".$blockchain->db_blockchain['coin_name_plural']."', '";
-								if ($account_game) echo $account_game->db_game['coin_name_plural'];
-								echo "'); return false;\">Spend</a>";
+								echo '<div class="row">';
+								echo '<div class="col-sm-4"><a href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/addresses/'.$transaction['pub_key'].'">';
+								echo $transaction['pub_key'];
+								echo '</a></div>';
+								
+								if ($transaction['is_mature'] == 0 || $transaction['create_block_id'] == "") $io_render_class = "text-warning";
+								else $io_render_class = "text-success";
+								
+								if ($account_game) {
+									echo '<div class="col-sm-2" style="text-align: right;"><a class="'.$io_render_class.'" target="_blank" href="/explorer/games/'.$account_game->db_game['url_identifier'].'/transactions/'.$transaction['tx_hash'].'/">';
+									echo "+".str_replace(" ", "&nbsp;", $account_game->display_coins($colored_coin_amount));
+									echo '</a></div>';
+								}
+								
+								echo '<div class="col-sm-2" style="text-align: right;"><a class="'.$io_render_class.'" target="_blank" href="/explorer/blockchains/'.$account['blockchain_url_identifier'].'/utxo/'.$transaction['tx_hash'].'/'.$transaction['out_index'].'">';
+								echo "+".$app->format_bignum($transaction['amount']/pow(10,$blockchain->db_blockchain['decimal_places']))."&nbsp;".$account['short_name_plural'];
+								echo '</a></div>';
+								
+								echo '<div class="col-sm-2">';
+								if ($transaction['block_id'] == "") echo "<a target=\"_blank\" href=\"/explorer/blockchains/".$account['blockchain_url_identifier']."/transactions/unconfirmed/\">Not yet confirmed</a>";
+								else echo "<a target=\"_blank\" href=\"/explorer/blockchains/".$account['blockchain_url_identifier']."/blocks/".$transaction['block_id']."\">Block&nbsp;#".$transaction['block_id']."</a>";
+								echo "</div>\n";
+								
+								echo '<div class="col-sm-2">';
+								
+								if ($transaction['is_mature'] == 0) {
+									$mature_on_block = $transaction['create_block_id'] + $blockchain->db_blockchain['coinbase_maturity'] - 1;
+									$blocks_til_maturity = $mature_on_block - $last_block_id;
+									echo 'Immature ('.$blocks_til_maturity.' block'.($blocks_til_maturity == 1 ? '' : 's').' left)';
+								}
+								else echo ucwords($transaction['spend_status']);
+								
+								if ($transaction['spend_status'] != "spent" && $transaction['is_mature']) {
+									echo "&nbsp;&nbsp;<a href=\"\" onclick=\"thisPageManager.account_start_spend_io(";
+									if ($account_game) echo $account_game->db_game['game_id'];
+									else echo 'false';
+									
+									echo ', '.$transaction['io_id'].", ".($transaction['amount']/pow(10,$blockchain->db_blockchain['decimal_places'])).", '".$blockchain->db_blockchain['coin_name_plural']."', '";
+									if ($account_game) echo $account_game->db_game['coin_name_plural'];
+									echo "'); return false;\">Spend</a>";
+								}
+								echo '</div>';
+								
+								echo "</div>\n";
 							}
-							echo '</div>';
+							
+							foreach ($transaction_out_arr as $transaction) {
+								if ($account_game) $colored_coin_amount = $account_game->game_amount_by_io($transaction['io_id']);
+								
+								echo '<div class="row">';
+								echo '<div class="col-sm-4"><a href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/addresses/'.$transaction['pub_key'].'">';
+								echo $transaction['pub_key'];
+								echo '</a></div>';
+								
+								if ($account_game) {
+									echo '<div class="col-sm-2" style="text-align: right;"><a class="redtext" target="_blank" href="/explorer/games/'.$account_game->db_game['url_identifier'].'/transactions/'.$transaction['tx_hash'].'">';
+									echo "-".$account_game->display_coins($colored_coin_amount);
+									echo '</a></div>';
+								}
+								
+								echo '<div class="col-sm-2" style="text-align: right;"><a class="redtext" target="_blank" href="/explorer/blockchains/'.$account['blockchain_url_identifier'].'/transactions/'.$transaction['tx_hash'].'">';
+								echo "-".$app->format_bignum($transaction['amount']/pow(10,$blockchain->db_blockchain['decimal_places']))."&nbsp;".$account['short_name_plural'];
+								echo '</a></div>';
+								
+								echo '<div class="col-sm-2">';
+								if ($transaction['block_id'] == "") echo "<a target=\"_blank\" href=\"/explorer/blockchains/".$account['blockchain_url_identifier']."/transactions/unconfirmed/\">Not yet confirmed</a>";
+								else echo "<a target=\"_blank\" href=\"/explorer/blockchains/".$account['blockchain_url_identifier']."/blocks/".$transaction['block_id']."\">Block&nbsp;#".$transaction['block_id']."</a>";
+								echo '</div>';
+								
+								echo '</div>';
+							}
 							
 							echo "</div>\n";
 						}
 						
-						foreach ($transaction_out_arr as $transaction) {
-							if ($account_game) $colored_coin_amount = $account_game->game_amount_by_io($transaction['io_id']);
-							
-							echo '<div class="row">';
-							echo '<div class="col-sm-4"><a href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/addresses/'.$transaction['pub_key'].'">';
-							echo $transaction['pub_key'];
-							echo '</a></div>';
-							
-							if ($account_game) {
-								echo '<div class="col-sm-2" style="text-align: right;"><a class="redtext" target="_blank" href="/explorer/games/'.$account_game->db_game['url_identifier'].'/transactions/'.$transaction['tx_hash'].'">';
-								echo "-".$account_game->display_coins($colored_coin_amount);
-								echo '</a></div>';
-							}
-							
-							echo '<div class="col-sm-2" style="text-align: right;"><a class="redtext" target="_blank" href="/explorer/blockchains/'.$account['blockchain_url_identifier'].'/transactions/'.$transaction['tx_hash'].'">';
-							echo "-".$app->format_bignum($transaction['amount']/pow(10,$blockchain->db_blockchain['decimal_places']))."&nbsp;".$account['short_name_plural'];
-							echo '</a></div>';
-							
-							echo '<div class="col-sm-2">';
-							if ($transaction['block_id'] == "") echo "<a target=\"_blank\" href=\"/explorer/blockchains/".$account['blockchain_url_identifier']."/transactions/unconfirmed/\">Not yet confirmed</a>";
-							else echo "<a target=\"_blank\" href=\"/explorer/blockchains/".$account['blockchain_url_identifier']."/blocks/".$transaction['block_id']."\">Block&nbsp;#".$transaction['block_id']."</a>";
-							echo '</div>';
-							
-							echo '</div>';
-						}
-						
-						echo '
-							</div>
-							<div id="addresses_'.$account['account_id'].'" class="tab-pane'.($account_selected_tab == "addresses" ? ' active' : ' fade').'">';
-						$addr_arr = $app->run_query("SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id=:account_id ORDER BY a.option_index ASC LIMIT 500;", [
-							'account_id' => $account['account_id']
-						])->fetchAll();
+						echo '<div id="addresses_'.$account['account_id'].'" class="tab-pane'.($account_selected_tab == "addresses" ? ' active' : ' fade').'">';
+						$addr_arr = $app->fetch_all_addresses_in_account($account, 500);
 						echo "<p>This account has ".count($addr_arr)." addresses.</p>";
 						
 						echo '<div style="max-height: 400px; overflow-x: hidden; overflow-y: scroll;">';
