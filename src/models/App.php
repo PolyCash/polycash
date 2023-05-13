@@ -403,11 +403,11 @@ class App {
 		else $html .= "Failed to start a process for game regular actions.\n";
 		sleep(0.02);
 		
-		/*$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/minutely_check_payments.php"';
+		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/minutely_check_payments.php"';
 		$payments_process = $this->run_shell_command($cmd, $print_debug);
 		if (is_resource($payments_process)) $process_count++;
 		else $html .= "Failed to start a process for processing payments.\n";
-		sleep(0.02);*/
+		sleep(0.02);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/fetch_currency_prices.php"';
 		$currency_prices_process = $this->run_shell_command($cmd, $print_debug);
