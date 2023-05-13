@@ -324,52 +324,57 @@ if ($app->running_as_admin()) {
 						else if ($sellout_blockchain->db_blockchain['sync_mode'] == "no_db") {
 							$spendable_txo_info = $sellout_blockchain->rpc_spendable_ios_in_account($sellout_account, 0);
 							
-							$raw_txin = [];
-							$raw_txout = [];
-							
-							$io_amount_sum = 0;
-							$input_pos = 0;
-							
-							foreach ($spendable_txo_info as $txo_identifier => $txo_info) {
-								$raw_txin[$input_pos] = [
-									"txid" => $txo_info['tx_hash'],
-									"vout" => $txo_info['out_index'],
-								];
-								$io_amount_sum += $txo_info['value']*pow(10, $sellout_blockchain->db_blockchain['decimal_places']);
+							if ($spendable_txo_info !== null) {
+								$raw_txin = [];
+								$raw_txout = [];
 								
-								if ($io_amount_sum >= $sellout_cost_int) break;
-							}
-							
-							$io_nonfee_amount = $io_amount_sum-$fee_amount_int;
-							
-							if ($io_nonfee_amount > 0) {
-								$receive_address = $app->fetch_address_by_id($invoice_address['receive_address_id']);
+								$io_amount_sum = 0;
+								$input_pos = 0;
 								
-								$raw_txout[$receive_address['address']] = sprintf('%.'.$sellout_blockchain->db_blockchain['decimal_places'].'F', $sellout_amount_int/pow(10, $sellout_blockchain->db_blockchain['decimal_places']));
-								
-								$remainder_error = false;
-								if ($io_nonfee_amount > $sellout_amount_int) {
-									$remainder_amount = $io_nonfee_amount-$sellout_amount_int;
-									$remainder_address = $app->new_normal_address_key($sellout_account['currency_id'], $sellout_account);
+								foreach ($spendable_txo_info as $txo_identifier => $txo_info) {
+									$raw_txin[$input_pos] = [
+										"txid" => $txo_info['tx_hash'],
+										"vout" => $txo_info['out_index'],
+									];
+									$io_amount_sum += $txo_info['value']*pow(10, $sellout_blockchain->db_blockchain['decimal_places']);
 									
-									if ($remainder_address) {
-										$raw_txout[$remainder_address['address']] = sprintf('%.'.$sellout_blockchain->db_blockchain['decimal_places'].'F', $remainder_amount/pow(10, $sellout_blockchain->db_blockchain['decimal_places']));
-									}
-									else $remainder_error = true;
+									if ($io_amount_sum >= $sellout_cost_int) break;
 								}
 								
-								if (!$remainder_error) {
-									list($sendraw_response, $tx_hash) = $sellout_blockchain->rpc_createrawtransaction($raw_txin, $raw_txout);
+								$io_nonfee_amount = $io_amount_sum-$fee_amount_int;
+								
+								if ($io_nonfee_amount > 0) {
+									$receive_address = $app->fetch_address_by_id($invoice_address['receive_address_id']);
 									
-									if (isset($sendraw_response['message'])) {
-										$sellout_transaction_error_message = $sendraw_response['message'];
+									$raw_txout[$receive_address['address']] = sprintf('%.'.$sellout_blockchain->db_blockchain['decimal_places'].'F', $sellout_amount_int/pow(10, $sellout_blockchain->db_blockchain['decimal_places']));
+									
+									$remainder_error = false;
+									if ($io_nonfee_amount > $sellout_amount_int) {
+										$remainder_amount = $io_nonfee_amount-$sellout_amount_int;
+										$remainder_address = $app->new_normal_address_key($sellout_account['currency_id'], $sellout_account);
+										
+										if ($remainder_address) {
+											$raw_txout[$remainder_address['address']] = sprintf('%.'.$sellout_blockchain->db_blockchain['decimal_places'].'F', $remainder_amount/pow(10, $sellout_blockchain->db_blockchain['decimal_places']));
+										}
+										else $remainder_error = true;
 									}
-									else {
-										$sellout_tx_hash = $sendraw_response;
-										$sellout_transaction_created = true;
+									
+									if (!$remainder_error) {
+										list($sendraw_response, $tx_hash) = $sellout_blockchain->rpc_createrawtransaction($raw_txin, $raw_txout);
+										
+										if (isset($sendraw_response['message'])) {
+											$sellout_transaction_error_message = $sendraw_response['message'];
+										}
+										else {
+											$sellout_tx_hash = $sendraw_response;
+											$sellout_transaction_created = true;
+										}
 									}
+									else $sellout_transaction_error_message = "Failed to generate a remainder address.";
 								}
+								else $sellout_transaction_error_message = "There's not enough money in the sellout account.";
 							}
+							else $sellout_transaction_error_message = "RPC call to fetch TXOs in sellout account failed.";
 						}
 						
 						if ($sellout_transaction_created) {
