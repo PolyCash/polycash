@@ -403,11 +403,11 @@ class App {
 		else $html .= "Failed to start a process for game regular actions.\n";
 		sleep(0.02);
 		
-		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/minutely_check_payments.php"';
+		/*$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/minutely_check_payments.php"';
 		$payments_process = $this->run_shell_command($cmd, $print_debug);
 		if (is_resource($payments_process)) $process_count++;
 		else $html .= "Failed to start a process for processing payments.\n";
-		sleep(0.02);
+		sleep(0.02);*/
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/fetch_currency_prices.php"';
 		$currency_prices_process = $this->run_shell_command($cmd, $print_debug);
@@ -2823,6 +2823,12 @@ class App {
 		
 		if ($make_unique) return array_values(array_unique($urls));
 		else return $urls;
+	}
+	
+	public function fetch_all_addresses_in_account(&$account, $limit=null) {
+		return $this->run_query("SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id=:account_id ORDER BY a.option_index ASC".($limit === null ? "" : " LIMIT ".$limit).";", [
+			'account_id' => $account['account_id']
+		])->fetchAll(PDO::FETCH_ASSOC);
 	}
 	
 	public function fetch_addresses_in_account(&$account, $option_index, $quantity) {
