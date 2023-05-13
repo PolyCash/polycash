@@ -353,7 +353,7 @@ class App {
 		
 		$script_path_name = AppSettings::srcPath();
 		
-		$sync_blockchains = $this->run_query("SELECT * FROM blockchains WHERE online=1 AND p2p_mode IN ('rpc','web_api');");
+		$sync_blockchains = $this->run_query("SELECT * FROM blockchains WHERE online=1 AND p2p_mode IN ('rpc','web_api') AND sync_mode='full';");
 		
 		while ($sync_blockchain = $sync_blockchains->fetch()) {
 			$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/load_blocks.php" blockchain_id='.$sync_blockchain['blockchain_id'];
@@ -1922,6 +1922,10 @@ class App {
 				}
 				
 				if ($import_params['p2p_mode'] != "rpc") $import_params['first_required_block'] = 1;
+				
+				if (property_exists($blockchain_def, 'sync_mode')) {
+					$import_params['sync_mode'] = $blockchain_def->sync_mode;
+				}
 				
 				if (property_exists($blockchain_def, 'online')) {
 					$import_params['online'] = $blockchain_def->online;

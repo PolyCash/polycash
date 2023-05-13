@@ -1403,6 +1403,11 @@ class Blockchain {
 	}
 	
 	public function sync_blockchain($print_debug) {
+		if ($this->db_blockchain['sync_mode'] == "no_db") {
+			if ($print_debug) $this->app->print_debug("Block loading is not enabled for ".$this->db_blockchain['blockchain_name'].".");
+			return false;
+		}
+		
 		$last_block_id = $this->db_blockchain['last_complete_block'];
 		
 		if ($last_block_id < 0) {
@@ -2151,13 +2156,21 @@ class Blockchain {
 	}
 	
 	public function total_paid_to_address(&$db_address, $confirmed_only) {
-		$balance_q = "SELECT SUM(io.amount) FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE t.blockchain_id=:blockchain_id AND io.address_id=:address_id";
-		if ($confirmed_only) $balance_q .= " AND t.block_id IS NOT NULL";
-		
-		return $this->app->run_query($balance_q, [
-			'blockchain_id' => $this->db_blockchain['blockchain_id'],
-			'address_id' => $db_address['address_id']
-		])->fetch()['SUM(io.amount)'];
+		if ($this->db_blockchain['sync_mode'] == "full") {
+			$balance_q = "SELECT SUM(io.amount) FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE t.blockchain_id=:blockchain_id AND io.address_id=:address_id";
+			if ($confirmed_only) $balance_q .= " AND t.block_id IS NOT NULL";
+			
+			return $this->app->run_query($balance_q, [
+				'blockchain_id' => $this->db_blockchain['blockchain_id'],
+				'address_id' => $db_address['address_id']
+			])->fetch()['SUM(io.amount)'];
+		}
+		else {
+			$this->load_coin_rpc();
+			$receivedbyaddress = $this->coin_rpc->getreceivedbyaddress($db_address['address'], $confirmed_only ? 1 : 0);
+			if ($receivedbyaddress === null || $receivedbyaddress === false) return 0;
+			else return $receivedbyaddress*pow(10, $this->db_blockchain['decimal_places']);
+		}
 	}
 	
 	public function address_balance_at_block(&$db_address, $block_id) {

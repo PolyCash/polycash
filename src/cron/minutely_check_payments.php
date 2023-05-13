@@ -126,7 +126,7 @@ if ($app->running_as_admin()) {
 						}
 						else if ($print_debug) echo "Not enough game coins available.\n";
 					}
-					else {
+					else { // Legacy buyins commented out and pending deletion
 						if ($invoice_address['buyin_amount'] > 0) $buyin_amount_float = $invoice_address['buyin_amount'];
 						else $buyin_amount_float = (int)($amount_paid_float/2);
 						
@@ -225,6 +225,7 @@ if ($app->running_as_admin()) {
 				}
 				else if ($print_debug) echo "amount paid: ".$amount_paid_float."\n";
 			}
+			else if ($print_debug) echo "game not fully loaded.. skipping\n";
 		}
 		
 		$sellout_invoices = $app->run_query("SELECT *, ug.user_id AS user_id, ug.account_id AS user_game_account_id FROM user_games ug JOIN currency_invoices i ON ug.user_game_id=i.user_game_id JOIN addresses a ON i.address_id=a.address_id JOIN games g ON ug.game_id=g.game_id WHERE i.status IN ('unpaid','unconfirmed','confirmed') AND (i.status='unconfirmed' OR i.expire_time >= :current_time) AND i.invoice_type='sellout' GROUP BY a.address_id;", ['current_time'=>time()]);

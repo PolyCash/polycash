@@ -3459,10 +3459,11 @@ class Game {
 			$html .= '<div class="row"><div class="col-sm-12">You don\'t have any buyin addresses yet.</div></div>'."\n";
 		}
 		else {
+			$link_to_addresses = $buyin_blockchain->db_blockchain['sync_mode'] == "full";
 			foreach ($invoices as $invoice) {
 				$html .= '<div class="row content_row">';
 				$html .= '<div class="col-sm-3">';
-				$unconfirmed_amount_paid = $this->blockchain->total_paid_to_address($invoice, false)/pow(10, $this->blockchain->db_blockchain['decimal_places']);
+				$unconfirmed_amount_paid = $buyin_blockchain->total_paid_to_address($invoice, false)/pow(10, $buyin_blockchain->db_blockchain['decimal_places']);
 				if ($invoice['confirmed_amount_paid'] == $unconfirmed_amount_paid) $html .= $this->blockchain->app->format_bignum($invoice['confirmed_amount_paid']);
 				else $html .= '<font class="text-warning">'.$this->blockchain->app->format_bignum($unconfirmed_amount_paid);
 				$html .= ' '.$invoice['coin_name_plural'];
@@ -3480,14 +3481,19 @@ class Game {
 					foreach ($invoice_ios as $invoice_io) {
 						$io = $this->blockchain->app->fetch_io_by_hash_out_index($this->blockchain->db_blockchain['blockchain_id'], $invoice_io['tx_hash'], $invoice_io['out_index']);
 						$game_amount = $this->game_amount_by_io($io['io_id']);
-						$html .= '<a target="_blank" href="/explorer/games/'.$this->db_game['url_identifier']."/utxo/".$invoice_io['tx_hash']."/".$invoice_io['game_out_index'].'/">'.$this->display_coins($game_amount)."</a><br/>\n";
+						if ($link_to_addresses) $html .= '<a target="_blank" href="/explorer/games/'.$this->db_game['url_identifier']."/utxo/".$invoice_io['tx_hash']."/".$invoice_io['game_out_index'].'/">';
+						$html .= $this->display_coins($game_amount);
+						if ($link_to_addresses) $html .= "</a>";
+						$html .= "<br/>\n";
 					}
 				}
 				$html .= '</div>';
 				
 				$html .= '<div class="col-sm-6">';
 				if (time() > $invoice['expire_time'] - 3600*2) $html .= '<font class="redtext">Expired</font> &nbsp; ';
-				$html .= '<a target="_blank" href="/explorer/blockchains/'.$invoice['url_identifier'].'/addresses/'.$invoice['address'].'/">'.$invoice['address'].'</a>';
+				if ($link_to_addresses) $html .= '<a target="_blank" href="/explorer/blockchains/'.$invoice['url_identifier'].'/addresses/'.$invoice['address'].'/">';
+				$html .= $invoice['address'];
+				if ($link_to_addresses) $html .= '</a>';
 				$html .= '</div>';
 				$html .= "</div>\n";
 			}

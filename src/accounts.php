@@ -55,7 +55,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 								$db_address = $app->new_normal_address_key($game_sale_account['currency_id'], $game_sale_account);
 								
 								array_push($address_ids, $db_address['address_id']);
-								array_push($address_key_ids, $addr_key['address_key_id']);
+								array_push($address_key_ids, $db_address['address_key_id']);
 								
 								$addresses_needed--;
 								$loop_count++;

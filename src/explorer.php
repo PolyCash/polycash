@@ -821,7 +821,10 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							
 							echo '<div class="panel-body">';
 							
-							if ((string) $blockchain->db_blockchain['first_required_block'] == "") {
+							if ((string) $blockchain->db_blockchain['sync_mode'] == "no_db") {
+								echo "<p>".$blockchain->db_blockchain['blockchain_name']." is not loading blocks but can be used for payments.</p>\n";
+							}
+							else if ((string) $blockchain->db_blockchain['first_required_block'] == "") {
 								echo "<p>".$blockchain->db_blockchain['blockchain_name']." is running in light mode.</p>\n";
 							}
 							else {
@@ -867,28 +870,32 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 									echo "</p>\n";
 								}
 							}
-							?>
-							<div class="row">
-								<div class="col-sm-6">
-									<p>
-										<select class="form-control" name="block_filter" onchange="window.location='/<?php echo $uri_parts[1]."/".$uri_parts[2]."/".$uri_parts[3]."/".$uri_parts[4]; ?>/?block_filter='+$(this).val();">
-											<option value="">All blocks</option>
-											<option <?php if ($filter_complete) echo 'selected="selected" '; ?>value="complete">Fully loaded blocks only</option>
-										</select>
-									</p>
+							
+							if ((string) $blockchain->db_blockchain['sync_mode'] == "full") {
+								?>
+								<div class="row">
+									<div class="col-sm-6">
+										<p>
+											<select class="form-control" name="block_filter" onchange="window.location='/<?php echo $uri_parts[1]."/".$uri_parts[2]."/".$uri_parts[3]."/".$uri_parts[4]; ?>/?block_filter='+$(this).val();">
+												<option value="">All blocks</option>
+												<option <?php if ($filter_complete) echo 'selected="selected" '; ?>value="complete">Fully loaded blocks only</option>
+											</select>
+										</p>
+									</div>
 								</div>
-							</div>
-							<div id="explorer_block_list" style="margin-bottom: 15px;">
-								<div id="explorer_block_list_0">
-									<?php
-									$ref_game = false;
-									echo $blockchain->explorer_block_list($from_block_id, $to_block_id, $ref_game, $filter_complete);
-									?>
+								<div id="explorer_block_list" style="margin-bottom: 15px;">
+									<div id="explorer_block_list_0">
+										<?php
+										$ref_game = false;
+										echo $blockchain->explorer_block_list($from_block_id, $to_block_id, $ref_game, $filter_complete);
+										?>
+									</div>
 								</div>
-							</div>
-							<a href="" onclick="thisPageManager.explorer_block_list_show_more(); return false;">Show More</a>
-							<br/>
-							<?php
+								<a href="" onclick="thisPageManager.explorer_block_list_show_more(); return false;">Show More</a>
+								<br/>
+								<?php	
+							}
+							
 							echo '</div>';
 						}
 					}
