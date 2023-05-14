@@ -174,5 +174,17 @@ class AppSettings {
 	public static function recommendedSeparatorFrac($burn_io_amount,$io_nonfee_amount) {
 		return min(0.5, max(0.001, round($burn_io_amount/$io_nonfee_amount, 16)));
 	}
+
+	public static function exchangeRateRecencySecForBuyins() {
+		$specifiedSec = self::getParam("exchange_rate_recency_sec_for_buyins");
+		if ($specifiedSec === null) return (60*20);
+		else return (int) $specifiedSec;
+	}
+
+	public static function exchangeRateRecencySecForSellouts() {
+		$specifiedSec = self::getParam("exchange_rate_recency_sec_for_sellouts");
+		if ($specifiedSec === null) return (60*20);
+		else return (int) $specifiedSec;
+	}
 }
 ?>

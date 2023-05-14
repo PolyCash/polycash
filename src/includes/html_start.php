@@ -18,8 +18,8 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 	
 	<link rel="stylesheet" type="text/css" href="/css/style.css<?php if (!empty(AppSettings::getParam('cachebuster'))) echo '?v='.AppSettings::getParam('cachebuster'); ?>" />
 	<?php if (!empty(AppSettings::getParam('custom_stylesheet'))) { ?><link rel="stylesheet" type="text/css" href="/css/<?php echo AppSettings::getParam('custom_stylesheet'); ?>"><?php } ?>
-	<link rel="stylesheet" type="text/css" href="/css/skin-blue.min.css">
-	<link rel="stylesheet" href="/css/AdminLTE.min.css">
+	<link rel="stylesheet" type="text/css" href="/css/skin-blue.min.css<?php if (!empty(AppSettings::getParam('cachebuster'))) echo '?v='.AppSettings::getParam('cachebuster'); ?>">
+	<link rel="stylesheet" href="/css/AdminLTE.min.css<?php if (!empty(AppSettings::getParam('cachebuster'))) echo '?v='.AppSettings::getParam('cachebuster'); ?>">
 	<link rel="stylesheet" href="/css/bootstrap.min.css">
 	
 	<script type="text/javascript" src="/js/sha256.js"></script>

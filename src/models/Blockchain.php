@@ -2293,32 +2293,42 @@ class Blockchain {
 			foreach ($transactions as $transaction) {
 				if (isset($transaction['address']) && !empty($account_addresses_map[$transaction['address']])) {
 					if (in_array($transaction['category'], $acceptable_categories)) {
-						$relevant_tx_hashes[$transaction['txid']] = true;
+						$relevant_tx_hashes[$transaction['txid']] = [
+							'blockhash' => $transaction['blockhash']
+						];
 					}
 				}
 			}
 			
-			$relevant_tx_hashes = array_keys($relevant_tx_hashes);
-			
 			$raw_tx_by_hash = [];
 			$tx_out_info = [];
 			
-			foreach ($relevant_tx_hashes as $relevant_tx_hash) {
-				$raw_tx = $this->coin_rpc->getrawtransaction($relevant_tx_hash);
+			foreach ($relevant_tx_hashes as $relevant_tx_hash => $tx_info) {
+				$raw_tx = $this->coin_rpc->getrawtransaction($relevant_tx_hash, false, $tx_info['blockhash']);
 				if ($raw_tx) {
 					$raw_tx_decoded = $this->coin_rpc->decoderawtransaction($raw_tx);
 					$raw_tx_by_hash[$relevant_tx_hash] = $raw_tx_decoded;
 					
 					if (!empty($raw_tx_decoded['vout'])) {
 						foreach ($raw_tx_decoded['vout'] as $vout_index => $vout_info) {
-							if (isset($vout_info['value']) && !empty($vout_info['scriptPubKey']['address']) && !empty($account_addresses_map[$vout_info['scriptPubKey']['address']])) {
-								$tx_out_info[$relevant_tx_hash."-".$vout_index] = [
-									'tx_hash' => $relevant_tx_hash,
-									'out_index' => $vout_index,
-									'address' => $vout_info['scriptPubKey']['address'],
-									'value' => $vout_info['value'],
-									'spent' => false,
-								];
+							if (isset($vout_info['value'])) {
+								if (!empty($vout_info['scriptPubKey']['address'])) $vout_addresses = [$vout_info['scriptPubKey']['address']];
+								else if (!empty($vout_info['scriptPubKey']['addresses'])) $vout_addresses = $vout_info['scriptPubKey']['addresses'];
+								
+								$matched_addresses = [];
+								foreach ($vout_addresses as $vout_address) {
+									if (isset($account_addresses_map[$vout_address])) array_push($matched_addresses, $vout_address);
+								}
+								
+								if (count($matched_addresses) > 0) {
+									$tx_out_info[$relevant_tx_hash."-".$vout_index] = [
+										'tx_hash' => $relevant_tx_hash,
+										'out_index' => $vout_index,
+										'addresses' => $matched_addresses,
+										'value' => $vout_info['value'],
+										'spent' => false,
+									];
+								}
 							}
 						}
 					}

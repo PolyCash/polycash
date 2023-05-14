@@ -887,7 +887,7 @@ class Game {
 		
 		$display_currency = $this->blockchain->app->fetch_currency_by_id($user_game['display_currency_id']);
 		
-		$escrow_value = $this->escrow_value_in_currency($display_currency['currency_id'], $coins_in_existence/pow(10, $this->db_game['decimal_places']));
+		list($escrow_value, $exchange_rate_as_of) = $this->escrow_value_in_currency($display_currency['currency_id'], $coins_in_existence/pow(10, $this->db_game['decimal_places']));
 		
 		if ($coins_in_existence > 0) {
 			$display_value = ($account_value/$coins_in_existence)*$escrow_value;
@@ -3270,8 +3270,12 @@ class Game {
 		
 		$escrow_amounts = EscrowAmount::fetch_escrow_amounts_in_game($this, "actual");
 		
+		$exchange_rate_as_of = null;
+		
 		while ($escrow_amount = $escrow_amounts->fetch()) {
 			$exchange_rate_info = $this->blockchain->app->exchange_rate_between_currencies($currency_id, $escrow_amount['currency_id'], time(), $reference_currency['currency_id']);
+			
+			if ($exchange_rate_as_of === null || $exchange_rate_info['time'] < $exchange_rate_as_of) $exchange_rate_as_of = $exchange_rate_info['time'];
 			
 			if ($escrow_amount['escrow_type'] == "fixed") {
 				$total_value += $escrow_amount['amount']*$exchange_rate_info['exchange_rate'];
@@ -3283,7 +3287,7 @@ class Game {
 		
 		$total_value = $this->blockchain->app->to_significant_digits($total_value, 10);
 		
-		return $total_value;
+		return [$total_value, $exchange_rate_as_of];
 	}
 	
 	public function pending_bets($use_cache) {
@@ -3540,13 +3544,17 @@ class Game {
 							$sellout_blockchain = new Blockchain($this->blockchain->app, $invoice['blockchain_id']);
 							$sellout_blockchain->load_coin_rpc();
 							
-							$raw_tx = $sellout_blockchain->coin_rpc->getrawtransaction($invoice_io['tx_hash']);
-							if ($raw_tx) {
-								$raw_tx_decoded = $sellout_blockchain->coin_rpc->decoderawtransaction($raw_tx);
-								
-								if (!empty($raw_tx_decoded['vout']) && isset($raw_tx_decoded['vout'][$invoice_io['out_index']])) {
-									$vout_info = $raw_tx_decoded['vout'][$invoice_io['out_index']];
-									if (isset($vout_info['value'])) $invoice_io_disp = $vout_info['value'];
+							$my_tx = $sellout_blockchain->coin_rpc->gettransaction($invoice_io['tx_hash']);
+							if ($my_tx) {
+								$raw_tx = $sellout_blockchain->coin_rpc->getrawtransaction($invoice_io['tx_hash'], false, $my_tx['blockhash']);
+								if ($raw_tx) {
+									$raw_tx_decoded = $sellout_blockchain->coin_rpc->decoderawtransaction($raw_tx);
+									
+									if (!empty($raw_tx_decoded['vout']) && isset($raw_tx_decoded['vout'][$invoice_io['out_index']])) {
+										$vout_info = $raw_tx_decoded['vout'][$invoice_io['out_index']];
+										if (isset($vout_info['value'])) $invoice_io_disp = $vout_info['value'];
+										else $fetch_io_error = true;
+									}
 									else $fetch_io_error = true;
 								}
 								else $fetch_io_error = true;

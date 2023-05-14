@@ -55,76 +55,86 @@ if ($app->running_as_admin()) {
 					
 					if ($invoice_address['invoice_type'] == "sale_buyin") {
 						$coins_in_existence = $game->coins_in_existence(false, false)+$game->pending_bets(false);
-						$escrow_value_float = $game->escrow_value_in_currency($invoice_address['pay_currency_id'], $coins_in_existence/pow(10, $game->db_game['decimal_places']));
-						$exchange_rate = $coins_in_existence/pow(10, $game->db_game['decimal_places'])/$escrow_value_float;
-						$buyin_amount_int = ceil($amount_paid_float*$exchange_rate*pow(10, $game->db_game['decimal_places']));
-						$sale_game_account = $game->check_set_game_sale_account($ref_user);
-						$sale_game_account_balance_int = $game->account_balance($sale_game_account['account_id']);
+						list($escrow_value_float, $exchange_rate_as_of) = $game->escrow_value_in_currency($invoice_address['pay_currency_id'], $coins_in_existence/pow(10, $game->db_game['decimal_places']));
 						
-						$chain_fee_float = $game->db_game['default_transaction_fee'];
-						$chain_fee_int = (int)($chain_fee_float*pow(10, $game->blockchain->db_blockchain['decimal_places']));
-						
-						$sale_spend_ios = $app->spendable_ios_in_account($sale_game_account['account_id'], $game->db_game['game_id'], $round_id, $last_block_id);
-						
-						$spend_ios = [];
-						$spend_io_ids = [];
-						$game_coins_in = 0;
-						$chain_coins_in = 0;
-						
-						while ($spend_io = $sale_spend_ios->fetch()) {
-							if ($game_coins_in < $buyin_amount_int || $chain_coins_in < $chain_fee_int*5) {
-								array_push($spend_ios, $spend_io);
-								array_push($spend_io_ids, $spend_io['io_id']);
-								$game_coins_in += $spend_io['coins'];
-								$chain_coins_in += $spend_io['amount'];
-							}
-						}
-						
-						if ($game_coins_in >= $buyin_amount_int) {
-							$chain_coins_per_game_coin = ($chain_coins_in-$chain_fee_int)/$game_coins_in;
-							$send_chain_coins = ceil($buyin_amount_int*$chain_coins_per_game_coin);
+						if ($escrow_value_float > 0) {
+							$exchange_rate = $coins_in_existence/pow(10, $game->db_game['decimal_places'])/$escrow_value_float;
 							
-							$pay_to_address = $app->any_normal_address_in_account($invoice_address['user_game_account_id']);
+							if ($print_debug) echo "Exchange rate is ".$exchange_rate." (".$app->format_seconds(time()-$exchange_rate_as_of).")\n";
 							
-							if ($pay_to_address) {
-								$amounts = array($send_chain_coins);
-								$address_ids = array($pay_to_address['address_id']);
+							if ($exchange_rate_as_of >= time()-AppSettings::exchangeRateRecencySecForBuyins()) {
+								$buyin_amount_int = ceil($amount_paid_float*$exchange_rate*pow(10, $game->db_game['decimal_places']));
+								$sale_game_account = $game->check_set_game_sale_account($ref_user);
+								$sale_game_account_balance_int = $game->account_balance($sale_game_account['account_id']);
 								
-								$remainder_error = false;
-								if ($chain_coins_in > $send_chain_coins+$chain_fee_int) {
-									$remainder_chain_coins = $chain_coins_in-$send_chain_coins-$chain_fee_int;
-									$remainder_address = $app->new_normal_address_key($sale_game_account['currency_id'], $sale_game_account);
-									
-									if ($remainder_address) {
-										array_push($amounts, $remainder_chain_coins);
-										array_push($address_ids, $remainder_address['address_id']);
+								$chain_fee_float = $game->db_game['default_transaction_fee'];
+								$chain_fee_int = (int)($chain_fee_float*pow(10, $game->blockchain->db_blockchain['decimal_places']));
+								
+								$sale_spend_ios = $app->spendable_ios_in_account($sale_game_account['account_id'], $game->db_game['game_id'], $round_id, $last_block_id);
+								
+								$spend_ios = [];
+								$spend_io_ids = [];
+								$game_coins_in = 0;
+								$chain_coins_in = 0;
+								
+								while ($spend_io = $sale_spend_ios->fetch()) {
+									if ($game_coins_in < $buyin_amount_int || $chain_coins_in < $chain_fee_int*5) {
+										array_push($spend_ios, $spend_io);
+										array_push($spend_io_ids, $spend_io['io_id']);
+										$game_coins_in += $spend_io['coins'];
+										$chain_coins_in += $spend_io['amount'];
 									}
-									else $remainder_error = true;
 								}
 								
-								if (!$remainder_error) {
-									$error_message = false;
-									$transaction_id = $game->blockchain->create_transaction("transaction", $amounts, false, $spend_io_ids, $address_ids, $chain_fee_int, $error_message);
+								if ($game_coins_in >= $buyin_amount_int) {
+									$chain_coins_per_game_coin = ($chain_coins_in-$chain_fee_int)/$game_coins_in;
+									$send_chain_coins = ceil($buyin_amount_int*$chain_coins_per_game_coin);
 									
-									if ($transaction_id) {
-										$transaction = $app->fetch_transaction_by_id($transaction_id);
+									$pay_to_address = $app->any_normal_address_in_account($invoice_address['user_game_account_id']);
+									
+									if ($pay_to_address) {
+										$amounts = array($send_chain_coins);
+										$address_ids = array($pay_to_address['address_id']);
 										
-										$pay_out_index = 0;
-										$pay_game_out_index = 0;
-										$pay_tx_hash = $transaction['tx_hash'];
+										$remainder_error = false;
+										if ($chain_coins_in > $send_chain_coins+$chain_fee_int) {
+											$remainder_chain_coins = $chain_coins_in-$send_chain_coins-$chain_fee_int;
+											$remainder_address = $app->new_normal_address_key($sale_game_account['currency_id'], $sale_game_account);
+											
+											if ($remainder_address) {
+												array_push($amounts, $remainder_chain_coins);
+												array_push($address_ids, $remainder_address['address_id']);
+											}
+											else $remainder_error = true;
+										}
 										
-										if ($print_debug) echo "Created tx: ".$transaction['tx_hash']."\n";
+										if (!$remainder_error) {
+											$error_message = false;
+											$transaction_id = $game->blockchain->create_transaction("transaction", $amounts, false, $spend_io_ids, $address_ids, $chain_fee_int, $error_message);
+											
+											if ($transaction_id) {
+												$transaction = $app->fetch_transaction_by_id($transaction_id);
+												
+												$pay_out_index = 0;
+												$pay_game_out_index = 0;
+												$pay_tx_hash = $transaction['tx_hash'];
+												
+												if ($print_debug) echo "Created tx: ".$transaction['tx_hash']."\n";
+											}
+											else if ($print_debug) {
+												echo "TX failed: ".$error_message."\n";
+												echo json_encode($amounts, JSON_PRETTY_PRINT)."\n"; 
+											}
+										}
+										else if ($print_debug) echo "Couldn't find an remainder address.\n";
 									}
-									else if ($print_debug) {
-										echo "TX failed: ".$error_message."\n";
-										echo json_encode($amounts, JSON_PRETTY_PRINT)."\n"; 
-									}
+									else if ($print_debug) echo "Couldn't find the address to pay to.\n";
 								}
-								else if ($print_debug) echo "Couldn't find an remainder address.\n";
+								else if ($print_debug) echo "Not enough game coins available.\n";
 							}
-							else if ($print_debug) echo "Couldn't find the address to pay to.\n";
+							else if ($print_debug) echo "Skipping buyin, exchange rate is too old.\n";
 						}
-						else if ($print_debug) echo "Not enough game coins available.\n";
+						else if ($print_debug) echo "Exchange rate not defined, skipping.\n";
 					}
 					else { // Legacy buyins commented out and pending deletion
 						if ($invoice_address['buyin_amount'] > 0) $buyin_amount_float = $invoice_address['buyin_amount'];
@@ -250,103 +260,57 @@ if ($app->running_as_admin()) {
 				
 				if ($amount_paid_float > 0) {
 					$coins_in_existence = $game->coins_in_existence(false, false)+$game->pending_bets(false);
-					$escrow_value_float = $game->escrow_value_in_currency($sellout_currency['currency_id'], $coins_in_existence/pow(10, $game->db_game['decimal_places']));
-					$exchange_rate = $coins_in_existence/pow(10, $game->db_game['decimal_places'])/$escrow_value_float;
+					list($escrow_value_float, $exchange_rate_as_of) = $game->escrow_value_in_currency($sellout_currency['currency_id'], $coins_in_existence/pow(10, $game->db_game['decimal_places']));
 					
-					$sellout_account = $game->check_set_blockchain_sale_account($ref_user, $sellout_currency);
-					
-					$include_unconfirmed = false;
-					$immature_only = false;
-					$min_confirmations = $include_unconfirmed ? 0 : 1;
-					if ($sellout_blockchain->db_blockchain['sync_mode'] == "no_db") {
-						$sellout_account_balance_int = $sellout_blockchain->rpc_account_balance($sellout_account, $min_confirmations);
-					}
-					else $sellout_account_balance_int = $sellout_blockchain->account_balance($sellout_account['account_id'], $include_unconfirmed, $immature_only);
-					
-					$sellout_amount_int = (int)($amount_paid_float/$exchange_rate*pow(10, $sellout_blockchain->db_blockchain['decimal_places']));
-					$fee_amount_int = (int)($invoice_address['fee_amount']*pow(10, $sellout_blockchain->db_blockchain['decimal_places']));
-					$sellout_amount_int = max(0, min($sellout_amount_int, $sellout_account_balance_int)-$fee_amount_int);
-					
-					if ($sellout_amount_int > 0) {
-						$sellout_cost_int = $sellout_amount_int+$fee_amount_int;
+					if ($escrow_value_float > 0) {
+						$exchange_rate = $coins_in_existence/pow(10, $game->db_game['decimal_places'])/$escrow_value_float;
 						
-						if ($print_debug) echo "exchange rate: $exchange_rate, pay: $sellout_amount_int, tx fee: $fee_amount_int\n";
+						if ($print_debug) echo "Exchange rate ".$exchange_rate." (".$app->format_seconds(time()-$exchange_rate_as_of).")\n";
 						
-						$sellout_transaction_created = false;
-						$sellout_transaction_error_message = null;
-						$sellout_tx_hash = null;
-						
-						if ($sellout_blockchain->db_blockchain['sync_mode'] == "full") {
-							$spend_ios = $app->run_query("SELECT * FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id WHERE io.spend_status IN ('unspent','unconfirmed') AND k.account_id=:account_id ORDER BY io.amount ASC;", ['account_id'=>$sellout_account['account_id']]);
+						if ($exchange_rate_as_of >= time() - AppSettings::exchangeRateRecencySecForSellouts()) {
+							$sellout_account = $game->check_set_blockchain_sale_account($ref_user, $sellout_currency);
 							
-							$io_amount_sum = 0;
-							$ios = [];
-							$io_ids = [];
-							$keep_looping = true;
-							
-							while ($keep_looping && $io = $spend_ios->fetch()) {
-								$io_amount_sum += $io['amount'];
-								array_push($io_ids, $io['io_id']);
-								array_push($ios, $io);
-								
-								if ($io_amount_sum >= $sellout_cost_int) $keep_looping = false;
+							$include_unconfirmed = false;
+							$immature_only = false;
+							$min_confirmations = $include_unconfirmed ? 0 : 1;
+							if ($sellout_blockchain->db_blockchain['sync_mode'] == "no_db") {
+								$sellout_account_balance_int = $sellout_blockchain->rpc_account_balance($sellout_account, $min_confirmations);
 							}
+							else $sellout_account_balance_int = $sellout_blockchain->account_balance($sellout_account['account_id'], $include_unconfirmed, $immature_only);
 							
-							$io_nonfee_amount = $io_amount_sum-$fee_amount_int;
+							$sellout_amount_int = (int)($amount_paid_float/$exchange_rate*pow(10, $sellout_blockchain->db_blockchain['decimal_places']));
+							$fee_amount_int = (int)($invoice_address['fee_amount']*pow(10, $sellout_blockchain->db_blockchain['decimal_places']));
+							$sellout_amount_int = max(0, min($sellout_amount_int, $sellout_account_balance_int)-$fee_amount_int);
 							
-							$amounts = array($sellout_amount_int);
-							$address_ids = array($invoice_address['receive_address_id']);
-							
-							$remainder_error = false;
-							if ($io_nonfee_amount > $sellout_amount_int) {
-								$remainder_amount = $io_nonfee_amount-$sellout_amount_int;
-								$remainder_address = $app->new_normal_address_key($sellout_account['currency_id'], $sellout_account);
+							if ($sellout_amount_int > 0) {
+								$sellout_cost_int = $sellout_amount_int+$fee_amount_int;
 								
-								if ($remainder_address) {
-									array_push($amounts, $remainder_amount);
-									array_push($address_ids, $remainder_address['address_id']);
-								}
-								else $remainder_error = true;
-							}
-							
-							if (!$remainder_error) {
-								$error_message = false;
-								$transaction_id = $sellout_blockchain->create_transaction("transaction", $amounts, false, $io_ids, $address_ids, $fee_amount_int, $error_message);
+								if ($print_debug) echo "exchange rate: $exchange_rate, pay: $sellout_amount_int, tx fee: $fee_amount_int\n";
 								
-								if ($transaction_id) {
-									$transaction = $app->fetch_transaction_by_id($transaction_id);
-									$sellout_transaction_created = true;
-									$sellout_tx_hash = $transaction['tx_hash'];
-								}
-								else $sellout_transaction_error_message = $error_message;
-							}
-						}
-						else if ($sellout_blockchain->db_blockchain['sync_mode'] == "no_db") {
-							$spendable_txo_info = $sellout_blockchain->rpc_spendable_ios_in_account($sellout_account, 0);
-							
-							if ($spendable_txo_info !== null) {
-								$raw_txin = [];
-								$raw_txout = [];
+								$sellout_transaction_created = false;
+								$sellout_transaction_error_message = null;
+								$sellout_tx_hash = null;
 								
-								$io_amount_sum = 0;
-								$input_pos = 0;
-								
-								foreach ($spendable_txo_info as $txo_identifier => $txo_info) {
-									$raw_txin[$input_pos] = [
-										"txid" => $txo_info['tx_hash'],
-										"vout" => $txo_info['out_index'],
-									];
-									$io_amount_sum += $txo_info['value']*pow(10, $sellout_blockchain->db_blockchain['decimal_places']);
+								if ($sellout_blockchain->db_blockchain['sync_mode'] == "full") {
+									$spend_ios = $app->run_query("SELECT * FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id WHERE io.spend_status IN ('unspent','unconfirmed') AND k.account_id=:account_id ORDER BY io.amount ASC;", ['account_id'=>$sellout_account['account_id']]);
 									
-									if ($io_amount_sum >= $sellout_cost_int) break;
-								}
-								
-								$io_nonfee_amount = $io_amount_sum-$fee_amount_int;
-								
-								if ($io_nonfee_amount > 0) {
-									$receive_address = $app->fetch_address_by_id($invoice_address['receive_address_id']);
+									$io_amount_sum = 0;
+									$ios = [];
+									$io_ids = [];
+									$keep_looping = true;
 									
-									$raw_txout[$receive_address['address']] = sprintf('%.'.$sellout_blockchain->db_blockchain['decimal_places'].'F', $sellout_amount_int/pow(10, $sellout_blockchain->db_blockchain['decimal_places']));
+									while ($keep_looping && $io = $spend_ios->fetch()) {
+										$io_amount_sum += $io['amount'];
+										array_push($io_ids, $io['io_id']);
+										array_push($ios, $io);
+										
+										if ($io_amount_sum >= $sellout_cost_int) $keep_looping = false;
+									}
+									
+									$io_nonfee_amount = $io_amount_sum-$fee_amount_int;
+									
+									$amounts = array($sellout_amount_int);
+									$address_ids = array($invoice_address['receive_address_id']);
 									
 									$remainder_error = false;
 									if ($io_nonfee_amount > $sellout_amount_int) {
@@ -354,78 +318,133 @@ if ($app->running_as_admin()) {
 										$remainder_address = $app->new_normal_address_key($sellout_account['currency_id'], $sellout_account);
 										
 										if ($remainder_address) {
-											$raw_txout[$remainder_address['address']] = sprintf('%.'.$sellout_blockchain->db_blockchain['decimal_places'].'F', $remainder_amount/pow(10, $sellout_blockchain->db_blockchain['decimal_places']));
+											array_push($amounts, $remainder_amount);
+											array_push($address_ids, $remainder_address['address_id']);
 										}
 										else $remainder_error = true;
 									}
 									
 									if (!$remainder_error) {
-										list($sendraw_response, $tx_hash) = $sellout_blockchain->rpc_createrawtransaction($raw_txin, $raw_txout);
+										$error_message = false;
+										$transaction_id = $sellout_blockchain->create_transaction("transaction", $amounts, false, $io_ids, $address_ids, $fee_amount_int, $error_message);
 										
-										if (isset($sendraw_response['message'])) {
-											$sellout_transaction_error_message = $sendraw_response['message'];
-										}
-										else {
-											$sellout_tx_hash = $sendraw_response;
+										if ($transaction_id) {
+											$transaction = $app->fetch_transaction_by_id($transaction_id);
 											$sellout_transaction_created = true;
+											$sellout_tx_hash = $transaction['tx_hash'];
 										}
+										else $sellout_transaction_error_message = $error_message;
 									}
-									else $sellout_transaction_error_message = "Failed to generate a remainder address.";
 								}
-								else $sellout_transaction_error_message = "There's not enough money in the sellout account.";
-							}
-							else $sellout_transaction_error_message = "RPC call to fetch TXOs in sellout account failed.";
-						}
-						
-						if ($sellout_transaction_created) {
-							$app->run_query("UPDATE currency_invoices SET confirmed_amount_paid=:address_balance_float, unconfirmed_amount_paid=:address_balance_float, status='confirmed' WHERE invoice_id=:invoice_id;", [
-								'address_balance_float' => $address_balance_float,
-								'invoice_id' => $invoice_address['invoice_id']
-							]);
-							
-							$invoice_io_extra_info = [];
-							
-							if (!empty(AppSettings::getParam('coinbase_key'))) {
-								$coinbase_client = new CoinbaseClient(AppSettings::getParam('coinbase_key'), AppSettings::getParam('coinbase_secret'), AppSettings::getParam('coinbase_passphrase'));
-								
-								$fulfill_buy_amount = $sellout_amount_int/pow(10, $sellout_blockchain->db_blockchain['decimal_places']);
-								echo "fulfill buy: ".$fulfill_buy_amount."\n";
-								
-								list($buy_order, $returned_headers, $error_message) = $coinbase_client->apiRequest("/orders", "POST", [
-									"size" => (string) $fulfill_buy_amount,
-									"side" => "buy",
-									"type" => "market",
-									"product_id" => $sellout_currency['abbreviation']."-USD"
-								]);
-								
-								$invoice_io_extra_info['order'] = $buy_order;
-								
-								if (!empty($buy_order->id)) {
-									echo "order: ".$buy_order->id."\n";
+								else if ($sellout_blockchain->db_blockchain['sync_mode'] == "no_db") {
+									$spendable_txo_info = $sellout_blockchain->rpc_spendable_ios_in_account($sellout_account, 0);
 									
-									sleep(1);
-								
-									list($fulfillments, $returned_headers, $error_message) = $coinbase_client->apiRequest("/fills", "GET", ['order_id' => $buy_order->id]);
-									
-									$invoice_io_extra_info['fulfillments'] = $fulfillments;
+									if ($spendable_txo_info !== null) {
+										$raw_txin = [];
+										$raw_txout = [];
+										
+										$io_amount_sum = 0;
+										$input_pos = 0;
+										
+										foreach ($spendable_txo_info as $txo_identifier => $txo_info) {
+											$raw_txin[$input_pos] = [
+												"txid" => $txo_info['tx_hash'],
+												"vout" => $txo_info['out_index'],
+											];
+											$io_amount_sum += $txo_info['value']*pow(10, $sellout_blockchain->db_blockchain['decimal_places']);
+											
+											if ($io_amount_sum >= $sellout_cost_int) break;
+										}
+										
+										$io_nonfee_amount = $io_amount_sum-$fee_amount_int;
+										
+										if ($io_nonfee_amount > 0) {
+											$receive_address = $app->fetch_address_by_id($invoice_address['receive_address_id']);
+											
+											$raw_txout[$receive_address['address']] = sprintf('%.'.$sellout_blockchain->db_blockchain['decimal_places'].'F', $sellout_amount_int/pow(10, $sellout_blockchain->db_blockchain['decimal_places']));
+											
+											$remainder_error = false;
+											if ($io_nonfee_amount > $sellout_amount_int) {
+												$remainder_amount = $io_nonfee_amount-$sellout_amount_int;
+												$remainder_address = $app->new_normal_address_key($sellout_account['currency_id'], $sellout_account);
+												
+												if ($remainder_address) {
+													$raw_txout[$remainder_address['address']] = sprintf('%.'.$sellout_blockchain->db_blockchain['decimal_places'].'F', $remainder_amount/pow(10, $sellout_blockchain->db_blockchain['decimal_places']));
+												}
+												else $remainder_error = true;
+											}
+											
+											if (!$remainder_error) {
+												list($sendraw_response, $tx_hash) = $sellout_blockchain->rpc_createrawtransaction($raw_txin, $raw_txout);
+												
+												if (isset($sendraw_response['message'])) {
+													$sellout_transaction_error_message = $sendraw_response['message'];
+												}
+												else {
+													$sellout_tx_hash = $sendraw_response;
+													$sellout_transaction_created = true;
+												}
+											}
+											else $sellout_transaction_error_message = "Failed to generate a remainder address.";
+										}
+										else $sellout_transaction_error_message = "There's not enough money in the sellout account.";
+									}
+									else $sellout_transaction_error_message = "RPC call to fetch TXOs in sellout account failed.";
 								}
-								else echo json_encode([$buy_order, $error_message], JSON_PRETTY_PRINT)."\n";
+								
+								if ($sellout_transaction_created) {
+									$app->run_query("UPDATE currency_invoices SET confirmed_amount_paid=:address_balance_float, unconfirmed_amount_paid=:address_balance_float, status='confirmed' WHERE invoice_id=:invoice_id;", [
+										'address_balance_float' => $address_balance_float,
+										'invoice_id' => $invoice_address['invoice_id']
+									]);
+									
+									$invoice_io_extra_info = [];
+									
+									if (!empty(AppSettings::getParam('coinbase_key'))) {
+										$coinbase_client = new CoinbaseClient(AppSettings::getParam('coinbase_key'), AppSettings::getParam('coinbase_secret'), AppSettings::getParam('coinbase_passphrase'));
+										
+										$fulfill_buy_amount = $sellout_amount_int/pow(10, $sellout_blockchain->db_blockchain['decimal_places']);
+										echo "fulfill buy: ".$fulfill_buy_amount."\n";
+										
+										list($buy_order, $returned_headers, $error_message) = $coinbase_client->apiRequest("/orders", "POST", [
+											"size" => (string) $fulfill_buy_amount,
+											"side" => "buy",
+											"type" => "market",
+											"product_id" => $sellout_currency['abbreviation']."-USD"
+										]);
+										
+										$invoice_io_extra_info['order'] = $buy_order;
+										
+										if (!empty($buy_order->id)) {
+											echo "order: ".$buy_order->id."\n";
+											
+											sleep(1);
+										
+											list($fulfillments, $returned_headers, $error_message) = $coinbase_client->apiRequest("/fills", "GET", ['order_id' => $buy_order->id]);
+											
+											$invoice_io_extra_info['fulfillments'] = $fulfillments;
+										}
+										else echo json_encode([$buy_order, $error_message], JSON_PRETTY_PRINT)."\n";
+									}
+									
+									$app->run_insert_query("currency_invoice_ios", [
+										'invoice_id' => $invoice_address['invoice_id'],
+										'tx_hash' => $sellout_tx_hash,
+										'extra_info' => json_encode($invoice_io_extra_info, JSON_PRETTY_PRINT),
+										'time_created' => time(),
+										'out_index' => 0,
+										'game_out_index' => null
+									]);
+									
+									if ($print_debug) echo "Created the sellout transaction: ".$sellout_tx_hash."\n";
+								}
+								else if ($print_debug) echo "Failed to create the sellout transaction.".(isset($sellout_transaction_error_message) ? " (".$sellout_transaction_error_message.")" : "")."\n";
 							}
-							
-							$app->run_insert_query("currency_invoice_ios", [
-								'invoice_id' => $invoice_address['invoice_id'],
-								'tx_hash' => $sellout_tx_hash,
-								'extra_info' => json_encode($invoice_io_extra_info, JSON_PRETTY_PRINT),
-								'time_created' => time(),
-								'out_index' => 0,
-								'game_out_index' => null
-							]);
-							
-							if ($print_debug) echo "Created the sellout transaction: ".$sellout_tx_hash."\n";
+							else if ($print_debug) echo "Invalid payment amount.\n";
 						}
-						else if ($print_debug) echo "Failed to create the sellout transaction.".(isset($sellout_transaction_error_message) ? " (".$sellout_transaction_error_message.")" : "")."\n";
+						else if ($print_debug) echo "Exchange rate is out of date, skipping.\n";
 					}
-					else if ($print_debug) echo "Invalid payment amount.\n";
+					else if ($print_debug) echo "Exchange rate not set, skipping.\n";
 				}
 				else if ($print_debug) echo "Nothing was paid.\n";
 				

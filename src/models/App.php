@@ -893,70 +893,80 @@ class App {
 			$api_response_raw = file_get_contents($currency_url['url']);
 			echo "(".strlen($api_response_raw).") ".$currency_url['url']."<br/>\n";
 			
-			$currencies_by_url = $this->run_query("SELECT * FROM currencies WHERE oracle_url_id=:oracle_url_id ORDER BY currency_id ASC;", ['oracle_url_id'=>$currency_url['oracle_url_id']]);
-			
-			while ($currency = $currencies_by_url->fetch()) {
-				$ref_currency_info = $this->exchange_rate_between_currencies($usd_currency['currency_id'], $reference_currency['currency_id'], time(), $reference_currency['currency_id']);
+			if (strlen($api_response_raw) > 0) {
+				$currencies_by_url = $this->run_query("SELECT * FROM currencies WHERE oracle_url_id=:oracle_url_id ORDER BY currency_id ASC;", ['oracle_url_id'=>$currency_url['oracle_url_id']]);
 				
-				$price_in_ref_currency = null;
-				$price_usd = null;
-				
-				if ($currency_url['format_id'] == 2) {
-					$api_response = json_decode($api_response_raw);
-					$price_usd = $api_response->USD->bid;
-				}
-				else if ($currency_url['format_id'] == 1) {
-					$api_response = json_decode($api_response_raw);
-					if (!empty($api_response->rates)) {
-						$api_rates = (array) $api_response->rates;
-						$price_usd = 1/($api_rates[$currency['abbreviation']]);
-					}
-				}
-				else if ($currency_url['format_id'] == 3) {
-					$coin_data_raw = $this->first_snippet_between($api_response_raw, '<script id="__NEXT_DATA__" type="application/json">', '</script>');
-					$coin_data = json_decode($coin_data_raw);
-					$price_data = AppSettings::arrayToMapOnKey($coin_data->props->initialState->cryptocurrency->listingLatest->data, "symbol");
+				while ($currency = $currencies_by_url->fetch()) {
+					$ref_currency_info = $this->exchange_rate_between_currencies($usd_currency['currency_id'], $reference_currency['currency_id'], time(), $reference_currency['currency_id']);
 					
-					if ($currency['currency_id'] == $usd_currency['currency_id']) {
-						$price_in_ref_currency = 1/$price_data['BTC']->quote->USD->price;
-					}
-					else {
-						$price_usd = $price_data[$currency['abbreviation']]->quote->USD->price;
-					}
-				}
-				else if ($currency_url['format_id'] == 4) {
-					$coin_data_raw = $this->first_snippet_between($api_response_raw, '<script type="application/ld+json">', '</script>');
-					$coin_data = (array) json_decode($coin_data_raw);
-					$price_data_arr = array_values($coin_data['@graph']);
-					$price_data_by_currency = AppSettings::arrayToMapOnKey($price_data_arr, "name");
+					$price_in_ref_currency = null;
+					$price_usd = null;
 					
-					if ($currency['currency_id'] == $usd_currency['currency_id']) {
-						$price_in_ref_currency = 1/$price_data_by_currency['BTC']->offers->price;
+					if ($currency_url['format_id'] == 2) {
+						$api_response = json_decode($api_response_raw);
+						$price_usd = $api_response->USD->bid;
 					}
-					else {
-						$this_price_data = $price_data_by_currency[$currency['abbreviation']];
+					else if ($currency_url['format_id'] == 1) {
+						$api_response = json_decode($api_response_raw);
+						if (!empty($api_response->rates)) {
+							$api_rates = (array) $api_response->rates;
+							$price_usd = 1/($api_rates[$currency['abbreviation']]);
+						}
+					}
+					else if ($currency_url['format_id'] == 3) {
+						$coin_data_raw = $this->first_snippet_between($api_response_raw, '<script id="__NEXT_DATA__" type="application/json">', '</script>');
+						$coin_data = json_decode($coin_data_raw);
+						$price_data = AppSettings::arrayToMapOnKey($coin_data->props->initialState->cryptocurrency->listingLatest->data, "symbol");
 						
-						$price_usd = $this_price_data->offers->price;
+						if ($currency['currency_id'] == $usd_currency['currency_id']) {
+							$price_in_ref_currency = 1/$price_data['BTC']->quote->USD->price;
+						}
+						else {
+							$price_usd = $price_data[$currency['abbreviation']]->quote->USD->price;
+						}
 					}
-				}
-				else if ($currency_url['format_id'] == 5) {
-					$coin_data = json_decode($api_response_raw);
-					$price_in_ref_currency = 1/$coin_data->bpi->USD->rate_float;
-				}
-				
-				if ($price_in_ref_currency == null) {
-					$price_in_ref_currency = $price_usd/$ref_currency_info['exchange_rate'];
-				}
-				
-				$price_in_ref_currency = $this->to_significant_digits($price_in_ref_currency, 10);
-				
-				if ($price_in_ref_currency > 0) {
-					$this->run_insert_query("currency_prices", [
-						'currency_id' => $currency['currency_id'],
-						'reference_currency_id' => $reference_currency['currency_id'],
-						'price' => $price_in_ref_currency,
-						'time_added' => time()
-					]);
+					else if ($currency_url['format_id'] == 4) {
+						$coin_data_raw = $this->first_snippet_between($api_response_raw, '<script type="application/ld+json">', '</script>');
+						$coin_data = (array) json_decode($coin_data_raw);
+						$price_data_arr = array_values($coin_data['@graph']);
+						$price_data_by_currency = AppSettings::arrayToMapOnKey($price_data_arr, "name");
+						
+						if ($currency['currency_id'] == $usd_currency['currency_id']) {
+							$price_in_ref_currency = 1/$price_data_by_currency['BTC']->offers->price;
+						}
+						else {
+							$this_price_data = $price_data_by_currency[$currency['abbreviation']];
+							
+							$price_usd = $this_price_data->offers->price;
+						}
+					}
+					else if ($currency_url['format_id'] == 5) {
+						$coin_data = json_decode($api_response_raw);
+						$price_in_ref_currency = 1/$coin_data->bpi->USD->rate_float;
+					}
+					else if ($currency_url['format_id'] == 6) {
+						$price_str = $this->first_snippet_between($api_response_raw, 'The Litecoin price is $', ',');
+						if ($price_str) {
+							$price_usd = (float)(trim($price_str));
+						}
+					}
+					
+					if ($price_in_ref_currency == null && isset($price_usd)) {
+						$price_in_ref_currency = $price_usd/$ref_currency_info['exchange_rate'];
+					}
+					
+					if (isset($price_in_ref_currency)) {
+						$price_in_ref_currency = $this->to_significant_digits($price_in_ref_currency, 10);
+						
+						if ($price_in_ref_currency > 0) {
+							$this->run_insert_query("currency_prices", [
+								'currency_id' => $currency['currency_id'],
+								'reference_currency_id' => $reference_currency['currency_id'],
+								'price' => $price_in_ref_currency,
+								'time_added' => time()
+							]);
+						}
+					}
 				}
 			}
 		}
@@ -989,24 +999,27 @@ class App {
 	public function new_currency_invoice(&$account, $pay_currency_id, $pay_amount, &$user, &$user_game, $invoice_type) {
 		$address_key = $this->new_normal_address_key($account['currency_id'], $account);
 		
-		$new_invoice_params = [
-			'time_created' => time(),
-			'pay_currency_id' => $pay_currency_id,
-			'expire_time' => time()+AppSettings::getParam('invoice_expiration_seconds'),
-			'user_game_id' => $user_game['user_game_id'],
-			'invoice_type' => $invoice_type,
-			'invoice_key_string' => $this->random_string(32),
-			'pay_amount' => $pay_amount,
-			'status' => 'unpaid'
-		];
 		if ($address_key) {
-			$new_invoice_params['address_id'] = $address_key['address_id'];
+			$new_invoice_params = [
+				'time_created' => time(),
+				'pay_currency_id' => $pay_currency_id,
+				'expire_time' => time()+AppSettings::getParam('invoice_expiration_seconds'),
+				'user_game_id' => $user_game['user_game_id'],
+				'invoice_type' => $invoice_type,
+				'invoice_key_string' => $this->random_string(32),
+				'pay_amount' => $pay_amount,
+				'status' => 'unpaid'
+			];
+			if ($address_key) {
+				$new_invoice_params['address_id'] = $address_key['address_id'];
+			}
+			
+			$this->run_insert_query("currency_invoices", $new_invoice_params);
+			$invoice_id = $this->last_insert_id();
+			
+			return $this->fetch_currency_invoice_by_id($invoice_id);
 		}
-		
-		$this->run_insert_query("currency_invoices", $new_invoice_params);
-		$invoice_id = $this->last_insert_id();
-		
-		return $this->fetch_currency_invoice_by_id($invoice_id);
+		else return null;
 	}
 	
 	public function new_normal_address_key($currency_id, &$account) {

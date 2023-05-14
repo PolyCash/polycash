@@ -534,11 +534,11 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 			<div style="margin-top: 8px;">
 				<?php
 				if ($game->db_game['buyin_policy'] != "none") { ?>
-					<button class="btn btn-sm btn-success" onclick="thisPageManager.manage_buyin('initiate');"><i class="fas fa-arrow-down"></i> &nbsp; Deposit</button>
+					<button class="btn btn-sm btn-success" onclick="thisPageManager.manage_buyin('initiate');"><i class="fas fa-arrow-down"></i> &nbsp; Buy In</button>
 					<?php
 				}
 				if ($game->db_game['sellout_policy'] == "on") { ?>
-					<button class="btn btn-sm btn-warning" onclick="thisPageManager.manage_sellout('initiate');"><i class="fas fa-arrow-up"></i> &nbsp; Withdraw</button>
+					<button class="btn btn-sm btn-warning" onclick="thisPageManager.manage_sellout('initiate');"><i class="fas fa-arrow-up"></i> &nbsp; Sell Out</button>
 					<?php
 				}
 				
