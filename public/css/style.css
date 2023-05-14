@@ -248,7 +248,6 @@ and (max-device-width : 480px) {
 .paragraph {
 	display: block;
 	margin-bottom: 12px;
-	overflow: hidden;
 }
 footer {
     position: fixed;
@@ -430,14 +429,20 @@ a.selected {
 	display: inline-block;
 	float: right;
 }
-.status_footer {
-	height: 30px;
-	margin-top: -30px;
-	background-color: rgba(0,0,0,0);
+@media (max-width: 979px) {
+	.sidebar {
+		margin-top: 100px;
+	}
 }
-.status_footer_right {
-	display: inline-block;
-	float: right;
+.container-fluid {
+	padding-bottom: 40px;
+	overflow: hidden;
+}
+.status_footer {
+	position: absolute;
+	right: 5px;
+	bottom: 0px;
+	max-width: 800px;
 	background-color: #fff;
 	border: 1px solid #888;
 	opacity: 0.9;

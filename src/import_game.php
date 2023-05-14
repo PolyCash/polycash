@@ -76,11 +76,6 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 					}
 					else {
 						?>
-						<script type="text/javascript">
-						$(document).ready(function() {
-							$('#key').focus();
-						});
-						</script>
 						<form action="/import/" method="post">
 							<input type="hidden" name="action" value="import_definition" />
 							<input type="hidden" name="import_mode" value="<?php echo $import_mode; ?>" />

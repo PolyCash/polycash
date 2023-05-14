@@ -10,26 +10,25 @@
 	</div>
 </div>
 <footer class="footer" id="chatWindows"></footer>
-<footer class="footer status_footer">
-	<div class="status_footer_right">
-		<?php
-		if (empty($thisuser)) $thisuser = false;
-		
-		$display_sync_games = [];
-		
-		if (AppSettings::getParam('display_sync_game_ids')) {
-			$display_sync_game_ids = explode(",", AppSettings::getParam('display_sync_game_ids'));
-			foreach ($display_sync_game_ids as $display_sync_game_id) {
-				$display_sync_game = $app->fetch_game_by_id($display_sync_game_id);
-				if (!empty($display_sync_game)) {
-					$display_sync_blockchain = new Blockchain($app, $display_sync_game['blockchain_id']);
-					array_push($display_sync_games, new Game($display_sync_blockchain, $display_sync_game_id));
-				}
+<div class="status_footer">
+	<?php
+	if (empty($thisuser)) $thisuser = false;
+	
+	$display_sync_games = [];
+	
+	if (AppSettings::getParam('display_sync_game_ids')) {
+		$display_sync_game_ids = explode(",", AppSettings::getParam('display_sync_game_ids'));
+		foreach ($display_sync_game_ids as $display_sync_game_id) {
+			$display_sync_game = $app->fetch_game_by_id($display_sync_game_id);
+			if (!empty($display_sync_game)) {
+				$display_sync_blockchain = new Blockchain($app, $display_sync_game['blockchain_id']);
+				array_push($display_sync_games, new Game($display_sync_blockchain, $display_sync_game_id));
 			}
 		}
-		
-		foreach ($display_sync_games as $display_sync_game) { ?>
-			<div class="status_footer_section">
+	}
+	
+	foreach ($display_sync_games as $display_sync_game) { ?>
+		<div class="status_footer_section">
 			<?php
 			$game_peers = $display_sync_game->fetch_all_peers();
 			
@@ -71,31 +70,30 @@
 				}
 			}
 			?>
-			</div>
+		</div>
 		<?php
-		}
+	}
+	
+	$online_blockchains = $app->run_query("SELECT * FROM blockchains b LEFT JOIN images i ON b.default_image_id=i.image_id WHERE b.online=1;");
+	
+	while ($db_blockchain = $online_blockchains->fetch()) {
+		$blockchain = new Blockchain($app, $db_blockchain['blockchain_id']);
 		
-		$online_blockchains = $app->run_query("SELECT * FROM blockchains b LEFT JOIN images i ON b.default_image_id=i.image_id WHERE b.online=1;");
+		echo '<div class="status_footer_section">';
+		echo '<a href="/explorer/blockchains/'.$db_blockchain['url_identifier'].'/blocks/">';
+		if ($db_blockchain['default_image_id'] > 0) echo '<img class="status_footer_img" src="/images/custom/'.$db_blockchain['default_image_id'].'.'.$db_blockchain['extension'].'" />';
 		
-		while ($db_blockchain = $online_blockchains->fetch()) {
-			$blockchain = new Blockchain($app, $db_blockchain['blockchain_id']);
-			
-			echo '<div class="status_footer_section">';
-			echo '<a href="/explorer/blockchains/'.$db_blockchain['url_identifier'].'/blocks/">';
-			if ($db_blockchain['default_image_id'] > 0) echo '<img class="status_footer_img" src="/images/custom/'.$db_blockchain['default_image_id'].'.'.$db_blockchain['extension'].'" />';
-			
-			if ($blockchain->last_active_time() > time()-(60*60)) {
-				echo '<font class="text-success">'.$db_blockchain['blockchain_name'].'</font>';
-			}
-			else {
-				echo '<font class="text-danger">'.$db_blockchain['blockchain_name'].'</font>';
-			}
-			echo "</a>";
-			echo '</div>';
+		if ($blockchain->last_active_time() > time()-(60*60)) {
+			echo '<font class="text-success">'.$db_blockchain['blockchain_name'].'</font>';
 		}
-		?>
-	</div>
-</footer>
+		else {
+			echo '<font class="text-danger">'.$db_blockchain['blockchain_name'].'</font>';
+		}
+		echo "</a>";
+		echo '</div>';
+	}
+	?>
+</div>
 
 <?php
 foreach ($display_sync_games as $display_sync_game) {

@@ -16,8 +16,6 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 	?>
 	<p><a href="/import/">Add another game</a></p>
 	
-	<p><a href="/redeem/">Redeem a card</a></p>
-	
 	<br/>
 </div>
 <?php
