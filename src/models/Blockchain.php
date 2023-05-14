@@ -2259,6 +2259,33 @@ class Blockchain {
 		}
 	}
 
+	public function rpc_load_txo_by_sellout_invoice_io($invoice_io) {
+		$this->load_coin_rpc();
+		
+		$vout_info = null;
+		
+		$my_tx = $this->coin_rpc->gettransaction($invoice_io['tx_hash']);
+		
+		if ($my_tx && isset($my_tx['blockhash'])) {
+			$raw_tx = $this->coin_rpc->getrawtransaction($invoice_io['tx_hash'], false, $my_tx['blockhash']);
+			if ($raw_tx) {
+				$raw_tx_decoded = $this->coin_rpc->decoderawtransaction($raw_tx);
+				
+				if (!empty($raw_tx_decoded['vout']) && isset($raw_tx_decoded['vout'][$invoice_io['out_index']])) {
+					$vout_info = $raw_tx_decoded['vout'][$invoice_io['out_index']];
+					
+					if (isset($vout_info['value'])) $fetch_io_error = false;
+					else $fetch_io_error = true;
+				}
+				else $fetch_io_error = true;
+			}
+			else $fetch_io_error = true;
+		}
+		else $fetch_io_error = true;
+		
+		return [$vout_info, $fetch_io_error];
+	}
+	
 	public function rpc_account_balance(&$account, $min_confirmations, $immature_only=false) {
 		$tx_out_info = $this->rpc_spendable_ios_in_account($account, $min_confirmations, $immature_only ? ["immature"] : null);
 		

@@ -544,7 +544,7 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 				
 				if (count($game->fetch_featured_strategies()->fetchAll()) > 0) {
 					?>
-					<button class="btn btn-sm btn-info" onclick="thisPageManager.apply_my_strategy();"><i class="fas fa-hand-point-up"></i> &nbsp; Apply my strategy now</button>
+					<button class="btn btn-sm btn-info" id="apply-strategy-btn" onclick="thisPageManager.apply_my_strategy();"<?php if ($user_strategy['voting_strategy'] == "manual") echo ' style="display: none;"'; ?>><i class="fas fa-hand-point-up"></i> &nbsp; Apply my strategy now</button>
 					<button class="btn btn-sm btn-danger" onclick="thisPageManager.show_featured_strategies(); return false;"><i class="fas fa-list"></i> &nbsp; Change my strategy</button>
 					<?php
 				}

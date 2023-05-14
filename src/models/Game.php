@@ -3542,24 +3542,10 @@ class Game {
 						}
 						else {
 							$sellout_blockchain = new Blockchain($this->blockchain->app, $invoice['blockchain_id']);
-							$sellout_blockchain->load_coin_rpc();
 							
-							$my_tx = $sellout_blockchain->coin_rpc->gettransaction($invoice_io['tx_hash']);
-							if ($my_tx) {
-								$raw_tx = $sellout_blockchain->coin_rpc->getrawtransaction($invoice_io['tx_hash'], false, $my_tx['blockhash']);
-								if ($raw_tx) {
-									$raw_tx_decoded = $sellout_blockchain->coin_rpc->decoderawtransaction($raw_tx);
-									
-									if (!empty($raw_tx_decoded['vout']) && isset($raw_tx_decoded['vout'][$invoice_io['out_index']])) {
-										$vout_info = $raw_tx_decoded['vout'][$invoice_io['out_index']];
-										if (isset($vout_info['value'])) $invoice_io_disp = $vout_info['value'];
-										else $fetch_io_error = true;
-									}
-									else $fetch_io_error = true;
-								}
-								else $fetch_io_error = true;
-							}
-							else $fetch_io_error = true;
+							list($vout_info, $fetch_io_error) = $sellout_blockchain->rpc_load_txo_by_sellout_invoice_io($invoice_io);
+							
+							if (!$fetch_io_error) $invoice_io_disp = $vout_info['value'];
 						}
 						
 						if (!$fetch_io_error && $invoice['sync_mode'] == "full") $html .= '<a target="_blank" href="/explorer/blockchains/'.$invoice['url_identifier']."/utxo/".$invoice_io['tx_hash']."/".$invoice_io['out_index'].'/">';

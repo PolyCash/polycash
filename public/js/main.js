@@ -2630,6 +2630,7 @@ var PageManager = function() {
 					$("input[name=voting_strategy][value='featured']").prop("checked",true);
 					
 					if (setStrategyResponse.status_code == 1) {
+						$('#apply-strategy-btn').show();
 						$('#featured_strategy_success').html(setStrategyResponse.message);
 						$('#featured_strategy_success').show();
 						setTimeout(function() {$('#featured_strategy_success').slideUp('fast');}, 3000);
@@ -2642,6 +2643,7 @@ var PageManager = function() {
 				}
 			});
 		}
+		else $('#apply-strategy-btn').hide();
 	}
 	this.apply_game_definition = function(game_id) {
 		if ($('#apply_def_link').html() == "Apply Changes") {

@@ -1075,7 +1075,7 @@ else {
 					list($game_escrow_value_usd, $exchange_rate_as_of) = $game->escrow_value_in_currency($usd_currency['currency_id'], $coins_in_existence_float);
 					$usd_per_game_coin = $game_escrow_value_usd/$coins_in_existence_float;
 					
-					$currency_conversions = $app->run_query("SELECT i.invoice_id, i.invoice_type, i.confirmed_amount_paid, c.blockchain_id, b.decimal_places, b.url_identifier, b.coin_name_plural, c.abbreviation, u.username, a.address FROM currency_invoices i JOIN user_games ug ON i.user_game_id=ug.user_game_id JOIN users u ON ug.user_id=u.user_id JOIN currencies c ON i.pay_currency_id=c.currency_id JOIN blockchains b ON c.blockchain_id=b.blockchain_id JOIN addresses a ON i.address_id=a.address_id WHERE i.invoice_type IN ('sale_buyin', 'sellout') AND i.status != 'unpaid' AND ug.game_id=:game_id;", ['game_id' => $game->db_game['game_id']])->fetchAll();
+					$currency_conversions = $app->run_query("SELECT i.invoice_id, i.invoice_type, i.confirmed_amount_paid, c.blockchain_id, b.decimal_places, b.url_identifier, b.coin_name_plural, b.sync_mode, b.blockchain_id, c.abbreviation, u.username, a.address FROM currency_invoices i JOIN user_games ug ON i.user_game_id=ug.user_game_id JOIN users u ON ug.user_id=u.user_id JOIN currencies c ON i.pay_currency_id=c.currency_id JOIN blockchains b ON c.blockchain_id=b.blockchain_id JOIN addresses a ON i.address_id=a.address_id WHERE i.invoice_type IN ('sale_buyin', 'sellout') AND i.status != 'unpaid' AND ug.game_id=:game_id;", ['game_id' => $game->db_game['game_id']])->fetchAll();
 					?>
 					<div class="row">
 						<div class="col-lg-12">
@@ -1101,20 +1101,48 @@ else {
 										foreach ($invoice_ios as $invoice_io) {
 											$invoice_io_blockchain_id = $currency_conversion['invoice_type'] == "sale_buyin" ? $game->blockchain->db_blockchain['blockchain_id'] : $currency_conversion['blockchain_id'];
 											
-											$io = $app->fetch_io_by_hash_out_index($invoice_io_blockchain_id, $invoice_io['tx_hash'], $invoice_io['out_index']);
-											
-											if ($currency_conversion['invoice_type'] == "sale_buyin") {
-												$game_amount = $game->game_amount_by_io($io['io_id']);
+											if ($currency_conversion['invoice_type'] == "sale_buyin" || $currency_conversion['sync_mode'] == "full") {
+												$io = $app->fetch_io_by_hash_out_index($invoice_io_blockchain_id, $invoice_io['tx_hash'], $invoice_io['out_index']);
 												
-												$received_utxo_html .= '<a href="/explorer/games/'.$game->db_game['url_identifier']."/utxo/".$invoice_io['tx_hash']."/".$invoice_io['game_out_index'].'/">'.$game->display_coins($game_amount)."</a> ";
-												
-												$conversion_game_amount_float += $game_amount/pow(10, $game->db_game['decimal_places']);
+												if ($io) $fetch_io_error = false;
+												else $fetch_io_error = true;
 											}
 											else {
-												$received_amt_disp = $app->format_bignum($io['amount']/pow(10, $currency_conversion['decimal_places']));
-												$received_utxo_html .= '<a href="/explorer/blockchains/'.$currency_conversion['url_identifier']."/utxo/".$invoice_io['tx_hash']."/".$invoice_io['out_index'].'/">'.$receive_amt_disp." ".($receive_amt_disp=="1" ? $currency_conversion['coin_name'] : $currency_conversion['coin_name_plural'])."</a><br/>\n";
+												$io = null;
 												
-												$conversion_blockchain_amount_float += $io['amount']/pow(10, $currency_conversion['decimal_places']);
+												$sellout_blockchain = new Blockchain($app, $currency_conversion['blockchain_id']);
+												
+												list($vout_info, $fetch_io_error) = $sellout_blockchain->rpc_load_txo_by_sellout_invoice_io($invoice_io);
+											}
+											
+											if ($currency_conversion['invoice_type'] == "sale_buyin") {
+												if ($fetch_io_error) $received_utxo_html .= "Unknown";
+												else {
+													$game_amount = $game->game_amount_by_io($io['io_id']);
+													
+													$received_utxo_html .= '<a href="/explorer/games/'.$game->db_game['url_identifier']."/utxo/".$invoice_io['tx_hash']."/".$invoice_io['game_out_index'].'/">'.$game->display_coins($game_amount)."</a> ";
+													
+													$conversion_game_amount_float += $game_amount/pow(10, $game->db_game['decimal_places']);
+												}
+											}
+											else {
+												if ($fetch_io_error) $receive_amt_disp = "Unknown";
+												else {
+													if ($currency_conversion['sync_mode'] == "full") {
+														$receive_amt_disp = $app->format_bignum($io['amount']/pow(10, $currency_conversion['decimal_places']));
+														
+														$conversion_blockchain_amount_float += $io['amount']/pow(10, $currency_conversion['decimal_places']);
+													}
+													else {
+														$receive_amt_disp = $app->format_bignum($vout_info['value']);
+														$conversion_blockchain_amount_float += $vout_info['value'];
+													}
+												}
+												
+												if ($currency_conversion['sync_mode'] == "full") $received_utxo_html .= '<a href="/explorer/blockchains/'.$currency_conversion['url_identifier']."/utxo/".$invoice_io['tx_hash']."/".$invoice_io['out_index'].'/">';
+												$received_utxo_html .= $receive_amt_disp." ".($receive_amt_disp=="1" ? $currency_conversion['coin_name'] : $currency_conversion['coin_name_plural']);
+												if ($currency_conversion['sync_mode'] == "full") $received_utxo_html .= "</a>";
+												$received_utxo_html .= "<br/>\n";
 											}
 										}
 										
@@ -1129,7 +1157,9 @@ else {
 										echo '<div class="col-sm-1">'.($currency_conversion['invoice_type'] == "sale_buyin" ? "Buyin" : "Sellout")."</div>";
 										echo '<div class="col-sm-3">';
 										
-										if ($currency_conversion['invoice_type'] == "sale_buyin") echo '<a href="/explorer/blockchains/'.$currency_conversion['url_identifier'].'/addresses/'.$currency_conversion['address'].'">';
+										if ($currency_conversion['invoice_type'] == "sale_buyin") {
+											if ($currency_conversion['sync_mode'] == "full") echo '<a href="/explorer/blockchains/'.$currency_conversion['url_identifier'].'/addresses/'.$currency_conversion['address'].'">';
+										}
 										else echo '<a href="/explorer/games/'.$game->db_game['url_identifier'].'/addresses/'.$currency_conversion['address'].'">';
 										
 										echo (float) $currency_conversion['confirmed_amount_paid'].' ';
@@ -1137,7 +1167,7 @@ else {
 										if ($currency_conversion['invoice_type'] == "sale_buyin") echo $currency_conversion['abbreviation'];
 										else echo $game->db_game['coin_abbreviation'];
 										
-										echo "</a>";
+										if ($currency_conversion['invoice_type'] != "sale_buyin" || $currency_conversion['sync_mode'] == "full") echo "</a>";
 										
 										echo "&rarr; ".$received_utxo_html."</div>";
 										
