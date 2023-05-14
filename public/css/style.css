@@ -429,7 +429,7 @@ a.selected {
 	display: inline-block;
 	float: right;
 }
-@media (max-width: 979px) {
+@media (max-width: 768px) {
 	.sidebar {
 		margin-top: 100px;
 	}

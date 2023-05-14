@@ -384,10 +384,6 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 					echo '</div>';
 					
 					if ($show_balances) {
-						$include_unconfirmed = false;
-						$immature_only = false;
-						$min_confirmations = $include_unconfirmed ? 0 : 1;
-						
 						if ($blockchain->db_blockchain['sync_mode'] == "no_db") {
 							$mature_balance = $blockchain->rpc_account_balance($account, 1);
 							$unconfirmed_balance = $blockchain->rpc_account_balance($account, 0);
