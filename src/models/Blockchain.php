@@ -2304,9 +2304,23 @@ class Blockchain {
 	public function rpc_spendable_ios_in_account(&$account, $min_confirmations, $only_categories=null) {
 		$this->load_coin_rpc();
 		
-		$transactions = $this->coin_rpc->listtransactions();
+		$transactions = [];
+		$page = 0;
+		$tx_per_page = 5000;
+		$max_tx_expected_between_pagination = 1000;
+		$keep_looping = true;
+		do {
+			$paged_transactions = $this->coin_rpc->listtransactions("*", $tx_per_page, $page*($tx_per_page-$max_tx_expected_between_pagination));
+			
+			if ($paged_transactions !== false && $paged_transactions !== null && count($paged_transactions) > 0) {
+				$transactions = array_merge($transactions, $paged_transactions);
+				$page++;
+			}
+			else $keep_looping = false;
+		}
+		while ($keep_looping);
 		
-		if ($transactions !== false && $transactions !== null) {
+		if (count($transactions) > 0) {
 			$all_addresses = $this->app->fetch_all_addresses_in_account($account);
 			$account_addresses_map = [];
 			foreach ($all_addresses as $account_address) {
@@ -2318,12 +2332,10 @@ class Blockchain {
 			if ($only_categories !== null) $acceptable_categories = $only_categories;
 			
 			foreach ($transactions as $transaction) {
-				if (isset($transaction['address']) && !empty($account_addresses_map[$transaction['address']])) {
-					if (in_array($transaction['category'], $acceptable_categories)) {
-						$relevant_tx_hashes[$transaction['txid']] = [
-							'blockhash' => $transaction['blockhash']
-						];
-					}
+				if (in_array($transaction['category'], $acceptable_categories)) {
+					$relevant_tx_hashes[$transaction['txid']] = [
+						'blockhash' => $transaction['blockhash']
+					];
 				}
 			}
 			
@@ -2373,7 +2385,7 @@ class Blockchain {
 					}
 				}
 			}
-			
+
 			return $tx_out_info;
 		}
 		else return null;

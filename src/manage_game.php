@@ -1225,7 +1225,7 @@ else {
 										}
 										
 										if ($amount_not_fulfilled != 0) {
-											echo $amount_not_fulfilled." ".$currency_conversion['abbreviation']." not fulfilled";
+											echo ($currency_conversion['invoice_type'] == "sale_buyin" ? "Sell" : "Buy")." ".$amount_not_fulfilled." ".$currency_conversion['abbreviation']." not fulfilled";
 										}
 										
 										echo '</div>';

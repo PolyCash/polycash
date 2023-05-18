@@ -1,4 +1,5 @@
 <?php
+set_time_limit(0);
 require_once(dirname(dirname(__FILE__))."/includes/connect.php");
 require_once(dirname(dirname(__FILE__))."/models/CoinbaseClient.php");
 
@@ -196,6 +197,8 @@ if ($app->running_as_admin()) {
 						
 						$invoice_io_extra_info = [];
 						
+						$fulfilled_buyin = false;
+						
 						if (!empty(AppSettings::getParam('coinbase_key'))) {
 							$coinbase_client = new CoinbaseClient(AppSettings::getParam('coinbase_key'), AppSettings::getParam('coinbase_secret'), AppSettings::getParam('coinbase_passphrase'));
 							
@@ -218,6 +221,8 @@ if ($app->running_as_admin()) {
 								list($fulfillments, $returned_headers, $error_message) = $coinbase_client->apiRequest("/fills", "GET", ['order_id' => $sell_order->id]);
 								
 								$invoice_io_extra_info['fulfillments'] = $fulfillments;
+								
+								$fulfilled_buyin = true;
 							}
 							else echo json_encode([$error_message, $sell_order], JSON_PRETTY_PRINT)."\n";
 						}
@@ -230,6 +235,26 @@ if ($app->running_as_admin()) {
 							'extra_info' => json_encode($invoice_io_extra_info, JSON_PRETTY_PRINT),
 							'time_created' => time()
 						]);
+						
+						$admin_user_id = $app->get_site_constant("admin_user_id");
+						
+						if ($admin_user_id) {
+							$admin_user = new User($app, $admin_user_id);
+							if ($admin_user && !empty($admin_user->db_user['notification_email'])) {
+								$subject = "Someone just bought in to ".$game->db_game['name'].".".($fulfilled_buyin ? '' : ' You need to sell '.$pay_currency['short_name_plural'].".");
+								
+								$message = $app->render_view('buyin_notification_mail', [
+									'user' => new User($app, $invoice_address['user_id']),
+									'game' => $game,
+									'fulfilled_buyin' => $fulfilled_buyin,
+									'buyin_amount_int' => $buyin_amount_int,
+									'amount_paid_float' => $amount_paid_float,
+									'pay_currency' => $pay_currency,
+								]);
+								
+								$delivery_id = $app->mail_async($admin_user->db_user['notification_email'], AppSettings::getParam('site_name'), AppSettings::defaultFromEmailAddress(), $subject, $message, "", "", null, null, null);
+							}
+						}
 					}
 					else if ($print_debug) echo "failed to create a transaction.\n";
 				}
@@ -400,10 +425,13 @@ if ($app->running_as_admin()) {
 									
 									$invoice_io_extra_info = [];
 									
+									$fulfilled_sellout = false;
+									
+									$fulfill_buy_amount = $sellout_amount_int/pow(10, $sellout_blockchain->db_blockchain['decimal_places']);
+									
 									if (!empty(AppSettings::getParam('coinbase_key'))) {
 										$coinbase_client = new CoinbaseClient(AppSettings::getParam('coinbase_key'), AppSettings::getParam('coinbase_secret'), AppSettings::getParam('coinbase_passphrase'));
 										
-										$fulfill_buy_amount = $sellout_amount_int/pow(10, $sellout_blockchain->db_blockchain['decimal_places']);
 										echo "fulfill buy: ".$fulfill_buy_amount."\n";
 										
 										list($buy_order, $returned_headers, $error_message) = $coinbase_client->apiRequest("/orders", "POST", [
@@ -423,6 +451,8 @@ if ($app->running_as_admin()) {
 											list($fulfillments, $returned_headers, $error_message) = $coinbase_client->apiRequest("/fills", "GET", ['order_id' => $buy_order->id]);
 											
 											$invoice_io_extra_info['fulfillments'] = $fulfillments;
+											
+											$fulfilled_sellout = true;
 										}
 										else echo json_encode([$buy_order, $error_message], JSON_PRETTY_PRINT)."\n";
 									}
@@ -437,6 +467,26 @@ if ($app->running_as_admin()) {
 									]);
 									
 									if ($print_debug) echo "Created the sellout transaction: ".$sellout_tx_hash."\n";
+									
+									$admin_user_id = $app->get_site_constant("admin_user_id");
+									
+									if ($admin_user_id) {
+										$admin_user = new User($app, $admin_user_id);
+										if ($admin_user && !empty($admin_user->db_user['notification_email'])) {
+											$subject = "Someone just sold out of ".$game->db_game['name'].".".($fulfilled_sellout ? '' : ' You need to buy '.$sellout_currency['short_name_plural'].".");
+											
+											$message = $app->render_view('sellout_notification_mail', [
+												'user' => new User($app, $invoice_address['user_id']),
+												'game' => $game,
+												'fulfilled_sellout' => $fulfilled_sellout,
+												'fulfill_buy_amount' => $fulfill_buy_amount,
+												'amount_paid_float' => $amount_paid_float,
+												'sellout_currency' => $sellout_currency,
+											]);
+											
+											$delivery_id = $app->mail_async($admin_user->db_user['notification_email'], AppSettings::getParam('site_name'), AppSettings::defaultFromEmailAddress(), $subject, $message, "", "", null, null, null);
+										}
+									}
 								}
 								else if ($print_debug) echo "Failed to create the sellout transaction.".(isset($sellout_transaction_error_message) ? " (".$sellout_transaction_error_message.")" : "")."\n";
 							}
