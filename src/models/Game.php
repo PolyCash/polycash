@@ -1735,12 +1735,14 @@ class Game {
 		return $error_message;
 	}
 	
-	public function schedule_game_reset($from_block, $from_index=null, $migration_id=null) {
+	public function schedule_game_reset($from_block, $from_index=null, $migration_id=null, $from_reset_time=null) {
 		$extra_info = $this->fetch_extra_info();
 		
 		unset($extra_info['reset_from_block']);
 		unset($extra_info['reset_from_event_index']);
+		unset($extra_info['from_reset_time']);
 		$extra_info['pending_reset'] = 1;
+		if ($from_reset_time) $extra_info['from_reset_time'] = $from_reset_time;
 		
 		if ($from_block !== null) {
 			$reset_from_event_index = $this->reset_block_to_event_index($from_block);
@@ -1821,35 +1823,46 @@ class Game {
 		// Reset game if there's a reset scheduled
 		$extra_info = $this->fetch_extra_info();
 		if (!empty($extra_info['pending_reset'])) {
-			if ($print_debug) $this->blockchain->app->print_debug("Resetting the game..");
-			
-			if (array_key_exists("reset_from_block", $extra_info) && $extra_info['reset_from_block'] > $this->db_game['game_starting_block']) {
-				$reset_from_block = $extra_info['reset_from_block'];
-				$this->reset_blocks_from_block($reset_from_block);
-				$this->set_loaded_until_block($reset_from_block-1);
-				$this->set_events_until_block($reset_from_block-1);
-				unset($extra_info['reset_from_block']);
-				
-				if (array_key_exists("reset_from_event_index", $extra_info)) {
-					$this->reset_events_from_index($extra_info['reset_from_event_index']);
-					unset($extra_info['reset_from_event_index']);
-				}
-				
-				$this->ensure_events_until_block($this->blockchain->last_complete_block_id()+1, $print_debug);
-				$this->set_target_scores_at_block($reset_from_block);
-			}
+			if (empty($extra_info['from_reset_time'])) $reset_now = true;
 			else {
-				$this->delete_reset_game('reset');
-				$this->set_loaded_until_block($this->db_game['game_starting_block']-1);
-				$this->set_events_until_block($this->db_game['game_starting_block']-1);
+				if (time() >= $extra_info['from_reset_time']) $reset_now = true;
+				else {
+					$reset_now = false;
+					if ($print_debug) $this->blockchain->app->print_debug("Game will reset in ".$this->blockchain->app->format_seconds($extra_info['from_reset_time'] - time()));
+				}
 			}
-			
-			unset($extra_info['pending_reset']);
-			
-			$this->set_extra_info($extra_info);
-			$this->update_db_game();
+
+			if ($reset_now) {
+				if ($print_debug) $this->blockchain->app->print_debug("Resetting the game..");
+
+				if (array_key_exists("reset_from_block", $extra_info) && $extra_info['reset_from_block'] > $this->db_game['game_starting_block']) {
+					$reset_from_block = $extra_info['reset_from_block'];
+					$this->reset_blocks_from_block($reset_from_block);
+					$this->set_loaded_until_block($reset_from_block-1);
+					$this->set_events_until_block($reset_from_block-1);
+					unset($extra_info['reset_from_block']);
+
+					if (array_key_exists("reset_from_event_index", $extra_info)) {
+						$this->reset_events_from_index($extra_info['reset_from_event_index']);
+						unset($extra_info['reset_from_event_index']);
+					}
+
+					$this->ensure_events_until_block($this->blockchain->last_complete_block_id()+1, $print_debug);
+					$this->set_target_scores_at_block($reset_from_block);
+				}
+				else {
+					$this->delete_reset_game('reset');
+					$this->set_loaded_until_block($this->db_game['game_starting_block']-1);
+					$this->set_events_until_block($this->db_game['game_starting_block']-1);
+				}
+
+				unset($extra_info['pending_reset']);
+
+				$this->set_extra_info($extra_info);
+				$this->update_db_game();
+			}
 		}
-		
+
 		$load_block_height = $this->db_game['loaded_until_block']+1;
 		$to_block_height = $this->blockchain->last_complete_block_id();
 		$ensure_block_id = $this->blockchain->last_block_id()+1;
