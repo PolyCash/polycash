@@ -54,7 +54,7 @@ if ($app->running_as_admin()) {
 									'game_peer_id' => $game_peer['game_peer_id'],
 									'last_sync_check_at' => time(),
 									'last_check_in_sync' => $out_of_sync_block === false ? 1 : 0,
-									'out_of_sync_since' => $out_of_sync_block === false ? null : (empty($game->db_game['out_of_sync_since']) ? time() : $game->db_game['out_of_sync_since']),
+									'out_of_sync_since' => $out_of_sync_block === false ? null : (empty($running_game->db_game['out_of_sync_since']) ? time() : $running_game->db_game['out_of_sync_since']),
 									'out_of_sync_block' => $out_of_sync_block === false ? null : $out_of_sync_block,
 								]);
 							}
@@ -63,6 +63,40 @@ if ($app->running_as_admin()) {
 					}
 					else if ($print_debug) $app->print_debug("Sync check ran recently for ".$game_peer['peer_name'].", skipping sync check.");
 				}
+
+				$game_peers = $running_game->fetch_all_peers();
+
+				$num_peers_recently_checked = 0;
+				$num_peers_out_of_sync = 0;
+				$min_out_of_sync_block = null;
+
+				foreach ($game_peers as $game_peer) {
+					if (!empty($game_peer['last_sync_check_at']) && $game_peer['last_sync_check_at'] >= time()-($sec_between_sync_checks*4)) {
+						$num_peers_recently_checked++;
+
+						if (!$game_peer['last_check_in_sync']) {
+							$num_peers_out_of_sync++;
+
+							if (isset($game_peer['out_of_sync_block']) && ($min_out_of_sync_block === null || $game_peer['out_of_sync_block'] < $min_out_of_sync_block)) $min_out_of_sync_block = (int) $game_peer['out_of_sync_block'];
+						}
+					}
+				}
+
+				if ($print_debug) $app->print_debug($num_peers_out_of_sync."/".$num_peers_recently_checked." peers are out of sync in ".$running_game->db_game['name'].($min_out_of_sync_block ? " since block ".$min_out_of_sync_block : ""));
+
+				if ($num_peers_recently_checked > 0 && $num_peers_out_of_sync/$num_peers_recently_checked > 0.5 && isset($min_out_of_sync_block)) {
+					$game_extra_info = $running_game->fetch_extra_info();
+
+					if (!empty($game_extra_info['pending_reset'])) {
+						if ($print_debug) $app->print_debug("Game already has a pending reset");
+					}
+					else {
+						if ($print_debug) $app->print_debug("Resetting game from block #".$min_out_of_sync_block);
+
+						$running_game->schedule_game_reset($min_out_of_sync_block, null, null, time()+$sec_between_sync_checks+60);
+					}
+				}
+				else if ($print_debug) $app->print_debug("Game does not need to be reset.");
 			}
 			else if ($print_debug) $app->print_debug("Skipping ".$running_game->db_game['name'].", it's not in fully loaded.");
 		}
