@@ -86,7 +86,7 @@ class VirtualStockMarketGameDefinition {
 		if (is_file($fname)) {
 			$fh = fopen($fname, 'r');
 			$config = json_decode(fread($fh, filesize($fname)));
-			$this->iex_api_key = $config->iex_api_key;
+			$this->finnhub_api_key = $config->finnhub_api_key;
 		}
 	}
 	
@@ -170,12 +170,9 @@ class VirtualStockMarketGameDefinition {
 				else $price_usd = 0;
 				
 				if (empty($price_usd) || $price_usd < 0 || $price_usd > pow(10, 6)) {
-					$price_api_url = "https://cloud.iexapis.com/stable/stock/".$this->currencies[$currency_i]['abbreviation']."/quote?token=".$this->iex_api_key;
-					if ($api_response_raw = @file_get_contents($price_api_url)) {
-						if ($api_response = @json_decode($api_response_raw)) {
-							$price_usd = (float) $api_response->latestPrice;
-						}
-					}
+					$new_price_usd = $this->fetch_stock_price_usd($this->currencies[$currency_i]['abbreviation']);
+					
+					if (isset($new_price_usd)) $price_usd = $new_price_usd;
 				}
 				
 				$price_max_target = $price_usd*1.33;
@@ -262,29 +259,27 @@ class VirtualStockMarketGameDefinition {
 		if (empty($this->currencies)) $this->load_currencies($game);
 		$ref_currency = $this->app->get_reference_currency();
 		$usd_currency = $this->app->get_currency_by_abbreviation("USD");
-		$usd_to_btc = $this->app->exchange_rate_between_currencies($usd_currency['currency_id'], $ref_currency['currency_id'], time(), $ref_currency['currency_id']);
+		$usd_to_ref = $this->app->exchange_rate_between_currencies($usd_currency['currency_id'], $ref_currency['currency_id'], time(), $ref_currency['currency_id']);
 		
 		$modulo = 0;
 		$start_q = "INSERT INTO currency_prices (currency_id, reference_currency_id, price, time_added) VALUES ";
 		$new_prices_q = $start_q;
 		
 		for ($i=0; $i<count($this->currencies); $i++) {
-			$price_in_btc = $this->app->currency_price_at_time($this->currencies[$i]['currency_id'], $ref_currency['currency_id'], time());
+			$price_in_ref = $this->app->currency_price_at_time($this->currencies[$i]['currency_id'], $ref_currency['currency_id'], time());
 			
-			if ($price_in_btc) $last_price_time = max(time()-(3600*24*2), $price_in_btc['time_added']);
+			if ($price_in_ref) $last_price_time = max(time()-(3600*24*2), $price_in_ref['time_added']);
 			else $last_price_time = false;
 			
 			if (!$last_price_time || $last_price_time < time()-(60*28)) {
 				$ticker = $this->currency_name_to_code[$this->currencies[$i]['name']];
-				$price_api_url = "https://cloud.iexapis.com/stable/stock/".$ticker."/quote?token=".$this->iex_api_key;
-				$api_response = file_get_contents($price_api_url);
 				
-				$api_data = json_decode($api_response, true);
-				$new_price_usd = (float)$api_data['latestPrice'];
-				$new_price_in_btc = $new_price_usd/$usd_to_btc['exchange_rate'];
+				$new_price_usd = $this->fetch_stock_price_usd($ticker);
 				
-				if ($new_price_in_btc > 0) {
-					$new_prices_q .= "('".$this->currencies[$i]['currency_id']."', '".$ref_currency['currency_id']."', ".$this->app->quote_escape($new_price_in_btc).", ".time()."), ";
+				if (isset($new_price_usd)) {
+					$new_price_in_ref = $new_price_usd/$usd_to_ref['exchange_rate'];
+					
+					$new_prices_q .= "('".$this->currencies[$i]['currency_id']."', '".$ref_currency['currency_id']."', ".$this->app->quote_escape($new_price_in_ref).", ".time()."), ";
 					
 					$modulo++;
 				}
@@ -296,6 +291,41 @@ class VirtualStockMarketGameDefinition {
 			$this->app->run_query($new_prices_q);
 			$modulo = 0;
 		}
+	}
+	
+	public function fetch_stock_price_usd($ticker) {
+		$new_price_usd = null;
+		
+		$price_source = "finnhub";
+		
+		if ($price_source == "iex") {
+			$price_api_url = "https://cloud.iexapis.com/stable/stock/".$ticker."/quote?token=".$this->iex_api_key;
+			$api_response = file_get_contents($price_api_url);
+			
+			$api_data = json_decode($api_response, true);
+			if (isset($api_data['latestPrice'])) $new_price_usd = (float)$api_data['latestPrice'];
+		}
+		else if ($price_source == "alphavantage") {
+			$price_api_url = "https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=".$ticker."&interval=5min&apikey=".$this->alphavantage_api_key;
+			$api_response = file_get_contents($price_api_url);
+			$api_data = json_decode($api_response, true);
+			if (isset($api_data['Time Series (5min)'])) {
+				$time_series = $api_data['Time Series (5min)'];
+				$time_series = $time_series[array_keys($time_series)[0]];
+				if (isset($time_series['4. close'])) $new_price_usd = (float) $time_series['4. close'];
+			}
+		}
+		else if ($price_source == "finnhub") {
+			$new_price_in_ref = 0;
+			$price_api_url = "https://finnhub.io/api/v1/quote?symbol=".$ticker."&token=".$this->finnhub_api_key;
+			$api_response = file_get_contents($price_api_url);
+			$api_data = json_decode($api_response, true);
+			if (isset($api_data['c'])) {
+				$new_price_usd = (float) $api_data['c'];
+			}
+		}
+		
+		return $new_price_usd;
 	}
 }
 ?>
