@@ -269,8 +269,9 @@ class User {
 	
 	public function new_game_permission() {
 		$games_created_by_user = $this->count_user_games_created();
-		if ((string)AppSettings::getParam('new_games_per_user') == "unlimited") return true;
-		else if ($games_created_by_user < $this->db_user['authorized_games']) return true;
+		if ($this->app->user_is_admin($this)) return true;
+		else if ((string)AppSettings::getParam('new_games_per_user') == "unlimited") return true;
+		else if ($games_created_by_user < (int) AppSettings::getParam('new_games_per_user')) return true;
 		else return false;
 	}
 	
