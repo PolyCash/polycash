@@ -64,7 +64,7 @@ if ($app->running_as_admin()) {
 		foreach ($users_needing_backup as $backup_user) {
 			$lastExportAt = User::getLastAddressExportAt($app, $backup_user['user_id']);
 			
-			if ($lastExportAt === null || $lastExportAt <= time()-(60*60*24)) {
+			if ($lastExportAt === null || $lastExportAt <= time()-(60*60*24*7)) {
 				$to_email = User::getToEmailAddress($backup_user);
 				
 				if ($to_email !== null) {

@@ -3391,7 +3391,7 @@ class Game {
 			$game_peer['never_checked'] = null;
 			
 			if ($game_peer['last_check_in_sync'] == 1) {
-				if ($game_peer['last_sync_check_at'] >= time()-(60*30)) $game_peer['in_sync'] = true;
+				if ($game_peer['last_sync_check_at'] >= time()-(60*60)) $game_peer['in_sync'] = true;
 				else $game_peer['expired'] = true;
 			}
 			else if ((string)$game_peer['last_check_in_sync'] === "0") $game_peer['out_of_sync'] = true;
