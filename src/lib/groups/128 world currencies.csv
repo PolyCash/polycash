@@ -1,0 +1,130 @@
+currency_code,currency_decimals,entity_name,currency_short_name,currency_short_name_plural,default_image_id
+currency,currencies,128 world currencies
+AED,2,United Arab Emirates dirham,dirham,dirhams,
+AFN,2,Afghan afghani,afghani,afghanis,
+ALL,2,Albanian lek,lek,leks,
+AMD,2,Armenian dram,dram,drams,
+ANG,2,Netherlands Antillean guilder,guilder,guilders,
+ARS,2,Argentine peso,peso,pesos,48
+AUD,2,Australian dollar,dollar,dollars,
+AZN,2,Azerbaijani manat,manat,manats,
+BBD,2,Barbados dollar,dollar,dollars,
+BDT,2,Bangladeshi taka,taka,taka,82
+BGN,2,Bulgarian lev,lev,leva,
+BHD,3,Bahraini dinar,dinar,dinars,
+BIF,0,Burundian franc,franc,francs,
+BND,2,Brunei dollar,dollar,dollars,
+BOB,2,Boliviano,boliviano,bolivianos,
+BRL,2,Brazilian real,real,reais,4
+BSD,2,Bahamian dollar,dollar,dollars,
+BTC,8,Bitcoin,bitcoin,bitcoins,
+BWP,2,Botswana pula,pula,pula,
+BZD,2,Belize dollar,dollar,dollars,
+CAD,2,Canadian dollar,dollar,dollars,
+CHF,2,Swiss franc,franc,francs,
+CLP,0,Chilean peso,peso,pesos,
+CNY,2,Renminbi,yuan,yuan,1
+COP,2,Colombian peso,peso,pesos,93
+CRC,2,Costa Rican colon,colon,colones,
+CUP,2,Cuban peso,peso,pesos,
+CZK,2,Czech koruna,koruna,koruny,
+DJF,0,Djiboutian franc,franc,francs,
+DKK,2,Danish krone,krone,kroner,
+DOP,2,Dominican peso,peso,pesos,
+DZD,2,Algerian dinar,dinar,dinars,47
+EGP,2,Egyptian pound,pound,pounds,85
+ETB,2,Ethiopian birr,birr,birr,83
+EUR,2,Euro,euro,euros,
+FJD,2,Fiji dollar,dollar,dollars,
+GBP,2,Pound sterling,pound,pounds,12
+GEL,2,Georgian lari,lari,lari,
+GHS,2,Ghanaian cedi,cedi,cedis,
+GMD,2,Gambian dalasi,dalasi,dalasis,
+GNF,0,Guinean franc,franc,francs,
+GTQ,2,Guatemalan quetzal,quetzal,quetzales,
+HKD,2,Hong Kong dollar,dollar,dollars,
+HNL,2,Honduran lempira,lempira,lempiras,
+HTG,2,Haitian gourde,gourde,gourdes,
+HUF,2,Hungarian forint,forint,forints,
+IDR,2,Indonesian rupiah,rupiah,rupiah,5
+ILS,2,Israeli new shekel,shekel,shekels,
+INR,2,Indian rupee,rupee,rupees,3
+IQD,3,Iraqi dinar,dinar,dinars,
+IRR,2,Iranian rial,rial,rials,16
+ISK,0,Icelandic króna,króna,krónur,
+JMD,2,Jamaican dollar,dollar,dollars,
+JOD,3,Jordanian dinar,dinar,dinars,
+JPY,0,Japanese yen,yen,yen,6
+KES,2,Kenyan shilling,shilling,shillings,94
+KGS,2,Kyrgyzstani som,som,som,
+KHR,2,Cambodian riel,riel,riels,
+KMF,0,Comoro franc,franc,francs,
+KRW,0,South Korean won,won,won,92
+KWD,3,Kuwaiti dinar,dinar,dinars,
+KYD,2,Cayman Islands dollar,dollar,dollars,
+KZT,2,Kazakhstani tenge,tenge,tenge,
+LAK,2,Lao kip,kip,kip,
+LBP,2,Lebanese pound,pound,pounds,
+LKR,2,Sri Lankan rupee,rupee,rupees,
+LSL,2,Lesotho loti,loti,maloti,
+LYD,3,Libyan dinar,dinar,dinars,
+MAD,2,Moroccan dirham,dirham,dirhams,
+MDL,2,Moldovan leu,leu,lei,
+MGA,2,Malagasy ariary,ariary,ariaries,
+MKD,2,Macedonian denar,denar,denari,
+MMK,2,Myanmar kyat,kyat,kyat,91
+MOP,2,Macanese pataca,pataca,patacas,
+MUR,2,Mauritian rupee,rupee,rupees,
+MVR,2,Maldivian rufiyaa,rufiyaa,rufiyaa,
+MWK,2,Malawian kwacha,kwacha,kwacha,
+MXN,2,Mexican peso,peso,pesos,9
+MYR,2,Malaysian ringgit,ringgit,ringgits,
+MZN,2,Mozambican metical,metical,meticals,
+NGN,2,Nigerian naira,naira,naira,10
+NIO,2,Nicaraguan córdoba,córdoba,córdobas,
+NOK,2,Norwegian krone,krone,kroner,
+NPR,2,Nepalese rupee,rupee,rupees,
+NZD,2,New Zealand dollar,dollar,dollars,
+OMR,3,Omani rial,rial,rials,
+PAB,2,Panamanian balboa,balboa,balboas,
+PEN,2,Peruvian sol,sol,soles,
+PGK,2,Papua New Guinean kina,kina,kina,
+PHP,2,Philippine peso,peso,pesos,84
+PKR,2,Pakistani rupee,rupee,rupees,13
+PLN,2,Polish zloty,zloty,zloty,
+PYG,0,Paraguayan guaraní,guaraní,guaraní,
+QAR,2,Qatari riyal,riyal,riyals,
+RON,2,Romanian leu,leu,lei,
+RSD,2,Serbian dinar,dinar,dinars,
+RUB,2,Russian ruble,ruble,rubles,7
+RWF,0,Rwandan franc,franc,francs,
+SAR,2,Saudi riyal,riyal,riyals,
+SCR,2,Seychelles rupee,rupee,rupees,
+SDG,2,Sudanese pound,pound,pounds,
+SEK,2,Swedish krona,krona,kronor,
+SGD,2,Singapore dollar,dollar,dollars,
+SOS,2,Somali shilling,shilling,shillings,
+SVC,2,Salvadoran colón,colón,colónes,
+SYP,2,Syrian pound,pound,pounds,
+SZL,2,Swazi lilangeni,lilangeni,emalangeni,
+THB,2,Thai baht,baht,baht,88
+TJS,2,Tajikistani somoni,somoni,somonis,
+TND,3,Tunisian dinar,dinar,dinars,
+TRY,2,Turkish lira,lira,lira,15
+TTD,2,Trinidad and Tobago dollar,dollar,dollars,
+TWD,2,New Taiwan dollar,dollar,dollars,
+TZS,2,Tanzanian shilling,shilling,shillings,90
+UAH,2,Ukrainian hryvnia,hryvnia,hryvni,
+UGX,0,Ugandan shilling,shilling,shillings,
+UYU,2,Uruguayan peso,peso,pesos,
+UZS,2,Uzbekistan sum,sum,sum,
+VND,0,Vietnamese dong,dong,dong,86
+VUV,0,Vanuatu vatu,vatu,vatu,
+XAF,0,CFA franc BEAC,franc,francs,
+XAG,.,troy ounce of silver,silver ounce,silver ounces,
+XAU,.,troy ounce of gold,gold ounce,gold ounces,
+XCD,2,East Caribbean dollar,dollar,dollars,
+XOF,0,CFA franc BCEAO,franc,francs,
+XPF,0,CFP franc (franc Pacifique),franc,francs,
+YER,2,Yemeni rial,rial,rials,
+ZAR,2,South African rand,rand,rand,89

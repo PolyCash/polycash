@@ -3373,6 +3373,12 @@ class Game {
 		else return (int)$this->db_game['game_starting_block'];
 	}
 	
+	public function max_gde_index() {
+		return (string) $this->blockchain->app->run_query("SELECT MAX(event_index) FROM game_defined_events WHERE game_id=:game_id;", [
+			'game_id' => $this->db_game['game_id'],
+		])->fetch()['MAX(event_index)'];
+	}
+	
 	public function get_game_peer_by_id($game_peer_id) {
 		return $this->blockchain->app->run_query("SELECT * FROM peers p JOIN game_peers gp ON p.peer_id=gp.peer_id WHERE gp.game_peer_id=:game_peer_id;", [
 			'game_peer_id' => $game_peer_id

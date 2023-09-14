@@ -166,7 +166,11 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 									$transaction_id = $blockchain->create_transaction('transaction', [$escrow_amount, $genesis_remainder], false, [$genesis_io['io_id']], [$db_genesis_address['address_id'], $my_address['address_id']], $fee_amount, $error_message);
 									
 									$transaction = $app->fetch_transaction_by_id($transaction_id);
-									$genesis_tx_hash = $transaction['tx_hash'];
+									if ($transaction) $genesis_tx_hash = $transaction['tx_hash'];
+									else {
+										$app->output_message(7, "Failed to create the genesis transaction.", false);
+										die();
+									}
 								}
 								else {
 									$app->output_message(2, "The escrow amount must be smaller than the amount of your UTXO.", false);

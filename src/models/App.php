@@ -3226,8 +3226,11 @@ class App {
 			$header_vars = explode(",", trim(strtolower($csv_lines[0])));
 			$name_col = array_search("entity_name", $header_vars);
 			$image_col = array_search("default_image_id", $header_vars);
+			$currency_code_col = array_search("currency_code", $header_vars);
+			$short_name_col = array_search("currency_short_name", $header_vars);
+			$short_name_plural_col = array_search("currency_short_name_plural", $header_vars);
 			$group_params = explode(",", $csv_lines[1]);
-			
+
 			$this->run_insert_query("option_groups", [
 				'option_name' => $group_params[0],
 				'option_name_plural' => $group_params[1],
@@ -3249,6 +3252,32 @@ class App {
 					'option_group_id' => $group_id,
 					'entity_id' => $member_entity['entity_id']
 				]);
+
+				if ($currency_code_col !== false) {
+					$currency_code = $csv_params[$currency_code_col];
+
+					if ($name_col !== false && $short_name_col !== false && $short_name_plural_col !== false) {
+						$existing_currency = $this->fetch_currency_by_abbreviation($currency_code);
+						
+						if (!$existing_currency) {
+							$this->run_insert_query("currencies", [
+								'name' => $csv_params[$name_col],
+								'short_name' => $csv_params[$short_name_col],
+								'short_name_plural' => $csv_params[$short_name_plural_col],
+								'abbreviation' => $currency_code,
+								'symbol' => '',
+							]);
+							$existing_currency = $this->fetch_currency_by_id($this->last_insert_id());
+						}
+						$track_entity = $this->check_set_entity($general_entity_type['entity_type_id'], $csv_params[$name_col]);
+						if (empty($track_entity['currency_id'])) {
+							$this->run_query("UPDATE entities SET currency_id=:currency_id WHERE entity_id=:entity_id;", [
+								'currency_id' => $existing_currency['currency_id'],
+								'entity_id' => $track_entity['entity_id'],
+							]);
+						}
+					}
+				}
 			}
 		}
 		else $error_message = "Failed to import group from file.. the file does not exist.\n";
