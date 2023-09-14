@@ -1219,7 +1219,7 @@ class Game {
 		if (!empty($filter_arr['require_option_block_rule'])) {
 			$events_q .= " AND ev.option_block_rule IS NOT NULL";
 		}
-		$events_q .= " AND (ev.event_starting_time IS NULL OR ev.event_starting_time < ".AppSettings::sqlNow().") AND (ev.event_final_time IS NULL OR ev.event_final_time > ".AppSettings::sqlNow().") ORDER BY ev.event_final_time ASC, ev.event_id ASC;";
+		$events_q .= " AND (ev.event_starting_time IS NULL OR ev.event_starting_time < ".AppSettings::sqlNow().") AND (ev.event_final_time IS NULL OR ev.event_final_time > ".AppSettings::sqlNow().") ORDER BY ev.event_final_time ASC, ev.event_index ASC;";
 		$db_events = $this->blockchain->app->run_query($events_q, $events_params);
 		
 		while ($db_event = $db_events->fetch()) {
