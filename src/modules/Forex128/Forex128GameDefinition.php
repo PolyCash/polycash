@@ -1,5 +1,5 @@
 <?php
-class ForexFightersGameDefinition {
+class Forex128GameDefinition {
 	public $app;
 	public $game_def;
 	public $game_def_base_txt;
@@ -13,9 +13,9 @@ class ForexFightersGameDefinition {
 			"definitive_peer": "https://poly.cash",
 			"option_group": "128 world currencies",
 			"protocol_version": 1.001,
-			"name": "Forex Fighters",
-			"url_identifier": "forex-fighters",
-			"module": "ForexFighters",
+			"name": "Forex 128",
+			"url_identifier": "forex-128",
+			"module": "Forex128",
 			"category_id": null,
 			"decimal_places": 2,
 			"finite_events": true,
@@ -132,8 +132,8 @@ class ForexFightersGameDefinition {
 					"outcome_index" => null,
 					"track_min_price" => $db_gde['track_min_price'],
 					"track_max_price" => $db_gde['track_max_price'],
-					"track_max_price" => $db_gde['track_payout_price'],
-					"track_name_short" => $tracked_currency['abbreviation'],
+					"track_payout_price" => $db_gde['track_payout_price'],
+					"track_name_short" => $db_gde['track_name_short'],
 					"possible_outcomes" => $possible_outcomes,
 				];
 
@@ -145,9 +145,9 @@ class ForexFightersGameDefinition {
 	}
 
 	public function regular_actions(&$game) {
-		if (is_file(dirname(__FILE__)."/ForexFightersManager.php")) {
-			include_once(dirname(__FILE__)."/ForexFightersManager.php");
-			$manager = new ForexFightersManager($this, $this->app, $game);
+		if (is_file(dirname(__FILE__)."/Forex128Manager.php")) {
+			include_once(dirname(__FILE__)."/Forex128Manager.php");
+			$manager = new Forex128Manager($this, $this->app, $game);
 			$manager->add_events();
 			//$manager->set_outcomes();
 			//$manager->set_blocks();

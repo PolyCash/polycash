@@ -595,7 +595,8 @@ class App {
 	public function to_significant_digits($number, $significant_digits, $err_lower=true) {
 		if ($number == 0) return 0;
 		$number_digits = floor(log10($number));
-		if ($err_lower) return (pow(10, $number_digits - $significant_digits + 1)) * floor($number/(pow(10, $number_digits - $significant_digits + 1)));
+		if ($err_lower === true) return (pow(10, $number_digits - $significant_digits + 1)) * floor($number/(pow(10, $number_digits - $significant_digits + 1)));
+		else if ($err_lower === "err_higher") return (pow(10, $number_digits - $significant_digits + 1)) * ceil($number/(pow(10, $number_digits - $significant_digits + 1)));
 		else return (pow(10, $number_digits - $significant_digits + 1)) * round($number/(pow(10, $number_digits - $significant_digits + 1)));
 	}
 
