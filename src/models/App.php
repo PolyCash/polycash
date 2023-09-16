@@ -1276,7 +1276,7 @@ class App {
 				else {
 					$db_image = false;
 					$this->run_query("DELETE FROM images WHERE image_id=:image_id;", ['image_id'=>$image_id]);
-					$error_message = 'Failed to write '.$image_fname;
+					$error_message = 'Failed to write '.$image_fname.' ('.error_get_last().')';
 				}
 			}
 			else $error_message = "That image file type is not supported.";
@@ -3304,8 +3304,8 @@ class App {
 								$new_im_raw = fread($new_im_fh, filesize($new_im_fname));
 								fclose($new_im_fh);
 								$access_key = $this->random_string(20);
-								$error_message = null;
-								$db_image = $this->add_image($new_im_raw, $info['extension'], $access_key, $error_message);
+								$new_im_error_message = null;
+								$db_image = $this->add_image($new_im_raw, $info['extension'], $access_key, $new_im_error_message);
 								if ($db_image) $default_image_id = $db_image['image_id'];
 							}
 						}
