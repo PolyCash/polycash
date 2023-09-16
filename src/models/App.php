@@ -3307,6 +3307,7 @@ class App {
 								$new_im_error_message = null;
 								$db_image = $this->add_image($new_im_raw, $info['extension'], $access_key, $new_im_error_message);
 								if ($db_image) $default_image_id = $db_image['image_id'];
+								else $error_message .= $new_im_error_message."\n";
 							}
 						}
 						
