@@ -3262,6 +3262,7 @@ class App {
 			$currency_code_col = array_search("currency_code", $header_vars);
 			$short_name_col = array_search("currency_short_name", $header_vars);
 			$short_name_plural_col = array_search("currency_short_name_plural", $header_vars);
+			$image_hash_col = array_search("image_hash", $header_vars);
 			$group_params = explode(",", $csv_lines[1]);
 
 			$this->run_insert_query("option_groups", [
@@ -3271,43 +3272,84 @@ class App {
 			]);
 			$group_id = $this->last_insert_id();
 			
+			$group_images_dir = dirname(__DIR__).'/lib/groups/images/'.$import_group_description;
+			$image_info_by_hash = [];
+			if (is_dir($group_images_dir)) {
+				if ($group_images_handle = opendir($group_images_dir)) {
+					while (false !== ($im_name = readdir($group_images_handle))) {
+						if (in_array($im_name, ['.', '..'])) continue;
+						$new_im_name_parts = explode(".", $im_name);
+						$image_hash = $new_im_name_parts[0];
+						$image_extension = $new_im_name_parts[count($new_im_name_parts)-1];
+						$image_info_by_hash[$image_hash] = [
+							'extension' => $image_extension
+						];
+					}
+				}
+			}
+			
 			for ($csv_i=2; $csv_i<count($csv_lines); $csv_i++) {
-				$csv_params = explode(",", $csv_lines[$csv_i]);
-				$member_entity = $this->check_set_entity($general_entity_type['entity_type_id'], trim($csv_params[$name_col]));
-				
-				if (empty($member_entity['default_image_id']) && !empty($csv_params[$image_col])) {
-					$this->run_query("UPDATE entities SET default_image_id=:default_image_id WHERE entity_id=:entity_id;", [
-						'default_image_id' => $csv_params[$image_col],
+				if (!empty($csv_lines[$csv_i])) {
+					$csv_params = explode(",", $csv_lines[$csv_i]);
+					$member_entity = $this->check_set_entity($general_entity_type['entity_type_id'], trim($csv_params[$name_col]));
+					
+					if (empty($member_entity['default_image_id'])) {
+						$default_image_id = null;
+						if ($image_col !== false && !empty($csv_params[$image_col])) $default_image_id = $csv_params[$image_col];
+						else if ($image_hash_col !== false && !empty($csv_params[$image_hash_col])) {
+							if (!empty($image_info_by_hash[$csv_params[$image_hash_col]])) {
+								$info = $image_info_by_hash[$csv_params[$image_hash_col]];
+								$new_im_fname = $group_images_dir."/".$csv_params[$image_hash_col].".".$info['extension'];
+								$new_im_fh = fopen($new_im_fname, 'r');
+								$new_im_raw = fread($new_im_fh, filesize($new_im_fname));
+								fclose($new_im_fh);
+								$access_key = $this->random_string(20);
+								$error_message = null;
+								$db_image = $this->add_image($new_im_raw, $info['extension'], $access_key, $error_message);
+								if ($db_image) $default_image_id = $db_image['image_id'];
+							}
+						}
+						
+						if ($default_image_id) {
+							$this->run_query("UPDATE entities SET default_image_id=:default_image_id WHERE entity_id=:entity_id;", [
+								'default_image_id' => $csv_params[$image_col],
+								'entity_id' => $member_entity['entity_id']
+							]);
+							$this->run_query("UPDATE options SET image_id=:image_id WHERE entity_id=:entity_id;", [
+								'image_id' => $default_image_id,
+								'entity_id' => $member_entity['entity_id']
+							]);
+						}
+					}
+					
+					$this->run_insert_query("option_group_memberships", [
+						'option_group_id' => $group_id,
 						'entity_id' => $member_entity['entity_id']
 					]);
-				}
-				$this->run_insert_query("option_group_memberships", [
-					'option_group_id' => $group_id,
-					'entity_id' => $member_entity['entity_id']
-				]);
 
-				if ($currency_code_col !== false) {
-					$currency_code = $csv_params[$currency_code_col];
+					if ($currency_code_col !== false) {
+						$currency_code = $csv_params[$currency_code_col];
 
-					if ($name_col !== false && $short_name_col !== false && $short_name_plural_col !== false) {
-						$existing_currency = $this->fetch_currency_by_abbreviation($currency_code);
-						
-						if (!$existing_currency) {
-							$this->run_insert_query("currencies", [
-								'name' => $csv_params[$name_col],
-								'short_name' => $csv_params[$short_name_col],
-								'short_name_plural' => $csv_params[$short_name_plural_col],
-								'abbreviation' => $currency_code,
-								'symbol' => '',
-							]);
-							$existing_currency = $this->fetch_currency_by_id($this->last_insert_id());
-						}
-						$track_entity = $this->check_set_entity($general_entity_type['entity_type_id'], $csv_params[$name_col]);
-						if (empty($track_entity['currency_id'])) {
-							$this->run_query("UPDATE entities SET currency_id=:currency_id WHERE entity_id=:entity_id;", [
-								'currency_id' => $existing_currency['currency_id'],
-								'entity_id' => $track_entity['entity_id'],
-							]);
+						if ($name_col !== false && $short_name_col !== false && $short_name_plural_col !== false) {
+							$existing_currency = $this->fetch_currency_by_abbreviation($currency_code);
+							
+							if (!$existing_currency) {
+								$this->run_insert_query("currencies", [
+									'name' => $csv_params[$name_col],
+									'short_name' => $csv_params[$short_name_col],
+									'short_name_plural' => $csv_params[$short_name_plural_col],
+									'abbreviation' => $currency_code,
+									'symbol' => '',
+								]);
+								$existing_currency = $this->fetch_currency_by_id($this->last_insert_id());
+							}
+							$track_entity = $this->check_set_entity($general_entity_type['entity_type_id'], $csv_params[$name_col]);
+							if (empty($track_entity['currency_id'])) {
+								$this->run_query("UPDATE entities SET currency_id=:currency_id WHERE entity_id=:entity_id;", [
+									'currency_id' => $existing_currency['currency_id'],
+									'entity_id' => $track_entity['entity_id'],
+								]);
+							}
 						}
 					}
 				}
