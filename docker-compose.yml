@@ -9,7 +9,7 @@ services:
     environment:
       MYSQL_ROOT_USER: root
       MYSQL_ROOT_PASSWORD: root
-      TZ: America/New_York
+      TZ: UTC
     ports:
       - "3306:3306"
     volumes:
