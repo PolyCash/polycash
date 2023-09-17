@@ -830,6 +830,7 @@ class App {
 		
 		$exchange_rate = null;
 		if ($rate_ref_per_numerator !== null && $rate_ref_per_denominator !== null && $rate_ref_per_numerator > 0) $exchange_rate = $rate_ref_per_denominator/$rate_ref_per_numerator;
+		else $price_time = null;
 		
 		return [
 			'exchange_rate' => $exchange_rate,
@@ -942,12 +943,7 @@ class App {
 							$coin_data = json_decode($coin_data_raw);
 							$price_data = AppSettings::arrayToMapOnKey($coin_data->props->initialState->cryptocurrency->listingLatest->data, "symbol");
 							
-							if ($currency['currency_id'] == $usd_currency['currency_id']) {
-								$price_in_ref_currency = 1/$price_data['BTC']->quote->USD->price;
-							}
-							else {
-								$price_usd = $price_data[$currency['abbreviation']]->quote->USD->price;
-							}
+							$price_usd = $price_data[$currency['abbreviation']]->quote->USD->price;
 						}
 						else if ($currency_url['format_id'] == 4) {
 							$coin_data_raw = $this->first_snippet_between($api_response_raw, '<script type="application/ld+json">', '</script>');
@@ -966,7 +962,7 @@ class App {
 						}
 						else if ($currency_url['format_id'] == 5) {
 							$coin_data = json_decode($api_response_raw);
-							$price_in_ref_currency = 1/$coin_data->bpi->USD->rate_float;
+							$price_in_ref_currency = $coin_data->bpi->USD->rate_float;
 						}
 						else if ($currency_url['format_id'] == 6) {
 							$price_str = $this->first_snippet_between($api_response_raw, 'The Litecoin price is $', ',');
@@ -3263,6 +3259,7 @@ class App {
 			$short_name_col = array_search("currency_short_name", $header_vars);
 			$short_name_plural_col = array_search("currency_short_name_plural", $header_vars);
 			$image_hash_col = array_search("image_hash", $header_vars);
+			$oracle_url_col = array_search("oracle_url_id", $header_vars);
 			$group_params = explode(",", $csv_lines[1]);
 
 			$this->run_insert_query("option_groups", [
@@ -3335,13 +3332,15 @@ class App {
 							$existing_currency = $this->fetch_currency_by_abbreviation($currency_code);
 							
 							if (!$existing_currency) {
-								$this->run_insert_query("currencies", [
+								$new_currency_params = [
 									'name' => $csv_params[$name_col],
 									'short_name' => $csv_params[$short_name_col],
 									'short_name_plural' => $csv_params[$short_name_plural_col],
 									'abbreviation' => $currency_code,
 									'symbol' => '',
-								]);
+								];
+								if ($oracle_url_col !== false) $new_currency_params['oracle_url_id'] = $csv_params[$oracle_url_col];
+								$this->run_insert_query("currencies", $new_currency_params);
 								$existing_currency = $this->fetch_currency_by_id($this->last_insert_id());
 							}
 							$track_entity = $this->check_set_entity($general_entity_type['entity_type_id'], $csv_params[$name_col]);
