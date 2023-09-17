@@ -370,12 +370,12 @@ for ($i=0; $i<count($round_stats); $i++) {
 			if (!empty($odds_disp)) echo ' &nbsp; '.$odds_disp;
 		}
 		else {
-			if ($our_buy_price) {
+			/*if ($our_buy_price) {
 				if ($round_stats[$i]['event_option_index'] == 0) $position_price = $our_buy_price-$event->db_event['track_min_price'];
 				else $position_price = $event->db_event['track_max_price']-$our_buy_price;
 				
-				?><font class="greentext">$<?php echo number_format($position_price, 2); ?></font><?php
-			}
+				?><font class="greentext">$<?php echo $app->format_percentage($app->to_significant_digits($position_price, 5)); ?></font><?php
+			}*/
 		}
 		?> &nbsp; (<?php echo $pct_votes; ?>%)
 		

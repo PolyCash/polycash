@@ -9,7 +9,7 @@ services:
     environment:
       MYSQL_ROOT_USER: root
       MYSQL_ROOT_PASSWORD: root
-      TZ: America/New_York
+      TZ: UTC
     ports:
       - "3306:3306"
     volumes:
@@ -28,6 +28,7 @@ services:
     volumes:
       - ./:/var/www/html
       - ./.datacoin:/root/.datacoin
+      - ./.dockerize/php/php.ini:/usr/local/etc/php/php.ini
     ports:
       - 8080:80
     depends_on:

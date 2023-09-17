@@ -595,7 +595,8 @@ class App {
 	public function to_significant_digits($number, $significant_digits, $err_lower=true) {
 		if ($number == 0) return 0;
 		$number_digits = floor(log10($number));
-		if ($err_lower) return (pow(10, $number_digits - $significant_digits + 1)) * floor($number/(pow(10, $number_digits - $significant_digits + 1)));
+		if ($err_lower === true) return (pow(10, $number_digits - $significant_digits + 1)) * floor($number/(pow(10, $number_digits - $significant_digits + 1)));
+		else if ($err_lower === "err_higher") return (pow(10, $number_digits - $significant_digits + 1)) * ceil($number/(pow(10, $number_digits - $significant_digits + 1)));
 		else return (pow(10, $number_digits - $significant_digits + 1)) * round($number/(pow(10, $number_digits - $significant_digits + 1)));
 	}
 
@@ -829,6 +830,7 @@ class App {
 		
 		$exchange_rate = null;
 		if ($rate_ref_per_numerator !== null && $rate_ref_per_denominator !== null && $rate_ref_per_numerator > 0) $exchange_rate = $rate_ref_per_denominator/$rate_ref_per_numerator;
+		else $price_time = null;
 		
 		return [
 			'exchange_rate' => $exchange_rate,
@@ -892,77 +894,93 @@ class App {
 			echo "(".strlen($api_response_raw).") ".$currency_url['url']."<br/>\n";
 			
 			if (strlen($api_response_raw) > 0) {
-				$currencies_by_url = $this->run_query("SELECT * FROM currencies WHERE oracle_url_id=:oracle_url_id ORDER BY currency_id ASC;", ['oracle_url_id'=>$currency_url['oracle_url_id']]);
-				
-				while ($currency = $currencies_by_url->fetch()) {
-					$ref_currency_info = $this->exchange_rate_between_currencies($usd_currency['currency_id'], $reference_currency['currency_id'], time(), $reference_currency['currency_id']);
-					
-					$price_in_ref_currency = null;
-					$price_usd = null;
-					
-					if ($currency_url['format_id'] == 2) {
-						$api_response = json_decode($api_response_raw);
-						$price_usd = $api_response->USD->bid;
-					}
-					else if ($currency_url['format_id'] == 1) {
-						$api_response = json_decode($api_response_raw);
-						if (!empty($api_response->rates)) {
-							$api_rates = (array) $api_response->rates;
-							$price_usd = 1/($api_rates[$currency['abbreviation']]);
+				if ($currency_url['format_id'] == 7) {
+					$api_response = json_decode($api_response_raw, true);
+
+					if (!empty($api_response['rates'])) {
+						foreach ($api_response['rates'] as $abbrev => $inv_price_usd) {
+							$currency = $this->fetch_currency_by_abbreviation($abbrev);
+							
+							if ($currency) {
+								$price_usd = 1/$inv_price_usd;
+								$ref_currency_info = $this->exchange_rate_between_currencies($usd_currency['currency_id'], $reference_currency['currency_id'], time(), $reference_currency['currency_id']);
+								$price_in_ref_currency = $price_usd/$ref_currency_info['exchange_rate'];
+								echo $currency['abbreviation']."/".$reference_currency['abbreviation']." = ".$price_in_ref_currency." ($price_usd/".$ref_currency_info['exchange_rate'].")\n";
+								
+								if (isset($price_in_ref_currency)) {
+									$price_in_ref_currency = $this->to_significant_digits($price_in_ref_currency, 10);
+									
+									if ($price_in_ref_currency > 0) {
+										$this->create_currency_price($currency['currency_id'], $reference_currency, $price_in_ref_currency);
+									}
+								}
+							}
 						}
 					}
-					else if ($currency_url['format_id'] == 3) {
-						$coin_data_raw = $this->first_snippet_between($api_response_raw, '<script id="__NEXT_DATA__" type="application/json">', '</script>');
-						$coin_data = json_decode($coin_data_raw);
-						$price_data = AppSettings::arrayToMapOnKey($coin_data->props->initialState->cryptocurrency->listingLatest->data, "symbol");
+				}
+				else {
+					$currencies_by_url = $this->run_query("SELECT * FROM currencies WHERE oracle_url_id=:oracle_url_id ORDER BY currency_id ASC;", ['oracle_url_id'=>$currency_url['oracle_url_id']]);
+
+					while ($currency = $currencies_by_url->fetch()) {
+						$ref_currency_info = $this->exchange_rate_between_currencies($usd_currency['currency_id'], $reference_currency['currency_id'], time(), $reference_currency['currency_id']);
 						
-						if ($currency['currency_id'] == $usd_currency['currency_id']) {
-							$price_in_ref_currency = 1/$price_data['BTC']->quote->USD->price;
+						$price_in_ref_currency = null;
+						$price_usd = null;
+						
+						if ($currency_url['format_id'] == 2) {
+							$api_response = json_decode($api_response_raw);
+							$price_usd = $api_response->USD->bid;
 						}
-						else {
+						else if ($currency_url['format_id'] == 1) {
+							$api_response = json_decode($api_response_raw);
+							if (!empty($api_response->rates)) {
+								$api_rates = (array) $api_response->rates;
+								$price_usd = 1/($api_rates[$currency['abbreviation']]);
+							}
+						}
+						else if ($currency_url['format_id'] == 3) {
+							$coin_data_raw = $this->first_snippet_between($api_response_raw, '<script id="__NEXT_DATA__" type="application/json">', '</script>');
+							$coin_data = json_decode($coin_data_raw);
+							$price_data = AppSettings::arrayToMapOnKey($coin_data->props->initialState->cryptocurrency->listingLatest->data, "symbol");
+							
 							$price_usd = $price_data[$currency['abbreviation']]->quote->USD->price;
 						}
-					}
-					else if ($currency_url['format_id'] == 4) {
-						$coin_data_raw = $this->first_snippet_between($api_response_raw, '<script type="application/ld+json">', '</script>');
-						$coin_data = (array) json_decode($coin_data_raw);
-						$price_data_arr = array_values($coin_data['@graph']);
-						$price_data_by_currency = AppSettings::arrayToMapOnKey($price_data_arr, "name");
-						
-						if ($currency['currency_id'] == $usd_currency['currency_id']) {
-							$price_in_ref_currency = 1/$price_data_by_currency['BTC']->offers->price;
-						}
-						else {
-							$this_price_data = $price_data_by_currency[$currency['abbreviation']];
+						else if ($currency_url['format_id'] == 4) {
+							$coin_data_raw = $this->first_snippet_between($api_response_raw, '<script type="application/ld+json">', '</script>');
+							$coin_data = (array) json_decode($coin_data_raw);
+							$price_data_arr = array_values($coin_data['@graph']);
+							$price_data_by_currency = AppSettings::arrayToMapOnKey($price_data_arr, "name");
 							
-							$price_usd = $this_price_data->offers->price;
+							if ($currency['currency_id'] == $usd_currency['currency_id']) {
+								$price_in_ref_currency = 1/$price_data_by_currency['BTC']->offers->price;
+							}
+							else {
+								$this_price_data = $price_data_by_currency[$currency['abbreviation']];
+								
+								$price_usd = $this_price_data->offers->price;
+							}
 						}
-					}
-					else if ($currency_url['format_id'] == 5) {
-						$coin_data = json_decode($api_response_raw);
-						$price_in_ref_currency = 1/$coin_data->bpi->USD->rate_float;
-					}
-					else if ($currency_url['format_id'] == 6) {
-						$price_str = $this->first_snippet_between($api_response_raw, 'The Litecoin price is $', ',');
-						if ($price_str) {
-							$price_usd = (float)(trim($price_str));
+						else if ($currency_url['format_id'] == 5) {
+							$coin_data = json_decode($api_response_raw);
+							$price_in_ref_currency = $coin_data->bpi->USD->rate_float;
 						}
-					}
-					
-					if ($price_in_ref_currency == null && isset($price_usd)) {
-						$price_in_ref_currency = $price_usd/$ref_currency_info['exchange_rate'];
-					}
-					
-					if (isset($price_in_ref_currency)) {
-						$price_in_ref_currency = $this->to_significant_digits($price_in_ref_currency, 10);
+						else if ($currency_url['format_id'] == 6) {
+							$price_str = $this->first_snippet_between($api_response_raw, 'The Litecoin price is $', ',');
+							if ($price_str) {
+								$price_usd = (float)(trim($price_str));
+							}
+						}
 						
-						if ($price_in_ref_currency > 0) {
-							$this->run_insert_query("currency_prices", [
-								'currency_id' => $currency['currency_id'],
-								'reference_currency_id' => $reference_currency['currency_id'],
-								'price' => $price_in_ref_currency,
-								'time_added' => time()
-							]);
+						if ($price_in_ref_currency == null && isset($price_usd)) {
+							$price_in_ref_currency = $price_usd/$ref_currency_info['exchange_rate'];
+						}
+						
+						if (isset($price_in_ref_currency)) {
+							$price_in_ref_currency = $this->to_significant_digits($price_in_ref_currency, 10);
+							
+							if ($price_in_ref_currency > 0) {
+								$this->create_currency_price($currency['currency_id'], $reference_currency, $price_in_ref_currency);
+							}
 						}
 					}
 				}
@@ -970,6 +988,17 @@ class App {
 		}
 	}
 	
+	public function create_currency_price($currency_id, &$reference_currency, $price_in_ref_currency) {
+		$this->run_insert_query("currency_prices", [
+			'currency_id' => $currency_id,
+			'reference_currency_id' => $reference_currency['currency_id'],
+			'price' => $price_in_ref_currency,
+			'time_added' => time()
+		]);
+
+		return $this->last_insert_id();
+	}
+
 	public function currency_conversion_rate($numerator_currency_id, $denominator_currency_id) {
 		if ($numerator_currency_id == $denominator_currency_id) {
 			$returnvals['conversion_rate'] = 1;
@@ -1243,7 +1272,7 @@ class App {
 				else {
 					$db_image = false;
 					$this->run_query("DELETE FROM images WHERE image_id=:image_id;", ['image_id'=>$image_id]);
-					$error_message = 'Failed to write '.$image_fname;
+					$error_message = 'Failed to write '.$image_fname.' ('.error_get_last().')';
 				}
 			}
 			else $error_message = "That image file type is not supported.";
@@ -3226,8 +3255,13 @@ class App {
 			$header_vars = explode(",", trim(strtolower($csv_lines[0])));
 			$name_col = array_search("entity_name", $header_vars);
 			$image_col = array_search("default_image_id", $header_vars);
+			$currency_code_col = array_search("currency_code", $header_vars);
+			$short_name_col = array_search("currency_short_name", $header_vars);
+			$short_name_plural_col = array_search("currency_short_name_plural", $header_vars);
+			$image_hash_col = array_search("image_hash", $header_vars);
+			$oracle_url_col = array_search("oracle_url_id", $header_vars);
 			$group_params = explode(",", $csv_lines[1]);
-			
+
 			$this->run_insert_query("option_groups", [
 				'option_name' => $group_params[0],
 				'option_name_plural' => $group_params[1],
@@ -3235,20 +3269,90 @@ class App {
 			]);
 			$group_id = $this->last_insert_id();
 			
+			$group_images_dir = dirname(__DIR__).'/lib/groups/images/'.$import_group_description;
+			$image_info_by_hash = [];
+			if (is_dir($group_images_dir)) {
+				if ($group_images_handle = opendir($group_images_dir)) {
+					while (false !== ($im_name = readdir($group_images_handle))) {
+						if (in_array($im_name, ['.', '..'])) continue;
+						$new_im_name_parts = explode(".", $im_name);
+						$image_hash = $new_im_name_parts[0];
+						$image_extension = $new_im_name_parts[count($new_im_name_parts)-1];
+						$image_info_by_hash[$image_hash] = [
+							'extension' => $image_extension
+						];
+					}
+				}
+			}
+			
 			for ($csv_i=2; $csv_i<count($csv_lines); $csv_i++) {
-				$csv_params = explode(",", $csv_lines[$csv_i]);
-				$member_entity = $this->check_set_entity($general_entity_type['entity_type_id'], trim($csv_params[$name_col]));
-				
-				if (empty($member_entity['default_image_id']) && !empty($csv_params[$image_col])) {
-					$this->run_query("UPDATE entities SET default_image_id=:default_image_id WHERE entity_id=:entity_id;", [
-						'default_image_id' => $csv_params[$image_col],
+				if (!empty($csv_lines[$csv_i])) {
+					$csv_params = explode(",", $csv_lines[$csv_i]);
+					$member_entity = $this->check_set_entity($general_entity_type['entity_type_id'], trim($csv_params[$name_col]));
+					
+					if (empty($member_entity['default_image_id'])) {
+						$default_image_id = null;
+						if ($image_col !== false && !empty($csv_params[$image_col])) $default_image_id = $csv_params[$image_col];
+						else if ($image_hash_col !== false && !empty($csv_params[$image_hash_col])) {
+							if (!empty($image_info_by_hash[$csv_params[$image_hash_col]])) {
+								$info = $image_info_by_hash[$csv_params[$image_hash_col]];
+								$new_im_fname = $group_images_dir."/".$csv_params[$image_hash_col].".".$info['extension'];
+								$new_im_fh = fopen($new_im_fname, 'r');
+								$new_im_raw = fread($new_im_fh, filesize($new_im_fname));
+								fclose($new_im_fh);
+								$access_key = $this->random_string(20);
+								$new_im_error_message = null;
+								$db_image = $this->add_image($new_im_raw, $info['extension'], $access_key, $new_im_error_message);
+								if ($db_image) $default_image_id = $db_image['image_id'];
+								else $error_message .= $new_im_error_message."\n";
+							}
+						}
+						
+						if ($default_image_id) {
+							$this->run_query("UPDATE entities SET default_image_id=:default_image_id WHERE entity_id=:entity_id;", [
+								'default_image_id' => $csv_params[$image_col],
+								'entity_id' => $member_entity['entity_id']
+							]);
+							$this->run_query("UPDATE options SET image_id=:image_id WHERE entity_id=:entity_id;", [
+								'image_id' => $default_image_id,
+								'entity_id' => $member_entity['entity_id']
+							]);
+						}
+					}
+					
+					$this->run_insert_query("option_group_memberships", [
+						'option_group_id' => $group_id,
 						'entity_id' => $member_entity['entity_id']
 					]);
+
+					if ($currency_code_col !== false) {
+						$currency_code = $csv_params[$currency_code_col];
+
+						if ($name_col !== false && $short_name_col !== false && $short_name_plural_col !== false) {
+							$existing_currency = $this->fetch_currency_by_abbreviation($currency_code);
+							
+							if (!$existing_currency) {
+								$new_currency_params = [
+									'name' => $csv_params[$name_col],
+									'short_name' => $csv_params[$short_name_col],
+									'short_name_plural' => $csv_params[$short_name_plural_col],
+									'abbreviation' => $currency_code,
+									'symbol' => '',
+								];
+								if ($oracle_url_col !== false) $new_currency_params['oracle_url_id'] = $csv_params[$oracle_url_col];
+								$this->run_insert_query("currencies", $new_currency_params);
+								$existing_currency = $this->fetch_currency_by_id($this->last_insert_id());
+							}
+							$track_entity = $this->check_set_entity($general_entity_type['entity_type_id'], $csv_params[$name_col]);
+							if (empty($track_entity['currency_id'])) {
+								$this->run_query("UPDATE entities SET currency_id=:currency_id WHERE entity_id=:entity_id;", [
+									'currency_id' => $existing_currency['currency_id'],
+									'entity_id' => $track_entity['entity_id'],
+								]);
+							}
+						}
+					}
 				}
-				$this->run_insert_query("option_group_memberships", [
-					'option_group_id' => $group_id,
-					'entity_id' => $member_entity['entity_id']
-				]);
 			}
 		}
 		else $error_message = "Failed to import group from file.. the file does not exist.\n";

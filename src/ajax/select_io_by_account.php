@@ -13,7 +13,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 	if ($account) {
 		$html = "";
 		
-		$ios_by_account = $app->run_query("SELECT * FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id WHERE k.account_id=:account_id AND io.spend_status='unspent' ORDER BY io.amount DESC;", [
+		$ios_by_account = $app->run_query("SELECT * FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id WHERE k.account_id=:account_id AND (io.spend_status='unspent' OR io.spend_status='unconfirmed') ORDER BY io.amount DESC;", [
 			'account_id' => $account['account_id']
 		]);
 		

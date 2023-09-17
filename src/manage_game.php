@@ -861,6 +861,39 @@ else {
 				else if ($next_action == "events") {
 					if (isset($_REQUEST['event_filter'])) $event_filter = $_REQUEST['event_filter'];
 					else $event_filter = "";
+					
+					$manage_gdes_params = [
+						'game_id' => $game->db_game['game_id']
+					];
+					$manage_gdes_q = "SELECT * FROM game_defined_events WHERE game_id=:game_id";
+					if ($event_filter == "past_due") {
+						$manage_gdes_q .= " AND outcome_index IS NULL AND event_payout_block <= :ref_block";
+						$manage_gdes_params['ref_block'] = $game->blockchain->last_block_id();
+					}
+					$max_events_per_page = 1000;
+					$to_gde_index = null;
+					$from_gde_index = null;
+					if (array_key_exists("from_gde", $_REQUEST) && array_key_exists("to_gde", $_REQUEST)) {
+						$to_gde_index = (int) $_REQUEST['to_gde'];
+						$from_gde_index = (int) $_REQUEST['from_gde'];
+					}
+					else {
+						$max_gde_index = $game->max_gde_index();
+						if ($max_gde_index > $max_events_per_page) {
+							$to_gde_index = (int) $max_gde_index;
+							$from_gde_index = $to_gde_index-$max_events_per_page;
+						}
+					}
+					if ($from_gde_index !== null) {
+						$manage_gdes_params['from_gde_index'] = $from_gde_index;
+						$manage_gdes_q .= " AND event_index >= :from_gde_index";
+					}
+					if ($to_gde_index !== null) {
+						$manage_gdes_params['to_gde_index'] = $to_gde_index;
+						$manage_gdes_q .= " AND event_index <= :to_gde_index";
+					}
+					$manage_gdes_q .= " ORDER BY event_index DESC;";
+					$manage_gdes = $app->run_query($manage_gdes_q, $manage_gdes_params);
 					?>
 					<div class="panel panel-info">
 						<div class="panel-heading">
@@ -878,23 +911,23 @@ else {
 								<button class="btn btn-sm btn-primary" onclick="thisPageManager.manage_game_set_event_blocks(false);">Set Event Blocks</button>
 								<button class="btn btn-sm btn-info" onclick="$('#import_csv_modal').modal('show');">Import Events from CSV</button>
 							</p>
-							<p>
-								<select class="form-control" id="manage_game_event_filter" onchange="thisPageManager.manage_game_event_filter_changed();">
-									<option value="">View all events</option>
-									<option <?php if ($event_filter == "past_due") echo "selected=\"selected\" "; ?>value="past_due">Past due unresolved events</option>
-								</select>
-							</p>
+							<form method="get" action="/manage/<?php echo $game->db_game['url_identifier']; ?>/">
+								<input type="hidden" name="next" value="events" />
+								<p>
+									<select class="form-control" id="manage_game_event_filter" name="event_filter" onchange="thisPageManager.manage_game_event_filter_changed();">
+										<option value="">View all events</option>
+										<option <?php if ($event_filter == "past_due") echo "selected=\"selected\" "; ?>value="past_due">Past due unresolved events</option>
+									</select>
+								</p>
+								<p>
+									Events: 
+									<input type="text" class="form-control input-sm" name="from_gde" value="<?php echo $from_gde_index; ?>" style="display: inline-block; max-width: 160px;" />
+									 to 
+									<input type="text" class="form-control input-sm" name="to_gde" value="<?php echo $to_gde_index; ?>" style="display: inline-block; max-width: 160px;" />
+									<button class="btn btn-sm btn-success">Go</button>
+								</p>
+							</form>
 							<?php
-							$manage_gdes_params = [
-								'game_id' => $game->db_game['game_id']
-							];
-							$manage_gdes_q = "SELECT * FROM game_defined_events WHERE game_id=:game_id";
-							if ($event_filter == "past_due") {
-								$manage_gdes_q .= " AND outcome_index IS NULL AND event_payout_block <= :ref_block";
-								$manage_gdes_params['ref_block'] = $game->blockchain->last_block_id();
-							}
-							$manage_gdes_q .= " ORDER BY event_index DESC;";
-							$manage_gdes = $app->run_query($manage_gdes_q, $manage_gdes_params);
 							while ($gde = $manage_gdes->fetch()) {
 								?>
 								<div class="row">

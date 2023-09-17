@@ -1219,7 +1219,7 @@ class Game {
 		if (!empty($filter_arr['require_option_block_rule'])) {
 			$events_q .= " AND ev.option_block_rule IS NOT NULL";
 		}
-		$events_q .= " AND (ev.event_starting_time IS NULL OR ev.event_starting_time < ".AppSettings::sqlNow().") AND (ev.event_final_time IS NULL OR ev.event_final_time > ".AppSettings::sqlNow().") ORDER BY ev.event_final_time ASC, ev.event_id ASC;";
+		$events_q .= " AND (ev.event_starting_time IS NULL OR ev.event_starting_time < ".AppSettings::sqlNow().") AND (ev.event_final_time IS NULL OR ev.event_final_time > ".AppSettings::sqlNow().") ORDER BY ev.event_final_time ASC, ev.event_index ASC;";
 		$db_events = $this->blockchain->app->run_query($events_q, $events_params);
 		
 		while ($db_event = $db_events->fetch()) {
@@ -3371,6 +3371,12 @@ class Game {
 		])->fetch();
 		if ((string)$info['MAX(event_starting_block)'] != "") return (int)$info['MAX(event_starting_block)'];
 		else return (int)$this->db_game['game_starting_block'];
+	}
+	
+	public function max_gde_index() {
+		return (string) $this->blockchain->app->run_query("SELECT MAX(event_index) FROM game_defined_events WHERE game_id=:game_id;", [
+			'game_id' => $this->db_game['game_id'],
+		])->fetch()['MAX(event_index)'];
 	}
 	
 	public function get_game_peer_by_id($game_peer_id) {

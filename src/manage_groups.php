@@ -109,7 +109,7 @@ else {
 							echo "<br/><b>Import groups from file:</b><br/>\n";
 							
 							while (($import_file = readdir($import_groups_dh)) !== false) {
-								if (!in_array($import_file, [".", ".."])) {
+								if (!in_array($import_file, [".", ".."]) && !is_dir($import_groups_dir.$import_file)) {
 									$import_group_name = explode(".csv", $import_file)[0];
 									
 									if (in_array($import_group_name, $group_names)) {

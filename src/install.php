@@ -68,9 +68,9 @@ if ($app->running_as_admin()) {
 			$app->blockchain_ensure_currencies();
 			
 			if (empty($app->get_site_constant("reference_currency_id"))) {
-				$btc_currency = $app->fetch_currency_by_abbreviation("BTC");
-				if ($btc_currency) {
-					$app->set_reference_currency($btc_currency['currency_id']);
+				$usd_currency = $app->fetch_currency_by_abbreviation("USD");
+				if ($usd_currency) {
+					$app->set_reference_currency($usd_currency['currency_id']);
 				}
 			}
 			

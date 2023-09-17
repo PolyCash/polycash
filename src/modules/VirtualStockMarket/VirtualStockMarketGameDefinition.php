@@ -86,7 +86,7 @@ class VirtualStockMarketGameDefinition {
 		if (is_file($fname)) {
 			$fh = fopen($fname, 'r');
 			$config = json_decode(fread($fh, filesize($fname)));
-			$this->finnhub_api_key = $config->finnhub_api_key;
+			if (!empty($config->finnhub_api_key)) $this->finnhub_api_key = $config->finnhub_api_key;
 		}
 	}
 	
