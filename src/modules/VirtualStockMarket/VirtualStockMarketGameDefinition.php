@@ -320,7 +320,7 @@ class VirtualStockMarketGameDefinition {
 			$price_api_url = "https://finnhub.io/api/v1/quote?symbol=".$ticker."&token=".$this->finnhub_api_key;
 			$api_response = file_get_contents($price_api_url);
 			$api_data = json_decode($api_response, true);
-			if (isset($api_data['c'])) {
+			if (isset($api_data['c']) && (float) $api_data['c'] > 0) {
 				$new_price_usd = (float) $api_data['c'];
 			}
 		}
