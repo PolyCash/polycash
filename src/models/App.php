@@ -901,7 +901,7 @@ class App {
 						foreach ($api_response['rates'] as $abbrev => $inv_price_usd) {
 							$currency = $this->fetch_currency_by_abbreviation($abbrev);
 							
-							if ($currency) {
+							if ($currency && $currency['oracle_url_id'] == $currency_url['oracle_url_id']) {
 								$price_usd = 1/$inv_price_usd;
 								$ref_currency_info = $this->exchange_rate_between_currencies($usd_currency['currency_id'], $reference_currency['currency_id'], time(), $reference_currency['currency_id']);
 								$price_in_ref_currency = $price_usd/$ref_currency_info['exchange_rate'];
