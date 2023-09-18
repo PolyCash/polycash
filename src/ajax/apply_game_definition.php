@@ -23,7 +23,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 				$log_message = GameDefinition::migrate_game_definitions($game, $thisuser->db_user['user_id'], "apply_defined_to_actual", $show_internal_params, $actual_game_def, $defined_game_def);
 				$app->output_message(1, $log_message, false);
 			}
-			else $app->output_message(5, "Found no changes to apply.", false);
+			else $app->output_message(5, "Found no changes to apply (".$actual_game_def_hash.").", false);
 		}
 		else $app->output_message(4, "You don't have permission to edit this game.", false);
 	}

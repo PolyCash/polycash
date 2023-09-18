@@ -256,7 +256,7 @@ if ($event->db_event['payout_rule'] == "linear") {
 	$buy_pos_effective_coins = $buy_pos_votes*$coins_per_vote + $round_stats[$min_option_index]['effective_destroy_score'] + $round_stats[$min_option_index]['unconfirmed_effective_destroy_score'];
 	
 	if (isset($track_price_usd) && $last_block_id < $event->db_event['event_payout_block']) {
-		echo "Market price: &nbsp; $".$app->round_to($track_price_usd, 2, 7, true);
+		echo "Market price: &nbsp; $".$app->round_to($track_price_usd, 2, 7, true)." &nbsp; (USD/".$event->db_event['track_name_short']." ".$app->round_to(1/$track_price_usd, 2, 7, true).")";
 		if (time()-$track_price_info['time'] >= 60*30) echo ' &nbsp; <font class="redtext">'.$app->format_seconds(time()-$track_price_info['time'])." ago</font>";
 		echo "<br/>\n";
 	}
@@ -268,12 +268,10 @@ if ($event->db_event['payout_rule'] == "linear") {
 		$buy_pos_payout_frac = $buy_pos_effective_coins/$event_effective_coins;
 		$our_buy_price = $event->db_event['track_min_price'] + $buy_pos_payout_frac*($event->db_event['track_max_price']-$event->db_event['track_min_price']);
 		
-		if ($last_block_id < $event->db_event['event_final_block']) {
-			?>Buy here for: &nbsp; $<?php echo $app->round_to($our_buy_price, 2, 7, true); ?><br/><?php
-		}
-		else {
-			?>Bought at: &nbsp; $<?php echo $app->round_to($our_buy_price, 2, 7, true); ?><br/><?php
-		}
+		if ($last_block_id < $event->db_event['event_final_block']) echo 'Buy here for:';
+		else echo 'Bought at:';
+		echo ' &nbsp; $'.$app->round_to($our_buy_price, 2, 7, true);
+		echo " &nbsp; (USD/".$event->db_event['track_name_short']." ".$app->round_to(1/$our_buy_price, 2, 7, true).")<br/>\n";
 	}
 	
 	if ((string)$event->db_event['track_payout_price'] != "") {

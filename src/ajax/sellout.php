@@ -263,9 +263,9 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 				
 				if (in_array($_REQUEST['action'], ['initiate','confirm','refresh'])) {
 					list($num_invoices, $sellout_invoices_html) = $game->display_sellouts_by_user_game($user_game['user_game_id']);
-					
+					$invoices_html = "";
 					if ($num_invoices > 0) {
-						$invoices_html = '<p style="margin-top: 10px;">You have '.$num_invoices.' sellout';
+						$invoices_html .= '<p style="margin-top: 10px;">You have '.$num_invoices.' sellout';
 						if ($num_invoices != 1) $invoices_html .= 's';
 						$invoices_html .= ".</p>\n";
 					}
