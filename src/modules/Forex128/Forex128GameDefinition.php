@@ -148,9 +148,7 @@ class Forex128GameDefinition {
 		if (empty($game->db_game['definitive_game_peer_id']) && is_file(dirname(__FILE__)."/Forex128Manager.php")) {
 			include_once(dirname(__FILE__)."/Forex128Manager.php");
 			$manager = new Forex128Manager($this, $this->app, $game);
-			$manager->add_events();
-			//$manager->set_outcomes();
-			$manager->set_blocks();
+			if (method_exists($manager, "regular_actions")) $manager->regular_actions();
 		}
 	}
 }
