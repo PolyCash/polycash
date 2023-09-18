@@ -3235,10 +3235,9 @@ class Game {
 		return $html;
 	}
 	
-	public function set_event_blocks($user_id, $game_defined_event_id) {
+	public function set_event_blocks($user_id, $game_defined_event_id, $avoid_changing_completed_events = false) {
 		$log_text = "";
 		$last_block_id = $this->blockchain->last_block_id();
-		$avoid_changing_completed_events = true;
 		
 		$event_params = [
 			'game_id' => $this->db_game['game_id']

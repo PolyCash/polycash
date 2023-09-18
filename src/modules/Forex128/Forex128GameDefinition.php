@@ -150,7 +150,7 @@ class Forex128GameDefinition {
 			$manager = new Forex128Manager($this, $this->app, $game);
 			$manager->add_events();
 			//$manager->set_outcomes();
-			//$manager->set_blocks();
+			$manager->set_blocks();
 		}
 	}
 }

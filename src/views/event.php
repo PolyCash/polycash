@@ -256,7 +256,7 @@ if ($event->db_event['payout_rule'] == "linear") {
 	$buy_pos_effective_coins = $buy_pos_votes*$coins_per_vote + $round_stats[$min_option_index]['effective_destroy_score'] + $round_stats[$min_option_index]['unconfirmed_effective_destroy_score'];
 	
 	if (isset($track_price_usd) && $last_block_id < $event->db_event['event_payout_block']) {
-		echo "Market price: &nbsp; $".$app->round_to($track_price_usd, 2, 4, true);
+		echo "Market price: &nbsp; $".$app->round_to($track_price_usd, 2, 7, true);
 		if (time()-$track_price_info['time'] >= 60*30) echo ' &nbsp; <font class="redtext">'.$app->format_seconds(time()-$track_price_info['time'])." ago</font>";
 		echo "<br/>\n";
 	}
@@ -269,10 +269,10 @@ if ($event->db_event['payout_rule'] == "linear") {
 		$our_buy_price = $event->db_event['track_min_price'] + $buy_pos_payout_frac*($event->db_event['track_max_price']-$event->db_event['track_min_price']);
 		
 		if ($last_block_id < $event->db_event['event_final_block']) {
-			?>Buy here for: &nbsp; $<?php echo $app->round_to($our_buy_price, 2, 4, true); ?><br/><?php
+			?>Buy here for: &nbsp; $<?php echo $app->round_to($our_buy_price, 2, 7, true); ?><br/><?php
 		}
 		else {
-			?>Bought at: &nbsp; $<?php echo $app->round_to($our_buy_price, 2, 4, true); ?><br/><?php
+			?>Bought at: &nbsp; $<?php echo $app->round_to($our_buy_price, 2, 7, true); ?><br/><?php
 		}
 	}
 	
@@ -286,15 +286,15 @@ if ($event->db_event['payout_rule'] == "linear") {
 	else $pct_gain = null;
 	
 	if (isset($pct_gain)) {
-		$pct_gain = round($pct_gain, 2);
+		$pct_gain_disp = $app->format_percentage($app->to_significant_digits(abs($pct_gain), 4, false));
 		
 		echo $event-> db_event['track_name_short'];
 		
 		if ($pct_gain >= 0) {
-			?> up <font class="greentext"><?php echo $pct_gain; ?>%</font><?php
+			?> up <font class="greentext"><?php echo $pct_gain_disp; ?>%</font><?php
 		}
 		else {
-			?> down <font class="redtext"><?php echo abs($pct_gain); ?>%</font><?php
+			?> down <font class="redtext"><?php echo $pct_gain_disp; ?>%</font><?php
 		}
 		?>
 		<br/>
