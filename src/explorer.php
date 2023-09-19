@@ -455,14 +455,9 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							echo " paid out to the winners.<br/>\n";
 						}
 						
-						echo "<p>Blocks in this event: ";
-						echo "<a href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$db_event['event_starting_block']."\">".$db_event['event_starting_block']."</a> ... <a href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$db_event['event_final_block']."\">".$db_event['event_final_block']."</a>";
-						if ($db_event['event_payout_block'] != $db_event['event_final_block']) echo " ... <a href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$db_event['event_payout_block']."\">".$db_event['event_payout_block']."</a>";
-						echo "</p>\n";
-						
 						$event_next_prev_links = $game->event_next_prev_links($event);
 						
-						echo '<p>'.$event_next_prev_links."</p>\n";
+						echo '<p style="margin-top: 15px;">'.$event_next_prev_links."</p>\n";
 						?>
 						<p>
 							<a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/events/">See all events</a><br/>
@@ -625,7 +620,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							}
 							
 							if (!empty($block['time_mined'])) {
-								echo "Mined at ".date("Y-m-d H:m:s", $block['time_mined'])." UTC (".$app->format_seconds(time()-$block['time_mined'])." ago)<br/>\n";
+								echo "Mined at ".date("Y-m-d H:i:s", $block['time_mined'])." UTC (".$app->format_seconds(time()-$block['time_mined'])." ago)<br/>\n";
 							}
 							
 							if (!empty($block['num_transactions'])) {
@@ -1399,8 +1394,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						<div class="row">
 							<div class="col-md-1 boldtext">Amt Paid</div>
 							<div class="col-md-2 boldtext">Option Purchased</div>
-							<div class="col-md-1 text-center boldtext">Range</div>
-							<div class="col-md-2 boldtext">Position Purchased</div>
+							<div class="col-md-3 boldtext">Position Purchased</div>
 							<div class="col-md-3 boldtext">Asset Performance</div>
 							<div class="col-md-3 boldtext">Position Performance</div>
 						</div>';

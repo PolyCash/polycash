@@ -605,7 +605,7 @@ class App {
 		else $sign = "-";
 		
 		$number = abs($number);
-		if ($number > 1) $number = $this->to_significant_digits($number, 5, $err_lower);
+		if ($number > 1) $number = $this->to_significant_digits($number, 6, $err_lower);
 		
 		if ($number >= pow(10, 9)) {
 			return $sign.($number/pow(10, 9))."B";
@@ -626,9 +626,8 @@ class App {
 		else return round($number, $decimals);
 	}
 	
-	public function format_percentage($number) {
+	public function format_percentage($number, $min_decimals=2) {
 		if ($number >= 50) $min_decimals = 0;
-		else $min_decimals = 2;
 
 		$max_decimals = 12;
 		$number = $this->to_significant_digits($number, $max_decimals-1, false);
@@ -748,10 +747,8 @@ class App {
 			return $str;
 		}
 		else if ($days > 1) return $days." days";
-		else if ($hours > 0) {
+		else if ($hours > 2) {
 			$str = $hours." hour".($hours == 1 ? "" : "s");
-			$remainder_min = round(($seconds - (3600*$hours))/60);
-			if ($remainder_min > 0 && $hours < 3) $str .= " and ".$remainder_min." minute".($remainder_min == 1 ? "" : "s");
 			return $str;
 		}
 		else if ($minutes > 0) return $minutes." minute".($minutes == 1 ? "" : "s");
@@ -3147,19 +3144,15 @@ class App {
 		if ($div_td == 'div') $this_bet_html .= "</div>\n";
 		else $this_bet_html .= "&nbsp;&nbsp;</td>\n";
 		
-		if ($div_td == 'div') $this_bet_html .= "<div class=\"col-md-2\">";
-		else $this_bet_html .= "<td>";
-		$this_bet_html .= $this->format_bignum($current_leverage)."X &nbsp; ".$bet['option_name'];
+		$cell_title = "Leverage: ".$this->format_bignum($current_leverage)."X";
+		if ($div_td == 'div') $this_bet_html .= "<div class=\"col-md-2\" title='".$cell_title."'>";
+		else $this_bet_html .= "<td title='".$cell_title."'>";
+		$this_bet_html .= str_replace(" ", "&nbsp;", $bet['option_name']);
+		$this_bet_html .= "&nbsp;($".$this->format_bignum($bet['track_min_price'])."&nbsp;-&nbsp;$".$this->format_bignum($bet['track_max_price']).")";
 		if ($div_td == 'div') $this_bet_html .= "</div>\n";
 		else $this_bet_html .= "&nbsp;&nbsp;</td>\n";
 		
-		if ($div_td == 'div') $this_bet_html .= "<div class=\"col-md-1 text-center\">";
-		else $this_bet_html .= "<td>";
-		$this_bet_html .= "$".$this->format_bignum($bet['track_min_price'])."&nbsp;-&nbsp;$".$this->format_bignum($bet['track_max_price']);
-		if ($div_td == 'div') $this_bet_html .= "</div>\n";
-		else $this_bet_html .= "&nbsp;&nbsp;</td>\n";
-		
-		if ($div_td == 'div') $this_bet_html .= '<div class="col-md-2">';
+		if ($div_td == 'div') $this_bet_html .= '<div class="col-md-3">';
 		else $this_bet_html .= "<td>";
 		
 		if ($bet['event_option_index'] != 0) $this_bet_html .= '-';
@@ -3172,16 +3165,21 @@ class App {
 		if ($div_td == 'div') $this_bet_html .= "</div>\n";
 		else $this_bet_html .= "&nbsp;&nbsp;</td>\n";
 		
-		$track_performance_pct = 100*(($track_pay_price/$bought_price_usd)-1);
+		$track_pay_price_round = $this->round_to($track_pay_price, 2, 7, true);
+		$bought_price_usd_round = $this->round_to($bought_price_usd, 2, 7, true);
+		
+		if ($track_pay_price_round == $bought_price_usd_round) $track_performance_pct = 0;
+		else $track_performance_pct = 100*(($track_pay_price_round/$bought_price_usd_round)-1);
+		
 		if ($div_td == 'div') $this_bet_html .= "<div class=\"col-md-3\">";
 		else $this_bet_html .= "<td>";
 		$this_bet_html .= $bet['track_name_short']." ";
 		if ($track_performance_pct >= 0) $this_bet_html .= '<font class="greentext">+'.$this->format_percentage($this->to_significant_digits($track_performance_pct, 4)).'%</font>';
 		else $this_bet_html .= '<font class="redtext">-'.$this->format_percentage($this->to_significant_digits(abs($track_performance_pct), 4)).'%</font>';
 		
-		$this_bet_html .= " &nbsp; ($".$this->format_bignum($bought_price_usd);
-		$this_bet_html .= " &rarr; $".$this->format_bignum($track_pay_price);
-		$this_bet_html .= ")";
+		$this_bet_html .= " <font style='font-size: 85%'>($".$bought_price_usd_round;
+		$this_bet_html .= " &rarr; $".$track_pay_price_round;
+		$this_bet_html .= ")</font>";
 		if ($div_td == 'div') $this_bet_html .= "</div>\n";
 		else $this_bet_html .= "&nbsp;&nbsp;</td>\n";
 		
@@ -4140,6 +4138,15 @@ class App {
 		return $this->run_query("SELECT * FROM address_keys WHERE account_id=:account_id AND address_key_id IN (".implode(",", $address_key_ids).") ORDER BY option_index ASC, address_id ASC;", [
 			'account_id' => $account['account_id'],
 		])->fetchAll(PDO::FETCH_ASSOC);
+	}
+	
+	public function format_datetime_short($datetime_str) {
+		$datetime_time = strtotime($datetime_str);
+		$date_format = "Y-m-d";
+		if (date("i:s", $datetime_time) == "00:00") $date_format .= " ga";
+		else if (date("s", $datetime_time) == "00") $date_format .= " g:ia";
+		else $date_format .= " H:i:s";
+		return date($date_format, $datetime_time);
 	}
 }
 ?>

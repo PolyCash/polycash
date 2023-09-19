@@ -65,6 +65,53 @@ if (!empty($event->db_event['event_final_time']) && $blocks_left > 0) {
 	}
 }
 
+if (!empty($event->db_event['event_starting_time'])) {
+	$event_starting_time = strtotime($event->db_event['event_starting_time']);
+	if ($event_starting_time < time()) echo "Started: ";
+	else echo "Starts: ";
+	echo $app->format_datetime_short($event->db_event['event_starting_time'])." UTC ";
+	if ($event_starting_time < time()) echo "(".$app->format_seconds(time()-$event_starting_time)." ago)";
+	else echo "(in ".$app->format_seconds($event_starting_time-time()).")";
+	echo "<br/>\n";
+}
+if (!empty($event->db_event['event_final_time'])) {
+	$event_final_time = strtotime($event->db_event['event_final_time']);
+	if ($event_final_time < time()) echo "Stopped: ";
+	else echo "Stops: ";
+	echo $app->format_datetime_short($event->db_event['event_final_time'])." UTC ";
+	if ($event_final_time < time()) echo "(".$app->format_seconds(time()-$event_final_time)." ago)";
+	else echo "(in ".$app->format_seconds($event_final_time-time()).")";
+	echo "<br/>\n";
+}
+
+if ($last_block_id < $event->db_event['event_payout_block']) {
+	$payout_blocks_left = $event->db_event['event_payout_block'] - $last_block_id;
+	
+	if (!empty($event->db_event['event_payout_time'])) {
+		?>
+		Pays out: <?php echo $app->format_datetime_short($event->db_event['event_payout_time']); ?> UTC (in <?php echo $app->format_seconds(strtotime($event->db_event['event_payout_time'])-time()); ?>)
+		<?php
+	}
+	else {
+		?>
+		Pays out in <?php echo $payout_blocks_left." block".($payout_blocks_left == 1 ? "" : "s")." (".$app->format_seconds($blockchain->seconds_per_block('average')*$payout_blocks_left).")";
+	}
+	echo "<br/>\n";
+}
+else {
+	$payout_block = $blockchain->fetch_block_by_id($event->db_event['event_payout_block']);
+	?>
+	Paid out: <?php $app->format_datetime_short(date("Y-m-d H:i:s", $payout_block['time_mined'])); ?> UTC 
+	(<?php $app->format_seconds(time()-$payout_block['time_mined']); ?>) ago)
+	<br/>
+	<?php
+}
+
+echo "Blocks: ";
+echo "<a target=\"_blank\" href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$event->db_event['event_starting_block']."\">".$event->db_event['event_starting_block']."</a> ... <a target=\"_blank\" href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$event->db_event['event_final_block']."\">".$event->db_event['event_final_block']."</a>";
+if ($event->db_event['event_payout_block'] != $event->db_event['event_final_block']) echo " ... <a target=\"_blank\" href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$event->db_event['event_payout_block']."\">".$event->db_event['event_payout_block']."</a>";
+echo "<br/>\n";
+
 if ($event->db_event['event_starting_block'] > $last_block_id+1) {
 	$blocks_to_start = $event->db_event['event_starting_block'] - $last_block_id;
 	$sec_to_start = $blockchain->seconds_per_block('average')*$blocks_to_start;
@@ -75,34 +122,12 @@ if ($event->db_event['event_starting_block'] > $last_block_id+1) {
 }
 else if ($blocks_left > 0) {
 	$sec_left = $blockchain->seconds_per_block('average')*$blocks_left;
-	echo $app->format_bignum($blocks_left); ?> betting block<?php echo $blocks_left=="1" ? "" : "s"; ?> left (<?php echo $app->format_seconds($sec_left); ?>)<br/>
+	echo $app->format_bignum($blocks_left, false); ?> betting block<?php echo $blocks_left=="1" ? "" : "s"; ?> left (<?php echo $app->format_seconds($sec_left); ?>)<br/>
 	<?php
 }
 
-if ($last_block_id < $event->db_event['event_payout_block']) {
-	$payout_blocks_left = $event->db_event['event_payout_block'] - $last_block_id;
-	
-	if (!empty($event->db_event['event_payout_time'])) {
-		?>
-		Pays out at <?php echo $event->db_event['event_payout_time']; ?> UTC (<?php echo $app->format_seconds(strtotime($event->db_event['event_payout_time'])-time()); ?>)
-		<?php
-	}
-	else {
-		?>
-		Pays out in <?php echo $app->format_seconds($blockchain->seconds_per_block('average')*$payout_blocks_left);
-	}
-}
-else {
-	$payout_block = $blockchain->fetch_block_by_id($event->db_event['event_payout_block']);
-	?>
-	Paid <?php echo $app->format_seconds(time()-$payout_block['time_mined']); ?> ago<br/>
-	<?php echo date("Y-m-d H:m:s", $payout_block['time_mined']); ?> UTC
-	<?php
-}
 if ($event->db_event['payout_rate'] != 1) {
-	?>
-	<br/>
-	<?php echo $app->format_percentage((1-$event->db_event['payout_rate'])*100); ?>% fee
+	echo $app->format_percentage((1-$event->db_event['payout_rate'])*100); ?>% fee
 	<?php
 }
 ?>
@@ -252,8 +277,10 @@ if ($event->db_event['payout_rule'] == "linear") {
 	$buy_pos_votes = $round_stats[$min_option_index]['votes'] + $round_stats[$min_option_index]['unconfirmed_votes'];
 	$buy_pos_effective_coins = $buy_pos_votes*$coins_per_vote + $round_stats[$min_option_index]['effective_destroy_score'] + $round_stats[$min_option_index]['unconfirmed_effective_destroy_score'];
 	
+	$track_price_usd_round = (string) $track_price_usd;
 	if (isset($track_price_usd) && $last_block_id < $event->db_event['event_payout_block']) {
-		echo "Market price: &nbsp; $".$app->round_to($track_price_usd, 2, 7, true)." &nbsp; (USD/".$event->db_event['track_name_short']." ".$app->round_to(1/$track_price_usd, 2, 7, true).")";
+		$track_price_usd_round = $app->round_to($track_price_usd, 2, 7, true);
+		echo "Market price: &nbsp; $".$track_price_usd_round." &nbsp; (USD/".$event->db_event['track_name_short']." ".$app->round_to(1/$track_price_usd, 2, 7, true).")";
 		if (time()-$track_price_info['time'] >= 60*30) echo ' &nbsp; <font class="redtext">'.$app->format_seconds(time()-$track_price_info['time'])." ago</font>";
 		echo "<br/>\n";
 	}
@@ -264,10 +291,11 @@ if ($event->db_event['payout_rule'] == "linear") {
 	if ($event_effective_coins > 0) {
 		$buy_pos_payout_frac = $buy_pos_effective_coins/$event_effective_coins;
 		$our_buy_price = $event->db_event['track_min_price'] + $buy_pos_payout_frac*($event->db_event['track_max_price']-$event->db_event['track_min_price']);
+		$our_buy_price_round = $app->round_to($our_buy_price, 2, 7, true);
 		
 		if ($last_block_id < $event->db_event['event_final_block']) echo 'Buy here for:';
 		else echo 'Bought at:';
-		echo ' &nbsp; $'.$app->round_to($our_buy_price, 2, 7, true);
+		echo ' &nbsp; $'.$our_buy_price_round;
 		echo " &nbsp; (USD/".$event->db_event['track_name_short']." ".$app->round_to(1/$our_buy_price, 2, 7, true).")<br/>\n";
 	}
 	
@@ -277,11 +305,14 @@ if ($event->db_event['payout_rule'] == "linear") {
 		echo "Paid out at: &nbsp; $".$app->format_bignum($event->db_event['track_payout_price'])."<br/>\n";
 	}
 	else if (!isset($track_price_usd)) $pct_gain = null;
-	else if ($our_buy_price > 0) $pct_gain = 100*($track_price_usd/$our_buy_price-1);
+	else if ($our_buy_price > 0) {
+		if ($track_price_usd_round === $our_buy_price_round) $pct_gain = 0;
+		else $pct_gain = 100*(((float)$track_price_usd_round)/((float)$our_buy_price_round)-1);
+	}
 	else $pct_gain = null;
 	
 	if (isset($pct_gain)) {
-		$pct_gain_disp = $app->format_percentage($app->to_significant_digits(abs($pct_gain), 4, false));
+		$pct_gain_disp = $app->format_percentage($app->to_significant_digits(abs($pct_gain), 4, false), 0);
 		
 		echo $event-> db_event['track_name_short'];
 		
