@@ -126,7 +126,7 @@ var GameEvent = function(game, game_event_index, event_id, real_event_index, num
 			if (thisPageManager.betting_mode == "inflationary") games[this.game.instance_id].add_option_to_vote(this.game_event_index, option_id);
 			else $('#principal_option_id_'+this.game.instance_id).val(option_id);
 		}
-		else window.location = '/wallet/'+games[this.game.instance_id].game_url_identifier+'/?action=start_bet&event_index='+this.game_event_index+'&option_id='+option_id;
+		else window.location = '/wallet/'+games[this.game.instance_id].game_url_identifier+'/?action=start_bet&event_index='+this.real_event_index+'&option_id='+option_id;
 	};
 	this.db_id2option_index = function(db_option_id) {
 		for (var i=0; i<this.options.length; i++) {
