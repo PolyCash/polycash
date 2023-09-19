@@ -626,9 +626,7 @@ class App {
 		else return round($number, $decimals);
 	}
 	
-	public function format_percentage($number, $min_decimals=2) {
-		if ($number >= 50) $min_decimals = 0;
-
+	public function format_percentage($number, $min_decimals=0) {
 		$max_decimals = 12;
 		$number = $this->to_significant_digits($number, $max_decimals-1, false);
 		
@@ -3144,12 +3142,12 @@ class App {
 		if ($div_td == 'div') $this_bet_html .= "</div>\n";
 		else $this_bet_html .= "&nbsp;&nbsp;</td>\n";
 		
-		$track_pay_price_round = $this->round_to($track_pay_price, 2, 7, false);
-		$track_pay_price_round_str = $this->round_to($track_pay_price, 2, 7, true);
-		$track_pay_price_inv_str = $this->round_to(1/$track_pay_price_round, 2, 7, true);
-		$bought_price_usd_round = $this->round_to($bought_price_usd, 2, 7, false);
-		$bought_price_usd_round_str = $this->round_to($bought_price_usd, 2, 7, true);
-		$bought_price_inv_str = $this->round_to(1/$bought_price_usd_round, 2, 7, true);
+		$track_pay_price_round = $this->round_to($track_pay_price, 0, 7, false);
+		$track_pay_price_round_str = $this->round_to($track_pay_price, 0, 7, true);
+		$track_pay_price_inv_str = $this->round_to(1/$track_pay_price_round, 0, 7, true);
+		$bought_price_usd_round = $this->round_to($bought_price_usd, 0, 7, false);
+		$bought_price_usd_round_str = $this->round_to($bought_price_usd, 0, 7, true);
+		$bought_price_inv_str = $this->round_to(1/$bought_price_usd_round, 0, 7, true);
 		
 		$cell_title = "Leverage: ".$this->round_to($bought_leverage, 0, 7, true)."X, ".($bet['event_option_index'] == 0 ? "Bought" : "Sold")." @ USD/".$bet['track_name_short'].": ".$bought_price_inv_str;
 		if ($div_td == 'div') $this_bet_html .= "<div class=\"col-md-2\" title='".$cell_title."'>";
