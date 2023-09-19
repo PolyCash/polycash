@@ -88,6 +88,7 @@ games.push(new Game(thisPageManager, <?php
 				'user_game' => $user_game,
 				'round_id' => $current_round_id,
 				'as_panel' => false,
+				'game_instance_id' => $game_instance_id,
 			]);
 			?>
 		</div>

@@ -1191,6 +1191,7 @@ class App {
 					'game' => $featured_game,
 					'blockchain' => $blockchain,
 					'counter' => $counter,
+					'game_instance_id' => $counter,
 				]);
 				$counter++;
 			}

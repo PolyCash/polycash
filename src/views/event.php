@@ -153,14 +153,11 @@ if (!empty($event->db_event['sport_name']) || !empty($event->db_event['league_na
 	echo "<p>".$event->db_event['sport_name']." &nbsp;&nbsp; ".$event->db_event['league_name']."</p>\n";
 }
 
-if ($last_block_id >= $event->db_event['event_final_block']) {
-	$clickable = false;
-}
+if ($last_block_id >= $event->db_event['event_final_block']) {}
 else if ($last_block_id >= $event->db_event['event_final_block']-$event->avoid_bet_buffer_blocks) {
 	?>
 	<p class="text-warning">Betting is about to end</p>
 	<?php
-	$clickable = false;
 }
 
 if ($event->db_event['outcome_index'] == "-1") {
@@ -336,7 +333,10 @@ for ($i=0; $i<count($round_stats); $i++) {
 		$onclick_html = 'if (!thisPageManager.transaction_in_progress) {thisPageManager.add_utxo_to_vote(utxo_spend_offset); games['.$game_instance_id.'].add_option_to_vote('.$game_event_index.', '.$round_stats[$i]['option_id'].'); thisPageManager.confirm_compose_bets(); setTimeout(function() {games[0].show_next_event()}, 1200);}';
 		echo '<img id="option'.$round_stats[$i]['option_id'].'_image" src="" style="cursor: pointer; max-width: 400px; max-height: 400px; border: 1px solid black; margin-bottom: 5px;" onclick="'.$onclick_html.'" />';
 	}
-	else $onclick_html = 'games['.$game_instance_id.'].events['.$game_event_index.'].start_vote('.$round_stats[$i]['option_id'].');';
+	else {
+		if ((string)$game_instance_id === "") $onclick_html = "window.location='/wallet/".$game->db_game['url_identifier']."/?action=start_bet&event_index=".$game_event_index."&option_id=".$round_stats[$i]['option_id']."';";
+		else $onclick_html = 'games['.$game_instance_id.'].events['.$game_event_index.'].start_vote('.$round_stats[$i]['option_id'].');';
+	}
 	
 	if ($game->db_game['module'] == "CryptoDuels") {
 		$db_currency = $app->fetch_currency_by_name($round_stats[$i]['name']);
@@ -412,7 +412,7 @@ for ($i=0; $i<count($round_stats); $i++) {
 		<?php
 		if ($show_boundbox) {
 			?>
-			<div onclick="games[<?php echo $game_instance_id; ?>].events[<?php echo $game_event_index; ?>].start_vote(<?php echo $round_stats[$i]['option_id']; ?>);" class="vote_option_boundbox" style="cursor: pointer; height: <?php echo $boundbox_diam; ?>px; width: <?php echo $boundbox_diam; ?>px;<?php
+			<div onclick="<?php echo $onclick_html; ?>" class="vote_option_boundbox" style="cursor: pointer; height: <?php echo $boundbox_diam; ?>px; width: <?php echo $boundbox_diam; ?>px;<?php
 				if ($holder_width != $boundbox_diam) echo 'left: '.(($holder_width-$boundbox_diam)/2).'px; top: '.(($holder_width-$boundbox_diam)/2).'px;';
 			?>">
 			</div>
@@ -430,7 +430,7 @@ for ($i=0; $i<count($round_stats); $i++) {
 			if ($clickable) echo 'cursor: pointer;';
 			if ($event->db_event['event_winning_rule'] == "max_below_cap" && $option_votes > $max_sum_votes) echo 'opacity: 0.5;';
 			echo '" id="game'.$game_instance_id.'_event'.$game_event_index.'_vote_option_'.$i.'"';
-			if ($clickable) echo ' onclick="games['.$game_instance_id.'].events['.$game_event_index.'].start_vote('.$round_stats[$i]['option_id'].');"';
+			if ($clickable) echo ' onclick="'.$onclick_html.'"';
 			?>>
 				<input type="hidden" id="game<?php echo $game_instance_id; ?>_event<?php echo $game_event_index; ?>_option_id2rank_<?php echo $round_stats[$i]['option_id']; ?>" value="<?php echo $i; ?>" />
 				<input type="hidden" id="game<?php echo $game_instance_id; ?>_event<?php echo $game_event_index; ?>_rank2option_id_<?php echo $i; ?>" value="<?php echo $round_stats[$i]['option_id']; ?>" />
