@@ -30,45 +30,50 @@ foreach ($my_bets as $my_bet) {
 		else {
 			?>
 			<div class="col-sm-6">
-				<font class="<?php echo $color; ?>text"><?php echo $my_bet['name']; ?></font><br/>
-				<a target="_blank" href="/explorer/games/<?php echo $game->db_game['url_identifier'].'/utxo/'.$my_bet['tx_hash'].'/'.$my_bet['game_out_index']; ?>">
-					Paid <?php echo $game->display_coins($coin_stake); ?>
-				</a> @ $<?php echo $app->format_bignum($asset_price_usd); ?>
-				<br/>
-				<?php
-				echo $app->format_bignum($equivalent_contracts/pow(10, $game->db_game['decimal_places'])).' '.$event->db_event['track_name_short'].' @ $'.$app->format_bignum($bought_price_usd);
-				if ($bought_leverage != 1) echo ' &nbsp; ('.$app->format_bignum($bought_leverage).'X)';
-				?>
+				<div style="padding: 5px 0px;">
+					<font class="<?php echo $color; ?>text"><?php echo $my_bet['name']; ?></font>
+					<?php if ($bought_leverage != 1) echo ' &nbsp; (Leverage: '.$app->round_to($bought_leverage, 0, 7, true).'X)'; ?>
+					<br/>
+					<a target="_blank" href="/explorer/games/<?php echo $game->db_game['url_identifier'].'/utxo/'.$my_bet['tx_hash'].'/'.$my_bet['game_out_index']; ?>">
+						Paid <?php echo $game->display_coins($coin_stake, false, true, false); ?>
+					</a> @ <?php echo $app->round_to($asset_price_usd, 0, 7, true); ?> / contract
+					<br/>
+					<?php
+					if ($my_bet['event_option_index'] != 0) echo '-';
+					echo $app->format_bignum($equivalent_contracts/pow(10, $game->db_game['decimal_places'])).' '.$event->db_event['track_name_short'].' ';
+					
+					if ($borrow_delta != 0) {
+						if ($borrow_delta > 0) echo '<font class="greentext">+ ';
+						else echo '<font class="redtext">- ';
+						echo $game->display_coins(abs($borrow_delta), true, false, false);
+						echo "</font>\n";
+					}
+					?>
+					<br/>
+				</div>
 			</div>
 			
 			<div class="col-sm-6">
-				<font class="<?php echo $color; ?>text">
+				<div style="padding: 5px 0px;">
+					<font class="<?php echo $color; ?>text">
+						Now valued: 
+						<?php
+						echo $game->display_coins($fair_io_value-$payout_fees); ?>
+					</font>
+					<br/>
 					<?php
-					echo $game->display_coins($fair_io_value-$payout_fees); ?>
-				</font>
-				@ $<?php echo $app->format_bignum($track_pay_price);
-				if ($track_pay_price != $track_price_usd) echo " ($".$app->format_bignum($track_price_usd).")";
-				?>
-				<br/>
-				<?php
-				if ($my_bet['event_option_index'] != 0) echo '-';
-				echo $app->format_bignum($equivalent_contracts/pow(10, $game->db_game['decimal_places'])).' '.$event->db_event['track_name_short'].' ';
-				
-				if ($borrow_delta != 0) {
-					if ($borrow_delta > 0) echo '<font class="greentext">+ ';
-					else echo '<font class="redtext">- ';
-					echo $app->format_bignum(abs($borrow_delta/pow(10, $game->db_game['decimal_places'])));
-					echo "</font>\n";
-				}
-				if ($current_leverage && $current_leverage != 1) echo " &nbsp; (".$app->format_bignum($current_leverage)."X)\n";
-				?>
-				<br/>
-				<?php
-				if ($net_delta < 0) echo '<font class="redtext">Net loss of ';
-				else echo '<font class="greentext">Net gain of ';
-				echo $game->display_coins(abs($net_delta));
-				echo '</font>';
-				?>
+					if ($net_delta < 0) echo '<font class="redtext">Net loss of ';
+					else echo '<font class="greentext">Net gain of ';
+					echo $game->display_coins(abs($net_delta));
+					echo '</font>';
+					?>
+					<br/>
+					<?php
+					$bought_price_usd_round = $app->round_to($bought_price_usd, 0, 7, false);
+					$track_price_usd_round = $app->round_to($track_price_usd, 0, 7, false);
+					echo "USD/".$event->db_event['track_name_short'].": ".$app->round_to(1/$bought_price_usd_round, 0, 7, true)." &rarr; ".$app->round_to(1/$track_price_usd_round, 0, 7, true);
+					?>
+				</div>
 			</div>
 			<?php
 		}

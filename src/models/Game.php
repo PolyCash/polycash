@@ -3207,11 +3207,11 @@ class Game {
 		}
 	}
 	
-	public function event_filter_html() {
+	public function event_filter_html($initial_filter_term=null) {
 		$html = '
 		<form class="form-inline" onsubmit="return false;">
 			<div class="form-group" style="margin-right: 15px;">
-				<input type="text" id="filter_by_term" class="form-control input-sm" placeholder="Search '.$this->db_game['event_type_name_plural'].'" />
+				<input type="text" id="filter_by_term" class="form-control input-sm" placeholder="Search '.$this->db_game['event_type_name_plural'].'" value="'.(isset($initial_filter_term) ? $initial_filter_term : '').'" />
 			</div>
 			<div class="form-group">
 				<label for="filter_by_date">Date:</label> &nbsp;&nbsp; 

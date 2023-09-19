@@ -3112,7 +3112,7 @@ class App {
 		return $this_bet_html;
 	}
 	
-	public function render_linear_bet($div_td, $bet, $game, $inflation_stake, $effective_paid, $current_leverage, $equivalent_contracts, $borrow_delta, $track_pay_price, $bought_price_usd, $fair_io_value, $bet_net_delta, &$net_delta, &$net_stake, &$pending_stake, &$resolved_fees_paid, &$num_wins, &$num_losses, &$num_unresolved, &$num_refunded, &$unresolved_net_delta) {
+	public function render_linear_bet($div_td, $bet, $game, $inflation_stake, $effective_paid, $bought_leverage, $equivalent_contracts, $borrow_delta, $track_pay_price, $bought_price_usd, $fair_io_value, $bet_net_delta, &$net_delta, &$net_stake, &$pending_stake, &$resolved_fees_paid, &$num_wins, &$num_losses, &$num_unresolved, &$num_refunded, &$unresolved_net_delta) {
 		$this_stake_int = $bet['destroy_amount'] + $inflation_stake;
 		$this_stake = $this_stake_int/pow(10, $game->db_game['decimal_places']);
 		$net_stake += $this_stake;
@@ -3144,7 +3144,14 @@ class App {
 		if ($div_td == 'div') $this_bet_html .= "</div>\n";
 		else $this_bet_html .= "&nbsp;&nbsp;</td>\n";
 		
-		$cell_title = "Leverage: ".$this->format_bignum($current_leverage)."X";
+		$track_pay_price_round = $this->round_to($track_pay_price, 2, 7, false);
+		$track_pay_price_round_str = $this->round_to($track_pay_price, 2, 7, true);
+		$track_pay_price_inv_str = $this->round_to(1/$track_pay_price_round, 2, 7, true);
+		$bought_price_usd_round = $this->round_to($bought_price_usd, 2, 7, false);
+		$bought_price_usd_round_str = $this->round_to($bought_price_usd, 2, 7, true);
+		$bought_price_inv_str = $this->round_to(1/$bought_price_usd_round, 2, 7, true);
+		
+		$cell_title = "Leverage: ".$this->round_to($bought_leverage, 0, 7, true)."X, ".($bet['event_option_index'] == 0 ? "Bought" : "Sold")." @ USD/".$bet['track_name_short'].": ".$bought_price_inv_str;
 		if ($div_td == 'div') $this_bet_html .= "<div class=\"col-md-2\" title='".$cell_title."'>";
 		else $this_bet_html .= "<td title='".$cell_title."'>";
 		$this_bet_html .= str_replace(" ", "&nbsp;", $bet['option_name']);
@@ -3160,25 +3167,23 @@ class App {
 		if ($borrow_delta != 0) {
 			if ($borrow_delta > 0) $this_bet_html .= '&nbsp;+&nbsp;';
 			else $this_bet_html .= '&nbsp;-&nbsp;';
-			$this_bet_html .= $this->format_bignum(abs($borrow_delta/pow(10, $game->db_game['decimal_places'])))."&nbsp;".$game->db_game['coin_abbreviation'];
+			$this_bet_html .= $game->display_coins(abs($borrow_delta), true, false, false);
 		}
 		if ($div_td == 'div') $this_bet_html .= "</div>\n";
 		else $this_bet_html .= "&nbsp;&nbsp;</td>\n";
 		
-		$track_pay_price_round = $this->round_to($track_pay_price, 2, 7, true);
-		$bought_price_usd_round = $this->round_to($bought_price_usd, 2, 7, true);
-		
 		if ($track_pay_price_round == $bought_price_usd_round) $track_performance_pct = 0;
 		else $track_performance_pct = 100*(($track_pay_price_round/$bought_price_usd_round)-1);
 		
-		if ($div_td == 'div') $this_bet_html .= "<div class=\"col-md-3\">";
-		else $this_bet_html .= "<td>";
+		$cell_title = "USD/".$bet['track_name_short'].": ".$bought_price_inv_str." &rarr; ".$track_pay_price_inv_str;
+		if ($div_td == 'div') $this_bet_html .= "<div class=\"col-md-3\" title=\"".$cell_title."\">";
+		else $this_bet_html .= "<td title=\"".$cell_title."\">";
 		$this_bet_html .= $bet['track_name_short']." ";
 		if ($track_performance_pct >= 0) $this_bet_html .= '<font class="greentext">+'.$this->format_percentage($this->to_significant_digits($track_performance_pct, 4)).'%</font>';
 		else $this_bet_html .= '<font class="redtext">-'.$this->format_percentage($this->to_significant_digits(abs($track_performance_pct), 4)).'%</font>';
 		
-		$this_bet_html .= " <font style='font-size: 85%'>($".$bought_price_usd_round;
-		$this_bet_html .= " &rarr; $".$track_pay_price_round;
+		$this_bet_html .= " <font style='font-size: 85%'>($".$bought_price_usd_round_str;
+		$this_bet_html .= " &rarr; $".$track_pay_price_round_str;
 		$this_bet_html .= ")</font>";
 		if ($div_td == 'div') $this_bet_html .= "</div>\n";
 		else $this_bet_html .= "&nbsp;&nbsp;</td>\n";
