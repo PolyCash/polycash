@@ -122,9 +122,7 @@ var GameEvent = function(game, game_event_index, event_id, real_event_index, num
 	this.option_id2option_index = {};
 	
 	this.start_vote = function(option_id) {
-		if (thisPageManager.betting_mode == "principal") $('#principal_option_id_'+this.game.instance_id).val(option_id);
-		else if (thisPageManager.betting_mode == "inflationary") games[this.game.instance_id].add_option_to_vote(this.game_event_index, option_id);
-		else console.log("Started a bet but betting_mode was "+thisPageManager.betting_mode);
+		games[this.game.instance_id].add_option_to_vote(this.game_event_index, option_id);
 	};
 	this.db_id2option_index = function(db_option_id) {
 		for (var i=0; i<this.options.length; i++) {
@@ -224,6 +222,7 @@ var Game = function(pageManager, game_id, last_block_id, last_transaction_id, ma
 		return Math.ceil(block_id/this.game_round_length);
 	};
 	this.add_option_to_vote = function(event_index, option_id) {
+		$('#principal_option_id_'+this.instance_id).val(option_id);
 		var this_event = this.events[event_index];
 		var this_option = this_event.options[this_event.option_id2option_index[option_id]];
 		var option_display_name = this_option.name;
@@ -489,7 +488,7 @@ var PageManager = function() {
 	this.selected_account_action = false;
 	this.set_event_id = false;
 
-	this.betting_mode = false;
+	this.betting_mode = 'principal';
 	this.existing_account = false;
 	this.selected_panel = false;
 	

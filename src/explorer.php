@@ -422,12 +422,14 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							echo "</p>";
 						}
 						
-						if (empty($db_event['winning_option_id'])) {
-							echo "<b>No Winner</b><br/>\n";
-						}
-						else {
-							$winner_option = $app->fetch_option_by_id($db_event['winning_option_id']);
-							echo "<b>Winner: ".$winner_option['name']."</b><br/>\n";
+						if ($event->db_event['payout_rule'] == "binary") {
+							if (empty($db_event['winning_option_id'])) {
+								echo "<b>No Winner</b><br/>\n";
+							}
+							else {
+								$winner_option = $app->fetch_option_by_id($db_event['winning_option_id']);
+								echo "<b>Winner: ".$winner_option['name']."</b><br/>\n";
+							}
 						}
 						?>
 						<div class="row">
@@ -476,7 +478,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 								<?php
 							}
 							
-							if ($game->allow_game_def_changes()) {
+							if ($game->allow_game_def_changes() && $event->db_event['payout_rule'] == "binary") {
 								?>
 								<p>
 									<button class="btn btn-sm btn-primary" onclick="thisPageManager.set_event_outcome(<?php echo $game->db_game['game_id'].", ".$event->db_event['event_id']; ?>);">Set Outcome</button>
