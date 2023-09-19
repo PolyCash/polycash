@@ -334,7 +334,7 @@ for ($i=0; $i<count($round_stats); $i++) {
 		echo '<img id="option'.$round_stats[$i]['option_id'].'_image" src="" style="cursor: pointer; max-width: 400px; max-height: 400px; border: 1px solid black; margin-bottom: 5px;" onclick="'.$onclick_html.'" />';
 	}
 	else {
-		if ((string)$game_instance_id === "") $onclick_html = "window.location='/wallet/".$game->db_game['url_identifier']."/?action=start_bet&event_index=".$game_event_index."&option_id=".$round_stats[$i]['option_id']."';";
+		if ((string)$game_instance_id === "") $onclick_html = "window.location='/wallet/".$game->db_game['url_identifier']."/?action=start_bet&event_index=".$event->db_event['event_index']."&option_id=".$round_stats[$i]['option_id']."';";
 		else $onclick_html = 'games['.$game_instance_id.'].events['.$game_event_index.'].start_vote('.$round_stats[$i]['option_id'].');';
 	}
 	
