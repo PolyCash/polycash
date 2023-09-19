@@ -122,7 +122,11 @@ var GameEvent = function(game, game_event_index, event_id, real_event_index, num
 	this.option_id2option_index = {};
 	
 	this.start_vote = function(option_id) {
-		games[this.game.instance_id].add_option_to_vote(this.game_event_index, option_id);
+		if (games[this.game.instance_id].refresh_page == "wallet") {
+			if (thisPageManager.betting_mode == "inflationary") games[this.game.instance_id].add_option_to_vote(this.game_event_index, option_id);
+			else $('#principal_option_id_'+this.game.instance_id).val(option_id);
+		}
+		else window.location = '/wallet/'+games[this.game.instance_id].game_url_identifier+'/?action=start_bet&event_index='+this.game_event_index+'&option_id='+option_id;
 	};
 	this.db_id2option_index = function(db_option_id) {
 		for (var i=0; i<this.options.length; i++) {
@@ -227,30 +231,18 @@ var Game = function(pageManager, game_id, last_block_id, last_transaction_id, ma
 		var this_option = this_event.options[this_event.option_id2option_index[option_id]];
 		var option_display_name = this_option.name;
 		
-		if (this.refresh_page != "wallet") {
-			var add_option_url = '/wallet/'+games[this.instance_id].game_url_identifier+'/?action=start_bet&event_index='+event_index+'&option_id='+option_id;
-			if (thisuser) {
-				window.location = add_option_url;
-			}
-			else {
-				var ans = confirm("To bet, first log in to your wallet.");
-				if (ans) window.location = add_option_url;
-			}
+		var index_id = this.pageManager.bet_outputs.length;
+		
+		if (games[0].option_has_votingaddr[option_id]) {
+			this.pageManager.bet_outputs.push(new BetOutput(index_id, option_display_name, option_id, this_event.real_event_index));
+			$('#compose_bet_outputs').append('<div id="compose_bet_output_'+index_id+'" class="select_utxo">'+this.pageManager.render_option_output(index_id, option_display_name)+'</div>');
+			
+			this.pageManager.load_option_slider(index_id);
+			this.pageManager.refresh_compose_bets();
+			this.pageManager.refresh_output_amounts();
 		}
 		else {
-			var index_id = this.pageManager.bet_outputs.length;
-			
-			if (games[0].option_has_votingaddr[option_id]) {
-				this.pageManager.bet_outputs.push(new BetOutput(index_id, option_display_name, option_id, this_event.real_event_index));
-				$('#compose_bet_outputs').append('<div id="compose_bet_output_'+index_id+'" class="select_utxo">'+this.pageManager.render_option_output(index_id, option_display_name)+'</div>');
-				
-				this.pageManager.load_option_slider(index_id);
-				this.pageManager.refresh_compose_bets();
-				this.pageManager.refresh_output_amounts();
-			}
-			else {
-				alert("You can't vote for this candidate yet, you don't have a voting address for it.");
-			}
+			alert("You can't vote for this candidate yet, you don't have a voting address for it.");
 		}
 	};
 	this.set_user_game_event_index = function() {
