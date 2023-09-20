@@ -32,11 +32,11 @@ foreach ($my_bets as $my_bet) {
 			<div class="col-sm-6">
 				<div style="padding: 5px 0px;">
 					<font class="<?php echo $color; ?>text"><?php echo $my_bet['name']; ?></font>
-					<?php if ($bought_leverage != 1) echo ' &nbsp; (Leverage: '.$app->round_to($bought_leverage, 0, 7, true).'X)'; ?>
+					<?php if ($bought_leverage != 1) echo ' &nbsp; (Leverage: '.$app->round_to($bought_leverage, 0, EXCHANGE_RATE_SIGFIGS, true).'X)'; ?>
 					<br/>
 					<a target="_blank" href="/explorer/games/<?php echo $game->db_game['url_identifier'].'/utxo/'.$my_bet['tx_hash'].'/'.$my_bet['game_out_index']; ?>">
 						Paid <?php echo $game->display_coins($coin_stake, false, true, false); ?>
-					</a> @ <?php echo $app->round_to($asset_price_usd, 0, 7, true); ?> / contract
+					</a> @ <?php echo $app->round_to($asset_price_usd, 0, EXCHANGE_RATE_SIGFIGS, true); ?> / contract
 					<br/>
 					<?php
 					if ($my_bet['event_option_index'] != 0) echo '-';
@@ -69,9 +69,9 @@ foreach ($my_bets as $my_bet) {
 					?>
 					<br/>
 					<?php
-					$bought_price_usd_round = $app->round_to($bought_price_usd, 0, 7, false);
-					$track_price_usd_round = $app->round_to($track_price_usd, 0, 7, false);
-					echo "USD/".$event->db_event['track_name_short'].": ".$app->round_to(1/$bought_price_usd_round, 0, 7, true)." &rarr; ".$app->round_to(1/$track_price_usd_round, 0, 7, true);
+					$bought_price_usd_round = $app->round_to($bought_price_usd, 0, EXCHANGE_RATE_SIGFIGS, false);
+					$track_price_usd_round = $app->round_to($track_price_usd, 0, EXCHANGE_RATE_SIGFIGS, false);
+					echo "USD/".$event->db_event['track_name_short'].": ".$app->round_to(1/$bought_price_usd_round, 0, EXCHANGE_RATE_SIGFIGS, true)." &rarr; ".$app->round_to(1/$track_price_usd_round, 0, EXCHANGE_RATE_SIGFIGS, true);
 					?>
 				</div>
 			</div>

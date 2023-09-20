@@ -3,6 +3,8 @@ $pageload_start_time = microtime(true);
 require_once(dirname(dirname(__FILE__))."/models/AppSettings.php");
 AppSettings::load();
 
+define('EXCHANGE_RATE_SIGFIGS', 6);
+
 if (!AppSettings::runningFromCommandline() && !empty(AppSettings::getParam('restrict_ip_address'))) {
 	if ($_SERVER['REMOTE_ADDR'] != AppSettings::getParam('restrict_ip_address')) {
 		header('HTTP/1.1 503 Service Temporarily Unavailable');

@@ -279,9 +279,9 @@ if ($event->db_event['payout_rule'] == "linear") {
 	
 	$track_price_usd_round = (string) $track_price_usd;
 	if (isset($track_price_usd) && $last_block_id < $event->db_event['event_payout_block']) {
-		$track_price_usd_round = $app->round_to($track_price_usd, 0, 7, false);
-		$track_price_usd_round_str = $app->round_to($track_price_usd, 0, 7, true);
-		echo "Market price: &nbsp; $".$track_price_usd_round_str." &nbsp; (USD/".$event->db_event['track_name_short']." ".$app->round_to(1/$track_price_usd_round, 0, 7, true).")";
+		$track_price_usd_round = $app->round_to($track_price_usd, 0, EXCHANGE_RATE_SIGFIGS, false);
+		$track_price_usd_round_str = $app->round_to($track_price_usd, 0, EXCHANGE_RATE_SIGFIGS, true);
+		echo "Market price: &nbsp; $".$track_price_usd_round_str." &nbsp; (USD/".$event->db_event['track_name_short']." ".$app->round_to(1/$track_price_usd_round, 0, EXCHANGE_RATE_SIGFIGS, true).")";
 		if (time()-$track_price_info['time'] >= 60*30) echo ' &nbsp; <font class="redtext">'.$app->format_seconds(time()-$track_price_info['time'])." ago</font>";
 		echo "<br/>\n";
 	}
@@ -292,13 +292,13 @@ if ($event->db_event['payout_rule'] == "linear") {
 	if ($event_effective_coins > 0) {
 		$buy_pos_payout_frac = $buy_pos_effective_coins/$event_effective_coins;
 		$our_buy_price = $event->db_event['track_min_price'] + $buy_pos_payout_frac*($event->db_event['track_max_price']-$event->db_event['track_min_price']);
-		$our_buy_price_round = $app->round_to($our_buy_price, 0, 7, false);
-		$our_buy_price_round_str = $app->round_to($our_buy_price, 0, 7, true);
+		$our_buy_price_round = $app->round_to($our_buy_price, 0, EXCHANGE_RATE_SIGFIGS, false);
+		$our_buy_price_round_str = $app->round_to($our_buy_price_round, 0, EXCHANGE_RATE_SIGFIGS, true);
 		
 		if ($last_block_id < $event->db_event['event_final_block']) echo 'Buy here for:';
 		else echo 'Bought at:';
 		echo ' &nbsp; $'.$our_buy_price_round_str;
-		if ($our_buy_price_round > 0) echo " &nbsp; (USD/".$event->db_event['track_name_short']." ".$app->round_to(1/$our_buy_price_round, 0, 7, true).")";
+		if ($our_buy_price_round > 0) echo " &nbsp; (USD/".$event->db_event['track_name_short']." ".$app->round_to(1/$our_buy_price_round, 0, EXCHANGE_RATE_SIGFIGS, true).")";
 		echo "<br/>\n";
 	}
 	

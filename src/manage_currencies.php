@@ -55,7 +55,7 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 								<td>
 									<?php
 									if (!empty($price_info['time'])){
-										echo $display_currency['abbreviation']."/".$currency['abbreviation']." &nbsp; ".$app->round_to(1/$price_info['exchange_rate'], false, 7, true)." &nbsp; (".$app->round_to($price_info['exchange_rate'], false, 7, true).")";
+										echo $display_currency['abbreviation']."/".$currency['abbreviation']." &nbsp; ".$app->round_to(1/$price_info['exchange_rate'], false, EXCHANGE_RATE_SIGFIGS, true)." &nbsp; (".$app->round_to($price_info['exchange_rate'], false, EXCHANGE_RATE_SIGFIGS, true).")";
 									}
 									?>
 								</td>

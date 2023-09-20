@@ -3142,14 +3142,14 @@ class App {
 		if ($div_td == 'div') $this_bet_html .= "</div>\n";
 		else $this_bet_html .= "&nbsp;&nbsp;</td>\n";
 		
-		$track_pay_price_round = $this->round_to($track_pay_price, 0, 7, false);
-		$track_pay_price_round_str = $this->round_to($track_pay_price, 0, 7, true);
-		$track_pay_price_inv_str = $this->round_to(1/$track_pay_price_round, 0, 7, true);
-		$bought_price_usd_round = $this->round_to($bought_price_usd, 0, 7, false);
-		$bought_price_usd_round_str = $this->round_to($bought_price_usd, 0, 7, true);
-		$bought_price_inv_str = $this->round_to(1/$bought_price_usd_round, 0, 7, true);
+		$track_pay_price_round = $this->round_to($track_pay_price, 0, EXCHANGE_RATE_SIGFIGS, false);
+		$track_pay_price_round_str = $this->round_to($track_pay_price, 0, EXCHANGE_RATE_SIGFIGS, true);
+		$track_pay_price_inv_str = $this->round_to(1/$track_pay_price_round, 0, EXCHANGE_RATE_SIGFIGS, true);
+		$bought_price_usd_round = $this->round_to($bought_price_usd, 0, EXCHANGE_RATE_SIGFIGS, false);
+		$bought_price_usd_round_str = $this->round_to($bought_price_usd, 0, EXCHANGE_RATE_SIGFIGS, true);
+		$bought_price_inv_str = $this->round_to(1/$bought_price_usd_round, 0, EXCHANGE_RATE_SIGFIGS, true);
 		
-		$cell_title = "Leverage: ".$this->round_to($bought_leverage, 0, 7, true)."X, ".($bet['event_option_index'] == 0 ? "Bought" : "Sold")." @ USD/".$bet['track_name_short'].": ".$bought_price_inv_str;
+		$cell_title = "Leverage: ".$this->round_to($bought_leverage, 0, EXCHANGE_RATE_SIGFIGS, true)."X, ".($bet['event_option_index'] == 0 ? "Bought" : "Sold")." @ USD/".$bet['track_name_short'].": ".$bought_price_inv_str;
 		if ($div_td == 'div') $this_bet_html .= "<div class=\"col-md-2\" title='".$cell_title."'>";
 		else $this_bet_html .= "<td title='".$cell_title."'>";
 		$this_bet_html .= str_replace(" ", "&nbsp;", $bet['option_name']);
