@@ -600,12 +600,15 @@ class App {
 		else return (pow(10, $number_digits - $significant_digits + 1)) * round($number/(pow(10, $number_digits - $significant_digits + 1)));
 	}
 
-	public function format_bignum($number, $err_lower=true) {
+	public function format_bignum($start_number, $err_lower=true, $significant_digits=6) {
+		$number = $start_number;
 		if ($number >= 0) $sign = "";
 		else $sign = "-";
 		
+		if ($number >= pow(10, 5)) $significant_digits = min(9, $significant_digits);
+		
 		$number = abs($number);
-		if ($number > 1) $number = $this->to_significant_digits($number, 6, $err_lower);
+		$number = $this->to_significant_digits($number, $significant_digits, $err_lower);
 		
 		if ($number >= pow(10, 9)) {
 			return $sign.($number/pow(10, 9))."B";
@@ -3137,7 +3140,7 @@ class App {
 		if ($div_td == 'div') $this_bet_html = "<div class=\"col-md-1\">";
 		else $this_bet_html = '<td>';
 		
-		$this_bet_html .= "<a href=\"".AppSettings::getParam('base_url')."/explorer/games/".$game->db_game['url_identifier']."/utxo/".$bet['tx_hash']."/".$bet['game_out_index']."\">".$this->format_bignum($effective_paid/pow(10, $game->db_game['decimal_places']))."&nbsp;".$game->db_game['coin_abbreviation']."</a>";
+		$this_bet_html .= "<a href=\"".AppSettings::getParam('base_url')."/explorer/games/".$game->db_game['url_identifier']."/utxo/".$bet['tx_hash']."/".$bet['game_out_index']."\">".str_replace(" ", "&nbsp;", $game->display_coins($effective_paid, true, false, false))."</a>";
 		
 		if ($div_td == 'div') $this_bet_html .= "</div>\n";
 		else $this_bet_html .= "&nbsp;&nbsp;</td>\n";
@@ -3188,7 +3191,7 @@ class App {
 		
 		if ($div_td == 'div') $this_bet_html .= "<div class=\"col-md-3\">";
 		else $this_bet_html .= "<td>";
-		$this_bet_html .= $this->format_bignum($fair_io_value/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_abbreviation']." &nbsp; ";
+		$this_bet_html .= $game->display_coins($fair_io_value, true, false, false)." &nbsp; ";
 		if ($bet_net_delta >= 0) $this_bet_html .= '<font class="greentext">+';
 		else $this_bet_html .= '<font class="redtext">-';
 		$this_bet_html .= $this->format_bignum(abs($bet_net_delta)/pow(10, $game->db_game['decimal_places']));

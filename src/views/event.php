@@ -258,7 +258,7 @@ if ($game->db_game['inflation'] == "exponential") {
 			$confirmed_equivalent_contracts = $confirmed_coins/$two_sided_contract_price/pow(10,$game->db_game['decimal_places']);
 			$unconfirmed_equivalent_contracts = $unconfirmed_coins/$two_sided_contract_price/pow(10,$game->db_game['decimal_places']);
 			
-			echo "<p>".$app->format_bignum($confirmed_equivalent_contracts, false)." ".$event->db_event['track_name_short']." issued at $".$app->format_bignum($two_sided_contract_price)." per contract";
+			echo "<p>".$app->format_bignum($confirmed_equivalent_contracts, false)." ".$event->db_event['track_name_short']." issued at $".$app->format_bignum($two_sided_contract_price, false)." per contract";
 			if ($unconfirmed_coins > 0) echo " +&nbsp;".$app->format_bignum($unconfirmed_equivalent_contracts, false)."&nbsp;unconfirmed&nbsp;".$event->db_event['track_name_short']."<br/>\n";
 			echo " (".str_replace(" ", "&nbsp;", $game->display_coins($confirmed_coins+$unconfirmed_coins, false, false, false)).")";
 			echo "</p>\n";
