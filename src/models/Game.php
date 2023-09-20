@@ -604,20 +604,23 @@ class Game {
 					$ref_currency = $this->blockchain->app->get_currency_by_abbreviation($db_event['track_name_short']);
 					$ref_price_info = $this->blockchain->app->exchange_rate_between_currencies(1, $ref_currency['currency_id'], time(), $reference_currency['currency_id']);
 					$ref_price_usd = max($db_event['track_min_price'], min($db_event['track_max_price'], $ref_price_info['exchange_rate']));
+					$ref_price_usd_round = $this->blockchain->app->round_to($ref_price_usd, 0, EXCHANGE_RATE_SIGFIGS, false);
 				}
 				$html .= " &nbsp;&nbsp; ";
 				
 				$html .= "<div style='display: inline-block; min-width: 190px;'>".$db_event['track_name_short']." &nbsp; ";
 				if ($event_effective_bets > 0) {
 					$our_buy_price = ($buy_stake/$event_effective_bets)*($db_event['track_max_price']-$db_event['track_min_price'])+$db_event['track_min_price'];
-					$html .= "$".$this->blockchain->app->round_to($our_buy_price, 2, 4, true)." &rarr; \n";
+					$our_buy_price_round = $this->blockchain->app->round_to($our_buy_price, 0, EXCHANGE_RATE_SIGFIGS, false);
+					$html .= "$".$this->blockchain->app->round_to($our_buy_price, 0, EXCHANGE_RATE_SIGFIGS, true)." &rarr; \n";
 				}
-				$html .= "$".$this->blockchain->app->round_to($ref_price_usd, 2, 4, true);
+				$html .= "$".$this->blockchain->app->round_to($ref_price_usd, 0, EXCHANGE_RATE_SIGFIGS, true);
 				$html .= "</div>\n";
 				
 				if ($event_effective_bets > 0) {
-					$pct_gain = 100*($ref_price_usd/$our_buy_price - 1);
-					$pct_gain_str = $this->blockchain->app->round_to(abs($pct_gain), 0, EXCHANGE_RATE_SIGFIGS, true);
+					if ($ref_price_usd_round == $our_buy_price_round) $pct_gain = 0;
+					else $pct_gain = 100*($ref_price_usd/$our_buy_price - 1);
+					$pct_gain_str = $this->blockchain->app->round_to(abs($pct_gain), 0, 4, true);
 					
 					if ($pct_gain >= 0) $html .= ' &nbsp; <font class="greentext">+'.$pct_gain_str."%</font>\n";
 					else $html .= ' &nbsp; <font class="redtext">-'.$pct_gain_str."%</font>\n";
