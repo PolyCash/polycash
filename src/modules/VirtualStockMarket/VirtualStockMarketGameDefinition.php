@@ -67,6 +67,7 @@ class VirtualStockMarketGameDefinition {
 			"default_payout_rule": "linear",
 			"view_mode": "default",
 			"order_options_by": "option_index",
+			"order_events_by": "event_index",
 			"escrow_amounts": [
 				{
 					"type": "dynamic",

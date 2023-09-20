@@ -317,7 +317,9 @@ if ($event->db_event['payout_rule'] == "linear") {
 	if ((string)$event->db_event['track_payout_price'] != "") {
 		if ($our_buy_price) $pct_gain = 100*($event->db_event['track_payout_price']/$our_buy_price-1);
 		else $pct_gain = 0;
-		echo "Paid out at: &nbsp; $".$app->format_bignum($event->db_event['track_payout_price'])."<br/>\n";
+		echo "Paid out at: &nbsp; $".$app->format_bignum($event->db_event['track_payout_price']);
+		echo " &nbsp; (USD/".$event->db_event['track_name_short']." ".$app->round_to(1/$event->db_event['track_payout_price'], 0, EXCHANGE_RATE_SIGFIGS, true).")";
+		echo "<br/>\n";
 	}
 	else if (!isset($track_price_usd)) $pct_gain = null;
 	else if ($our_buy_price > 0) {

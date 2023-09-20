@@ -82,6 +82,7 @@ if (!empty($_REQUEST['filter_date'])) {
 if (!empty($_REQUEST['filter_term'])) {
 	$filter_arr['term'] = urldecode($_REQUEST['filter_term']);
 }
+$filter_arr['order_by'] = $game->db_game['order_events_by'];
 
 $set_options_js = "";
 $output['rendered_events'] = [];

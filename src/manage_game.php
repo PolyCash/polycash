@@ -673,6 +673,14 @@ else {
 											</select>
 										</div>
 										<div class="form-group">
+											<label for="game_form_order_events_by">Order events by:</label>
+											<select class="form-control" id="game_form_order_events_by">
+												<option value="">-- Please Select --</option>
+												<option value="event_index">Event index ascending</option>
+												<option value="volume">Betting volume descending</option>
+											</select>
+										</div>
+										<div class="form-group">
 											<label for="game_form_default_betting_mode">Default betting mode:</label>
 											<select class="form-control" id="game_form_default_betting_mode">
 												<option value="">-- Please Select --</option>

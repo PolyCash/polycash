@@ -1052,7 +1052,7 @@ class Game {
 			if (empty($sample_block) || $last_block['block_id'] == $sample_block['block_id']) $time_per_block = 0;
 			else $time_per_block = ($last_block['time_loaded']-$sample_block['time_loaded'])/($last_block['block_id']-$sample_block['block_id']);
 			
-			$html .= "<p>Loading ".$this->blockchain->app->format_bignum($missing_game_blocks)." game block";
+			$html .= "<p>Loading ".number_format($missing_game_blocks)." game block";
 			if ($missing_game_blocks != 1) $html .= "s";
 			
 			if ($missing_game_blocks > 1) {
@@ -1225,7 +1225,12 @@ class Game {
 		if (!empty($filter_arr['require_option_block_rule'])) {
 			$events_q .= " AND ev.option_block_rule IS NOT NULL";
 		}
-		$events_q .= " AND (ev.event_starting_time IS NULL OR ev.event_starting_time < ".AppSettings::sqlNow().") AND (ev.event_final_time IS NULL OR ev.event_final_time > ".AppSettings::sqlNow().") ORDER BY ev.event_final_time ASC, ev.event_index ASC;";
+		$events_q .= " AND (ev.event_starting_time IS NULL OR ev.event_starting_time < ".AppSettings::sqlNow().") AND (ev.event_final_time IS NULL OR ev.event_final_time > ".AppSettings::sqlNow().") ORDER BY ";
+		$order_by_q = "ev.event_final_time ASC, ev.event_index ASC";
+		if (!empty($filter_arr['order_by'])) {
+			if ($filter_arr['order_by'] == "volume") $order_by_q = "(ev.sum_score+ev.sum_unconfirmed_score+ev.destroy_score+ev.sum_unconfirmed_destroy_score) DESC, ev.event_index ASC";
+		}
+		$events_q .= $order_by_q;
 		$db_events = $this->blockchain->app->run_query($events_q, $events_params);
 		
 		while ($db_event = $db_events->fetch()) {

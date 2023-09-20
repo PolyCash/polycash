@@ -49,6 +49,7 @@ class BetcoinGameDefinition {
 			"default_payout_rule": "binary",
 			"view_mode": "default",
 			"order_options_by": "option_index",
+			"order_events_by": "event_index",
 			"target_option_block_score": 90,
 			"escrow_amounts": []
 		}';

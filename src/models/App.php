@@ -432,6 +432,11 @@ class App {
 		if (is_resource($set_game_def_process)) $process_count++;
 		else $html .= "Failed to start a process for caching game definitions.\n";
 		
+		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/set_cached_game_values.php"';
+		$set_game_def_process = $this->run_shell_command($cmd, $print_debug);
+		if (is_resource($set_game_def_process)) $process_count++;
+		else $html .= "Failed to start a process for caching game values.\n";
+		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/process_target_balances.php"';
 		$target_balances_process = $this->run_shell_command($cmd, $print_debug);
 		if (is_resource($target_balances_process)) $process_count++;
@@ -605,7 +610,7 @@ class App {
 		if ($number >= 0) $sign = "";
 		else $sign = "-";
 		
-		if ($number >= pow(10, 5)) $significant_digits = min(9, $significant_digits);
+		if ($number >= pow(10, 5)) $significant_digits = min(6, $significant_digits);
 		
 		$number = abs($number);
 		$number = $this->to_significant_digits($number, $significant_digits, $err_lower);
@@ -616,7 +621,7 @@ class App {
 		else if ($number >= pow(10, 6)) {
 			return $sign.($number/pow(10, 6))."M";
 		}
-		else if ($number > pow(10, 5)) {
+		else if ($number >= pow(10, 5)) {
 			return $sign.($number/pow(10, 3))."k";
 		}
 		else return $sign.rtrim(rtrim(number_format(sprintf('%.8F', $number), 8), '0'), ".");
@@ -1753,6 +1758,7 @@ class App {
 			['int', 'default_payout_block_delay', true],
 			['string', 'view_mode', true],
 			['string', 'order_options_by', true],
+			['string', 'order_events_by', true],
 			['float', 'target_option_block_score', true],
 		];
 	}

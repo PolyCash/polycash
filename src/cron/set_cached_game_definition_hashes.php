@@ -19,8 +19,8 @@ if ($app->running_as_admin()) {
 	if (!$process_locked || $only_game_id) {
 		$app->set_site_constant($process_lock_name, getmypid());
 		
-		$script_target_time = 549;
-		$loop_target_time = 30;
+		$script_target_time = 580;
+		$loop_target_time = 15;
 		$blockchains = [];
 		
 		do {
@@ -37,14 +37,12 @@ if ($app->running_as_admin()) {
 				
 				if ($running_game->db_game['save_every_definition'] || $only_game_id) GameDefinition::set_cached_definition_hashes($running_game);
 				
-				$running_game->set_cached_fields();
-				
 				if ($print_debug) echo "Set ".$running_game->db_game['name']." at ".round(microtime(true)-$loop_start_time, 8)."\n";
 			}
 			
 			$loop_stop_time = microtime(true);
 			$loop_time = $loop_stop_time-$loop_start_time;
-			$loop_target_time = max($loop_target_time, $loop_time*5);
+			$loop_target_time = max($loop_target_time, $loop_time*1.5);
 			
 			if ($loop_time < $loop_target_time) {
 				$sleep_usec = round(pow(10,6)*($loop_target_time - $loop_time));

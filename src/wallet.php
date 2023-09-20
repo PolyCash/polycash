@@ -326,6 +326,7 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 	$faucet_io = $game->check_faucet($user_game);
 	
 	$filter_arr['date'] = false;
+	$filter_arr['order_by'] = $game->db_game['order_events_by'];
 	$event_ids = "";
 	list($new_event_js, $new_event_html) = $game->new_event_js(0, $thisuser, $filter_arr, $event_ids, true);
 	?>

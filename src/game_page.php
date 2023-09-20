@@ -81,7 +81,7 @@ else $exchange_rate = 0;
 		</div>
 	</div>
 	<?php
-	$filter_arr = false;
+	$filter_arr = ["order_by" => $game->db_game['order_events_by']];
 	$event_ids = "";
 	list($new_event_js, $new_event_html) = $game->new_event_js(0, $thisuser, $filter_arr, $event_ids, true);
 	?>

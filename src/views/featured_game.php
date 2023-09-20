@@ -4,7 +4,7 @@ $blockchain_last_block_id = $blockchain->last_block_id();
 $db_last_block = $blockchain->fetch_block_by_id($blockchain_last_block_id);
 $current_round_id = $game->block_to_round($blockchain_last_block_id+1);
 
-$filter_arr = false;
+$filter_arr = ["order_by" => $game->db_game['order_events_by']];
 $event_ids = "";
 list($new_event_js, $new_event_html) = $game->new_event_js($counter, $user, $filter_arr, $event_ids, true);
 

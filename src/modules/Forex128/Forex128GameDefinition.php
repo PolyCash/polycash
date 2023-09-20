@@ -51,6 +51,7 @@ class Forex128GameDefinition {
 			"default_payout_rule": "linear",
 			"view_mode": "default",
 			"order_options_by": "option_index",
+			"order_events_by": "volume",
 			"escrow_amounts": [
 				{
 					"type": "dynamic",
