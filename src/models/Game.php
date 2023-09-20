@@ -574,12 +574,12 @@ class Game {
 					
 					if ($event_effective_bets > 0) {
 						$winner_pct = $winning_effective_coins/$event_effective_bets;
-						$html .= round(100*$winner_pct, 2)."% &nbsp;&nbsp; ";
+						$html .= $this->blockchain->app->round_to(100*$winner_pct, 0, EXCHANGE_RATE_SIGFIGS, true)."% &nbsp;&nbsp; ";
 					}
 					
 					if ($winning_effective_coins > 0) {
 						$winner_odds = $db_event['payout_rate']*$event_effective_bets/$winning_effective_coins;
-						$html .= "x".$this->blockchain->app->round_to($winner_odds, 2, 4, true)." &nbsp;&nbsp; ";
+						$html .= "x".$this->blockchain->app->round_to($winner_odds, 0, EXCHANGE_RATE_SIGFIGS, true)." &nbsp;&nbsp; ";
 					}
 					
 					$html .= $db_event['winner_name'];
@@ -614,10 +614,11 @@ class Game {
 				$html .= "</div>\n";
 				
 				if ($event_effective_bets > 0) {
-					$pct_gain = round(100*($ref_price_usd/$our_buy_price - 1), 2);
+					$pct_gain = 100*($ref_price_usd/$our_buy_price - 1);
+					$pct_gain_str = $this->blockchain->app->round_to(abs($pct_gain), 0, EXCHANGE_RATE_SIGFIGS, true);
 					
-					if ($pct_gain >= 0) $html .= ' &nbsp; <font class="greentext">+'.$pct_gain."%</font>\n";
-					else $html .= ' &nbsp; <font class="redtext">-'.abs($pct_gain)."%</font>\n";
+					if ($pct_gain >= 0) $html .= ' &nbsp; <font class="greentext">+'.$pct_gain_str."%</font>\n";
+					else $html .= ' &nbsp; <font class="redtext">-'.$pct_gain_str."%</font>\n";
 				}
 			}
 			$html .= "</div>";
