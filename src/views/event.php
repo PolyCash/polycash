@@ -108,8 +108,20 @@ else {
 }
 
 echo "Blocks: ";
-echo "<a target=\"_blank\" href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$event->db_event['event_starting_block']."\">".$event->db_event['event_starting_block']."</a> ... <a target=\"_blank\" href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$event->db_event['event_final_block']."\">".$event->db_event['event_final_block']."</a>";
-if ($event->db_event['event_payout_block'] != $event->db_event['event_final_block']) echo " ... <a target=\"_blank\" href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$event->db_event['event_payout_block']."\">".$event->db_event['event_payout_block']."</a>";
+if ($last_block_id >= $event->db_event['event_starting_block']) echo "<a target=\"_blank\" href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$event->db_event['event_starting_block']."\">";
+echo $event->db_event['event_starting_block'];
+if ($last_block_id >= $event->db_event['event_starting_block']) echo "</a>";
+echo " ... ";
+if ($last_block_id >= $event->db_event['event_final_block']) echo "<a target=\"_blank\" href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$event->db_event['event_final_block']."\">";
+echo $event->db_event['event_final_block'];
+if ($last_block_id >= $event->db_event['event_final_block']) echo "</a>";
+
+if ($event->db_event['event_payout_block'] != $event->db_event['event_final_block']) {
+	echo " ... ";
+	if ($last_block_id >= $event->db_event['event_payout_block']) echo "<a target=\"_blank\" href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$event->db_event['event_payout_block']."\">";
+	echo $event->db_event['event_payout_block'];
+	if ($last_block_id >= $event->db_event['event_payout_block']) echo "</a>";
+}
 echo "<br/>\n";
 
 if ($event->db_event['event_starting_block'] > $last_block_id+1) {
