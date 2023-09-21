@@ -418,6 +418,7 @@ var Game = function(pageManager, game_id, last_block_id, last_transaction_id, ma
 							
 							if (thisPageManager.scroll_to_event_index_on_refresh) {
 								var event_pos = this.event_index_to_event_pos(thisPageManager.scroll_to_event_index_on_refresh);
+								console.log("Refreshed page, now scrolling to ", thisPageManager.scroll_to_event_index_on_refresh, event_pos);
 								if (event_pos !== null) this.scroll_to_event_by_pos(event_pos);
 								thisPageManager.scroll_to_event_index_on_refresh = null;
 							}
@@ -456,7 +457,7 @@ var Game = function(pageManager, game_id, last_block_id, last_transaction_id, ma
 			var scrollFromTop = $('#game'+this.instance_id+'_event'+event_pos).position().top-40;
 			console.log("Scrolling to event in position "+event_pos+" ("+scrollFromTop+")");
 			$('.game_events_long').scrollTop(scrollFromTop);
-		}.bind(this), 400);
+		}.bind(this), 800);
 	};
 	this.event_index_to_event_pos = function(event_index) {
 		var event_pos = null;

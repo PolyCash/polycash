@@ -452,6 +452,11 @@ class App {
 		if (is_resource($target_balances_process)) $process_count++;
 		else $html .= "Failed to start a process for address backups.\n";
 		
+		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/integrity_checks.php"';
+		$target_balances_process = $this->run_shell_command($cmd, $print_debug);
+		if (is_resource($target_balances_process)) $process_count++;
+		else $html .= "Failed to start a process for integrity checks.\n";
+		
 		$html .= "Started ".$process_count." background processes.\n";
 		return $html;
 	}
