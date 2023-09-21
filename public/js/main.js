@@ -123,6 +123,7 @@ var GameEvent = function(game, game_event_index, event_id, real_event_index, num
 	
 	this.start_vote = function(option_id) {
 		if (games[this.game.instance_id].refresh_page == "wallet") {
+			thisPageManager.last_event_index_clicked = this.real_event_index;
 			if (thisPageManager.betting_mode == "inflationary") games[this.game.instance_id].add_option_to_vote(this.game_event_index, option_id);
 			else $('#principal_option_id_'+this.game.instance_id).val(option_id);
 		}
@@ -229,21 +230,22 @@ var Game = function(pageManager, game_id, last_block_id, last_transaction_id, ma
 		$('#principal_option_id_'+this.instance_id).val(option_id);
 		var this_event = this.events[event_index];
 		var this_option = this_event.options[this_event.option_id2option_index[option_id]];
-		var option_display_name = this_option.name;
-		
-		var index_id = this.pageManager.bet_outputs.length;
-		
-		if (games[0].option_has_votingaddr[option_id]) {
-			this.pageManager.bet_outputs.push(new BetOutput(index_id, option_display_name, option_id, this_event.real_event_index));
-			$('#compose_bet_outputs').append('<div id="compose_bet_output_'+index_id+'" class="select_utxo">'+this.pageManager.render_option_output(index_id, option_display_name)+'</div>');
+		if (this_option) {
+			var option_display_name = this_option.name;
 			
-			this.pageManager.load_option_slider(index_id);
-			this.pageManager.refresh_compose_bets();
-			this.pageManager.refresh_output_amounts();
+			var index_id = this.pageManager.bet_outputs.length;
+			
+			if (games[0].option_has_votingaddr[option_id]) {
+				this.pageManager.bet_outputs.push(new BetOutput(index_id, option_display_name, option_id, this_event.real_event_index));
+				$('#compose_bet_outputs').append('<div id="compose_bet_output_'+index_id+'" class="select_utxo">'+this.pageManager.render_option_output(index_id, option_display_name)+'</div>');
+				
+				this.pageManager.load_option_slider(index_id);
+				this.pageManager.refresh_compose_bets();
+				this.pageManager.refresh_output_amounts();
+			}
+			else alert("You can't vote for this option yet, you don't have a staking address for it.");
 		}
-		else {
-			alert("You can't vote for this candidate yet, you don't have a voting address for it.");
-		}
+		else console.log("Option was added to a bet but failed to load.");
 	};
 	this.set_user_game_event_index = function() {
 		$.ajax({
@@ -413,6 +415,12 @@ var Game = function(pageManager, game_id, last_block_id, last_transaction_id, ma
 								
 								this.pageManager.refresh_output_amounts();
 							}
+							
+							if (thisPageManager.scroll_to_event_index_on_refresh) {
+								var event_pos = this.event_index_to_event_pos(thisPageManager.scroll_to_event_index_on_refresh);
+								if (event_pos !== null) this.scroll_to_event_by_pos(event_pos);
+								thisPageManager.scroll_to_event_index_on_refresh = null;
+							}
 						}
 						
 						if (typeof check_activity_response.chart_html != "undefined") {
@@ -440,6 +448,27 @@ var Game = function(pageManager, game_id, last_block_id, last_transaction_id, ma
 		this.refresh_if_needed();
 		this.game_loop_index++;
 		setTimeout(function() {this.game_loop_event()}.bind(this), 2000);
+	};
+	this.scroll_to_event_by_pos = function(event_pos) {
+		$('.game_events_long').scrollTop(0);
+		
+		setTimeout(function() {
+			var scrollFromTop = $('#game'+this.instance_id+'_event'+event_pos).position().top-40;
+			console.log("Scrolling to event in position "+event_pos+" ("+scrollFromTop+")");
+			$('.game_events_long').scrollTop(scrollFromTop);
+		}.bind(this), 400);
+	};
+	this.event_index_to_event_pos = function(event_index) {
+		var event_pos = null;
+		
+		for (var i=0; i<this.events.length; i++) {
+			if (this.events[i].real_event_index == event_index) {
+				event_pos = i;
+				i = this.events.length;
+			}
+		}
+		
+		return event_pos;
 	};
 };
 var User = function(id) {
@@ -1445,6 +1474,8 @@ var PageManager = function() {
 								this.set_input_amount_sums();
 								this.refresh_compose_bets();
 								this.refresh_output_amounts();
+								
+								this.scroll_to_event_index_on_refresh = this.last_event_index_clicked;
 							}.bind(this), remove_utxos_delay_ms);
 						}
 						else {
@@ -2583,7 +2614,9 @@ var PageManager = function() {
 			}
 		});
 	}
+	this.scroll_to_event_index_on_refresh = null;
 	this.submit_principal_bet = function() {
+		this.scroll_to_event_index_on_refresh = this.last_event_index_clicked;
 		$('#principal_bet_btn').html("Loading...");
 		
 		$.ajax({
@@ -2596,6 +2629,7 @@ var PageManager = function() {
 				fee: $('#principal_fee').val(),
 				synchronizer_token: this.synchronizer_token
 			},
+			context: this,
 			success: function(principal_bet_response) {
 				$('#principal_bet_btn').html('<i class="fas fa-check-circle"></i> &nbsp; Confirm Bet');
 				$('#principal_bet_message').html(principal_bet_response.message);

@@ -1228,7 +1228,11 @@ class Game {
 		$events_q .= " AND (ev.event_starting_time IS NULL OR ev.event_starting_time < ".AppSettings::sqlNow().") AND (ev.event_final_time IS NULL OR ev.event_final_time > ".AppSettings::sqlNow().") ORDER BY ";
 		$order_by_q = "ev.event_final_time ASC, ev.event_index ASC";
 		if (!empty($filter_arr['order_by'])) {
-			if ($filter_arr['order_by'] == "volume") $order_by_q = "(ev.sum_score+ev.sum_unconfirmed_score+ev.destroy_score+ev.sum_unconfirmed_destroy_score) DESC, ev.event_index ASC";
+			if ($filter_arr['order_by'] == "volume") {
+				$order_by_q = "(ev.destroy_score+ev.sum_unconfirmed_destroy_score";
+				if ($this->db_game['exponential_inflation_rate'] > 0) $order_by_q .= "+((ev.sum_score+ev.sum_unconfirmed_score)*".$this->blockchain->app->coins_per_vote($this->db_game).")";
+				$order_by_q .= ") DESC, ev.event_index ASC";
+			}
 		}
 		$events_q .= $order_by_q;
 		$db_events = $this->blockchain->app->run_query($events_q, $events_params);

@@ -425,16 +425,11 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 		if ($_REQUEST['action'] == "start_bet") {
 			?>
 			$(document).ready(function() {
-				var show_event_pos = null;
+				var show_event_pos = games[0].event_index_to_event_pos(<?php echo (int)$_REQUEST['event_index']; ?>);
+				console.log("Initialize with a bet, event pos: ", show_event_pos);
 				
-				for (var i=0; i<games[0].events.length; i++) {
-					if (games[0].events[i].real_event_index == <?php echo (int)$_REQUEST['event_index']; ?>) {
-						show_event_pos = i;
-						i = games[0].events.length;
-					}
-				}
 				if (show_event_pos !== null) {
-					$('.game_events_long').scrollTop($('#game0_event'+show_event_pos).position().top-40);
+					games[0].scroll_to_event_by_pos(show_event_pos);
 					games[0].add_option_to_vote(show_event_pos, <?php echo (int)$_REQUEST['option_id']; ?>);
 				}
 			});
