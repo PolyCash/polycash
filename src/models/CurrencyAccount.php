@@ -10,6 +10,9 @@ class CurrencyAccount {
 		'faucet_amount_each' => [
 			'editableInSettings' => true,
 		],
+		'join_txos_on_quantity' => [
+			'editableInSettings' => true,
+		],
 	];
 	
 	public static function updateAccount(&$app, &$account, $updateParams) {

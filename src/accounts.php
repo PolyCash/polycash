@@ -262,7 +262,8 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 		if (!empty($settings_account) && $settings_account['user_id'] == $thisuser->db_user['user_id']) {
 			$updateParams = [];
 			foreach (CurrencyAccount::$fieldsInfo as $fieldName => $fieldInfo) {
-				if (!empty($fieldInfo['editableInSettings']) && isset($_REQUEST[$fieldName])) $updateParams[$fieldName] = $_REQUEST[$fieldName];
+				if ((string)$_REQUEST[$fieldName] == "") $_REQUEST[$fieldName] = null;
+				if (!empty($fieldInfo['editableInSettings']) && array_key_exists($fieldName, $_REQUEST)) $updateParams[$fieldName] = $_REQUEST[$fieldName];
 			}
 			CurrencyAccount::updateAccount($app, $settings_account, $updateParams);
 		}
@@ -680,6 +681,23 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 											<label for="faucet_amount_each">How many <?php echo $account_game->db_game['coin_name_plural']; ?> should each person receive per faucet claim?</label>
 											<input type="text" class="form-control" id="faucet_amount_each" name="faucet_amount_each" value="<?php echo $account['faucet_amount_each']; ?>" />
 										</div>
+									</div>
+									<?php
+									$join_quantity_suggestions = [
+										10,
+										50,
+										100,
+										200
+									];
+									?>
+									<div class="form-group">
+										<label for="join_txos_on_quantity">Should TXOs be automatically joined to reduce your quantity of TXOs?</label>
+										<select class="form-control" name="join_txos_on_quantity">
+											<option value="">Do not join TXOs</option>
+											<?php foreach ($join_quantity_suggestions as $suggestion_qty) { ?>
+												<option value="<?php echo $suggestion_qty; ?>" <?php if ($account['join_txos_on_quantity'] == $suggestion_qty) echo 'selected="selected"'; ?>>Join in groups of <?php echo $suggestion_qty; ?></option>
+											<?php } ?>
+										</select>
 									</div>
 									<script type="text/javascript">
 									function faucet_donations_on_changed(selectEl) {

@@ -1393,7 +1393,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$bet_table_headers['linear'] = '
 						<div class="row">
 							<div class="col-md-1 boldtext">Amt Paid</div>
-							<div class="col-md-2 boldtext">Option Purchased</div>
+							<div class="col-md-2 boldtext">Asset Purchased</div>
 							<div class="col-md-3 boldtext">Position Purchased</div>
 							<div class="col-md-3 boldtext">Asset Performance</div>
 							<div class="col-md-3 boldtext">Position Performance</div>

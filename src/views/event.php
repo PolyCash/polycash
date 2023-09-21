@@ -279,7 +279,7 @@ if ($event->db_event['payout_rule'] == "linear") {
 	
 	$track_price_info = $app->exchange_rate_between_currencies(1, $track_entity['currency_id'], time(), $app->get_reference_currency()['currency_id']);
 	
-	if (isset($track_price_info['exchange_rate'])) $track_price_usd = max($event->db_event['track_min_price'], min($event->db_event['track_max_price'], $track_price_info['exchange_rate']));
+	if (isset($track_price_info['exchange_rate'])) $track_price_usd = $track_price_info['exchange_rate'];
 	else $track_price_usd = null;
 	
 	// For tracked asset events, the buy position is always the first option (min option ID)

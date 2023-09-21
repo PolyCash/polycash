@@ -457,6 +457,11 @@ class App {
 		if (is_resource($target_balances_process)) $process_count++;
 		else $html .= "Failed to start a process for integrity checks.\n";
 		
+		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/join_txos.php"';
+		$target_balances_process = $this->run_shell_command($cmd, $print_debug);
+		if (is_resource($target_balances_process)) $process_count++;
+		else $html .= "Failed to start a process for joining txos.\n";
+		
 		$html .= "Started ".$process_count." background processes.\n";
 		return $html;
 	}
