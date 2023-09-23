@@ -1343,7 +1343,7 @@ class App {
 			$blockchain = new Blockchain($this, $db_game['blockchain_id']);
 			$game = new Game($blockchain, $db_game['game_id']);
 			
-			if (!empty($game->db_game['cached_definition_hash']) && $game->db_game['cached_definition_time'] > time()-300) {
+			if (!empty($game->db_game['cached_definition_hash']) && $game->db_game['cached_definition_time'] >= time()-60) {
 				$display_def_hash = GameDefinition::shorten_game_def_hash($game->db_game['cached_definition_hash']);
 			}
 			else {

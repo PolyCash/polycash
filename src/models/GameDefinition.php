@@ -163,11 +163,13 @@ class GameDefinition {
 		}
 	}
 	
-	public static function set_cached_definition_hashes(&$game) {
+	public static function set_cached_definition_hashes(&$game, $print_debug=false) {
 		$show_internal_params = false;
 		
 		list($actual_game_def_hash, $actual_game_def) = self::fetch_game_definition($game, "actual", $show_internal_params, false);
 		self::check_set_game_definition($game->blockchain->app, $actual_game_def_hash, $actual_game_def);
+		
+		if ($print_debug) echo "Actual: ".$actual_game_def_hash."\n";
 		
 		if ($game->db_game['cached_definition_hash'] != $actual_game_def_hash) {
 			$game->blockchain->app->run_query("UPDATE games SET cached_definition_hash=:cached_definition_hash, cached_definition_time=:cached_definition_time WHERE game_id=:game_id;", [
@@ -180,6 +182,8 @@ class GameDefinition {
 		
 		list($defined_game_def_hash, $defined_game_def) = self::fetch_game_definition($game, "defined", $show_internal_params, false);
 		self::check_set_game_definition($game->blockchain->app, $defined_game_def_hash, $defined_game_def);
+		
+		if ($print_debug) echo "Defined: ".$defined_game_def_hash."\n";
 		
 		if ($game->db_game['defined_cached_definition_hash'] != $defined_game_def_hash) {
 			$game->blockchain->app->run_query("UPDATE games SET defined_cached_definition_hash=:defined_cached_definition_hash WHERE game_id=:game_id;", [

@@ -3250,7 +3250,7 @@ class Game {
 		return $html;
 	}
 	
-	public function set_event_blocks($user_id, $game_defined_event_id, $avoid_changing_completed_events = false) {
+	public function set_event_blocks($user_id, $game_defined_event_id, $avoid_changing_completed_events = false, $skip_record_migration=false) {
 		$log_text = "";
 		$last_block_id = $this->blockchain->last_block_id();
 		
@@ -3271,21 +3271,25 @@ class Game {
 		$log_text .= "Set blocks for ".count($event_arr)." events in ".$this->db_game['name'];
 		
 		if (count($event_arr) > 0) {
-			$show_internal_params = true;
+			$show_internal_params = false;
 			
-			list($initial_game_def_hash, $initial_game_def) = GameDefinition::fetch_game_definition($this, "defined", $show_internal_params, false);
-			GameDefinition::check_set_game_definition($this->blockchain->app, $initial_game_def_hash, $initial_game_def);
+			if (!$skip_record_migration) {
+				list($initial_game_def_hash, $initial_game_def) = GameDefinition::fetch_game_definition($this, "defined", $show_internal_params, false);
+				GameDefinition::check_set_game_definition($this->blockchain->app, $initial_game_def_hash, $initial_game_def);
+			}
 			
 			foreach ($event_arr as $gde) {
 				$this->set_gde_blocks_by_time($gde);
 			}
 			
-			list($final_game_def_hash, $final_game_def) = GameDefinition::fetch_game_definition($this, "defined", $show_internal_params, false);
-			GameDefinition::check_set_game_definition($this->blockchain->app, $final_game_def_hash, $final_game_def);
-			
-			GameDefinition::record_migration($this, $user_id, "set_blocks_by_ui", $show_internal_params, $initial_game_def, $final_game_def);
-			
-			GameDefinition::set_cached_definition_hashes($this);
+			if (!$skip_record_migration) {
+				list($final_game_def_hash, $final_game_def) = GameDefinition::fetch_game_definition($this, "defined", $show_internal_params, false);
+				GameDefinition::check_set_game_definition($this->blockchain->app, $final_game_def_hash, $final_game_def);
+				
+				GameDefinition::record_migration($this, $user_id, "set_blocks_by_ui", $show_internal_params, $initial_game_def, $final_game_def);
+				
+				GameDefinition::set_cached_definition_hashes($this);
+			}
 		}
 		return $log_text;
 	}

@@ -3,7 +3,7 @@ require_once(dirname(dirname(__FILE__))."/includes/connect.php");
 
 $script_start_time = microtime(true);
 
-$allowed_params = ['print_debug','game_id'];
+$allowed_params = ['print_debug','game_id', 'print_debug'];
 $app->safe_merge_argv_to_request($argv, $allowed_params);
 
 if ($app->running_as_admin()) {
@@ -35,7 +35,7 @@ if ($app->running_as_admin()) {
 				if (empty($blockchains[$db_running_game['blockchain_id']])) $blockchains[$db_running_game['blockchain_id']] = new Blockchain($app, $db_running_game['blockchain_id']);
 				$running_game = new Game($blockchains[$db_running_game['blockchain_id']], $db_running_game['game_id']);
 				
-				if ($running_game->db_game['save_every_definition'] || $only_game_id) GameDefinition::set_cached_definition_hashes($running_game);
+				GameDefinition::set_cached_definition_hashes($running_game, $print_debug);
 				
 				if ($print_debug) echo "Set ".$running_game->db_game['name']." at ".round(microtime(true)-$loop_start_time, 8)."\n";
 			}
