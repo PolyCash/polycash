@@ -383,7 +383,7 @@ if ($uri_parts[1] == "api") {
 				$api_output['last_block_id'] = $game->last_block_id();
 			}
 			else if ($uri_parts[3] == "definition") {
-				if (empty($game->db_game['events_until_block']) || $game->db_game['events_until_block'] < $last_block_id) {
+				if (empty($game->db_game['events_until_block']) || $game->last_block_id() < $last_block_id) {
 					$api_output['status_code'] = 2;
 					$api_output['message'] = "This game is currently loading.";
 				}
@@ -398,6 +398,7 @@ if ($uri_parts[1] == "api") {
 					else {
 						$show_internal_params = false;
 						list($game_def_hash, $game_def) = GameDefinition::fetch_game_definition($game, "actual", $show_internal_params, false);
+						GameDefinition::check_set_game_definition($app, $game_def_hash, $game_def);
 						
 						$api_output['status_code'] = 1;
 						$api_output['definition_hash'] = $game_def_hash;
