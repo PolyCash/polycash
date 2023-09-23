@@ -1213,7 +1213,7 @@ class Game {
 			'game_id' => $this->db_game['game_id'],
 			'block_id' => $block_id
 		];
-		$events_q = "SELECT *, sp.entity_name AS sport_name, lg.entity_name AS league_name FROM events ev LEFT JOIN entities sp ON ev.sport_entity_id=sp.entity_id LEFT JOIN entities lg ON ev.league_entity_id=lg.entity_id WHERE ev.game_id=:game_id AND ev.event_starting_block<=:block_id AND ev.event_final_block>=:block_id";
+		$events_q = "SELECT *, sp.entity_name AS sport_name, lg.entity_name AS league_name FROM events ev LEFT JOIN entities sp ON ev.sport_entity_id=sp.entity_id LEFT JOIN entities lg ON ev.league_entity_id=lg.entity_id WHERE ev.game_id=:game_id";
 		if (!empty($filter_arr['date'])) {
 			$events_q .= " AND DATE(ev.event_final_time)=:filter_date";
 			$events_params['filter_date'] = $filter_arr['date'];
@@ -1225,11 +1225,12 @@ class Game {
 		if (!empty($filter_arr['require_option_block_rule'])) {
 			$events_q .= " AND ev.option_block_rule IS NOT NULL";
 		}
-		$events_q .= " AND (ev.event_starting_time IS NULL OR ev.event_starting_time < ".AppSettings::sqlNow().") AND (ev.event_final_time IS NULL OR ev.event_final_time > ".AppSettings::sqlNow().") ORDER BY ";
-		$order_by_q = "ev.event_final_time ASC, ev.event_index ASC";
+		$events_q .= " AND (ev.event_starting_time < ".AppSettings::sqlNow()." OR (ev.event_starting_time IS NULL AND ev.event_starting_block<=:block_id))";
+		$events_q .= " AND (ev.event_final_time > ".AppSettings::sqlNow()." OR (ev.event_final_time IS NULL AND ev.event_final_block>=:block_id))";
+		$order_by_q = " ORDER BY ev.event_final_time ASC, ev.event_index ASC";
 		if (!empty($filter_arr['order_by'])) {
 			if ($filter_arr['order_by'] == "volume") {
-				$order_by_q = "(ev.destroy_score+ev.sum_unconfirmed_destroy_score";
+				$order_by_q = " ORDER BY ev.event_final_time ASC, (ev.destroy_score+ev.sum_unconfirmed_destroy_score";
 				if ($this->db_game['exponential_inflation_rate'] > 0) $order_by_q .= "+((ev.sum_score+ev.sum_unconfirmed_score)*".$this->blockchain->app->coins_per_vote($this->db_game).")";
 				$order_by_q .= ") DESC, ev.event_index ASC";
 			}
