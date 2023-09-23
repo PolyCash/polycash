@@ -383,13 +383,29 @@ if ($uri_parts[1] == "api") {
 				$api_output['last_block_id'] = $game->last_block_id();
 			}
 			else if ($uri_parts[3] == "definition") {
-				if (empty($game->db_game['events_until_block']) || $game->last_block_id() < $last_block_id) {
-					$api_output['status_code'] = 2;
-					$api_output['message'] = "This game is currently loading.";
+				$real_or_defined = "defined";
+				$real_or_defined_prefix = $real_or_defined == "real" ? "" : "defined_";
+				
+				$locked_loading = false;
+				
+				if ($real_or_defined == "real"){
+					if (empty($game->db_game['events_until_block']) || $game->last_block_id() < $last_block_id) {
+						$api_output['status_code'] = 2;
+						$api_output['message'] = "This game is currently loading.";
+						$locked_loading = true;
+					}
 				}
-				else {
+				else { // defined
+					if ($game->game_definition_is_locked()) {
+						$api_output['status_code'] = 4;
+						$api_output['message'] = "Game is locked for changes; please try again soon.";
+						$locked_loading = true;
+					}
+				}
+				
+				if (!$locked_loading) {
 					$client_needs_info = true;
-					if (!empty($_REQUEST['definition_hash']) && $_REQUEST['definition_hash'] == $game->db_game['cached_definition_hash']) $client_needs_info = false;
+					if (!empty($_REQUEST['definition_hash']) && $_REQUEST['definition_hash'] == $game->db_game[$real_or_defined_prefix.'cached_definition_hash']) $client_needs_info = false;
 					
 					if (!$client_needs_info) {
 						$api_output['status_code'] = 3;
@@ -397,7 +413,7 @@ if ($uri_parts[1] == "api") {
 					}
 					else {
 						$show_internal_params = false;
-						list($game_def_hash, $game_def) = GameDefinition::fetch_game_definition($game, "actual", $show_internal_params, false);
+						list($game_def_hash, $game_def) = GameDefinition::fetch_game_definition($game, $real_or_defined, $show_internal_params, false);
 						GameDefinition::check_set_game_definition($app, $game_def_hash, $game_def);
 						
 						$api_output['status_code'] = 1;
