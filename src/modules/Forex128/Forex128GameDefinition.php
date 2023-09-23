@@ -146,7 +146,7 @@ class Forex128GameDefinition {
 	}
 
 	public function regular_actions(&$game) {
-		if (empty($game->db_game['definitive_game_peer_id']) && is_file(dirname(__FILE__)."/Forex128Manager.php")) {
+		if (is_file(dirname(__FILE__)."/Forex128Manager.php")) {
 			include_once(dirname(__FILE__)."/Forex128Manager.php");
 			$manager = new Forex128Manager($this, $this->app, $game);
 			if (method_exists($manager, "regular_actions")) $manager->regular_actions();

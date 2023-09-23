@@ -310,6 +310,8 @@ class GameDefinition {
 					else {
 						$ref_from_event->outcome_index = null;
 						$ref_to_event->outcome_index = null;
+						$ref_from_event->track_payout_price = null;
+						$ref_to_event->track_payout_price = null;
 						
 						if (json_encode($ref_from_event) == json_encode($ref_to_event)) $event_differences['outcome_changed_events']++;
 						else $event_differences['other_changed_events']++;
@@ -347,7 +349,7 @@ class GameDefinition {
 			array_push($difference_summary_lines, "Blocks were changed in ".$differences['events']['block_changed_events']." event".($differences['events']['block_changed_events'] == 1 ? "" : "s"));
 		}
 		if ($differences['events']['outcome_changed_events'] > 0) {
-			array_push($difference_summary_lines, "Outcomes were set for ".$differences['events']['outcome_changed_events']." event".($differences['events']['outcome_changed_events'] == 1 ? "" : "s"));
+			array_push($difference_summary_lines, "Outcomes were changed for ".$differences['events']['outcome_changed_events']." event".($differences['events']['outcome_changed_events'] == 1 ? "" : "s"));
 		}
 		if ($differences['events']['other_changed_events'] > 0) {
 			array_push($difference_summary_lines, $differences['events']['other_changed_events']." event".($differences['events']['other_changed_events'] != 1 ? "s were" : " was")." changed");
