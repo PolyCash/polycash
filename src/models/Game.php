@@ -2422,16 +2422,37 @@ class Game {
 			}
 			
 			$payout_events = $this->events_by_payout_block($block_height);
-			$payout_resolved_event_ids = [];
-			foreach ($payout_events as $payout_event) {
-				$payout_event->pay_out_event();
-				if ((string)$payout_event->db_event['outcome_index'] !== "" || (string)$payout_event->db_event['track_payout_price'] !== "") {
-					array_push($payout_resolved_event_ids, $payout_event->db_event['event_id']);
-				}
-			}
 			
-			if (count($payout_resolved_event_ids) > 0) {
-				$this->blockchain->app->run_query("UPDATE transaction_game_ios SET is_resolved=1 WHERE event_id IN (".implode(",", $payout_resolved_event_ids).");");
+			if (count($payout_events) > 0) {
+				$show_internal_params = false;
+				list($initial_game_def_hash, $initial_game_def) = GameDefinition::fetch_game_definition($this, "defined", $show_internal_params, false);
+				GameDefinition::check_set_game_definition($this->blockchain->app, $initial_game_def_hash, $initial_game_def);
+				
+				$any_payout_changed_def = false;
+				$payout_resolved_event_ids = [];
+				
+				foreach ($payout_events as $payout_event) {
+					$payout_changed_def = $payout_event->pay_out_event();
+					
+					if ($payout_changed_def) $any_payout_changed_def = true;
+					
+					if ((string)$payout_event->db_event['outcome_index'] !== "" || (string)$payout_event->db_event['track_payout_price'] !== "") {
+						array_push($payout_resolved_event_ids, $payout_event->db_event['event_id']);
+					}
+				}
+				
+				if ($any_payout_changed_def) {
+					list($final_game_def_hash, $final_game_def) = GameDefinition::fetch_game_definition($this, "defined", $show_internal_params, false);
+					GameDefinition::check_set_game_definition($this->blockchain->app, $final_game_def_hash, $final_game_def);
+					
+					if ($initial_game_def_hash !== $final_game_def_hash) {
+						GameDefinition::record_migration($this, null, "set_outcomes", $show_internal_params, $initial_game_def, $final_game_def);
+					}
+				}
+				
+				if (count($payout_resolved_event_ids) > 0) {
+					$this->blockchain->app->run_query("UPDATE transaction_game_ios SET is_resolved=1 WHERE event_id IN (".implode(",", $payout_resolved_event_ids).");");
+				}
 			}
 			
 			$this->blockchain->app->run_query("UPDATE game_blocks SET locally_saved=1, time_loaded=:current_time, load_time=load_time+:add_load_time, max_game_io_index=:max_game_io_index WHERE game_block_id=:game_block_id;", [

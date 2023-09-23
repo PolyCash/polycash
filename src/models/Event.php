@@ -122,6 +122,8 @@ class Event {
 	}
 	
 	public function set_track_payout_price() {
+		$changed_game_definition = false;
+		
 		$db_block = $this->game->blockchain->fetch_block_by_id($this->db_event['event_payout_block']);
 		if ($db_block) $ref_time = $db_block['time_mined'];
 		else $ref_time = time();
@@ -131,17 +133,22 @@ class Event {
 		
 		$track_price_usd = $this->game->blockchain->app->to_significant_digits($track_price_info['exchange_rate'], 8);
 		
-		$this->game->blockchain->app->run_query("UPDATE events SET track_payout_price=:track_payout_price WHERE event_id=:event_id;", [
-			'track_payout_price' => $track_price_usd,
-			'event_id' => $this->db_event['event_id']
-		]);
-		$this->game->blockchain->app->run_query("UPDATE game_defined_events SET track_payout_price=:track_payout_price WHERE game_id=:game_id AND event_index=:event_index;", [
-			'track_payout_price' => $track_price_usd,
-			'game_id' => $this->game->db_game['game_id'],
-			'event_index' => $this->db_event['event_index']
-		]);
-		
-		$this->db_event['track_payout_price'] = $track_price_usd;
+		if ((string)$track_price_usd !== (string)$this->db_event['track_payout_price']) {
+			$this->game->blockchain->app->run_query("UPDATE events SET track_payout_price=:track_payout_price WHERE event_id=:event_id;", [
+				'track_payout_price' => $track_price_usd,
+				'event_id' => $this->db_event['event_id']
+			]);
+			$this->game->blockchain->app->run_query("UPDATE game_defined_events SET track_payout_price=:track_payout_price WHERE game_id=:game_id AND event_index=:event_index;", [
+				'track_payout_price' => $track_price_usd,
+				'game_id' => $this->game->db_game['game_id'],
+				'event_index' => $this->db_event['event_index']
+			]);
+			
+			$this->db_event['track_payout_price'] = $track_price_usd;
+			
+			$changed_game_definition = true;
+		}
+		else $changed_game_definition = false;
 	}
 	
 	public function new_refund_payout() {
@@ -166,47 +173,56 @@ class Event {
 		return $log_text;
 	}
 	
-	public function new_linear_payout() {
+	public function new_linear_payout($allow_change_def=true) {
+		$changed_game_definition = false;
 		$log_text = "";
 		
-		if (empty($this->db_event['track_payout_price'])) $this->set_track_payout_price();
+		if (empty($this->db_event['track_payout_price']) && $allow_change_def) {
+			$payout_price_changed_def = $this->set_track_payout_price();
+			if ($payout_price_changed_def) $changed_game_definition = true;
+		}
 		
-		list($inflationary_reward, $destroy_reward, $total_reward) = $this->event_rewards();
-		$coins_per_vote = $this->game->blockchain->app->coins_per_vote($this->game->db_game);
-		
-		$contract_size = $this->db_event['track_max_price']-$this->db_event['track_min_price'];
-		if ($this->db_event['track_payout_price'] > $this->db_event['track_max_price']) $long_contract_price = $contract_size;
-		else if ($this->db_event['track_payout_price'] < $this->db_event['track_min_price']) $long_contract_price = 0;
-		else $long_contract_price = $this->db_event['track_payout_price']-$this->db_event['track_min_price'];
-		
-		$long_payout_frac = $contract_size > 0 ? $long_contract_price/$contract_size : 0;
-		$long_payout_total = floor($total_reward*$long_payout_frac);
-		$short_payout_total = $total_reward-$long_payout_total;
-		
-		$options_by_event = $this->game->blockchain->app->fetch_options_by_event($this->db_event['event_id']);
-		
-		while ($option = $options_by_event->fetch()) {
-			if ($option['event_option_index'] == 0) $option_payout_total = $long_payout_total;
-			else $option_payout_total = $short_payout_total;
+		if ((string)$this->db_event['track_payout_price'] === "") $paid_out = false;
+		else {
+			$paid_out = true;
 			
-			$option_effective_coins = $option['effective_destroy_score'] + $option['votes']*$coins_per_vote;
+			list($inflationary_reward, $destroy_reward, $total_reward) = $this->event_rewards();
+			$coins_per_vote = $this->game->blockchain->app->coins_per_vote($this->game->db_game);
 			
-			if ($option_effective_coins > 0) {
-				$bets_by_option = $this->game->blockchain->app->run_query("SELECT * FROM transaction_game_ios WHERE option_id=:option_id AND is_game_coinbase=0;", ['option_id'=>$option['option_id']]);
+			$contract_size = $this->db_event['track_max_price']-$this->db_event['track_min_price'];
+			if ($this->db_event['track_payout_price'] > $this->db_event['track_max_price']) $long_contract_price = $contract_size;
+			else if ($this->db_event['track_payout_price'] < $this->db_event['track_min_price']) $long_contract_price = 0;
+			else $long_contract_price = $this->db_event['track_payout_price']-$this->db_event['track_min_price'];
+			
+			$long_payout_frac = $contract_size > 0 ? $long_contract_price/$contract_size : 0;
+			$long_payout_total = floor($total_reward*$long_payout_frac);
+			$short_payout_total = $total_reward-$long_payout_total;
+			
+			$options_by_event = $this->game->blockchain->app->fetch_options_by_event($this->db_event['event_id']);
+			
+			while ($option = $options_by_event->fetch()) {
+				if ($option['event_option_index'] == 0) $option_payout_total = $long_payout_total;
+				else $option_payout_total = $short_payout_total;
 				
-				while ($parent_io = $bets_by_option->fetch()) {
-					$this_effective_coins = $parent_io['votes']*$coins_per_vote + $parent_io['effective_destroy_amount'];
-					$this_payout_amount = floor($this->db_event['payout_rate']*$option_payout_total*$this_effective_coins/$option_effective_coins);
-					$weighted_payout = $this_payout_amount/$parent_io['contract_parts'];
+				$option_effective_coins = $option['effective_destroy_score'] + $option['votes']*$coins_per_vote;
+				
+				if ($option_effective_coins > 0) {
+					$bets_by_option = $this->game->blockchain->app->run_query("SELECT * FROM transaction_game_ios WHERE option_id=:option_id AND is_game_coinbase=0;", ['option_id'=>$option['option_id']]);
 					
-					$this->game->blockchain->app->run_query("UPDATE transaction_game_ios SET colored_amount=".AppSettings::sqlFloor($weighted_payout."*contract_parts")." WHERE parent_io_id=:parent_io_id AND resolved_before_spent=1;", [
-						'parent_io_id' => $parent_io['game_io_id']
-					]);
+					while ($parent_io = $bets_by_option->fetch()) {
+						$this_effective_coins = $parent_io['votes']*$coins_per_vote + $parent_io['effective_destroy_amount'];
+						$this_payout_amount = floor($this->db_event['payout_rate']*$option_payout_total*$this_effective_coins/$option_effective_coins);
+						$weighted_payout = $this_payout_amount/$parent_io['contract_parts'];
+						
+						$this->game->blockchain->app->run_query("UPDATE transaction_game_ios SET colored_amount=".AppSettings::sqlFloor($weighted_payout."*contract_parts")." WHERE parent_io_id=:parent_io_id AND resolved_before_spent=1;", [
+							'parent_io_id' => $parent_io['game_io_id']
+						]);
+					}
 				}
 			}
 		}
 		
-		return $log_text;
+		return [$paid_out, $changed_game_definition, $log_text];
 	}
 	
 	public function new_binary_payout($winning_option, $winning_votes, $winning_effective_destroy_score) {
@@ -364,7 +380,9 @@ class Event {
 		return [$winning_option_id, $winning_votes, $winning_effective_destroy_score];
 	}
 	
-	public function pay_out_event() {
+	public function pay_out_event($allow_change_def=true) {
+		$changed_game_definition = false;
+		
 		$this->update_option_votes($this->db_event['event_final_block'], false);
 		
 		$round_voting_stats_all = false;
@@ -418,13 +436,14 @@ class Event {
 			}
 		}
 		else {
-			$payout_response = $this->new_linear_payout();
+			list($paid_out, $linear_changed_game_def, $payout_response) = $this->new_linear_payout($allow_change_def);
 			$log_text .= "Linear payout response: ".$payout_response."<br/>\n";
+			if ($linear_changed_game_def) $changed_game_definition = true;
 		}
 		
 		$this->set_event_completed();
 		
-		return $log_text;
+		return [$changed_game_definition, $log_text];
 	}
 	
 	public function process_option_blocks(&$game_block, $events_in_round, $round_first_event_index) {

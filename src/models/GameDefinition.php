@@ -11,6 +11,8 @@ class GameDefinition {
 			'set_from_text',
 			'set_from_peer',
 			'set_blocks_by_ui',
+			'changed_by_module',
+			'set_outcomes',
 		];
 	}
 	
@@ -294,13 +296,13 @@ class GameDefinition {
 		if ($matched_events > 0) {
 			for ($event_pos=0; $event_pos<$matched_events; $event_pos++) {
 				if (json_encode($from_def->events[$event_pos]) != json_encode($to_def->events[$event_pos])) {
-					$ref_from_event = $from_def->events[$event_pos];
+					$ref_from_event = clone $from_def->events[$event_pos];
 					$ref_from_event->event_starting_block = null;
 					$ref_from_event->event_final_block = null;
 					$ref_from_event->event_determined_to_block = null;
 					$ref_from_event->event_payout_block = null;
 					
-					$ref_to_event = $to_def->events[$event_pos];
+					$ref_to_event = clone $to_def->events[$event_pos];
 					$ref_to_event->event_starting_block = null;
 					$ref_to_event->event_final_block = null;
 					$ref_to_event->event_determined_to_block = null;
