@@ -148,7 +148,8 @@ class Event {
 			
 			$changed_game_definition = true;
 		}
-		else $changed_game_definition = false;
+		
+		return $changed_game_definition;
 	}
 	
 	public function new_refund_payout() {
