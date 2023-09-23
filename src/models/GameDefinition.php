@@ -379,6 +379,8 @@ class GameDefinition {
 		$leagues_entity_type = $game->blockchain->app->check_set_entity_type("leagues");
 		$general_entity_type = $game->blockchain->app->check_set_entity_type("general entity");
 		
+		$game->lock_game_definition();
+		
 		// Check if any base params are different. If so, reset from game starting block
 		for ($i=0; $i<count($verbatim_vars); $i++) {
 			$var = $verbatim_vars[$i];
@@ -465,6 +467,8 @@ class GameDefinition {
 		$migration = self::record_migration($game, $user_id, $migration_type, $show_internal_params, $initial_game_def, $new_game_def);
 		
 		$game->schedule_game_reset($reset_block, $set_events_from_index, $migration['migration_id']);
+		
+		$game->unlock_game_definition();
 		
 		$game_extra_info = json_decode($game->db_game['extra_info']);
 		

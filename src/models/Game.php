@@ -2428,11 +2428,14 @@ class Game {
 				list($initial_game_def_hash, $initial_game_def) = GameDefinition::fetch_game_definition($this, "defined", $show_internal_params, false);
 				GameDefinition::check_set_game_definition($this->blockchain->app, $initial_game_def_hash, $initial_game_def);
 				
+				if (empty($this->db_game['definitive_game_peer_id'])) $allow_change_def = true;
+				else $allow_change_def = false;
+				
 				$any_payout_changed_def = false;
 				$payout_resolved_event_ids = [];
 				
 				foreach ($payout_events as $payout_event) {
-					$payout_changed_def = $payout_event->pay_out_event();
+					$payout_changed_def = $payout_event->pay_out_event($allow_change_def);
 					
 					if ($payout_changed_def) $any_payout_changed_def = true;
 					
@@ -4166,6 +4169,21 @@ class Game {
 			'game_id' => $this->db_game['game_id'],
 			'time' => time(),
 		]);
+	}
+	
+	public function lock_game_definition() {
+		$this->blockchain->app->set_site_constant("game_definition_locked_".$this->db_game['game_id'], time());
+	}
+	
+	public function unlock_game_definition() {
+		$this->blockchain->app->set_site_constant("game_definition_locked_".$this->db_game['game_id'], 0);
+	}
+	
+	public function game_definition_is_locked() {
+		$lock_time = (int) $this->blockchain->app->get_site_constant("game_definition_locked_".$this->db_game['game_id']);
+		
+		if ($lock_time == 0 || $lock_time < time()-(60*10)) return false;
+		else return true;
 	}
 }
 ?>

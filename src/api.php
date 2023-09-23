@@ -387,6 +387,10 @@ if ($uri_parts[1] == "api") {
 					$api_output['status_code'] = 2;
 					$api_output['message'] = "This game is currently loading.";
 				}
+				else if ($game->game_definition_is_locked()) {
+					$api_output['status_code'] = 4;
+					$api_output['message'] = "Game is locked for changes; please try again soon.";
+				}
 				else {
 					$client_needs_info = true;
 					if (!empty($_REQUEST['definition_hash']) && $_REQUEST['definition_hash'] == $game->db_game['cached_definition_hash']) $client_needs_info = false;
