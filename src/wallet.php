@@ -159,7 +159,7 @@ if (!$thisuser) {
 			include('includes/explorer_top_nav.php');
 		}
 		
-		include(AppSettings::srcPath()."/includes/html_login.php");
+		include(AppSettings::srcPath()."/includes/html_register.php");
 		?>
 	</div>
 	<?php

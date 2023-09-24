@@ -366,7 +366,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 			}
 			
 			if ($explore_mode == "my_bets" && empty($thisuser)) {
-				include(AppSettings::srcPath()."/includes/html_login.php");
+				include(AppSettings::srcPath()."/includes/html_register.php");
 				include(AppSettings::srcPath()."/includes/html_stop.php");
 				die();
 			}

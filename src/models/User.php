@@ -20,6 +20,37 @@ class User {
 		return $this->synchronizer_token;
 	}
 	
+	public static function registration_fields() {
+		return [
+			'username' => [
+				'required' => true,
+				'max_length' => 255,
+				'display_name' => 'username',
+			],
+			'first_name' => [
+				'required' => true,
+				'max_length' => 100,
+				'display_name' => 'first name',
+			],
+			'last_name' => [
+				'required' => true,
+				'max_length' => 100,
+				'display_name' => 'last name',
+			],
+			'phone_number' => [
+				'required' => false,
+				'max_length' => 100,
+			],
+			'password' => [
+				'required' => true,
+				'max_length' => 255,
+				'min_length' => 6,
+				'display_name' => 'password',
+				'created_with_different_value' => true,
+			],
+		];
+	}
+	
 	public static function email_login_message() {
 		return "We just sent you a verification email. Please open your inbox and click the link to log in.";
 	}

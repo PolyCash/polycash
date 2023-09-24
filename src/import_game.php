@@ -106,7 +106,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 	else {
 		$redirect_url = $app->get_redirect_url("/import/?import_mode=".$import_mode);
 		$redirect_key = $redirect_url['redirect_key'];
-		include(AppSettings::srcPath()."/includes/html_login.php");
+		include(AppSettings::srcPath()."/includes/html_register.php");
 	}
 	?>
 </div>

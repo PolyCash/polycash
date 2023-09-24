@@ -13,7 +13,7 @@ if (!$thisuser) {
 		<?php
 		if (empty($_REQUEST['redirect_key'])) $redirect_url = $app->get_redirect_url($_SERVER['REQUEST_URI']);
 		
-		include(AppSettings::srcPath()."/includes/html_login.php");
+		include(AppSettings::srcPath()."/includes/html_register.php");
 		?>
 	</div>
 	<?php

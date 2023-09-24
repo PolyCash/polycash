@@ -991,7 +991,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 		<?php
 	}
 	else {
-		include(AppSettings::srcPath()."/includes/html_login.php");
+		include(AppSettings::srcPath()."/includes/html_register.php");
 	}
 	?>
 </div>

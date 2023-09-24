@@ -2721,20 +2721,6 @@ var PageManager = function() {
 			}
 		});
 	}
-	this.generate_credentials = function() {
-		$.ajax({
-			url: "/ajax/check_username.php",
-			dataType: "json",
-			data: {
-				action: "generate"
-			},
-			success: function(generation_response) {
-				$('#generate_display').html(generation_response.message);
-				$('#login_password').val($('#generate_password').val());
-				$('#username').val($('#generate_username').val());
-			}
-		});
-	}
 	this.check_username = function() {
 		var username = $('#username').val();
 		$('#check_username_btn').html("Loading...");
@@ -2747,68 +2733,16 @@ var PageManager = function() {
 			},
 			context: this,
 			success: function(check_response) {
-				$('#check_username_btn').html("Continue");
-				
-				$('#login_message').html(check_response.message);
-				$('#login_message').show();
-				
-				if (check_response.status_code == 3 || check_response.status_code == 4) {
-					this.toggle_to_panel('password');
-					
-					if (check_response.status_code == 4) {
-						$('#login_btn').html("Sign Up");
-					}
-					else $('#login_btn').html("Log In");
-				}
-				else if (check_response.status_code == 1 || check_response.status_code == 2) {
-					this.login();
-				}
-			}
-		});
-	}
-	this.login = function() {
-		if ($('#login_password').val() != "") $('#login_password').val(Sha256.hash($('#login_password').val()));
-		
-		$('#login_btn').html("Loading...");
-		$('#generate_login_btn').html("Loading...");
-		
-		$.ajax({
-			url: "/ajax/log_in.php",
-			dataType: "json",
-			data: {
-				username: $('#username').val(),
-				"password": $('#login_password').val(),
-				redirect_key: $('#redirect_key').val()
-			},
-			success: function(login_response) {
-				$('#login_btn').html("Log In");
-				$('#generate_login_btn').html("Continue");
-				
-				if (login_response.status_code == 1) {
-					window.location = login_response.message;
+				if (check_response.status_code == 2) {
+					$('#email_logins').show();
+					$('#password_logins').hide();
 				}
 				else {
-					$('#login_password').val("");
-					if (login_response.status_code != 3) alert(login_response.message);
+					$('#email_logins').hide();
+					$('#password_logins').show();
 				}
 			}
 		});
-	}
-	this.toggle_to_panel = function(which_panel) {
-		if (this.selected_panel) $('#'+this.selected_panel+'_panel').hide();
-		
-		if (which_panel == 'noemail') {
-			which_panel = 'generate';
-			
-			$('#login_panel').hide();
-		}
-		
-		this.selected_panel = which_panel;
-		
-		$('#'+this.selected_panel+'_panel').show('fast');
-		
-		if (which_panel == "login") setTimeout(function() {$('#username').focus()}, 500);
-		else if (this.selected_panel == 'password') setTimeout(function() {$('#login_password').focus()}, 500);
 	}
 	this.manage_game_event_filter_changed = function() {
 		window.location = '/manage/'+games[0].game_url_identifier+'/?next=events&event_filter='+$('#manage_game_event_filter').val();
@@ -3090,5 +3024,39 @@ var PageManager = function() {
 	};
 	this.open_option_address_link = function(option_index) {};
 }
+var LoginManager = function() {
+	this.regularly_check_username = function() {
+		if (this.usernameChanged) {
+			thisPageManager.check_username();
+			this.usernameChanged = false;
+		}
+	
+		setTimeout(function() {
+			this.regularly_check_username();
+		}.bind(this), 2000);
+	};
+	
+	this.login_by_email = function() {
+		$.ajax({
+			url: "/ajax/send_login_link.php",
+			dataType: "json",
+			data: {
+				username: $('#username').val(),
+				redirect_key: $('#redirect_key').val()
+			},
+			success: function(send_link_response) {
+				if (send_link_response.status_code == 1) {
+					$('#send_link_message').html(send_link_response.message);
+					$('#send_link_message').slideDown('fast');
+					setTimeout(function() {
+						$('#send_link_message').html("");
+						$('#send_link_message').slideUp();
+					}, 5000);
+				}
+				else alert(send_link_response.message);
+			}
+		});
+	};
+};
 
 var thisPageManager = new PageManager();

@@ -5,5 +5,9 @@ class Router {
 		echo "404 - Page not found";
 		die();
 	}
+	
+	public static function RedirectTo($uri) {
+		Header("Location: ".$uri);
+	}
 }
 ?>
