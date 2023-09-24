@@ -1205,7 +1205,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						echo "\n<br/>\n";
 
 						echo "This UTXO";
-						if ($io['spend_status'] == "unconfirmed") echo " has not been confirmed yet";
+						if ($io['spend_status'] == "unconfirmed" || (string)$io['create_block_id'] === "") echo " has not been confirmed yet";
 						else echo " was created on block <a href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$io['create_block_id']."\">#".$io['create_block_id']."</a> (round #".$game->round_to_display_round($game->block_to_round($io['create_block_id'])).")";
 						
 						if ($io['spend_block_id'] > 0) {
