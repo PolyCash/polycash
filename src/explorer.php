@@ -268,12 +268,20 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 		$mode_error = false;
 	}
 	else if ($explore_mode == "definition") {
-		if ($game) $pagetitle = $game->db_game['name']." game definition";
+		if ($game) {
+			if (empty($_REQUEST['definition_mode']) && !empty($uri_parts[5])) {
+				$game_def_hash = $uri_parts[5];
+				$game_def = json_decode(GameDefinition::get_game_definition_by_hash($app, $game_def_hash));
+				if (empty($game_def)) Router::send404();
+				else $pagetitle = $game_def_hash.": ".$game->db_game['name']." game definition";
+			}
+			else $pagetitle = $game->db_game['name']." game definition";
+		}
 		else $pagetitle = $blockchain->db_blockchain['blockchain_name']." blockchain definition";
 		$mode_error = false;
 	}
 	else if ($explore_mode == "history") {
-		$pagetitle = $game->db_game['name']." game definition history";
+		$pagetitle = "History - ".$game->db_game['name'];
 		$mode_error = false;
 	}
 	else if ($explore_mode == "search") {
@@ -1540,12 +1548,6 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					if ($game) {
 						$definition_mode = "defined";
 						$def_field = 'defined_cached_definition_hash';
-						
-						if (empty($_REQUEST['definition_mode']) && !empty($uri_parts[5])) {
-							$game_def_hash = $uri_parts[5];
-							$game_def = json_decode(GameDefinition::get_game_definition_by_hash($app, $game_def_hash));
-							if (empty($game_def)) Router::send404();
-						}
 						
 						if (empty($game_def)) {
 							list($game_def_hash, $game_def) = GameDefinition::fetch_game_definition($game, $definition_mode, false, true);

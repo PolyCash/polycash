@@ -11,6 +11,8 @@ class GameDefinition {
 			'set_from_text',
 			'set_from_peer',
 			'set_blocks_by_ui',
+			'changed_by_module',
+			'set_outcomes',
 		];
 	}
 	
@@ -163,11 +165,13 @@ class GameDefinition {
 		}
 	}
 	
-	public static function set_cached_definition_hashes(&$game) {
+	public static function set_cached_definition_hashes(&$game, $print_debug=false) {
 		$show_internal_params = false;
 		
 		list($actual_game_def_hash, $actual_game_def) = self::fetch_game_definition($game, "actual", $show_internal_params, false);
 		self::check_set_game_definition($game->blockchain->app, $actual_game_def_hash, $actual_game_def);
+		
+		if ($print_debug) echo "Actual: ".$actual_game_def_hash."\n";
 		
 		if ($game->db_game['cached_definition_hash'] != $actual_game_def_hash) {
 			$game->blockchain->app->run_query("UPDATE games SET cached_definition_hash=:cached_definition_hash, cached_definition_time=:cached_definition_time WHERE game_id=:game_id;", [
@@ -180,6 +184,8 @@ class GameDefinition {
 		
 		list($defined_game_def_hash, $defined_game_def) = self::fetch_game_definition($game, "defined", $show_internal_params, false);
 		self::check_set_game_definition($game->blockchain->app, $defined_game_def_hash, $defined_game_def);
+		
+		if ($print_debug) echo "Defined: ".$defined_game_def_hash."\n";
 		
 		if ($game->db_game['defined_cached_definition_hash'] != $defined_game_def_hash) {
 			$game->blockchain->app->run_query("UPDATE games SET defined_cached_definition_hash=:defined_cached_definition_hash WHERE game_id=:game_id;", [
@@ -290,13 +296,13 @@ class GameDefinition {
 		if ($matched_events > 0) {
 			for ($event_pos=0; $event_pos<$matched_events; $event_pos++) {
 				if (json_encode($from_def->events[$event_pos]) != json_encode($to_def->events[$event_pos])) {
-					$ref_from_event = $from_def->events[$event_pos];
+					$ref_from_event = clone $from_def->events[$event_pos];
 					$ref_from_event->event_starting_block = null;
 					$ref_from_event->event_final_block = null;
 					$ref_from_event->event_determined_to_block = null;
 					$ref_from_event->event_payout_block = null;
 					
-					$ref_to_event = $to_def->events[$event_pos];
+					$ref_to_event = clone $to_def->events[$event_pos];
 					$ref_to_event->event_starting_block = null;
 					$ref_to_event->event_final_block = null;
 					$ref_to_event->event_determined_to_block = null;
@@ -306,6 +312,8 @@ class GameDefinition {
 					else {
 						$ref_from_event->outcome_index = null;
 						$ref_to_event->outcome_index = null;
+						$ref_from_event->track_payout_price = null;
+						$ref_to_event->track_payout_price = null;
 						
 						if (json_encode($ref_from_event) == json_encode($ref_to_event)) $event_differences['outcome_changed_events']++;
 						else $event_differences['other_changed_events']++;
@@ -343,7 +351,7 @@ class GameDefinition {
 			array_push($difference_summary_lines, "Blocks were changed in ".$differences['events']['block_changed_events']." event".($differences['events']['block_changed_events'] == 1 ? "" : "s"));
 		}
 		if ($differences['events']['outcome_changed_events'] > 0) {
-			array_push($difference_summary_lines, "Outcomes were set for ".$differences['events']['outcome_changed_events']." event".($differences['events']['outcome_changed_events'] == 1 ? "" : "s"));
+			array_push($difference_summary_lines, "Outcomes were changed for ".$differences['events']['outcome_changed_events']." event".($differences['events']['outcome_changed_events'] == 1 ? "" : "s"));
 		}
 		if ($differences['events']['other_changed_events'] > 0) {
 			array_push($difference_summary_lines, $differences['events']['other_changed_events']." event".($differences['events']['other_changed_events'] != 1 ? "s were" : " was")." changed");
@@ -370,6 +378,8 @@ class GameDefinition {
 		$sports_entity_type = $game->blockchain->app->check_set_entity_type("sports");
 		$leagues_entity_type = $game->blockchain->app->check_set_entity_type("leagues");
 		$general_entity_type = $game->blockchain->app->check_set_entity_type("general entity");
+		
+		$game->lock_game_definition();
 		
 		// Check if any base params are different. If so, reset from game starting block
 		for ($i=0; $i<count($verbatim_vars); $i++) {
@@ -457,6 +467,8 @@ class GameDefinition {
 		$migration = self::record_migration($game, $user_id, $migration_type, $show_internal_params, $initial_game_def, $new_game_def);
 		
 		$game->schedule_game_reset($reset_block, $set_events_from_index, $migration['migration_id']);
+		
+		$game->unlock_game_definition();
 		
 		$game_extra_info = json_decode($game->db_game['extra_info']);
 		

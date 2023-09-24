@@ -35,9 +35,11 @@ if ($app->running_as_admin()) {
 				if (empty($blockchains[$db_running_game['blockchain_id']])) $blockchains[$db_running_game['blockchain_id']] = new Blockchain($app, $db_running_game['blockchain_id']);
 				$running_game = new Game($blockchains[$db_running_game['blockchain_id']], $db_running_game['game_id']);
 				
-				$running_game->set_cached_fields();
-				
-				if ($print_debug) echo "Set ".$running_game->db_game['name']." at ".round(microtime(true)-$loop_start_time, 8)."\n";
+				if ($running_game->last_block_id() == $running_game->blockchain->last_block_id()) {
+					$running_game->set_cached_fields();
+					if ($print_debug) echo "Set ".$running_game->db_game['name']."\n";
+				}
+				else if ($print_debug) echo "Skipped ".$running_game."; it's not fully loaded.\n";
 			}
 			
 			$loop_stop_time = microtime(true);

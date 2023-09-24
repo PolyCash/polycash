@@ -301,7 +301,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 					$app->output_message(1, "", $output_obj);
 				}
 				else if ($action == "save_gde") {
-					$show_internal_params = true;
+					$show_internal_params = false;
 					
 					list($initial_defined_game_def_hash, $initial_defined_game_def) = GameDefinition::fetch_game_definition($game, "defined", $show_internal_params, false);
 					GameDefinition::check_set_game_definition($app, $initial_defined_game_def_hash, $initial_defined_game_def);
@@ -431,7 +431,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 						
 						if ($entity_type) {
 							if (!empty($name)) {
-								$show_internal_params = true;
+								$show_internal_params = false;
 								
 								$entity = $app->check_set_entity($entity_type['entity_type_id'], $name);
 								
