@@ -190,7 +190,11 @@ if (!empty($event->db_event['sport_name']) || !empty($event->db_event['league_na
 	echo "<p>".$event->db_event['sport_name']." &nbsp;&nbsp; ".$event->db_event['league_name']."</p>\n";
 }
 
-if ($last_block_id >= $event->db_event['event_final_block']) {}
+if ($last_block_id >= $event->db_event['event_final_block']) {
+	?>
+	<p class="text-warning">Betting ended on block <a target="_blank" href="/explorer/blockchains/<?php echo $blockchain->db_blockchain['url_identifier']; ?>/blocks/<?php echo $event->db_event['event_final_block']; ?>"><?php echo $event->db_event['event_final_block']; ?></a>.</p>
+	<?php
+}
 else if ($last_block_id >= $event->db_event['event_final_block']-$event->avoid_bet_buffer_blocks) {
 	?>
 	<p class="text-warning">Betting is about to end</p>
