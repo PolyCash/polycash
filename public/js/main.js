@@ -3088,12 +3088,7 @@ var PageManager = function() {
 			}
 		});
 	};
-	this.open_option_address_link = function(option_index) {
-		$('#option_address_value_'+option_index).select();
-		document.execCommand("copy");
-		setTimeout(function() { $('#option_address_value_'+option_index).select(); }, 100);
-		setTimeout(function() { document.execCommand("copy"); }, 200);
-	};
+	this.open_option_address_link = function(option_index) {};
 }
 
 var thisPageManager = new PageManager();

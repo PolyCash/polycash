@@ -448,7 +448,7 @@ for ($i=0; $i<count($round_stats); $i++) {
 				<div class="dropdown option_address_link_section" id="option_address_link_<?php echo $round_stats[$i]['option_index']; ?>">
 					<i class="fas fa-at dropdown-toggle text-success option_address_link_icon" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" onClick="thisPageManager.open_option_address_link(<?php echo $round_stats[$i]['option_index']; ?>);"></i>
 					<div class="dropdown-menu option_address_dropdown">
-						<p style="font-size: 80%;">Your address was copied to your clipboard.</p>
+						<p style="font-size: 80%;">Your staking address is:</p>
 						<input type="text" class="form-control input-sm" id="option_address_value_<?php echo $round_stats[$i]['option_index']; ?>" value="<?php echo $addresses[0]['pub_key']; ?>" />
 					</div>
 				</div>
