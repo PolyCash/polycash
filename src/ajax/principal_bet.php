@@ -56,48 +56,50 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 						if ($game_amount_in >= $burn_game_amount*1.2) $keep_looping = false;
 					}
 					
-					$recycle_ios = $app->fetch_recycle_ios_in_account($user_game['account_id'], false);
-					
-					foreach ($recycle_ios as $recycle_io) {
-						array_push($io_ids, $recycle_io['io_id']);
-						$io_amount_in += $recycle_io['amount'];
-					}
-					
-					$io_nonfee_amount = $io_amount_in-$fee_int;
-					$game_coins_per_coin = $game_amount_in/$io_nonfee_amount;
-					
-					$burn_amount = ceil($burn_game_amount/$game_coins_per_coin);
-					
-					$io_nonfee_amount = $io_amount_in-$fee_int;
-					$io_nondestroy_amount = $io_nonfee_amount - $burn_amount;
-					
-					if ($io_nondestroy_amount > 0) {
-						$io_separator_frac = AppSettings::recommendedSeparatorFrac($burn_amount, $io_nonfee_amount);
-						$error_message = false;
+					if ($burn_game_amount <= AppSettings::maxBurnFrac()*$game_amount_in) {
+						$recycle_ios = $app->fetch_recycle_ios_in_account($user_game['account_id'], false);
 						
-						$io_amounts = [$burn_amount];
-						$address_ids = [$destroy_address['address_id']];
-						
-						$bet_addr_amount = round($io_nondestroy_amount*(1-$io_separator_frac));
-						$separator_amount = $io_nondestroy_amount-$bet_addr_amount;
-						
-						array_push($io_amounts, $bet_addr_amount);
-						array_push($address_ids, $address['address_id']);
-						
-						array_push($io_amounts, $separator_amount);
-						array_push($address_ids, $separator_address['address_id']);
-						
-						$transaction_id = $game->blockchain->create_transaction("transaction", $io_amounts, false, $io_ids, $address_ids, $fee_int, $error_message);
-						
-						if ($transaction_id) {
-							$transaction = $app->fetch_transaction_by_id($transaction_id);
-							$app->output_message(1, "Great, your transaction was submitted. <a href=\"/explorer/games/".$game->db_game['url_identifier']."/transactions/".$transaction['tx_hash']."\">View Transaction</a>", false);
+						foreach ($recycle_ios as $recycle_io) {
+							array_push($io_ids, $recycle_io['io_id']);
+							$io_amount_in += $recycle_io['amount'];
 						}
-						else {
-							$app->output_message(8, "TX Error: ".$error_message, false);
+						
+						$io_nonfee_amount = $io_amount_in-$fee_int;
+						$game_coins_per_coin = $game_amount_in/$io_nonfee_amount;
+						
+						$burn_amount = ceil($burn_game_amount/$game_coins_per_coin);
+						$io_nonfee_amount = $io_amount_in-$fee_int;
+						$io_nondestroy_amount = $io_nonfee_amount - $burn_amount;
+						
+						if ($io_nondestroy_amount > 0) {
+							$io_separator_frac = AppSettings::recommendedSeparatorFrac($burn_amount, $io_nonfee_amount);
+							$error_message = false;
+							
+							$io_amounts = [$burn_amount];
+							$address_ids = [$destroy_address['address_id']];
+							
+							$bet_addr_amount = round($io_nondestroy_amount*(1-$io_separator_frac));
+							$separator_amount = $io_nondestroy_amount-$bet_addr_amount;
+							
+							array_push($io_amounts, $bet_addr_amount);
+							array_push($address_ids, $address['address_id']);
+							
+							array_push($io_amounts, $separator_amount);
+							array_push($address_ids, $separator_address['address_id']);
+							
+							$transaction_id = $game->blockchain->create_transaction("transaction", $io_amounts, false, $io_ids, $address_ids, $fee_int, $error_message);
+							
+							if ($transaction_id) {
+								$transaction = $app->fetch_transaction_by_id($transaction_id);
+								$app->output_message(1, "Great, your transaction was submitted. <a href=\"/explorer/games/".$game->db_game['url_identifier']."/transactions/".$transaction['tx_hash']."\">View Transaction</a>", false);
+							}
+							else {
+								$app->output_message(9, "TX Error: ".$error_message, false);
+							}
 						}
+						else $app->output_message(8, "Transaction failed: you don't have enough ".$game->db_game['coin_name_plural'].".", false);
 					}
-					else $app->output_message(7, "Transaction failed: you don't have enough ".$game->db_game['coin_name_plural'].".", false);
+					else $app->output_message(7, "Please bet a maximum of ".$game->display_coins((int)(AppSettings::maxBurnFrac()*$game_amount_in), false, false, false).".");
 				}
 				else $app->output_message(6, "Transaction failed: no destroy address found in this account.", false);
 			}

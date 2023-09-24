@@ -186,5 +186,11 @@ class AppSettings {
 		if ($specifiedSec === null) return (60*20);
 		else return (int) $specifiedSec;
 	}
+	
+	public static function maxBurnFrac() {
+		$maxBurnFrac = self::getParam("max_burn_frac");
+		if ($maxBurnFrac === null) return 0.9;
+		else return $maxBurnFrac;
+	}
 }
 ?>

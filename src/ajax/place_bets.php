@@ -84,7 +84,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 		die();
 	}
 	
-	$max_burn_frac = 0.9;
+	$max_burn_frac = AppSettings::maxBurnFrac();
 	$max_burn_amount = floor($io_info['SUM(io.amount)']*$max_burn_frac);
 	$gio_max_burn_amount = floor($gio_info['SUM(gio.colored_amount)']*$max_burn_frac);
 	
