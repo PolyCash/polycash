@@ -39,7 +39,7 @@
 						?>
 						<div class="col-sm-6">
 							<div style="width: 100%; padding: 0px 8px; border: 1px solid #aaa; background-color: #fff;">
-								<?php echo $event->event_html($thisuser, false, true, null, $render_event_i, $account); ?>
+								<?php echo $event->event_html($thisuser, false, true, null, $render_event_i, $account, "being_determined"); ?>
 								<?php if ($user_game) echo $event->my_votes_table($round_id, $user_game); ?>
 							</div>
 						</div>

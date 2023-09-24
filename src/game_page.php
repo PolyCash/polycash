@@ -83,7 +83,7 @@ else $exchange_rate = 0;
 	<?php
 	$filter_arr = ["order_by" => $game->db_game['order_events_by']];
 	$event_ids = "";
-	list($new_event_js, $new_event_html) = $game->new_event_js(0, $thisuser, $filter_arr, $event_ids, true);
+	list($new_event_js, $new_event_html) = $game->new_event_js(0, $thisuser, $filter_arr, $event_ids, true, "game_page");
 	?>
 	<div id="game0_events" class="game_events game_events_short"><?php echo $new_event_html; ?></div>
 

@@ -107,7 +107,7 @@ if ($include_betting_events) {
 	else $account = null;
 	
 	for ($render_event_i=0; $render_event_i<count($these_events); $render_event_i++) {
-		$rendered_event = $these_events[$render_event_i]->event_html($thisuser, $show_intro_text, true, $instance_id, $render_event_i, $account);
+		$rendered_event = $these_events[$render_event_i]->event_html($thisuser, $show_intro_text, true, $instance_id, $render_event_i, $account, $refresh_page);
 		$rendered_event_hash = hash("sha256", $rendered_event);
 		$rendered_event_hash = substr($rendered_event_hash, 0, 8);
 		$display_event_ids .= $these_events[$render_event_i]->db_event['event_id'].",";
@@ -182,7 +182,7 @@ if ($include_betting_events) {
 	$display_event_ids_hash = AppSettings::standardHash($display_event_ids);
 
 	if ($display_event_ids_hash != $_REQUEST['event_ids_hash']) {
-		$js = $game->new_event_js($instance_id, $thisuser, $filter_arr, $display_event_ids, false)[0];
+		$js = $game->new_event_js($instance_id, $thisuser, $filter_arr, $display_event_ids, false, $refresh_page)[0];
 		$output['new_event_ids'] = 1;
 		$output['new_event_js'] = $js;
 		$output['event_ids'] = $display_event_ids;

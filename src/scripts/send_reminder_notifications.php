@@ -76,7 +76,7 @@ while ($db_running_game = $running_games->fetch()) {
 			$blocks_left = $current_event->db_event['event_final_block']-$last_block_id;
 			$seconds_left = $seconds_per_block*$blocks_left;
 			
-			$event_html = $current_event->event_html(null, false, true, 0, 0, null);
+			$event_html = $current_event->event_html(null, false, true, 0, 0, null, "reminder_notifications");
 			$event_html = str_replace("background-image: url('/images", "background-repeat: no-repeat; background-size: cover; background-position: center center; border-radius: 50%; background-image: url('".AppSettings::getParam('base_url')."/images", $event_html);
 			$event_html = str_replace('class="vote_option_box_container"', 'style="position: relative; display: inline-block; margin-right: 20px;"', $event_html);
 			$event_html = str_replace('href="/', 'href="'.AppSettings::getParam('base_url').'/', $event_html);

@@ -499,7 +499,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							echo '<div id="game0_chart_js"><script type="text/javascript">'.$js.'</script></div>'."\n";
 						}
 						
-						$event_html = $event->event_html($thisuser, false, true, null, 0, null);
+						$event_html = $event->event_html($thisuser, false, true, null, 0, null, "explorer");
 						echo $event_html;
 						
 						echo $app->render_view('event_details_modal');

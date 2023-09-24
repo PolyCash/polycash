@@ -6,7 +6,7 @@ $current_round_id = $game->block_to_round($blockchain_last_block_id+1);
 
 $filter_arr = ["order_by" => $game->db_game['order_events_by']];
 $event_ids = "";
-list($new_event_js, $new_event_html) = $game->new_event_js($counter, $user, $filter_arr, $event_ids, true);
+list($new_event_js, $new_event_html) = $game->new_event_js($counter, $user, $filter_arr, $event_ids, true, "featured_games");
 
 if ($user) $user_game = $blockchain->app->fetch_user_game($user->user_id, $game->db_game['game_id']);
 else $user_game = null;

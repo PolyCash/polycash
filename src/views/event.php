@@ -191,9 +191,11 @@ if (!empty($event->db_event['sport_name']) || !empty($event->db_event['league_na
 }
 
 if ($last_block_id >= $event->db_event['event_final_block']) {
-	?>
-	<p class="text-warning">Betting ended on block <a target="_blank" href="/explorer/blockchains/<?php echo $blockchain->db_blockchain['url_identifier']; ?>/blocks/<?php echo $event->db_event['event_final_block']; ?>"><?php echo $event->db_event['event_final_block']; ?></a>.</p>
-	<?php
+	if ($view_event_from_page == "wallet") {
+		?>
+		<p class="text-warning">Betting ended on block <a target="_blank" href="/explorer/blockchains/<?php echo $blockchain->db_blockchain['url_identifier']; ?>/blocks/<?php echo $event->db_event['event_final_block']; ?>"><?php echo $event->db_event['event_final_block']; ?></a>.</p>
+		<?php
+	}
 }
 else if ($last_block_id >= $event->db_event['event_final_block']-$event->avoid_bet_buffer_blocks) {
 	?>

@@ -1326,7 +1326,7 @@ class Game {
 		return $event_ids;
 	}
 	
-	public function new_event_js($game_index, &$user, &$filter_arr, &$event_ids, $include_content=false) {
+	public function new_event_js($game_index, &$user, &$filter_arr, &$event_ids, $include_content=false, $view_event_from_page=null) {
 		$last_block_id = $this->blockchain->last_block_id();
 		$mining_block_id = $last_block_id+1;
 		$current_round = $this->block_to_round($mining_block_id);
@@ -1369,7 +1369,7 @@ class Game {
 			}
 			$html .= "<div id='game".$game_index."_event".$i."' class='game_event_inner'><div id='game".$game_index."_event".$i."_display' class='game_event_display'>";
 			
-			$html .= $these_events[$i]->event_html($user, false, true, $game_index, $i, $account);
+			$html .= $these_events[$i]->event_html($user, false, true, $game_index, $i, $account, $view_event_from_page);
 			
 			$html .= "</div><div id='game".$game_index."_event".$i."_my_current_votes'>";
 			if ($user) $html .= $these_events[$i]->my_votes_table($current_round, $user_game);

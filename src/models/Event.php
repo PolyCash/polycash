@@ -98,7 +98,9 @@ class Event {
 		return $output_arr;
 	}
 	
-	public function event_html($user, $show_intro_text, $clickable, $game_instance_id, $game_event_index, $account=null) {
+	public function event_html($user, $show_intro_text, $clickable, $game_instance_id, $game_event_index, $account=null, $view_event_from_page=null) {
+		if (empty($view_event_from_page)) throw new \Exception("empty view from page");
+		
 		return $this->game->blockchain->app->render_view('event', [
 			'app' => $this->game->blockchain->app,
 			'blockchain' => $this->game->blockchain,
@@ -110,6 +112,7 @@ class Event {
 			'clickable' => $clickable,
 			'game_instance_id' => $game_instance_id,
 			'game_event_index' => $game_event_index,
+			'view_event_from_page' => $view_event_from_page,
 		]);
 	}
 	
