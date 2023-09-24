@@ -62,6 +62,13 @@ games.push(new Game(thisPageManager, <?php
 			<?php } ?>
 			</a>
 			<a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/events/" class="btn btn-sm btn-primary"><i class="fas fa-list"></i> &nbsp; <?php echo ucwords($game->db_game['event_type_name']); ?> Results</a>
+			<?php
+			if ($game->db_game['finite_events']) {
+				?>
+				<a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/history/" class="btn btn-sm btn-warning"><i class="fas fa-book"></i> &nbsp; Migration History</a>
+				<?php
+			}
+			?>
 		</p>
 		<?php
 		if ($game->db_game['module'] == "CoinBattles") {
@@ -101,18 +108,6 @@ games.push(new Game(thisPageManager, <?php
 		<script type="text/javascript" id="game<?php echo $counter; ?>_new_event_js">
 		<?php echo $new_event_js; ?>
 		</script>
-		<br/>
-		
-		<center>
-			<a href="/<?php echo $game->db_game['url_identifier']; ?>/" class="btn btn-sm btn-success"><i class="fas fa-play-circle"></i> &nbsp; 
-			<?php if ($faucet_io) { ?>
-				Join now & receive <?php echo $game->display_coins($faucet_io['colored_amount_sum']); ?>
-			<?php } else { ?>
-				Play Now
-			<?php } ?>
-			</a>
-			<a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/events/" class="btn btn-sm btn-primary"><i class="fas fa-list"></i> &nbsp; <?php echo ucwords($game->db_game['event_type_name']); ?> Results</a>
-		</center>
 		<br/>
 		<?php
 	}
