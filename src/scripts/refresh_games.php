@@ -13,7 +13,7 @@ if ($app->running_as_admin()) {
 	}
 	$refresh_games = $app->run_query($refresh_games_q, $refresh_games_params);
 
-	$show_internal_params = true;
+	$show_internal_params = false;
 	
 	while ($db_game = $refresh_games->fetch()) {
 		$blockchain = new Blockchain($app, $db_game['blockchain_id']);

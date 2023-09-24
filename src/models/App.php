@@ -1343,7 +1343,7 @@ class App {
 			$blockchain = new Blockchain($this, $db_game['blockchain_id']);
 			$game = new Game($blockchain, $db_game['game_id']);
 			
-			if (!empty($game->db_game['cached_definition_hash']) && $game->db_game['cached_definition_time'] > time()-300) {
+			if (!empty($game->db_game['cached_definition_hash']) && $game->db_game['cached_definition_time'] >= time()-60) {
 				$display_def_hash = GameDefinition::shorten_game_def_hash($game->db_game['cached_definition_hash']);
 			}
 			else {
@@ -3156,7 +3156,7 @@ class App {
 		if ($div_td == 'div') $this_bet_html = "<div class=\"col-md-1\">";
 		else $this_bet_html = '<td>';
 		
-		$this_bet_html .= "<a href=\"".AppSettings::getParam('base_url')."/explorer/games/".$game->db_game['url_identifier']."/utxo/".$bet['tx_hash']."/".$bet['game_out_index']."\">".str_replace(" ", "&nbsp;", $game->display_coins($effective_paid, true, false, false))."</a>";
+		$this_bet_html .= "<a target=\"_blank\" href=\"".AppSettings::getParam('base_url')."/explorer/games/".$game->db_game['url_identifier']."/utxo/".$bet['tx_hash']."/".$bet['game_out_index']."\">".str_replace(" ", "&nbsp;", $game->display_coins($effective_paid, true, false, false))."</a>";
 		
 		if ($div_td == 'div') $this_bet_html .= "</div>\n";
 		else $this_bet_html .= "&nbsp;&nbsp;</td>\n";
@@ -3171,7 +3171,9 @@ class App {
 		$cell_title = "Leverage: ".$this->round_to($bought_leverage, 0, EXCHANGE_RATE_SIGFIGS, true)."X, ".($bet['event_option_index'] == 0 ? "Bought" : "Sold")." @ USD/".$bet['track_name_short'].": ".$bought_price_inv_str;
 		if ($div_td == 'div') $this_bet_html .= "<div class=\"col-md-2\" title='".$cell_title."'>";
 		else $this_bet_html .= "<td title='".$cell_title."'>";
+		$this_bet_html .= '<a target="_blank" href="'.AppSettings::getParam('base_url').'/explorer/games/'.$game->db_game['url_identifier'].'/events/'.$bet['event_index'].'">';
 		$this_bet_html .= str_replace(" ", "&nbsp;", $bet['option_name']);
+		$this_bet_html .= '</a>';
 		$this_bet_html .= "&nbsp;($".$this->format_bignum($bet['track_min_price'])."&nbsp;-&nbsp;$".$this->format_bignum($bet['track_max_price']).")";
 		if ($div_td == 'div') $this_bet_html .= "</div>\n";
 		else $this_bet_html .= "&nbsp;&nbsp;</td>\n";

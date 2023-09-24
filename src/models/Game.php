@@ -2423,16 +2423,40 @@ class Game {
 			}
 			
 			$payout_events = $this->events_by_payout_block($block_height);
-			$payout_resolved_event_ids = [];
-			foreach ($payout_events as $payout_event) {
-				$payout_event->pay_out_event();
-				if ((string)$payout_event->db_event['outcome_index'] !== "" || (string)$payout_event->db_event['track_payout_price'] !== "") {
-					array_push($payout_resolved_event_ids, $payout_event->db_event['event_id']);
-				}
-			}
 			
-			if (count($payout_resolved_event_ids) > 0) {
-				$this->blockchain->app->run_query("UPDATE transaction_game_ios SET is_resolved=1 WHERE event_id IN (".implode(",", $payout_resolved_event_ids).");");
+			if (count($payout_events) > 0) {
+				$show_internal_params = false;
+				list($initial_game_def_hash, $initial_game_def) = GameDefinition::fetch_game_definition($this, "defined", $show_internal_params, false);
+				GameDefinition::check_set_game_definition($this->blockchain->app, $initial_game_def_hash, $initial_game_def);
+				
+				if (empty($this->db_game['definitive_game_peer_id'])) $allow_change_def = true;
+				else $allow_change_def = false;
+				
+				$any_payout_changed_def = false;
+				$payout_resolved_event_ids = [];
+				
+				foreach ($payout_events as $payout_event) {
+					$payout_changed_def = $payout_event->pay_out_event($allow_change_def);
+					
+					if ($payout_changed_def) $any_payout_changed_def = true;
+					
+					if ((string)$payout_event->db_event['outcome_index'] !== "" || (string)$payout_event->db_event['track_payout_price'] !== "") {
+						array_push($payout_resolved_event_ids, $payout_event->db_event['event_id']);
+					}
+				}
+				
+				if ($any_payout_changed_def) {
+					list($final_game_def_hash, $final_game_def) = GameDefinition::fetch_game_definition($this, "defined", $show_internal_params, false);
+					GameDefinition::check_set_game_definition($this->blockchain->app, $final_game_def_hash, $final_game_def);
+					
+					if ($initial_game_def_hash !== $final_game_def_hash) {
+						GameDefinition::record_migration($this, null, "set_outcomes", $show_internal_params, $initial_game_def, $final_game_def);
+					}
+				}
+				
+				if (count($payout_resolved_event_ids) > 0) {
+					$this->blockchain->app->run_query("UPDATE transaction_game_ios SET is_resolved=1 WHERE event_id IN (".implode(",", $payout_resolved_event_ids).");");
+				}
 			}
 			
 			$this->blockchain->app->run_query("UPDATE game_blocks SET locally_saved=1, time_loaded=:current_time, load_time=load_time+:add_load_time, max_game_io_index=:max_game_io_index WHERE game_block_id=:game_block_id;", [
@@ -3251,7 +3275,7 @@ class Game {
 		return $html;
 	}
 	
-	public function set_event_blocks($user_id, $game_defined_event_id, $avoid_changing_completed_events = false) {
+	public function set_event_blocks($user_id, $game_defined_event_id, $avoid_changing_completed_events = false, $skip_record_migration=false) {
 		$log_text = "";
 		$last_block_id = $this->blockchain->last_block_id();
 		
@@ -3272,21 +3296,25 @@ class Game {
 		$log_text .= "Set blocks for ".count($event_arr)." events in ".$this->db_game['name'];
 		
 		if (count($event_arr) > 0) {
-			$show_internal_params = true;
+			$show_internal_params = false;
 			
-			list($initial_game_def_hash, $initial_game_def) = GameDefinition::fetch_game_definition($this, "defined", $show_internal_params, false);
-			GameDefinition::check_set_game_definition($this->blockchain->app, $initial_game_def_hash, $initial_game_def);
+			if (!$skip_record_migration) {
+				list($initial_game_def_hash, $initial_game_def) = GameDefinition::fetch_game_definition($this, "defined", $show_internal_params, false);
+				GameDefinition::check_set_game_definition($this->blockchain->app, $initial_game_def_hash, $initial_game_def);
+			}
 			
 			foreach ($event_arr as $gde) {
 				$this->set_gde_blocks_by_time($gde);
 			}
 			
-			list($final_game_def_hash, $final_game_def) = GameDefinition::fetch_game_definition($this, "defined", $show_internal_params, false);
-			GameDefinition::check_set_game_definition($this->blockchain->app, $final_game_def_hash, $final_game_def);
-			
-			GameDefinition::record_migration($this, $user_id, "set_blocks_by_ui", $show_internal_params, $initial_game_def, $final_game_def);
-			
-			GameDefinition::set_cached_definition_hashes($this);
+			if (!$skip_record_migration) {
+				list($final_game_def_hash, $final_game_def) = GameDefinition::fetch_game_definition($this, "defined", $show_internal_params, false);
+				GameDefinition::check_set_game_definition($this->blockchain->app, $final_game_def_hash, $final_game_def);
+				
+				GameDefinition::record_migration($this, $user_id, "set_blocks_by_ui", $show_internal_params, $initial_game_def, $final_game_def);
+				
+				GameDefinition::set_cached_definition_hashes($this);
+			}
 		}
 		return $log_text;
 	}
@@ -4142,6 +4170,21 @@ class Game {
 			'game_id' => $this->db_game['game_id'],
 			'time' => time(),
 		]);
+	}
+	
+	public function lock_game_definition() {
+		$this->blockchain->app->set_site_constant("game_definition_locked_".$this->db_game['game_id'], time());
+	}
+	
+	public function unlock_game_definition() {
+		$this->blockchain->app->set_site_constant("game_definition_locked_".$this->db_game['game_id'], 0);
+	}
+	
+	public function game_definition_is_locked() {
+		$lock_time = (int) $this->blockchain->app->get_site_constant("game_definition_locked_".$this->db_game['game_id']);
+		
+		if ($lock_time == 0 || $lock_time < time()-(60*10)) return false;
+		else return true;
 	}
 }
 ?>
