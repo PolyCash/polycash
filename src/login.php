@@ -101,41 +101,6 @@ else {
 		</div>
 	</div>
 	<script type="text/javascript">
-	var LoginManager = function() {
-		this.regularly_check_username = function() {
-			if (this.usernameChanged) {
-				thisPageManager.check_username();
-				this.usernameChanged = false;
-			}
-		
-			setTimeout(function() {
-				this.regularly_check_username();
-			}.bind(this), 2000);
-		};
-		
-		this.login_by_email = function() {
-			$.ajax({
-				url: "/ajax/send_login_link.php",
-				dataType: "json",
-				data: {
-					username: $('#username').val(),
-					redirect_key: $('#redirect_key').val()
-				},
-				success: function(send_link_response) {
-					if (send_link_response.status_code == 1) {
-						$('#send_link_message').html(send_link_response.message);
-						$('#send_link_message').slideDown('fast');
-						setTimeout(function() {
-							$('#send_link_message').html("");
-							$('#send_link_message').slideUp();
-						}, 5000);
-					}
-					else alert(send_link_response.message);
-				}
-			});
-		};
-	};
-	
 	var thisLoginManager;
 	window.onload = function() {
 		thisLoginManager = new LoginManager();
