@@ -87,7 +87,7 @@ if ($app->running_as_admin()) {
 				if (empty($thisuser)) {
 					$redirect_url = $app->get_redirect_url($_SERVER['REQUEST_URI']);
 					$redirect_key = $redirect_url['redirect_key'];
-					include(AppSettings::srcPath()."/includes/html_login.php");
+					include(AppSettings::srcPath()."/includes/html_register.php");
 				}
 				else {
 					$install_messages = $app->install_configured_games_and_blockchains($thisuser);

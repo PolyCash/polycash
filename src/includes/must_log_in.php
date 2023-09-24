@@ -9,7 +9,7 @@ if (empty($thisuser)) {
 	?>
 	<div class="container-fluid">
 		<?php
-		include(AppSettings::srcPath()."/includes/html_login.php");
+		include(AppSettings::srcPath()."/includes/html_register.php");
 		?>
 	</div>
 	<?php

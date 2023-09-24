@@ -14,27 +14,10 @@ if (!empty($_REQUEST['action'])) $action = $_REQUEST['action'];
 			$message = "";
 			
 			if ($matched_user) {
-				if ($matched_user['login_method'] == "email") {
-					$message = User::email_login_message();
-					$status_code = 2;
-				}
-				else {
-					$message = "To log in, please enter your password.";
-					$status_code = 3;
-				}
+				if ($matched_user['login_method'] == "email") $app->output_message(2, User::email_login_message(), false);
+				else $app->output_message(3, "To log in, please enter your password.", false);
 			}
-			else {
-				if (empty(AppSettings::getParam('sendgrid_api_key')) || strpos($username, '@') === false) {
-					$message = "To sign up, please enter your password.";
-					$status_code = 4;
-				}
-				else {
-					$message = User::email_login_message();
-					$status_code = 1;
-				}
-			}
-			
-			$app->output_message($status_code, $message, false);
+			else $app->output_message(4, "That username is already registered.", false);
 		}
 		else $app->output_message(5, "Error: the username you entered is too short. Usernames must be at least 6 characters.", false);
 	}

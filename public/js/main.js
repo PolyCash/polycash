@@ -2733,26 +2733,18 @@ var PageManager = function() {
 			},
 			context: this,
 			success: function(check_response) {
-				$('#check_username_btn').html("Continue");
-				
-				$('#login_message').html(check_response.message);
-				$('#login_message').show();
-				
-				if (check_response.status_code == 3 || check_response.status_code == 4) {
-					this.toggle_to_panel('password');
-					
-					if (check_response.status_code == 4) {
-						$('#login_btn').html("Sign Up");
-					}
-					else $('#login_btn').html("Log In");
+				if (check_response.status_code == 2) {
+					$('#email_logins').show();
+					$('#password_logins').hide();
 				}
-				else if (check_response.status_code == 1 || check_response.status_code == 2) {
-					this.login();
+				else {
+					$('#email_logins').hide();
+					$('#password_logins').show();
 				}
 			}
 		});
 	}
-	this.login = function() {
+/*	this.login = function() {
 		if ($('#login_password').val() != "") $('#login_password').val(Sha256.hash($('#login_password').val()));
 		
 		$('#login_btn').html("Loading...");
@@ -2795,7 +2787,7 @@ var PageManager = function() {
 		
 		if (which_panel == "login") setTimeout(function() {$('#username').focus()}, 500);
 		else if (this.selected_panel == 'password') setTimeout(function() {$('#login_password').focus()}, 500);
-	}
+	}*/
 	this.manage_game_event_filter_changed = function() {
 		window.location = '/manage/'+games[0].game_url_identifier+'/?next=events&event_filter='+$('#manage_game_event_filter').val();
 	}

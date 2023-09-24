@@ -2612,15 +2612,10 @@ class App {
 		return hash("sha256", $secret);
 	}
 	
-	public function create_new_user($verify_code, $salt, $username, $password) {
-		if (empty(AppSettings::getParam("sendgrid_api_key"))) $login_method = "password";
-		else {
-			if (strpos($username, '@') === false) $login_method = "password";
-			else $login_method = "email";
-		}
+	public function create_new_user($verify_code, $salt, $username, $password, $registration_values=[]) {
+		$login_method = "password";
 		
 		$new_user_params = [
-			'username' => $username,
 			'password' => $this->normalize_password($password, $salt),
 			'salt' => $salt,
 			'login_method' => $login_method,
@@ -2628,6 +2623,13 @@ class App {
 			'verify_code' => $verify_code,
 			'ip_address' => AppSettings::getParam('pageview_tracking_enabled') ? $_SERVER['REMOTE_ADDR'] : null
 		];
+		
+		foreach (User::registration_fields() as $field_name => $field_info) {
+			if (empty($field_info['created_with_different_value'])) {
+				$new_user_params[$field_name] = $registration_values[$field_name];
+			}
+		}
+		
 		if (strpos($username, '@') !== false) {
 			$new_user_params['notification_email'] = $username;
 		}
