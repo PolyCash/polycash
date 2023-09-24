@@ -2721,20 +2721,6 @@ var PageManager = function() {
 			}
 		});
 	}
-	this.generate_credentials = function() {
-		$.ajax({
-			url: "/ajax/check_username.php",
-			dataType: "json",
-			data: {
-				action: "generate"
-			},
-			success: function(generation_response) {
-				$('#generate_display').html(generation_response.message);
-				$('#login_password').val($('#generate_password').val());
-				$('#username').val($('#generate_username').val());
-			}
-		});
-	}
 	this.check_username = function() {
 		var username = $('#username').val();
 		$('#check_username_btn').html("Loading...");
