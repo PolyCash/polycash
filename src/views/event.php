@@ -412,24 +412,35 @@ for ($i=0; $i<count($round_stats); $i++) {
 		<?php } ?>
 		<?php echo $round_stats[$i]['name']; ?>
 		<?php
+		$show_odds_as_pct = false;
 		if ($event->db_event['payout_rule'] == "binary") {
+			$show_odds_as_pct = true;
 			if (!empty($odds_disp)) echo ' &nbsp; '.$odds_disp;
 		}
 		else {
-			/*if ($our_buy_price) {
-				if ($round_stats[$i]['event_option_index'] == 0) $position_price = $our_buy_price-$event->db_event['track_min_price'];
-				else $position_price = $event->db_event['track_max_price']-$our_buy_price;
+			if ($our_buy_price) {
+				if ($round_stats[$i]['event_option_index'] == 0) {
+					$position_price = $our_buy_price-$event->db_event['track_min_price'];
+					$leverage = ($position_price+$event->db_event['track_min_price'])/$position_price;
+				}
+				else {
+					$position_price = $event->db_event['track_max_price']-$our_buy_price;
+					$leverage = ($event->db_event['track_max_price']-$position_price)/$position_price;
+				}
 				
-				?><font class="greentext">$<?php echo $app->format_percentage($app->to_significant_digits($position_price, 5)); ?></font><?php
-			}*/
+				?> &nbsp; <font class="greentext">$<?php echo $app->format_percentage($app->to_significant_digits($position_price, EXCHANGE_RATE_SIGFIGS)); ?></font><?php
+				
+				echo " &nbsp; ".$app->to_significant_digits($leverage, 4, false)."x";
+			}
 		}
-		?> &nbsp; (<?php echo $pct_votes; ?>%)
-		
-		<?php if ($clickable) { ?>
+		if ($show_odds_as_pct) {
+			?> &nbsp; (<?php echo $pct_votes; ?>%) <?php
+		}
+		if ($clickable) { ?>
 			</div>
-		<?php } ?>
+			<?php
+		}
 		
-		<?php
 		if ($account && $last_block_id < $event->db_event['event_final_block'] && $last_block_id+1 >= $event->db_event['event_starting_block']) {
 			$addresses = $app->fetch_addresses_in_account($account, $round_stats[$i]['option_index'], 1);
 			if (!empty($addresses[0])) {
