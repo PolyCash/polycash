@@ -35,7 +35,7 @@ else {
 					}
 					if (array_key_exists('min_length', $field_info)) {
 						if (strlen($_POST[$field_name]) < $field_info['min_length']) {
-							$error_messages[$field_name] = ucfirst($field_info['display_name'])." must be at least ".$field_info['max_length']." characters.";
+							$error_messages[$field_name] = ucfirst($field_info['display_name'])." must be at least ".$field_info['min_length']." characters.";
 							$value_ok = false;
 						}
 					}
