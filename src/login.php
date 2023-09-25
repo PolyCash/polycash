@@ -22,8 +22,6 @@ else {
 			
 			$old_vars_safe['username'] = $username;
 			
-			if ($password == hash("sha256", "")) $password = "";
-			
 			$noinfo_message = "Incorrect username or password, please try again.";
 			
 			$existing_user = $app->fetch_user_by_username($username);
@@ -33,7 +31,10 @@ else {
 			}
 			else {
 				if ($existing_user['login_method'] == "password") {
-					if ($existing_user['password'] == $app->normalize_password($password, $existing_user['salt'])) {
+					if ($existing_user['has_legacy_password']) $supply_password = $app->normalize_password(hash("sha256", $password), $existing_user['salt']);
+					else $supply_password = $app->normalize_password($password, $existing_user['salt']);
+
+					if ($existing_user['password'] == $supply_password) {
 						$thisuser = new User($app, $existing_user['user_id']);
 						
 						$success = $thisuser->log_user_in($redirect_url, $viewer_id);
