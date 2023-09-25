@@ -45,7 +45,7 @@ if (!empty($_REQUEST['redirect_key']) && empty($redirect_url)) $redirect_url = $
 			</div>
 			<div class="form-group">
 				<label for="first_name">What is your first name?</label>
-				<input name="first_name" class="form-control" placeholder="First name" <?php if (!empty($old_vars_safe['first_name'])) echo ' value="'.$old_vars_safe['first_name'].'" '; ?>/>
+				<input name="first_name" class="form-control" placeholder="First name" autocomplete="off" <?php if (!empty($old_vars_safe['first_name'])) echo ' value="'.$old_vars_safe['first_name'].'" '; ?>/>
 				<?php
 				if (!empty($error_messages['first_name'])) {
 					echo '<p class="text-warning">'.$error_messages['first_name'].'</p>';
@@ -54,7 +54,7 @@ if (!empty($_REQUEST['redirect_key']) && empty($redirect_url)) $redirect_url = $
 			</div>
 			<div class="form-group">
 				<label for="last_name">What is your last name?</label>
-				<input name="last_name" class="form-control" placeholder="Last name" <?php if (!empty($old_vars_safe['last_name'])) echo ' value="'.$old_vars_safe['last_name'].'" '; ?>/>
+				<input name="last_name" class="form-control" placeholder="Last name" autocomplete="off" <?php if (!empty($old_vars_safe['last_name'])) echo ' value="'.$old_vars_safe['last_name'].'" '; ?>/>
 				<?php
 				if (!empty($error_messages['last_name'])) {
 					echo '<p class="text-warning">'.$error_messages['last_name'].'</p>';
@@ -63,7 +63,7 @@ if (!empty($_REQUEST['redirect_key']) && empty($redirect_url)) $redirect_url = $
 			</div>
 			<div class="form-group">
 				<label for="phone_number">What is your phone number? (Optional)</label>
-				<input name="phone_number" class="form-control" placeholder="+1" <?php if (!empty($old_vars_safe['phone_number'])) echo ' value="'.$old_vars_safe['phone_number'].'" '; ?>/>
+				<input name="phone_number" class="form-control" placeholder="+1" autocomplete="off" <?php if (!empty($old_vars_safe['phone_number'])) echo ' value="'.$old_vars_safe['phone_number'].'" '; ?>/>
 				<?php
 				if (!empty($error_messages['phone_number'])) {
 					echo '<p class="text-warning">'.$error_messages['phone_number'].'</p>';
