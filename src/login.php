@@ -76,7 +76,7 @@ else {
 					
 					<div class="form-group">
 						<label for="username">Please enter your username:</label>
-						<input id="username" name="username" class="form-control" placeholder="Username" required <?php if (!empty($old_vars_safe['username'])) echo ' value="'.$old_vars_safe['username'].'" '; ?> onChange="thisPageManager.check_username();" onKeyUp="thisLoginManager.usernameChanged = true;" />
+						<input id="username" name="username" class="form-control" placeholder="Username" required autocomplete="username" <?php if (!empty($old_vars_safe['username'])) echo ' value="'.$old_vars_safe['username'].'" '; ?> onChange="thisPageManager.check_username();" onKeyUp="thisLoginManager.usernameChanged = true;" />
 						<?php
 						if (!empty($error_messages['username'])) {
 							echo '<p class="text-warning">'.$error_messages['username'].'</p>';
@@ -87,7 +87,7 @@ else {
 					<div id="password_logins">
 						<div class="form-group">
 							<label for="password">Please enter your password:</label>
-							<input name="password" type="password" class="form-control" required placeholder="Password" />
+							<input name="password" type="password" class="form-control" required placeholder="Password" autocomplete="current-password" />
 						</div>
 						
 						<button class="btn btn-success btn-sm">Log in</button>
