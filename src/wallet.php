@@ -679,7 +679,7 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 										<select class="form-control" style="margin-top: 5px;" id="select_add_output" onchange="thisPageManager.select_add_output_changed();"></select>
 									</div>
 								</div>
-								<button class="btn btn-success" id="confirm_compose_bets_btn" style="margin-top: 5px; margin-left: 5px;" onclick="thisPageManager.confirm_compose_bets();"><i class="fas fa-check-circle"></i> &nbsp; Confirm & Stake</button>
+								<button class="btn btn-sm btn-success" id="confirm_compose_bets_btn" style="margin-top: 5px; margin-left: 5px;" onclick="thisPageManager.confirm_compose_bets();"><i class="fas fa-check-circle"></i> &nbsp; Confirm & Stake</button>
 							</div>
 							
 							<div class="redtext" id="compose_bets_errors" style="margin-top: 10px;"></div>
@@ -720,7 +720,7 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 									</div>
 								</div>
 								<div class="form-group">
-									<button class="btn btn-success" id="principal_bet_btn"><i class="fas fa-check-circle"></i> &nbsp; Confirm Bet</button>
+									<button class="btn btn-sm btn-success" id="principal_bet_btn"><i class="fas fa-check-circle"></i> &nbsp; Confirm Bet</button>
 									<div id="principal_bet_message" class="greentext" style="margin-top: 10px;"></div>
 								</div>
 							</form>
