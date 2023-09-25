@@ -73,7 +73,7 @@ else $exchange_rate = 0;
 		</div>
 	</div>
 	
-	<div style="overflow: auto; margin-bottom: 10px;">
+	<div style="overflow: auto; margin: 10px 0px;">
 		<div style="float: right;">
 			<?php
 			echo $game->event_filter_html();
@@ -124,7 +124,7 @@ games.push(new Game(thisPageManager, <?php
 	else echo "0";
 	echo ', false';
 	echo ', "'.$game->db_game['default_betting_mode'].'"';
-	echo ', false, true, false';
+	echo ', true, true, false';
 ?>));
 
 <?php
