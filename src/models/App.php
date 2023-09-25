@@ -2344,7 +2344,12 @@ class App {
 				$verify_code = $this->random_string(32);
 				$salt = $this->random_string(16);
 				
-				$thisuser = $this->create_new_user($verify_code, $salt, $username, $user_password);
+				$thisuser = $this->create_new_user($verify_code, $salt, $username, $user_password, [
+					'username' => $username,
+					'first_name' => null,
+					'last_name' => null,
+					'phone_number' => null,
+				]);
 			}
 			
 			$new_card_user_params = [

@@ -63,18 +63,7 @@ if (empty($thisuser) && !empty($_REQUEST['login_key'])) {
 		if (empty($login_link['time_clicked'])) {
 			if ($login_link['time_created'] > time()-(60*15)) {
 				if (empty($login_link['user_id'])) {
-					$existing_user = $app->fetch_user_by_username($login_link['username']);
-					
-					if (!$existing_user) {
-						$verify_code = $app->random_string(32);
-						$salt = $app->random_string(16);
-						
-						$thisuser = $app->create_new_user($verify_code, $salt, $login_link['username'], "");
-					}
-					else {
-						$login_link_error = true;
-						$message = "Error: you followed an invalid login link. Please try again.";
-					}
+					$login_link_error = "Signup with email only logins has been disabled.";
 				}
 				else {
 					$db_user = $app->fetch_user_by_id($login_link['user_id']);

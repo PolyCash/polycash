@@ -22,7 +22,12 @@ if (strlen($session_key) > 0) {
 			$salt = $app->random_string(16);
 			$redirect_url = false;
 			
-			$only_user = $app->create_new_user($verify_code, $salt, AppSettings::getParam('only_user_username'), AppSettings::getParam('only_user_password'));
+			$only_user = $app->create_new_user($verify_code, $salt, AppSettings::getParam('only_user_username'), AppSettings::getParam('only_user_password'), [
+				'username' => AppSettings::getParam('only_user_username'),
+				'first_name' => null,
+				'last_name' => null,
+				'phone_number' => null,
+			]);
 			$only_user->log_user_in($redirect_url, null);
 		}
 		else {
