@@ -1851,10 +1851,14 @@ class Game {
 				if ($print_debug) $this->blockchain->app->print_debug("Resetting the game..");
 
 				if (array_key_exists("reset_from_block", $extra_info) && $extra_info['reset_from_block'] > $this->db_game['game_starting_block']) {
-					$reset_from_block = $extra_info['reset_from_block'];
-					$this->reset_blocks_from_block($reset_from_block);
-					$this->set_loaded_until_block($reset_from_block-1);
-					$this->set_events_until_block($reset_from_block-1);
+					if ($extra_info['reset_from_block'] <= $this->blockchain->last_block_id()) {
+						$reset_from_block = $extra_info['reset_from_block'];
+						$this->reset_blocks_from_block($reset_from_block);
+						$this->set_loaded_until_block($reset_from_block-1);
+						$this->set_events_until_block($reset_from_block-1);
+					}
+					else $this->blockchain->app->log_message("Game #".$this->db_game['game_id']." tried to reset to future block ".$extra_info['reset_from_block']." but last block was ".$this->blockchain->last_block_id().", skipping block reloading.");
+					
 					unset($extra_info['reset_from_block']);
 
 					if (array_key_exists("reset_from_event_index", $extra_info)) {
