@@ -69,6 +69,7 @@ if ($app->running_as_admin()) {
 				$num_peers_recently_checked = 0;
 				$num_peers_out_of_sync = 0;
 				$min_out_of_sync_block = null;
+				$min_out_of_sync_since = null;
 
 				foreach ($game_peers as $game_peer) {
 					if (!empty($game_peer['last_sync_check_at']) && $game_peer['last_sync_check_at'] >= time()-($sec_between_sync_checks*4)) {
@@ -79,22 +80,33 @@ if ($app->running_as_admin()) {
 
 							if (isset($game_peer['out_of_sync_block']) && ($min_out_of_sync_block === null || $game_peer['out_of_sync_block'] < $min_out_of_sync_block)) $min_out_of_sync_block = (int) $game_peer['out_of_sync_block'];
 						}
+						
+						if ((string)$game_peer['out_of_sync_since'] !== "") {
+							if ($min_out_of_sync_since === null || (int)$game_peer['out_of_sync_since'] < $min_out_of_sync_since) {
+								$min_out_of_sync_since = (int)$game_peer['out_of_sync_since'];
+							}
+						}
 					}
 				}
 
 				if ($print_debug) $app->print_debug($num_peers_out_of_sync."/".$num_peers_recently_checked." peers are out of sync in ".$running_game->db_game['name'].($min_out_of_sync_block ? " since block ".$min_out_of_sync_block : ""));
 
 				if ($num_peers_recently_checked > 0 && $num_peers_out_of_sync/$num_peers_recently_checked > 0.5 && isset($min_out_of_sync_block)) {
-					$game_extra_info = $running_game->fetch_extra_info();
+					$reset_after_out_of_sync_minutes = 6*60;
+					
+					if ($min_out_of_sync_since !== null && $min_out_of_sync_since < time()-(60*$reset_after_out_of_sync_minutes)) {
+						$game_extra_info = $running_game->fetch_extra_info();
 
-					if (!empty($game_extra_info['pending_reset'])) {
-						if ($print_debug) $app->print_debug("Game already has a pending reset");
-					}
-					else {
-						if ($print_debug) $app->print_debug("Resetting game from block #".$min_out_of_sync_block);
+						if (!empty($game_extra_info['pending_reset'])) {
+							if ($print_debug) $app->print_debug("Game already has a pending reset");
+						}
+						else {
+							if ($print_debug) $app->print_debug("Resetting game from block #".$min_out_of_sync_block);
 
-						$running_game->schedule_game_reset($min_out_of_sync_block, null, null, time()+$sec_between_sync_checks+60);
+							$running_game->schedule_game_reset($min_out_of_sync_block, null, null, time()+$sec_between_sync_checks+60);
+						}
 					}
+					else if ($print_debug) $app->print_debug("Game reset skipped because no peer is out of sync for more than ".$app->format_seconds(60*$reset_after_out_of_sync_minutes).".");
 				}
 				else if ($print_debug) $app->print_debug("Game does not need to be reset.");
 			}
