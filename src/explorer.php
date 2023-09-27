@@ -1,5 +1,4 @@
 <?php
-ini_set('memory_limit', '1024M');
 require(AppSettings::srcPath().'/includes/connect.php');
 require(AppSettings::srcPath().'/includes/get_session.php');
 

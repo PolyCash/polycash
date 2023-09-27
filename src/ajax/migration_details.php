@@ -5,6 +5,8 @@ require(AppSettings::srcPath()."/includes/get_session.php");
 $action = null;
 if (!empty($_REQUEST['action'])) $action = $_REQUEST['action'];
 
+$migration = null;
+
 if (!empty($_REQUEST['migration_id'])) {
 	$migration = $app->run_query("SELECT * FROM game_definition_migrations WHERE migration_id=:migration_id;", ['migration_id' => $_REQUEST['migration_id']])->fetch();
 	$db_game = $app->fetch_game_by_id($migration['game_id']);
@@ -47,6 +49,20 @@ else {
 	</div>
 	<div class="modal-body">
 		<?php
+		if ($migration) {
+			if ((string)$migration['extra_info'] != "" && $extra_info = json_decode($migration['extra_info'], true)) {
+				if (isset($extra_info['reset_from_block'])) {
+					$reset_from_block = $game->blockchain->fetch_block_by_id($extra_info['reset_from_block']);
+					echo "Reset from block #".$extra_info['reset_from_block'];
+					if ($reset_from_block) echo " (".date("Y-m-d H:i:s", $reset_from_block['time_mined']).")";
+					echo "<br/>\n";
+				}
+				
+				if (isset($extra_info['reset_from_event_index'])) {
+					echo "Reset from event #".$extra_info['reset_from_event_index']."<br/>\n";
+				}
+			}
+		}
 		echo implode(".<br/>\n", $difference_summary_lines);
 		?>
 	</div>

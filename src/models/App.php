@@ -415,12 +415,6 @@ class App {
 		else $html .= "Failed to start a process for updating currency prices.\n";
 		sleep(0.02);
 		
-		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/load_cached_urls.php"';
-		$cached_url_process = $this->run_shell_command($cmd, $print_debug);
-		if (is_resource($cached_url_process)) $process_count++;
-		else $html .= "Failed to start a process for loading cached urls.\n";
-		sleep(0.02);
-		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/ensure_user_addresses.php"';
 		$ensure_addresses_process = $this->run_shell_command($cmd, $print_debug);
 		if (is_resource($ensure_addresses_process)) $process_count++;
@@ -2069,48 +2063,6 @@ class App {
 			$this->run_insert_query("entity_types", ['entity_name'=>$name]);
 			return $this->fetch_entity_type_by_id($this->last_insert_id());
 		}
-	}
-	
-	public function cached_url_info($url) {
-		return $this->run_query("SELECT * FROM cached_urls WHERE url=:url;", ['url'=>$url])->fetch();
-	}
-	
-	public function async_fetch_url($url, $require_now) {
-		$cached_url = $this->cached_url_info($url);
-		
-		if ($cached_url) {
-			if ($require_now && empty($cached_url['time_fetched'])) {
-				$start_load_time = microtime(true);
-				$http_response = file_get_contents($cached_url['url']) or die("Failed to fetch url: $url");
-				
-				$this->run_query("UPDATE cached_urls SET cached_result=:cached_result, time_fetched=:time_fetched, load_time=:load_time WHERE cached_url_id=:cached_url_id;", [
-					'cached_result' => $http_response,
-					'time_fetched' => time(),
-					'load_time' => (microtime(true)-$start_load_time),
-					'cached_url_id' => $cached_url['cached_url_id']
-				]);
-				
-				$cached_url = $this->run_query("SELECT * FROM cached_urls WHERE cached_url_id=:cached_url_id;", ['cached_url_id'=>$cached_url['cached_url_id']])->fetch();
-			}
-		}
-		else {
-			$new_cached_url_params = [
-				'url' => $url,
-				'time_created' => time()
-			];
-			if ($require_now) {
-				$start_load_time = microtime(true);
-				$http_response = file_get_contents($url) or die("Failed to fetch url: $url");
-				$new_cached_url_params['time_fetched'] = time();
-				$new_cached_url_params['cached_result'] = $http_response;
-				$new_cached_url_params['load_time'] = microtime(true)-$start_load_time;
-			}
-			$this->run_insert_query("cached_urls", $new_cached_url_params);
-			
-			$cached_url = $this->run_query("SELECT * FROM cached_urls WHERE cached_url_id=:cached_url_id;", ['cached_url_id'=>$this->last_insert_id()])->fetch();
-		}
-		
-		return $cached_url;
 	}
 	
 	public function permission_to_claim_address(&$thisuser, &$address_blockchain, &$db_address) {
@@ -4118,18 +4070,14 @@ class App {
 			'game_id' => $game->db_game['game_id']
 		])->fetchAll();
 		$migrationsByToHash = [];
-		$definitionsByHash = [];
 		foreach ($migrations as $migration) {
 			$migrationsByToHash[$migration['to_hash']] = $migration;
-			if (empty($definitionsByHash[$migration['from_hash']])) $definitionsByHash[$migration['from_hash']] = json_decode(GameDefinition::get_game_definition_by_hash($this, $migration['from_hash']));
-			if (empty($definitionsByHash[$migration['to_hash']])) $definitionsByHash[$migration['to_hash']] = json_decode(GameDefinition::get_game_definition_by_hash($this, $migration['to_hash']));
 		}
 		
 		$migrations = array_slice($migrations, 0, $fetchQuantity);
 		
 		return [
 			$migrations,
-			$definitionsByHash,
 			$migrationsByToHash,
 			$migrationQuantity
 		];

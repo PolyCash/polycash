@@ -1,7 +1,7 @@
 <?php
 $migrationsPerPage = 16;
 if (!empty($_REQUEST['history_pos'])) $migrationsPerPage = (int) $_REQUEST['history_pos'];
-list($migrations, $definitionsByHash, $migrationsByToHash, $migrationQuantity) = $app->fetch_recent_migrations($game, $migrationsPerPage);
+list($migrations, $migrationsByToHash, $migrationQuantity) = $app->fetch_recent_migrations($game, $migrationsPerPage);
 ?>
 <style>
 .migration-header-cell {
