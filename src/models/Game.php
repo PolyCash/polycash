@@ -478,7 +478,7 @@ class Game {
 			'ref_block' => $block_id
 		])->fetch();
 		
-		if ($event_info) return (int) $event_info['MIN(event_index)'];
+		if ($event_info && (string) $event_info['MIN(event_index)'] !== "") return (int) $event_info['MIN(event_index)'];
 		else return false;
 	}
 	
@@ -1760,8 +1760,7 @@ class Game {
 		if ($from_reset_time) $extra_info['from_reset_time'] = $from_reset_time;
 		
 		if ($from_block !== null) {
-			$reset_from_event_index = $this->reset_block_to_event_index($from_block);
-			if ($from_index !== null && $from_index < $reset_from_event_index) $reset_from_event_index = $from_index;
+			$reset_from_event_index = $this->blockchain->app->min_excluding_false([$this->reset_block_to_event_index($from_block), $from_index]);
 			
 			if ($reset_from_event_index !== false) {
 				$extra_info['reset_from_event_index'] = $reset_from_event_index;
@@ -1772,7 +1771,6 @@ class Game {
 			
 			$extra_info['reset_from_block'] = $from_block;
 		}
-		
 		$this->set_extra_info($extra_info);
 		
 		if ($migration_id) {
