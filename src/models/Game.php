@@ -3297,6 +3297,7 @@ class Game {
 			$event_q .= " AND ((event_starting_block <= :block_id AND event_payout_block >= :block_id) OR event_starting_block IS NULL OR event_final_block IS NULL)";
 			$event_params['block_id'] = $last_block_id;
 		}
+		$event_q .= " ORDER BY event_index ASC;";
 		$event_arr = $this->blockchain->app->run_query($event_q, $event_params)->fetchAll();
 		
 		$log_text .= "Set blocks for ".count($event_arr)." events in ".$this->db_game['name'];

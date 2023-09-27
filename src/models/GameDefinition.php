@@ -426,7 +426,26 @@ class GameDefinition {
 			$initial_event_text = self::game_def_to_text($initial_game_obj['events'][$i]);
 			
 			if (self::game_def_to_text($new_game_obj['events'][$i]) != $initial_event_text) {
-				$reset_block = $game->blockchain->app->min_excluding_false(array($reset_block, $initial_game_obj['events'][$i]->event_starting_block, $new_game_obj['events'][$i]->event_starting_block));
+				// If only thing changed is outcome, only need to reset from the payout block
+				// otherwise need to reset from the event starting block.
+				
+				$new_event_no_outcome = clone $new_game_obj['events'][$i];
+				$initial_event_no_outcome = clone $initial_game_obj['events'][$i];
+				
+				$initial_event_no_outcome->outcome_index = null;
+				$initial_event_no_outcome->track_payout_price = null;
+				$initial_event_no_outcome->event_payout_block = null;
+				
+				$new_event_no_outcome->outcome_index = null;
+				$new_event_no_outcome->track_payout_price = null;
+				$new_event_no_outcome->event_payout_block = null;
+				
+				if (self::game_def_to_text($initial_event_no_outcome) == self::game_def_to_text($new_event_no_outcome)) {
+					$reset_block = $game->blockchain->app->min_excluding_false(array($reset_block, $initial_game_obj['events'][$i]->event_payout_block, $new_game_obj['events'][$i]->event_payout_block));
+				}
+				else {
+					$reset_block = $game->blockchain->app->min_excluding_false(array($reset_block, $initial_game_obj['events'][$i]->event_starting_block, $new_game_obj['events'][$i]->event_starting_block));
+				}
 				
 				if ($reset_event_index === false) $reset_event_index = $new_game_obj['events'][$i]->event_index;
 			}
