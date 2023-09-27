@@ -478,7 +478,7 @@ class Game {
 			'ref_block' => $block_id
 		])->fetch();
 		
-		if ($event_info) return (int) $event_info['MIN(event_index)'];
+		if ($event_info && (string) $event_info['MIN(event_index)'] !== "") return (int) $event_info['MIN(event_index)'];
 		else return false;
 	}
 	
@@ -1760,8 +1760,7 @@ class Game {
 		if ($from_reset_time) $extra_info['from_reset_time'] = $from_reset_time;
 		
 		if ($from_block !== null) {
-			$reset_from_event_index = $this->reset_block_to_event_index($from_block);
-			if ($from_index !== null && $from_index < $reset_from_event_index) $reset_from_event_index = $from_index;
+			$reset_from_event_index = $this->blockchain->app->min_excluding_false([$this->reset_block_to_event_index($from_block), $from_index]);
 			
 			if ($reset_from_event_index !== false) {
 				$extra_info['reset_from_event_index'] = $reset_from_event_index;
@@ -1772,7 +1771,6 @@ class Game {
 			
 			$extra_info['reset_from_block'] = $from_block;
 		}
-		
 		$this->set_extra_info($extra_info);
 		
 		if ($migration_id) {
@@ -1851,10 +1849,14 @@ class Game {
 				if ($print_debug) $this->blockchain->app->print_debug("Resetting the game..");
 
 				if (array_key_exists("reset_from_block", $extra_info) && $extra_info['reset_from_block'] > $this->db_game['game_starting_block']) {
-					$reset_from_block = $extra_info['reset_from_block'];
-					$this->reset_blocks_from_block($reset_from_block);
-					$this->set_loaded_until_block($reset_from_block-1);
-					$this->set_events_until_block($reset_from_block-1);
+					if ($extra_info['reset_from_block'] <= $this->blockchain->last_block_id()) {
+						$reset_from_block = $extra_info['reset_from_block'];
+						$this->reset_blocks_from_block($reset_from_block);
+						$this->set_loaded_until_block($reset_from_block-1);
+						$this->set_events_until_block($reset_from_block-1);
+					}
+					else $this->blockchain->app->log_message("Game #".$this->db_game['game_id']." tried to reset to future block ".$extra_info['reset_from_block']." but last block was ".$this->blockchain->last_block_id().", skipping block reloading.");
+					
 					unset($extra_info['reset_from_block']);
 
 					if (array_key_exists("reset_from_event_index", $extra_info)) {
