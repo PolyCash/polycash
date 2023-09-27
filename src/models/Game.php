@@ -1565,7 +1565,6 @@ class Game {
 					
 					$i = 0;
 					for ($event_index=$init_event_index; $event_index<$init_event_index+count($gdes_to_add); $event_index++) {
-						if ((string)$gdes_to_add[$i]['event_determined_to_block'] == "") $gdes_to_add[$i]['event_determined_to_block'] = $gdes_to_add[$i]['event_payout_block'];
 						$this->blockchain->app->check_set_gde($this, $gdes_to_add[$i], $event_verbatim_vars, $sports_entity_type['entity_type_id'], $leagues_entity_type['entity_type_id'], $general_entity_type['entity_type_id']);
 						$i++;
 					}
@@ -1617,7 +1616,7 @@ class Game {
 						if (!empty($game_defined_event['league_entity_id'])) $event_searchtext .= $searchtext_leagues_by_id[$game_defined_event['league_entity_id']]->entity_name;
 						$event_searchtext = strtolower($this->blockchain->app->make_alphanumeric($event_searchtext, ""));
 						
-						$event_determined_to_block = $game_defined_event['event_determined_to_block'] ? $game_defined_event['event_determined_to_block'] : $game_defined_event['event_payout_block'];
+						$event_determined_to_block = $game_defined_event['event_determined_to_block'] ? $game_defined_event['event_determined_to_block'] : null;
 						
 						$new_event_params = [
 							'game_id' => $this->db_game['game_id'],
@@ -2577,11 +2576,22 @@ class Game {
 	}
 	
 	public function set_game_defined_outcome($event_index, $outcome_index) {
-		$this->blockchain->app->run_query("UPDATE game_defined_events SET outcome_index=:outcome_index WHERE game_id=:game_id AND event_index=:event_index;", [
-			'game_id' => $this->db_game['game_id'],
-			'event_index' => $event_index,
-			'outcome_index' => $outcome_index
+		$this->update_game_defined_event($event_index, [
+			'outcome_index' => $outcome_index,
 		]);
+	}
+	
+	public function update_game_defined_event($event_index, $params, $update_events_too=false) {
+		$params['game_id'] = $this->db_game['game_id'];
+		$params['event_index'] = $event_index;
+		$update_q = "";
+		foreach ($params as $var => $value) {
+			$update_q .= $var."=:".$var.", ";
+		}
+		$update_q = substr($update_q, 0, strlen($update_q)-2);
+		$update_q .= " WHERE game_id=:game_id AND event_index=:event_index;";
+		$this->blockchain->app->run_query("UPDATE game_defined_events SET ".$update_q, $params);
+		if ($update_events_too) $this->blockchain->app->run_query("UPDATE events SET ".$update_q, $params);
 	}
 	
 	public function render_transaction(&$transaction, $selected_address_id, $selected_game_io_id, $coins_per_vote, $last_block_id) {
@@ -3240,7 +3250,6 @@ class Game {
 				'event_starting_block' => $start_block,
 				'event_final_block' => $final_block,
 				'event_payout_block' => $payout_block,
-				'event_determined_to_block' => $payout_block,
 				'game_id' => $this->db_game['game_id'],
 				'event_index' => $gde['event_index']
 			]);

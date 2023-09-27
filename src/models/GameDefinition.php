@@ -442,12 +442,18 @@ class GameDefinition {
 				
 				if (self::game_def_to_text($initial_event_no_outcome) == self::game_def_to_text($new_event_no_outcome)) {
 					$reset_block = $game->blockchain->app->min_excluding_false(array($reset_block, $initial_game_obj['events'][$i]->event_payout_block, $new_game_obj['events'][$i]->event_payout_block));
+					
+					$game->update_game_defined_event($i, [
+						'event_payout_block' => $new_game_obj['events'][$i]->event_payout_block,
+						'track_payout_price' => $new_game_obj['events'][$i]->track_payout_price,
+						'outcome_index' => $new_game_obj['events'][$i]->outcome_index,
+					], true);
 				}
 				else {
 					$reset_block = $game->blockchain->app->min_excluding_false(array($reset_block, $initial_game_obj['events'][$i]->event_starting_block, $new_game_obj['events'][$i]->event_starting_block));
+					
+					if ($reset_event_index === false) $reset_event_index = $new_game_obj['events'][$i]->event_index;
 				}
-				
-				if ($reset_event_index === false) $reset_event_index = $new_game_obj['events'][$i]->event_index;
 			}
 		}
 		
