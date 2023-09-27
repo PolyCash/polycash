@@ -4118,18 +4118,14 @@ class App {
 			'game_id' => $game->db_game['game_id']
 		])->fetchAll();
 		$migrationsByToHash = [];
-		$definitionsByHash = [];
 		foreach ($migrations as $migration) {
 			$migrationsByToHash[$migration['to_hash']] = $migration;
-			if (empty($definitionsByHash[$migration['from_hash']])) $definitionsByHash[$migration['from_hash']] = json_decode(GameDefinition::get_game_definition_by_hash($this, $migration['from_hash']));
-			if (empty($definitionsByHash[$migration['to_hash']])) $definitionsByHash[$migration['to_hash']] = json_decode(GameDefinition::get_game_definition_by_hash($this, $migration['to_hash']));
 		}
 		
 		$migrations = array_slice($migrations, 0, $fetchQuantity);
 		
 		return [
 			$migrations,
-			$definitionsByHash,
 			$migrationsByToHash,
 			$migrationQuantity
 		];
