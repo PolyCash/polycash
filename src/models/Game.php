@@ -4130,6 +4130,7 @@ class Game {
 		else $checksum_section_ok = true;
 		
 		$out_of_sync_block = null;
+		$out_of_sync_txo_pos = null;
 		
 		if ($checksum_section_ok) {
 			$array_scan_from_txo_pos = $max_set_checksum_partition === null ? 0 : $this->checksum_partition_to_txo_index($max_set_checksum_partition, $txos_per_partition)+1;
@@ -4178,7 +4179,7 @@ class Game {
 		
 		if ($print_debug) $this->blockchain->app->print_debug("Out of sync block: ".json_encode($out_of_sync_block));
 		
-		return $out_of_sync_block;
+		return [$out_of_sync_block, $out_of_sync_txo_pos];
 	}
 	
 	public function reset_partition_checksums($print_debug) {
