@@ -119,8 +119,10 @@ class User {
 		
 		if ($game->db_game['payout_weight'] != "coin") {
 			if ($game->db_game['inflation'] == "exponential") {
-				$unrealized_disp = $game->display_coins($votes_value, false, true);
-				$html .= '<div class="row"><div class="col-sm-4">Unrealized gains:</div><div class="col-sm-6 text-right"><font class="greentext">'.$unrealized_disp.'</font> '.($unrealized_disp=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']).'</div></div>'."\n";
+				if ($game->db_game['exponential_inflation_rate'] > 0) {
+					$unrealized_disp = $game->display_coins($votes_value, false, true);
+					$html .= '<div class="row"><div class="col-sm-4">Unrealized gains:</div><div class="col-sm-6 text-right"><font class="greentext">'.$unrealized_disp.'</font> '.($unrealized_disp=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']).'</div></div>'."\n";
+				}
 			}
 			else {
 				$html .= '<div class="row"><div class="col-sm-4">Votes:</div><div class="col-sm-6 text-right"><font class="greentext">'.$game->display_coins($user_votes, false, true).'</font> votes available</div></div>'."\n";
