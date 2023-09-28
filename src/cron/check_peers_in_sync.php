@@ -4,12 +4,15 @@ require_once(dirname(dirname(__FILE__))."/models/CoinbaseClient.php");
 
 $script_start_time = microtime(true);
 
-$allowed_params = ['print_debug'];
+$allowed_params = ['print_debug', 'force'];
 $app->safe_merge_argv_to_request($argv, $allowed_params);
 
 if ($app->running_as_admin()) {
 	$print_debug = false;
 	if (!empty($_REQUEST['print_debug'])) $print_debug = true;
+	
+	$force = false;
+	if (!empty($_REQUEST['force'])) $force=true;
 	
 	$process_lock_name = "check_peers_in_sync";
 	$process_locked = $app->check_process_running($process_lock_name);
@@ -40,7 +43,7 @@ if ($app->running_as_admin()) {
 				$app->print_debug("Checking ".$running_game->db_game['name']." synchronization status against ".count($game_peers)." peers.");
 				
 				foreach ($game_peers as $game_peer) {
-					if (empty($game_peer['last_sync_check_at']) || $game_peer['last_sync_check_at'] <= time()-$sec_between_sync_checks) {
+					if ($force || empty($game_peer['last_sync_check_at']) || $game_peer['last_sync_check_at'] <= time()-$sec_between_sync_checks) {
 						$last_block_id = $running_game->blockchain->last_block_id();
 						$last_block = $running_game->fetch_game_block_by_height($last_block_id);
 						
