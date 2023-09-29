@@ -6,6 +6,7 @@ services:
     platform: linux/x86_64
     image: mysql:5.7
     container_name: polycash-db-mysql
+    command: --max_allowed_packet=1024M
     environment:
       MYSQL_ROOT_USER: root
       MYSQL_ROOT_PASSWORD: root

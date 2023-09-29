@@ -3993,6 +3993,10 @@ class Game {
 	public function set_partition_checksum($partition, $txos_per_partition, $print_debug=false) {
 		$start_time = microtime(true);
 		
+		$any_error = false;
+		$error_message = null;
+		$checksum = null;
+		
 		$to_txo_index = $this->checksum_partition_to_txo_index($partition, $txos_per_partition);
 		$from_txo_index = $to_txo_index-$txos_per_partition+1;
 		
@@ -4001,8 +4005,20 @@ class Game {
 		if ($print_debug) $this->blockchain->app->print_debug("Fetch took ".round(microtime(true)-$start_time, 4)." sec");
 		$ref_time = microtime(true);
 		
+		if ($partition == 0) $previous_checksum = null;
+		else {
+			$prev_partition_txo_index = $this->checksum_partition_to_txo_index($partition-1, $txos_per_partition);
+			$prev_partition_txo = $this->fetch_game_io_by_index($prev_partition_txo_index);
+			if ($prev_partition_txo) $previous_checksum = $prev_partition_txo['partition_checksum'];
+			else {
+				$any_error = true;
+				$error_message = "Failed to fetch TXO #".$prev_partition_txo_index.", cannot set partition checksums.";
+				return [$any_error, $error_message, $checksum];
+			}
+		}
+		
 		$checksum = hash("sha256", json_encode([
-			'previous_checksum' => $partition == 0 ? null : $this->fetch_game_io_by_index($this->checksum_partition_to_txo_index($partition-1, $txos_per_partition))['partition_checksum'],
+			'previous_checksum' => $previous_checksum,
 			'txos' => $txos,
 		], JSON_PRETTY_PRINT));
 		
@@ -4017,7 +4033,7 @@ class Game {
 		
 		if ($print_debug) $this->blockchain->app->print_debug("Update took ".round(microtime(true)-$ref_time, 4)." sec");
 		
-		return $checksum;
+		return [$any_error, $error_message, $checksum];
 	}
 	
 	public function find_peer_out_of_sync_block_by_array_scan($peer_txos, $from_txo_pos, $to_txo_pos) {
@@ -4047,6 +4063,9 @@ class Game {
 	}
 	
 	public function set_partition_checksums($txos_per_partition, $print_debug) {
+		$any_error = false;
+		$error_message = null;
+		
 		$last_block_id = $this->blockchain->last_block_id();
 		$last_block = $this->fetch_game_block_by_height($last_block_id);
 		$max_game_io_index = $last_block['max_game_io_index'];
@@ -4075,7 +4094,13 @@ class Game {
 				$sec_per_debug_output = 1;
 				
 				for ($partition=$from_partition; $partition <= $to_partition; $partition++) {
-					$checksum = $this->set_partition_checksum($partition, $txos_per_partition, false);
+					list($set_partition_error, $set_partition_error_message, $checksum) = $this->set_partition_checksum($partition, $txos_per_partition, false);
+					
+					if ($set_partition_error) {
+						$any_error = $set_partition_error;
+						$error_message = $set_partition_error_message;
+						$partition = $to_partition;
+					}
 					
 					if ($print_debug && microtime(true)-$last_debug_output_time >= $sec_per_debug_output) {
 						$checksums_remaining = $to_partition-$partition;
@@ -4088,7 +4113,11 @@ class Game {
 				}
 				if ($print_debug) $this->blockchain->app->print_debug("Set ".$num_checksums_to_set." checksums in ".round(microtime(true)-$set_checksums_start_time, 4)." sec");
 			}
+			else $error_message = "No partition checksums were set. Max paid block could not be fetched.";
 		}
+		else $error_message = "No partition checksums needed to be set because there was no min unpaid block.";
+		
+		return [$any_error, $error_message];
 	}
 	
 	public function peer_out_of_sync_block($game_peer, $txos_per_partition, $last_block, $print_debug) {
@@ -4120,7 +4149,7 @@ class Game {
 					}
 					else {
 						if ($print_debug) $this->blockchain->app->print_debug("Peer is missing checksum for TXO #".$txo_pos.", skipping sync check.");
-						return null;
+						return [null, false];
 					}
 				}
 				else $checksum_section_ok = true;
