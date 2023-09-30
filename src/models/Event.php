@@ -215,7 +215,9 @@ class Event {
 					
 					while ($parent_io = $bets_by_option->fetch()) {
 						$this_effective_coins = $parent_io['votes']*$coins_per_vote + $parent_io['effective_destroy_amount'];
-						$this_payout_amount = floor($this->db_event['payout_rate']*$option_payout_total*$this_effective_coins/$option_effective_coins);
+						$frac_of_winnings = $this_effective_coins/$option_effective_coins;
+						$this_payout_float = $this->db_event['payout_rate']*$option_payout_total*$frac_of_winnings;
+						$this_payout_amount = floor($this_payout_float);
 						$weighted_payout = $this_payout_amount/$parent_io['contract_parts'];
 						
 						$this->game->blockchain->app->run_query("UPDATE transaction_game_ios SET colored_amount=".AppSettings::sqlFloor($weighted_payout."*contract_parts")." WHERE parent_io_id=:parent_io_id AND resolved_before_spent=1;", [
