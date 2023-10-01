@@ -186,13 +186,19 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 									$io_amount_sum += $recycle_io['amount'];
 								}
 								
-								while ($keep_looping && $io = $my_spendable_ios->fetch()) {
+								$loop_pos = 0;
+								
+								while ($keep_looping && $loop_pos<count($my_spendable_ios)) {
+									$io = $my_spendable_ios[$loop_pos];
+									
 									$game_amount_sum += $io['coins'];
 									$io_amount_sum += $io['amount'];
 									array_push($io_ids, $io['io_id']);
 									array_push($ios, $io);
 									
 									if ($game_amount_sum >= $sellout_amount && $io_amount_sum > ($tx_fee*2)) $keep_looping = false;
+									
+									$loop_pos++;
 								}
 								
 								if ($io_amount_sum > $tx_fee*2) {

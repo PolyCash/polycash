@@ -1394,7 +1394,7 @@ class Game {
 		
 		$mature_ios = $this->blockchain->app->spendable_ios_in_account($user_game['account_id'], $this->db_game['game_id'], false, false);
 		
-		while ($io = $mature_ios->fetch()) {
+		foreach ($mature_ios as $io) {
 			$ids_csv .= $io['io_id'].",";
 		}
 		if ($ids_csv != "") $ids_csv = substr($ids_csv, 0, -1);
@@ -1402,7 +1402,7 @@ class Game {
 	}
 	
 	public function select_input_buttons($user_game) {
-		$mature_ios = $this->blockchain->app->spendable_ios_in_account($user_game['account_id'], $this->db_game['game_id'], false, false)->fetchAll();
+		$mature_ios = $this->blockchain->app->spendable_ios_in_account($user_game['account_id'], $this->db_game['game_id'], false, false);
 		
 		$js = "thisPageManager.chain_ios.length = 0;\n";
 		$html = "<p>";
@@ -3839,7 +3839,7 @@ class Game {
 					$game_cost_int = $quantity_donations*$donate_from_account['faucet_amount_each']*pow(10, $this->db_game['decimal_places']);
 					$fee_int = $strategy['transaction_fee']*pow(10, $this->blockchain->db_blockchain['decimal_places']);
 					
-					$spendable_ios = $this->blockchain->app->spendable_ios_in_account($donate_from_account['account_id'], $this->db_game['game_id'], false, false)->fetchAll();
+					$spendable_ios = $this->blockchain->app->spendable_ios_in_account($donate_from_account['account_id'], $this->db_game['game_id'], false, false);
 					
 					$gio_input_sum = 0;
 					$io_input_sum = 0;

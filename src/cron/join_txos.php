@@ -39,7 +39,7 @@ if ($app->running_as_admin()) {
 				
 				$keep_looping = true;
 				do {
-					$spendable_ios = $app->spendable_ios_in_account($account['account_id'], $game->db_game['game_id'], false, false)->fetchAll();
+					$spendable_ios = $app->spendable_ios_in_account($account['account_id'], $game->db_game['game_id'], false, false);
 					$quantity = min($account['join_txos_on_quantity'], count($spendable_ios));
 					
 					if (count($spendable_ios) >= $account['join_txos_on_quantity']) {
@@ -77,7 +77,7 @@ if ($app->running_as_admin()) {
 							$new_tx_count++;
 							$join_txo_count += $quantity;
 							
-							$spendable_ios = $app->spendable_ios_in_account($account['account_id'], $game->db_game['game_id'], false, false)->fetchAll();
+							$spendable_ios = $app->spendable_ios_in_account($account['account_id'], $game->db_game['game_id'], false, false);
 							
 							if (count($spendable_ios) < $account['join_txos_on_quantity']) $keep_looping = false;
 						}
