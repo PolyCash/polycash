@@ -75,7 +75,7 @@ class User {
 		
 		$gio_sum = 0;
 		foreach ($spendable_ios_in_account as $spendable_io) {
-			$gio_sum += $spendable_io['coins'];
+			$gio_sum += (int)$spendable_io['coins'];
 		}
 		return $gio_sum;
 		
@@ -102,7 +102,7 @@ class User {
 		return [$votes, $votes_value];
 	}
 	
-	public function wallet_text_stats(&$game, $current_round, $last_block_id, $block_within_round, $mature_balance, $locked_amount, $user_votes, $votes_value, $pending_bets, &$user_game, $earlY_resolved_amount) {
+	public function wallet_text_stats(&$game, $current_round, $last_block_id, $block_within_round, $mature_balance, $locked_amount, $user_votes, $votes_value, $pending_bets, &$user_game, $early_resolved_amount) {
 		$available_disp = $game->display_coins($mature_balance, false, true);
 		$html = '<div class="row"><div class="col-sm-4">Available&nbsp;funds:</div>';
 		$html .= '<div class="col-sm-6 text-right"><font class="greentext">';
@@ -117,8 +117,10 @@ class User {
 		$pending_disp = $game->display_coins($pending_bets, false, true);
 		$html .= '<div class="row"><div class="col-sm-4">Pending bets:</div><div class="col-sm-6 text-right"><font class="greentext">'.$pending_disp.'</font> '.($pending_disp=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']).'</div></div>'."\n";
 		
-		$early_resolved_disp = $game->display_coins($early_resolved_amount, false, true);
-		$html .= '<div class="row"><div class="col-sm-4">Bets resolved early:</div><div class="col-sm-6 text-right"><font class="redtext">'.$early_resolved_disp.'</font> '.($early_resolved_disp=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']).'</div></div>'."\n";
+		if ($early_resolved_amount > 0) {
+			$early_resolved_disp = $game->display_coins($early_resolved_amount, false, true);
+			$html .= '<div class="row"><div class="col-sm-4">Bets resolved early:</div><div class="col-sm-6 text-right"><font class="redtext">'.$early_resolved_disp.'</font> '.($early_resolved_disp=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']).'</div></div>'."\n";
+		}
 		
 		if ($game->db_game['payout_weight'] != "coin") {
 			if ($game->db_game['inflation'] == "exponential") {

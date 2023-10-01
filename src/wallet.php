@@ -286,14 +286,14 @@ $coins_per_vote = $app->coins_per_vote($game->db_game);
 
 $unconfirmed_amount = $thisuser->unconfirmed_amount($game, $user_game);
 $immature_amount = $thisuser->immature_amount($game, $user_game);
-list($early_resolved_ios, $early_resolved_amount) = $app->early_resolved_ios_in_account($user_game['account_id'], $game->db_game['game_id']);
+list($early_resolved_ios, $early_resolved_amount) = $app->early_resolved_ios_in_account($user_game['account_id'], $game->db_game['game_id'], true);
 $mature_balance = $thisuser->mature_balance($game, $user_game, $early_resolved_ios);
 
 list($user_votes, $votes_value) = $thisuser->user_current_votes($game, $last_block_id, $current_round, $user_game);
 $user_pending_bets = $game->user_pending_bets($user_game);
 $game_pending_bets = $game->pending_bets(true);
 list($vote_supply, $vote_supply_value) = $game->vote_supply($last_block_id, $current_round, $coins_per_vote, true);
-$account_value = $mature_balance+$immature_amount+$unconfirmed_amount+$user_pending_bets;
+$account_value = $mature_balance+$immature_amount+$unconfirmed_amount+$user_pending_bets+$early_resolved_amount;
 
 $blockchain_last_block_id = $game->blockchain->last_block_id();
 $blockchain_current_round = $game->block_to_round($blockchain_last_block_id+1);
