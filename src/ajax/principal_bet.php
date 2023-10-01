@@ -37,8 +37,11 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 					$io_ids = [];
 					$burn_game_amount = 0;
 					$keep_looping = true;
+					$loop_pos = 0;
 					
-					while ($keep_looping && $io = $spendable_ios_in_account->fetch()) {
+					while ($keep_looping && $loop_pos < count($spendable_ios_in_account)) {
+						$io = $spendable_ios_in_account[$loop_pos];
+						
 						$game_amount_in += $io['coins'];
 						$io_amount_in += $io['amount'];
 						array_push($io_ids, $io['io_id']);
@@ -54,6 +57,8 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 						
 						$burn_game_amount = $amount_int-$mandatory_bets;
 						if ($game_amount_in >= $burn_game_amount*1.2) $keep_looping = false;
+						
+						$loop_pos++;
 					}
 					
 					if ($burn_game_amount <= AppSettings::maxBurnFrac()*$game_amount_in) {

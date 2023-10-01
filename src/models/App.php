@@ -3593,7 +3593,7 @@ class App {
 		])->fetch();
 	}
 	
-	public function spendable_ios_in_account($account_id, $game_id, $round_id, $last_block_id) {
+	public function spendable_ios_in_account($account_id, $game_id, $round_id, $last_block_id, $early_resolved_ios=null) {
 		$spendable_io_params = [
 			'account_id' => $account_id,
 			'game_id' => $game_id
@@ -3608,7 +3608,37 @@ class App {
 			$spendable_io_params['ref_round_id'] = $round_id;
 		}
 		$spendable_io_q .= " FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id AND gio.address_id=k.address_id WHERE io.spend_status IN ('unspent','unconfirmed') AND io.is_mature=1 AND k.account_id=:account_id AND gio.game_id=:game_id GROUP BY gio.io_id HAVING COUNT(*)=num_resolved ORDER BY io.io_id ASC;";
-		return $this->run_query($spendable_io_q, $spendable_io_params);
+		
+		$spendable_ios = $this->run_query($spendable_io_q, $spendable_io_params)->fetchAll();
+		
+		$spendable_ios_by_id = AppSettings::arrayToMapOnKey($spendable_ios, 'io_id');
+
+		if ($early_resolved_ios === null) {
+			list($early_resolved_ios, $early_resolved_amount) = $this->early_resolved_ios_in_account($account_id, $game_id);
+		}
+		
+		$early_resolved_ios_by_id = AppSettings::arrayToMapOnKey($early_resolved_ios, 'io_id');
+		
+		foreach ($spendable_ios_by_id as $io_id => $spendable_io) {
+			if (array_key_exists($early_resolved_ios_by_id, $io_id)) unset($spendable_ios_by_id[$io_id]);
+		}
+		
+		return array_values($spendable_ios_by_id);
+	}
+	
+	public function early_resolved_ios_in_account($account_id, $game_id) {
+		$early_resolved_ios = $this->run_query("SELECT io.*, SUM(gio.colored_amount) as coins FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id AND gio.address_id=k.address_id JOIN events ev ON gio.event_id=ev.event_id WHERE io.spend_status IN ('unspent','unconfirmed') AND io.is_mature=1 AND k.account_id=:account_id AND gio.game_id=:game_id AND gio.is_game_coinbase=1 AND gio.is_resolved=1 AND ev.event_payout_time > NOW() GROUP BY io.io_id ORDER BY io.io_id ASC;", [
+			'account_id' => $account_id,
+			'game_id' => $game_id,
+		])->fetchAll();
+		
+		$game_coin_sum = 0;
+		
+		foreach ($early_resolved_ios as $early_resolved_io) {
+			$game_coin_sum += $early_resolved_io['coins'];
+		}
+		
+		return [$early_resolved_ios, $game_coin_sum];
 	}
 	
 	public function fetch_blockchain_by_identifier($blockchain_identifier) {

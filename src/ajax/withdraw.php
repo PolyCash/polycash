@@ -22,7 +22,7 @@ if ($game && $thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 		$blockchain_spendable_balance = $game->blockchain->account_balance($user_game['account_id'], true);
 		
 		if ($fee < $blockchain_spendable_balance) {
-			$spendable_ios_in_account = $app->spendable_ios_in_account($user_game['account_id'], $game->db_game['game_id'], $round_id, $last_block_id)->fetchAll();
+			$spendable_ios_in_account = $app->spendable_ios_in_account($user_game['account_id'], $game->db_game['game_id'], $round_id, $last_block_id);
 			
 			$account_balance = 0;
 			foreach ($spendable_ios_in_account as $io) {

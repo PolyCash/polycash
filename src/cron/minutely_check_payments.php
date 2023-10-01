@@ -78,7 +78,7 @@ if ($app->running_as_admin()) {
 								$game_coins_in = 0;
 								$chain_coins_in = 0;
 								
-								while ($spend_io = $sale_spend_ios->fetch()) {
+								foreach ($sale_spend_ios as $spend_io) {
 									if ($game_coins_in < $buyin_amount_int || $chain_coins_in < $chain_fee_int*5) {
 										array_push($spend_ios, $spend_io);
 										array_push($spend_io_ids, $spend_io['io_id']);

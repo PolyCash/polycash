@@ -16,7 +16,7 @@ if ($app->running_as_admin()) {
 	if (!empty($_REQUEST['runs'])) $runs = (int) $_REQUEST['runs'];
 	
 	for ($run=0; $run<$runs; $run++) {
-		$spendable_ios = $app->spendable_ios_in_account($account['account_id'], $game->db_game['game_id'], false, false)->fetchAll();
+		$spendable_ios = $app->spendable_ios_in_account($account['account_id'], $game->db_game['game_id'], false, false);
 		$quantity = min($quantity, count($spendable_ios));
 		
 		if (count($spendable_ios) > 10) {
