@@ -656,6 +656,17 @@ class App {
 		return number_format($number, $decimal_places);
 	}
 	
+	public function first_digit($number) {
+		if ($number == 0) return "0";
+		
+		if ($number < 0) $number = abs($number);
+		
+		$orders_magnitude = floor(log10($number));
+		$greater_zero_number = $number/pow(10, $orders_magnitude);
+		
+		return ((string)$greater_zero_number)[0];
+	}
+	
 	public function to_ranktext($rank) {
 		return $rank.date("S", strtotime("1/".$rank."/".date("Y")));
 	}
