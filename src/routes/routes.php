@@ -24,6 +24,12 @@ else if ($uri_parts[1] == "faq") {
 else if ($uri_parts[1] == "unsubscribe") {
 	include($src_path."/unsubscribe.php");
 }
+else if ($uri_parts[1] == "privacy-policy") {
+	include($src_path."/privacy-policy.php");
+}
+else if ($uri_parts[1] == "terms-of-use") {
+	include($src_path."/terms-of-use.php");
+}
 else if ($uri_parts[1] == "register") {
 	include($src_path."/register.php");
 }
