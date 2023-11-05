@@ -196,5 +196,23 @@ class AppSettings {
 		if ($maxBurnFrac === null) return 0.9;
 		else return $maxBurnFrac;
 	}
+	
+	public static function nodeLegalEntity() {
+		$nodeLegalEntity = self::getParam("node_legal_entity");
+		if ($nodeLegalEntity === null) return "";
+		else return $nodeLegalEntity;
+	}
+	
+	public static function nodeContactEmail() {
+		$nodeContactEmail = self::getParam("node_contact_email");
+		if ($nodeContactEmail === null) return "";
+		else return $nodeContactEmail;
+	}
+	
+	public static function nodeLegalState() {
+		$nodeLegalState = self::getParam("node_legal_state");
+		if ($nodeLegalState === null) return "";
+		else return $nodeLegalState;
+	}
 }
 ?>

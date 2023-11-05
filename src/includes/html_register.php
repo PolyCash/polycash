@@ -80,6 +80,11 @@ if (!empty($_REQUEST['redirect_key']) && empty($redirect_url)) $redirect_url = $
 				?>
 			</div>
 			
+			<div class="form-group">
+				<input type="checkbox" id="agree_terms" name="agree_terms" value="1" required />
+				<label for="agree_terms">By checking this box, you agree to our <a href="/terms-of-use" target="_blank">Terms of Use</a> and <a href="/privacy-policy" target="_blank">Privacy Policy</a></label>
+			</div>
+			
 			<p>
 				<button id="check_username_btn" class="btn btn-success btn-sm">Register</button>
 			</p>

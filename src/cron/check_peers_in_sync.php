@@ -63,7 +63,10 @@ if ($app->running_as_admin()) {
 							
 							$peer_info = PeerVerifier::peerApiCall($game_peer, "/api/".$running_game->db_game['url_identifier']."/info");
 							
-							if (array_key_exists('last_block_id', $peer_info) && $peer_info['last_block_id'] == $last_block_id) {
+							if ($peer_info === null) {
+								if ($print_debug) $app->print_debug("API call to peer ".$game_peer['peer_name']." failed.");
+							}
+							else if (array_key_exists('last_block_id', $peer_info) && $peer_info['last_block_id'] == $last_block_id) {
 								list($out_of_sync_block, $out_of_sync_txo_pos) = $running_game->peer_out_of_sync_block($game_peer, $txos_per_partition, $last_block, $print_debug);
 								
 								$app->run_query("UPDATE game_peers SET last_sync_check_at=:last_sync_check_at, last_check_in_sync=:last_check_in_sync, out_of_sync_since=:out_of_sync_since, out_of_sync_block=:out_of_sync_block, out_of_sync_txo_pos=:out_of_sync_txo_pos WHERE game_peer_id=:game_peer_id;", [

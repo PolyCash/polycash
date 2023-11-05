@@ -1,6 +1,9 @@
 {
 	"site_name": "PolyCash",
 	"site_domain": "localhost",
+	"node_legal_entity": "Your Company LLC",
+	"node_contact_email": "support@yourcompany.com",
+	"node_legal_state": "Your State",
 	"server": "Apache",
 	"desktop_mode": true,
 	"mysql_server": "127.0.0.1",

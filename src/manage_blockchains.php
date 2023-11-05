@@ -79,7 +79,7 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 				if ($existing_blockchain_arr) {
 					if ($_REQUEST['action'] == "save_blockchain_params") {
 						$existing_blockchain = new Blockchain($app, $existing_blockchain_arr['blockchain_id']);
-						$existing_blockchain->set_blockchain_parameters([
+						$update_params = [
 							'rpc_host' => $_REQUEST['rpc_host'],
 							'rpc_username' => $_REQUEST['rpc_username'],
 							'rpc_password' => $_REQUEST['rpc_password'],
@@ -87,8 +87,13 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 							'online' => (int) $_REQUEST['online'],
 							'sync_mode' => $_REQUEST['sync_mode'],
 							'first_required_block' => $first_required_block,
-							'last_complete_block' => (string) $first_required_block == "" ? null : ($_REQUEST['first_required_block']-1),
-						]);
+						];
+						if ((string)$first_required_block != (string)$existing_blockchain->db_blockchain['first_required_block']) {
+							if ((string) $first_required_block == "") $update_params['last_complete_block'] = null;
+							else if ($first_required_block < $existing_blockchain->db_blockchain['first_required_block']) $update_params['last_complete_block'] = $first_required_block-1;
+							else $update_params['last_complete_block'] = $existing_blockchain->last_complete_block_id();
+						}
+						$existing_blockchain->set_blockchain_parameters();
 						
 						$message_class = "success";
 						$message = "Blockchain parameters have been successfully updated.";
