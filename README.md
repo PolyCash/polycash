@@ -98,6 +98,8 @@ Edit src/config/config.json:
 - Set "desktop_mode": false,
 - Delete lines for "only_user_username" and "only_user_password"
 
+By default, Datachain RPC calls can only be run locally from your node.  You can allow RPC access from other IPs by adding "rpcallowip" to your datacoin.conf.  When running a public node be sure to set secure RPC credentials by editing "rpcuser" and setting a secure random string for "rpcpassword" in your /.datacoin/datacoin.conf
+
 ## Shutting Down Safely
 
 It's recommended to always stop Datachain before shutting down your node. To stop Datachain open a terminal for your polycash-app-1 container and then run this command:
@@ -106,4 +108,4 @@ It's recommended to always stop Datachain before shutting down your node. To sto
 /var/www/html/datacoin-cli stop
 ```
 
-Then wait for datacoin to stop.
+Once datacoin has stopped, it's safe to stop your Docker container.

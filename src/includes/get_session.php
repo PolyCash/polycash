@@ -24,9 +24,9 @@ if (strlen($session_key) > 0) {
 			
 			$config = AppSettings::getSettings();
 			$config->only_user_password = $only_user_password;
-			list($setConfigSuccess, $setConfigError) = AppSettings::setSettings($config);
+			list($setConfigError, $setConfigErrorMessage) = AppSettings::setSettings($config);
 
-			if ($setConfigSuccess) {
+			if (!$setConfigError) {
 				$redirect_url = false;
 
 				$only_user = $app->create_new_user($verify_code, $salt, AppSettings::getParam('only_user_username'), $only_user_password, [
@@ -37,7 +37,6 @@ if (strlen($session_key) > 0) {
 				]);
 				$only_user->log_user_in($redirect_url, null);
 			}
-			else die('Failed to create admin user, check "only_user_username" and "only_user_password" params in src/config/config.json. ('.$setConfigError.')');
 		}
 		else {
 			$sessions = $app->fetch_sessions_by_key($session_key);
