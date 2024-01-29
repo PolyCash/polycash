@@ -1,6 +1,9 @@
 {
     "site_name": "PolyCash",
     "site_domain": "localhost:8080",
+    "node_legal_entity": "Your Company LLC",
+    "node_contact_email": "support@yourcompany.com",
+    "node_legal_state": "Your State",
     "server": "Apache",
     "desktop_mode": true,
     "mysql_server": "db-mysql",
@@ -18,7 +21,7 @@
     "pageview_tracking_enabled": false,
     "currency_price_refresh_seconds": 300,
     "invoice_expiration_seconds": 604800,
-    "new_games_per_user": "unlimited",
+    "new_games_per_user": 0,
     "homepage_fname": "default.php",
     "default_timezone": "UTC",
     "api_proxy_url": "",
@@ -28,11 +31,12 @@
     "restrict_ip_address": false,
     "limited_navigation": false,
     "memory_limit": "1024M",
+    "only_user_username": "admin",
+    "only_user_password": null,
     "coinbase_key": "",
     "coinbase_secret": "",
     "coinbase_passphrase": "",
     "coinbase_deposit_btc_address": "",
     "coinbase_deposit_ltc_address": "",
-    "only_user_username": "admin",
-    "only_user_password": "admin"
+    "display_sync_game_ids": ""
 }

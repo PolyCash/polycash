@@ -24,7 +24,8 @@ http://localhost:8080/
 
 PolyCash will automatically install and begin syncing with the network.  The synchronization step can take hours to complete. 
 
-To start or stop PolyCash, simply open Docker Desktop, navigate to the Containers section and then use the start and stop buttons.
+If PolyCash hasn't started already, open Docker Desktop, navigate to the Containers section and then click the start/play icon on your polycash container.
+
 
 ## Install Blockchains & Games
 By default, the Betcoin cryptocurrency is installed when you install PolyCash.  You can install other PolyCash-protocol cryptocurrencies by pasting their game definitions in via the "Import" link found in the left menu.
@@ -45,7 +46,18 @@ cd /var/www/html
 
 ## Set Blockchain RPC credentials
 
-If you installed with Docker, PolyCash should have been configured to use the right RPC credentials for Datachain. If not, you may need to enter your Datachain RPC credentials into PolyCash. To do that, log in to the PolyCash user account you used when installing, then click the "Manage Blockchains" link in the left hand menu. Then select Datachain -> "Set RPC credentials", and then enter the RPC username and password from your datacoin.conf (typically located at /.datacoin/datacoin.conf).
+Next you need to enter your Datachain RPC credentials into PolyCash. To do that, log in to the PolyCash user account you used when installing, then click the "Manage Blockchains" link in the left hand menu. Then select Datachain -> "Set RPC credentials", and then enter the RPC username and password from your datacoin.conf (typically located at /.datacoin/datacoin.conf).
+
+Enter these values for Datachain:
+```
+RPC hostname: 127.0.0.1
+RPC username: datacoinuser
+RPC password: datacoinpass
+RPC port: 9023
+Status: Enabled
+Sync mode: Full
+Sync from block: 1
+```
 
 ## Make PolyCash Configuration Changes
 
@@ -76,3 +88,24 @@ bash
 cd /var/www/html
 php src/cron/load_blocks.php print_debug=1
 ```
+
+## Running a Public Node
+
+If you installed PolyCash using the recommended method, your node has been configured for local use with no public access.  If you would like to run a public PolyCash node, you should make some changes to your configuration before going live with your node.
+
+Edit src/config/config.json:
+- Create a secure random string and enter it as "operator_key"
+- Set "desktop_mode": false,
+- Delete lines for "only_user_username" and "only_user_password"
+
+By default, Datachain RPC calls can only be run locally from your node.  You can allow RPC access from other IPs by adding "rpcallowip" to your datacoin.conf.  When running a public node be sure to set secure RPC credentials by editing "rpcuser" and setting a secure random string for "rpcpassword" in your /.datacoin/datacoin.conf
+
+## Shutting Down Safely
+
+It's recommended to always stop Datachain before shutting down your node. To stop Datachain open a terminal for your polycash-app-1 container and then run this command:
+
+```
+/var/www/html/datacoin-cli stop
+```
+
+Once datacoin has stopped, it's safe to stop your Docker container.

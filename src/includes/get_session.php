@@ -20,15 +20,23 @@ if (strlen($session_key) > 0) {
 		if (!$db_only_user) {
 			$verify_code = $app->random_string(32);
 			$salt = $app->random_string(16);
-			$redirect_url = false;
+			$only_user_password = $app->random_string(16);
 			
-			$only_user = $app->create_new_user($verify_code, $salt, AppSettings::getParam('only_user_username'), AppSettings::getParam('only_user_password'), [
-				'username' => AppSettings::getParam('only_user_username'),
-				'first_name' => null,
-				'last_name' => null,
-				'phone_number' => null,
-			]);
-			$only_user->log_user_in($redirect_url, null);
+			$config = AppSettings::getSettings();
+			$config->only_user_password = $only_user_password;
+			list($setConfigError, $setConfigErrorMessage) = AppSettings::setSettings($config);
+
+			if (!$setConfigError) {
+				$redirect_url = false;
+
+				$only_user = $app->create_new_user($verify_code, $salt, AppSettings::getParam('only_user_username'), $only_user_password, [
+					'username' => AppSettings::getParam('only_user_username'),
+					'first_name' => null,
+					'last_name' => null,
+					'phone_number' => null,
+				]);
+				$only_user->log_user_in($redirect_url, null);
+			}
 		}
 		else {
 			$sessions = $app->fetch_sessions_by_key($session_key);

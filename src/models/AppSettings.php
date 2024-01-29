@@ -99,6 +99,30 @@ class AppSettings {
 		else return null;
 	}
 	
+	public static function getSettings() {
+		return self::$settings;
+	}
+	
+	public static function setSettings($settings) {
+		$anyError = false;
+		$errorMessage = null;
+		
+		$config_path = self::srcPath()."/config/config.json";
+		if ($config_fh = fopen($config_path, 'w')) {
+			if (fwrite($config_fh, json_encode($settings, JSON_PRETTY_PRINT))) $anyError = false;
+			else {
+				$anyError = true;
+				$errorMessage = "Could not write to configuration file.";
+			}
+		}
+		else {
+			$anyError = true;
+			$errorMessage = "Could not open configuration file.";
+		}
+		
+		return [$anyError, $errorMessage];
+	}
+	
 	public static function addJsDependency($jsFile) {
 		self::$jsDependencies[$jsFile] = true;
 	}
