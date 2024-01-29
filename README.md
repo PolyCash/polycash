@@ -24,7 +24,8 @@ http://localhost:8080/
 
 PolyCash will automatically install and begin syncing with the network.  The synchronization step can take hours to complete. 
 
-To start or stop PolyCash, simply open Docker Desktop, navigate to the Containers section and then use the start and stop buttons.
+If PolyCash hasn't started already, open Docker Desktop, navigate to the Containers section and then click the start/play icon on your polycash container.
+
 
 ## Install Blockchains & Games
 By default, the Betcoin cryptocurrency is installed when you install PolyCash.  You can install other PolyCash-protocol cryptocurrencies by pasting their game definitions in via the "Import" link found in the left menu.
@@ -96,3 +97,13 @@ Edit src/config/config.json:
 - Create a secure random string and enter it as "operator_key"
 - Set "desktop_mode": false,
 - Delete lines for "only_user_username" and "only_user_password"
+
+## Shutting Down Safely
+
+It's recommended to always stop Datachain before shutting down your node. To stop Datachain open a terminal for your polycash-app-1 container and then run this command:
+
+```
+/var/www/html/datacoin-cli stop
+```
+
+Then wait for datacoin to stop.
