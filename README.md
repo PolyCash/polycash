@@ -45,7 +45,18 @@ cd /var/www/html
 
 ## Set Blockchain RPC credentials
 
-If you installed with Docker, PolyCash should have been configured to use the right RPC credentials for Datachain. If not, you may need to enter your Datachain RPC credentials into PolyCash. To do that, log in to the PolyCash user account you used when installing, then click the "Manage Blockchains" link in the left hand menu. Then select Datachain -> "Set RPC credentials", and then enter the RPC username and password from your datacoin.conf (typically located at /.datacoin/datacoin.conf).
+Next you need to enter your Datachain RPC credentials into PolyCash. To do that, log in to the PolyCash user account you used when installing, then click the "Manage Blockchains" link in the left hand menu. Then select Datachain -> "Set RPC credentials", and then enter the RPC username and password from your datacoin.conf (typically located at /.datacoin/datacoin.conf).
+
+Enter these values for Datachain:
+```
+RPC hostname: 127.0.0.1
+RPC username: datacoinuser
+RPC password: datacoinpass
+RPC port: 9023
+Status: Enabled
+Sync mode: Full
+Sync from block: 1
+```
 
 ## Make PolyCash Configuration Changes
 
@@ -76,3 +87,12 @@ bash
 cd /var/www/html
 php src/cron/load_blocks.php print_debug=1
 ```
+
+## Running a Public Node
+
+If you installed PolyCash using the recommended method, your node has been configured for local use with no public access.  If you would like to run a public PolyCash node, you should make some changes to your configuration before going live with your node.
+
+Edit src/config/config.json:
+- Create a secure random string and enter it as "operator_key"
+- Set "desktop_mode": false,
+- Delete lines for "only_user_username" and "only_user_password"

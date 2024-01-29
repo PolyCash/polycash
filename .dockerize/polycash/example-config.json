@@ -28,11 +28,11 @@
     "restrict_ip_address": false,
     "limited_navigation": false,
     "memory_limit": "1024M",
+    "only_user_username": "admin",
+    "only_user_password": "admin",
     "coinbase_key": "",
     "coinbase_secret": "",
     "coinbase_passphrase": "",
     "coinbase_deposit_btc_address": "",
-    "coinbase_deposit_ltc_address": "",
-    "only_user_username": "admin",
-    "only_user_password": "admin"
+    "coinbase_deposit_ltc_address": ""
 }
