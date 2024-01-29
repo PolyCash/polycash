@@ -91,9 +91,13 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 						if ((string)$first_required_block != (string)$existing_blockchain->db_blockchain['first_required_block']) {
 							if ((string) $first_required_block == "") $update_params['last_complete_block'] = null;
 							else if ($first_required_block < $existing_blockchain->db_blockchain['first_required_block']) $update_params['last_complete_block'] = $first_required_block-1;
-							else $update_params['last_complete_block'] = $existing_blockchain->last_complete_block_id();
+							else {
+								$last_complete_block_id = $existing_blockchain->last_complete_block_id();
+								if ($last_complete_block_id < 0) $last_complete_block_id = null;
+								$update_params['last_complete_block'] = $last_complete_block_id;
+							}
 						}
-						$existing_blockchain->set_blockchain_parameters();
+						$existing_blockchain->set_blockchain_parameters($update_params);
 						
 						$message_class = "success";
 						$message = "Blockchain parameters have been successfully updated.";
