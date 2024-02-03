@@ -1,4 +1,7 @@
 <?php
+require_once(AppSettings::srcPath()."/includes/connect.php");
+require_once(AppSettings::srcPath()."/includes/get_session.php");
+
 if (empty($selected_category) && !empty($_REQUEST['path'])) {
 	$uri_parts = explode("/", $_REQUEST['path']);
 	$selected_category = $app->run_query("SELECT * FROM categories WHERE url_identifier=:category_identifier;", ['category_identifier'=>$uri_parts[1]])->fetch();

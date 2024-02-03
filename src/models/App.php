@@ -3757,7 +3757,7 @@ class App {
 	}
 	
 	public function fetch_card_by_peer_and_id($peer_id, $card_id) {
-		return $this->run_query("SELECT * FROM cards WHERE peer_card_id=:card_id AND peer_id=:peer_id;", [
+		return $this->run_query("SELECT c.* FROM cards c JOIN peers p ON c.peer_id=p.peer_id WHERE c.peer_card_id=:card_id AND p.peer_id=:peer_id AND p.is_public_card_issuer=1;", [
 			'card_id' => $card_id,
 			'peer_id' => $peer_id
 		])->fetch();
