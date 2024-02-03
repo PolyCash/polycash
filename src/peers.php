@@ -153,6 +153,11 @@ else {
 							<div class="col-sm-4">
 								<?php echo $game_peer['peer_name']; ?>
 							</div>
+							<div class="col-sm-7">
+								<?php
+								include(AppSettings::srcPath().'/views/peer_status_label.php');
+								?>
+							</div>
 						</div>
 						<?php
 					}

@@ -123,7 +123,7 @@ else {
 		if ($app->user_can_edit_game($thisuser, $game)) {
 			$next_action = "params";
 			$last_action = "";
-			$messages = "";
+			$messages = [];
 			
 			if (!empty($_REQUEST['next'])) $next_action = $_REQUEST['next'];
 			if (!empty($_REQUEST['last'])) $last_action = $_REQUEST['last'];
@@ -146,7 +146,7 @@ else {
 					$id_col = array_search("user_id", $header_vars);
 					
 					if ($id_col === false) {
-						$messages .= "Required column user_id was missing.<br/>\n";
+						array_push($messages, "Required column user_id was missing.");
 					}
 					else {
 						$invite_count = 0;
@@ -171,7 +171,7 @@ else {
 							}
 						}
 						
-						$messages .= $invite_count." invitations have been sent & applied.<br/>\n";
+						array_push($messages, $invite_count." invitations have been sent & applied.");
 					}
 				}
 				else if ($last_action == "upload_csv") {
@@ -197,7 +197,7 @@ else {
 					$outcome_col = array_search("outcome", $header_vars);
 					
 					if ($home_col === false || $away_col === false || $name_col === false || $time_col === false || $start_time_col === false) {
-						$messages .= "A required column was missing in the file you uploaded. Required fields are 'Home', 'Away', 'Event Name', 'Start Time UTC' and 'Datetime UTC'<br/>\n";
+						array_push($messages, "A required column was missing in the file you uploaded. Required fields are 'Home', 'Away', 'Event Name', 'Start Time UTC' and 'Datetime UTC'");
 					}
 					else {
 						$sports_entity_type = $app->check_set_entity_type("sports");
@@ -343,8 +343,8 @@ else {
 							}
 						}
 						
-						$messages .= "Added ".$game_event_index_offset." events.<br/>\n";
-						if ($skip_count > 0) $messages .= "Skipped ".$skip_count." events that already exist.<br/>\n";
+						array_push($messages, "Added ".$game_event_index_offset." events.");
+						if ($skip_count > 0) array_push($messages, "Skipped ".$skip_count." events that already exist.");
 					}
 				}
 				else if ($last_action == "internal_settings") {
@@ -418,7 +418,7 @@ else {
 					$game->db_game['sellout_policy'] = $sellout_policy;
 					$game->db_game['sellout_confirmations'] = $sellout_confirmations;
 					
-					$messages .= "Game internal settings have been updated.<br/>\n";
+					array_push($messages, "Game internal settings have been updated.");
 				}
 				else if ($last_action == "claim_account") {
 					$account_id = (int) $_REQUEST['account_id'];
@@ -439,8 +439,6 @@ else {
 			$nav_tab_selected = "manage_game";
 			$pagetitle = "Manage game: ".$game->db_game['name'];
 			include(AppSettings::srcPath().'/includes/html_start.php');
-			
-			if (!empty($messages)) echo $messages;
 			
 			$actions = array("params", "internal_settings", "events", "description", "currency_conversions", "game_definition");
 			$action_labels = array("Public Parameters", "Internal Settings", "Manage Events", "Description", "Currency Conversions", "Game Definition");
@@ -512,6 +510,9 @@ else {
 			</script>
 			
 			<div class="container-fluid">
+				<?php
+				if (count($messages) > 0) echo '<div style="margin-top: 15px;">'.$app->render_error_message(implode("<br/>", $messages), 'success').'</div>';
+				?>
 				<div class="row game_tabs">
 					<?php
 					for ($i=0; $i<count($actions); $i++) {
@@ -760,7 +761,7 @@ else {
 									
 									echo "<br/>\n";
 									?>
-									<form method="get" action="/manage/<?php echo $game->db_game['url_identifier']; ?>/">
+									<form method="post" action="/manage/<?php echo $game->db_game['url_identifier']; ?>/">
 										<input type="hidden" name="next" value="internal_settings" />
 										<input type="hidden" name="last" value="internal_settings" />
 										<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
