@@ -593,8 +593,12 @@ class Game {
 				
 				$buy_stake = $buy_option['effective_destroy_score']+$buy_option['unconfirmed_effective_destroy_score'] + $coins_per_vote*($buy_option['votes']+$buy_option['unconfirmed_votes']);
 				
+				$ref_price_fresh = null;
+				
 				if ((string)$db_event['track_payout_price'] != "") {
 					$ref_price_usd = $db_event['track_payout_price'];
+					$ref_price_usd_round = $ref_price_usd;
+					$ref_price_fresh = true;
 					$html .= "<b>Paid</b>";
 				}
 				else {
@@ -603,8 +607,12 @@ class Game {
 					
 					$ref_currency = $this->blockchain->app->get_currency_by_abbreviation($db_event['track_name_short']);
 					$ref_price_info = $this->blockchain->app->exchange_rate_between_currencies(1, $ref_currency['currency_id'], time(), $reference_currency['currency_id']);
-					$ref_price_usd = max($db_event['track_min_price'], min($db_event['track_max_price'], $ref_price_info['exchange_rate']));
-					$ref_price_usd_round = $this->blockchain->app->round_to($ref_price_usd, 0, EXCHANGE_RATE_SIGFIGS, false);
+					if (isset($ref_price_info['exchange_rate']) && $ref_price_info['time'] >= time() - AppSettings::exchangeRateFreshMaxSec()) {
+						$ref_price_usd = max($db_event['track_min_price'], min($db_event['track_max_price'], $ref_price_info['exchange_rate']));
+						$ref_price_usd_round = $this->blockchain->app->round_to($ref_price_usd, 0, EXCHANGE_RATE_SIGFIGS, false);
+						$ref_price_fresh = true;
+					}
+					else $ref_price_fresh = false;
 				}
 				$html .= " &nbsp;&nbsp; ";
 				
@@ -612,9 +620,9 @@ class Game {
 				if ($event_effective_bets > 0) {
 					$our_buy_price = ($buy_stake/$event_effective_bets)*($db_event['track_max_price']-$db_event['track_min_price'])+$db_event['track_min_price'];
 					$our_buy_price_round = $this->blockchain->app->round_to($our_buy_price, 0, EXCHANGE_RATE_SIGFIGS, false);
-					$html .= "$".$this->blockchain->app->round_to($our_buy_price, 0, EXCHANGE_RATE_SIGFIGS, true)." &rarr; \n";
+					$html .= "$".$this->blockchain->app->round_to($our_buy_price, 0, EXCHANGE_RATE_SIGFIGS, true);
+					if ($ref_price_fresh) $html .= " &rarr; $".$this->blockchain->app->round_to($ref_price_usd_round, 0, EXCHANGE_RATE_SIGFIGS, true);
 				}
-				$html .= "$".$this->blockchain->app->round_to($ref_price_usd, 0, EXCHANGE_RATE_SIGFIGS, true);
 				$html .= "</div>\n";
 				
 				if ($event_effective_bets > 0) {

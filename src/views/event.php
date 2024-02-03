@@ -300,7 +300,7 @@ if ($event->db_event['payout_rule'] == "linear") {
 		$track_price_usd_round = $app->round_to($track_price_usd, 0, EXCHANGE_RATE_SIGFIGS, false);
 		$track_price_usd_round_str = $app->round_to($track_price_usd, 0, EXCHANGE_RATE_SIGFIGS, true);
 		echo "Market price: &nbsp; $".$track_price_usd_round_str." &nbsp; (USD/".$event->db_event['track_name_short']." ".$app->round_to(1/$track_price_usd_round, 0, EXCHANGE_RATE_SIGFIGS, true).")";
-		if (time()-$track_price_info['time'] >= 60*30) echo ' &nbsp; <font class="redtext">'.$app->format_seconds(time()-$track_price_info['time'])." ago</font>";
+		if ($track_price_info['time'] < time() - AppSettings::exchangeRateFreshMaxSec()) echo ' &nbsp; <font class="redtext">'.$app->format_seconds(time()-$track_price_info['time'])." ago</font>";
 		echo "<br/>\n";
 	}
 	
