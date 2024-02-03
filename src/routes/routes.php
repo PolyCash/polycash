@@ -15,12 +15,6 @@ if (count($uri_parts) < 2 || $uri_parts[1] == "") {
 	if (!empty(AppSettings::getParam('homepage_fname'))) include($src_path."/pages/".AppSettings::getParam('homepage_fname'));
 	else include($src_path."/pages/default.php");
 }
-else if ($uri_parts[1] == "about") {
-	include($src_path."/pages/about.php");
-}
-else if ($uri_parts[1] == "faq") {
-	include($src_path."/pages/faq.php");
-}
 else if ($uri_parts[1] == "unsubscribe") {
 	include($src_path."/unsubscribe.php");
 }
@@ -60,9 +54,6 @@ else if ($uri_parts[1] == "api") {
 else if ($uri_parts[1] == "explorer") {
 	include($src_path."/explorer.php");
 }
-else if ($uri_parts[1] == "download") {
-	include($src_path."/download.php");
-}
 else if ($uri_parts[1] == "import") {
 	include($src_path."/import_game.php");
 }
@@ -86,9 +77,6 @@ else if ($uri_parts[1] == "peers") {
 }
 else if ($uri_parts[1] == "groups") {
 	include($src_path."/manage_groups.php");
-}
-else if ($uri_parts[1] == "auto_stake") {
-	include($src_path."/auto_stake.php");
 }
 else {
 	$extension_pos = strpos($uri, ".php");
