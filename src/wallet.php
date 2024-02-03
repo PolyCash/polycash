@@ -303,12 +303,7 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 <div class="container-fluid">
 	<?php
 	if (!empty($message)) {
-		echo '<font style="display: block; margin: 10px 0px;" class="';
-		if ($error_code == 1) echo "greentext";
-		else echo "redtext";
-		echo '">';
-		echo $message;
-		echo "</font>\n";
+		echo '<div style="margin-top: 15px;">'.$app->render_error_message($message, $error_code == 1 ? 'success' : 'danger').'</div>';
 	}
 	
 	$user_strategy = $game->fetch_user_strategy($user_game);
