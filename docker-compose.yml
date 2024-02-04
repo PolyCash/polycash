@@ -30,6 +30,8 @@ services:
       - ./:/var/www/html
       - ./.datacoin:/root/.datacoin
       - ./.dockerize/php/php.ini:/usr/local/etc/php/php.ini
+      - ./.dockerize/apache:/etc/apache2/sites-enabled
+      - ./.dockerize/cron/crontab:/etc/crontab
     ports:
       - 8080:80
     depends_on:
