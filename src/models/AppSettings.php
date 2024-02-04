@@ -238,5 +238,11 @@ class AppSettings {
 		if ($nodeLegalState === null) return "";
 		else return $nodeLegalState;
 	}
+	
+	public static function exchangeRateFreshMaxSec() {
+		$maxSec = self::getParam("exchange_rate_fresh_max_sec");
+		if ($maxSec === null) return 60*30;
+		else return (int) $maxSec;
+	}
 }
 ?>
