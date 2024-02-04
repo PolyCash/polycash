@@ -21,7 +21,5 @@ RUN docker-php-ext-install pdo_mysql \
     && docker-php-source delete
 
 COPY ./ ./
-RUN mv ./.dockerize/apache/000-default.conf /etc/apache2/sites-enabled/000-default.conf
-RUN mv ./.dockerize/cron/crontab /etc/crontab
 
 ENTRYPOINT [ "./run-apache.sh" ]
