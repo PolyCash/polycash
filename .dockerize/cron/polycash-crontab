@@ -1,2 +1,1 @@
 * * * * * root php /var/www/html/src/cron/minutely.php
-* * * * * root echo "joeygothere2" > /var/log/cron.log
