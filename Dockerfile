@@ -21,5 +21,7 @@ RUN docker-php-ext-install pdo_mysql \
     && docker-php-source delete
 
 COPY ./ ./
+RUN mv ./.dockerize/cron/polycash-crontab /etc/cron.d
+RUN chmod 644 /etc/cron.d/polycash-crontab
 
 ENTRYPOINT [ "./run-apache.sh" ]
