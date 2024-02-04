@@ -26,5 +26,6 @@ fi
 
 /var/www/html/datacoind &
 cron
+a2enmod ssl
 a2enmod headers rewrite
 apache2-foreground

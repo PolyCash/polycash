@@ -31,8 +31,9 @@ services:
       - ./.datacoin:/root/.datacoin
       - ./.dockerize/php/php.ini:/usr/local/etc/php/php.ini
       - ./.dockerize/apache:/etc/apache2/sites-enabled
-      - ./.dockerize/cron/crontab:/etc/crontab
+      - ./.dockerize/cron:/etc/cron.d
     ports:
-      - 8080:80
+      - 80:80
+      - 443:443
     depends_on:
       - db-mysql
