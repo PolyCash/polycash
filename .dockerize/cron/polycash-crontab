@@ -1,1 +1,4 @@
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
 * * * * * root php /var/www/html/src/cron/minutely.php
