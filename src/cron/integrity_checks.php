@@ -16,7 +16,7 @@ if ($app->running_as_admin()) {
 	$next_integrity_check_time = $app->get_site_constant("next_integrity_check_time");
 	
 	if ((empty($next_integrity_check_time) || time() >= $next_integrity_check_time) || !empty($_REQUEST['force'])) {
-		if (!$process_locked || !empty($_REQUEST['force'])) {
+		if (!empty($_REQUEST['force']) || (!$process_locked && $app->lock_process($process_lock_name))) {
 			$app->set_site_constant($process_lock_name, getmypid());
 			
 			$false_spent_ios = $app->run_query("SELECT * FROM transaction_ios WHERE spend_status='spent' AND spend_transaction_id IS NULL;")->fetchAll(PDO::FETCH_ASSOC);

@@ -14,7 +14,7 @@ if ($app->running_as_admin()) {
 	$process_lock_name = "process_target_balances";
 	$process_locked = $app->check_process_running($process_lock_name);
 	
-	if (!$process_locked) {
+	if (!$process_locked && $app->lock_process($process_lock_name)) {
 		$admin_user_id = $app->get_site_constant("admin_user_id");
 		
 		$db_running_games = $app->fetch_running_games()->fetchAll();

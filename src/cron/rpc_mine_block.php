@@ -14,9 +14,7 @@ if ($app->running_as_admin()) {
 				$rpc_mining_lock_name = "rpc_mining_".$blockchain->db_blockchain['blockchain_id'];
 				$rpc_mining_already = $app->check_process_running($rpc_mining_lock_name);
 				
-				if (!$rpc_mining_already) {
-					$app->set_site_constant($rpc_mining_lock_name, getmypid());
-					
+				if (!$rpc_mining_already && $app->lock_process($rpc_mining_lock_name)) {
 					$new_address = $blockchain->coin_rpc->getnewaddress();
 					
 					if ($new_address) {

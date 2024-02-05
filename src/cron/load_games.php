@@ -21,9 +21,7 @@ if ($app->running_as_admin()) {
 	$process_lock_name = "load_game".($only_game_id ? "_".$only_game_id : "");
 	$process_locked = $app->check_process_running($process_lock_name);
 	
-	if (!$process_locked) {
-		$app->set_site_constant($process_lock_name, getmypid());
-		
+	if (!$process_locked && $app->lock_process($process_lock_name)) {
 		$blockchains = [];
 		
 		do {
