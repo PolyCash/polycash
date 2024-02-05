@@ -28,13 +28,16 @@ if ($app->running_as_admin() || $app->user_is_admin($thisuser)) {
 	}
 	while ($process_locked);
 	
-	$app->print_debug("Now resetting ".$blockchain->db_blockchain['blockchain_name']);
-	
-	$app->set_site_constant($process_lock_name, getmypid());
-	$blockchain->reset_blockchain(true);
-	$app->set_site_constant($process_lock_name, 0);
-	
-	$app->print_debug("Completed in ".round(microtime(true)-$start_time, 6)." sec");
+	if ($app->lock_process($process_lock_name)) {
+		$app->print_debug("Now resetting ".$blockchain->db_blockchain['blockchain_name']);
+		
+		$app->set_site_constant($process_lock_name, getmypid());
+		$blockchain->reset_blockchain(true);
+		$app->set_site_constant($process_lock_name, 0);
+		
+		$app->print_debug("Completed in ".round(microtime(true)-$start_time, 6)." sec");
+	}
+	else $app->print_debug("Failed to take the process lock.");
 }
 else {
 	echo "You need admin privileges to run this script.\n";

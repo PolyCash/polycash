@@ -24,18 +24,19 @@ if ($app->running_as_admin()) {
 		}
 		while ($process_locked);
 		
-		$app->print_debug("now resetting the game");
-		
-		$app->set_site_constant($process_lock_name, getmypid());
-		
-		$game->delete_reset_game($action);
-		list($start_error, $start_error_message) = $game->start_game();
-		
-		$app->print_debug($game->db_game['name']." has been ".$action."!");
-		
-		if ($start_error) $app->print_debug($start_error_message);
-		
-		$app->set_site_constant($process_lock_name, 0);
+		if ($app->lock_process($process_lock_name)) {
+			$app->print_debug("now resetting the game");
+			
+			$app->set_site_constant($process_lock_name, getmypid());
+			
+			$game->delete_reset_game($action);
+			list($start_error, $start_error_message) = $game->start_game();
+			
+			$app->print_debug($game->db_game['name']." has been ".$action."!");
+			
+			if ($start_error) $app->print_debug($start_error_message);
+		}
+		else echo "Failed to take the process lock.\n";
 	}
 	else echo "Failed to load game #".$game_id."<br/>\n";
 }

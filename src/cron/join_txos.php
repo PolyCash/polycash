@@ -16,7 +16,7 @@ if ($app->running_as_admin()) {
 	$next_join_txos_time = $app->get_site_constant("next_join_txos_time");
 	
 	if ((empty($next_join_txos_time) || time() >= $next_join_txos_time) || !empty($_REQUEST['force'])) {
-		if (!$process_locked || !empty($_REQUEST['force'])) {
+		if (!empty($_REQUEST['force']) || (!$process_locked && $app->lock_process($process_lock_name))) {
 			$app->set_site_constant($process_lock_name, getmypid());
 			
 			$next_join_txos_time = strtotime(date("Y-m-d H:00:01")." +30 minutes");
