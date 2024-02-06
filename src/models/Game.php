@@ -676,7 +676,7 @@ class Game {
 	}
 	
 	public function option_index_to_option_id_in_block($option_index, $block_id) {
-		$first_option = $this->blockchain->app->run_query("SELECT * FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.game_id=:game_id AND op.option_index=:option_index AND e.event_starting_block<=:block_id AND e.event_final_block>=:block_id;", [
+		$first_option = $this->blockchain->app->run_query("SELECT * FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.game_id=:game_id AND op.option_index=:option_index AND e.event_starting_block<=:block_id AND e.event_final_block>=:block_id ORDER BY e.event_index ASC, op.option_index ASC;", [
 			'game_id' => $this->db_game['game_id'],
 			'option_index' => $option_index,
 			'block_id' => $block_id
@@ -689,13 +689,13 @@ class Game {
 	public function option_indices_to_id_in_block($option_indices, $block_height, &$option_index_to_id) {
 		$option_indices_csv = implode(",", array_keys($option_indices));
 		
-		$options = $this->blockchain->app->run_query("SELECT op.option_index, op.option_id FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.game_id=:game_id AND op.option_index IN (".$option_indices_csv.") AND e.event_starting_block<=:block_id AND e.event_final_block>=:block_id;", [
+		$options = $this->blockchain->app->run_query("SELECT op.option_index, op.option_id FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.game_id=:game_id AND op.option_index IN (".$option_indices_csv.") AND e.event_starting_block<=:block_id AND e.event_final_block>=:block_id ORDER BY e.event_index ASC, op.option_index ASC;", [
 			'game_id' => $this->db_game['game_id'],
 			'block_id' => $block_height
 		])->fetchAll();
 		
 		foreach ($options as $option) {
-			$option_index_to_id[$option['option_index']] = $option['option_id'];
+			if (!isset($option_index_to_id[$option['option_index']])) $option_index_to_id[$option['option_index']] = $option['option_id'];
 		}
 	}
 	
