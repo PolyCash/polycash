@@ -14,9 +14,7 @@ if ($app->running_as_admin()) {
 	
 	$process_locked = $app->check_process_running($process_lock_name);
 	
-	if (!$process_locked) {
-		$app->set_site_constant($process_lock_name, getmypid());
-		
+	if (!$process_locked && $app->lock_process($process_lock_name)) {
 		$script_start_time = microtime(true);
 		$script_target_time = 171;
 		$blockchains_by_id = [];

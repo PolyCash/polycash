@@ -24,9 +24,7 @@ if ($app->running_as_admin()) {
 	
 	$process_locked = $app->check_process_running($process_lock_name);
 	
-	if (!$process_locked) {
-		$app->set_site_constant($process_lock_name, getmypid());
-		
+	if (!$process_locked && $app->lock_process($process_lock_name)) {
 		if ($print_debug) $app->print_debug("Processing my addresses for ".$blockchain->db_blockchain['blockchain_name']);
 		
 		$total_add_count = 0;

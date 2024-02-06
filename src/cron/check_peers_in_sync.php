@@ -20,7 +20,7 @@ if ($app->running_as_admin()) {
 	$process_lock_name = "check_peers_in_sync";
 	$process_locked = $app->check_process_running($process_lock_name);
 	
-	if (!$process_locked) {
+	if (!$process_locked && $app->lock_process($process_lock_name)) {
 		if ($only_game_id) $db_running_games = [$app->fetch_game_by_id($only_game_id)];
 		else $db_running_games = $app->fetch_running_games()->fetchAll();
 		

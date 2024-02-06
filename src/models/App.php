@@ -1529,6 +1529,11 @@ class App {
 	
 	public function lock_process($lock_name) {
 		$this->set_site_constant($lock_name, getmypid());
+
+		usleep(0.003*pow(10,6));
+
+		if ($this->get_site_constant($lock_name) == getmypid()) return true;
+		else return false;
 	}
 	
 	public function unlock_process($lock_name) {
@@ -1548,27 +1553,18 @@ class App {
 					
 					$pid_no_match_str = "INFO: No tasks";
 					
-					if (substr($pid_response, 0, strlen($pid_no_match_str)) == $pid_no_match_str) {
-						$this->set_site_constant($lock_name, 0);
-						return 0;
-					}
+					if (substr($pid_response, 0, strlen($pid_no_match_str)) == $pid_no_match_str) return 0;
 					else {
 						$process_is_php = strpos($pid_response, 'php.exe') === false ? false : true;
 						if ($process_is_php) return $process_running;
-						else {
-							$this->set_site_constant($lock_name, 0);
-							return 0;
-						}
+						else return 0;
 					}
 				}
 				else {
 					$cmd = "ps -p ".$process_running."|wc -l";
 					$cmd_result_lines = (int) exec($cmd);
 					if ($cmd_result_lines > 1) return $process_running;
-					else {
-						$this->set_site_constant($lock_name, 0);
-						return 0;
-					}
+					else return 0;
 				}
 			}
 			else return 0;
