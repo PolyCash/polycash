@@ -625,7 +625,7 @@ class Game {
 				}
 				$html .= "</div>\n";
 				
-				if ($event_effective_bets > 0) {
+				if ($event_effective_bets > 0 && $ref_price_fresh) {
 					if ($ref_price_usd_round == $our_buy_price_round) $pct_gain = 0;
 					else $pct_gain = 100*($ref_price_usd/$our_buy_price - 1);
 					$pct_gain_str = $this->blockchain->app->round_to(abs($pct_gain), 0, 4, true);
@@ -1215,11 +1215,11 @@ class Game {
 		}
 	}
 	
-	public function events_by_block($block_id, $filter_arr) {
+	public function current_events($mining_block_id, $filter_arr) {
 		$events = [];
 		$events_params = [
 			'game_id' => $this->db_game['game_id'],
-			'block_id' => $block_id
+			'block_id' => $mining_block_id
 		];
 		$events_q = "SELECT *, sp.entity_name AS sport_name, lg.entity_name AS league_name FROM events ev LEFT JOIN entities sp ON ev.sport_entity_id=sp.entity_id LEFT JOIN entities lg ON ev.league_entity_id=lg.entity_id WHERE ev.game_id=:game_id";
 		if (!empty($filter_arr['date'])) {
@@ -1245,7 +1245,44 @@ class Game {
 		}
 		$events_q .= $order_by_q;
 		$db_events = $this->blockchain->app->run_query($events_q, $events_params);
+
+		while ($db_event = $db_events->fetch()) {
+			array_push($events, new Event($this, $db_event, false));
+		}
 		
+		return $events;
+	}
+
+	public function events_by_block($block_id, $filter_arr) {
+		$events = [];
+		$events_params = [
+			'game_id' => $this->db_game['game_id'],
+			'block_id' => $block_id
+		];
+		$events_q = "SELECT *, sp.entity_name AS sport_name, lg.entity_name AS league_name FROM events ev LEFT JOIN entities sp ON ev.sport_entity_id=sp.entity_id LEFT JOIN entities lg ON ev.league_entity_id=lg.entity_id WHERE ev.game_id=:game_id";
+		if (!empty($filter_arr['date'])) {
+			$events_q .= " AND DATE(ev.event_final_time)=:filter_date";
+			$events_params['filter_date'] = $filter_arr['date'];
+		}
+		if (!empty($filter_arr['term'])) {
+			$term = strtolower($this->blockchain->app->make_alphanumeric(strip_tags($filter_arr['term'])));
+			$events_q .= " AND ev.searchtext LIKE '%".$term."%'";
+		}
+		if (!empty($filter_arr['require_option_block_rule'])) {
+			$events_q .= " AND ev.option_block_rule IS NOT NULL";
+		}
+		$events_q .= " AND ev.event_starting_block<=:block_id AND ev.event_final_block>=:block_id";
+		$order_by_q = " ORDER BY ev.event_final_time ASC, ev.event_index ASC";
+		if (!empty($filter_arr['order_by'])) {
+			if ($filter_arr['order_by'] == "volume") {
+				$order_by_q = " ORDER BY ev.event_final_time ASC, (ev.destroy_score+ev.sum_unconfirmed_destroy_score";
+				if ($this->db_game['exponential_inflation_rate'] > 0) $order_by_q .= "+((ev.sum_score+ev.sum_unconfirmed_score)*".$this->blockchain->app->coins_per_vote($this->db_game).")";
+				$order_by_q .= ") DESC, ev.event_index ASC";
+			}
+		}
+		$events_q .= $order_by_q;
+		$db_events = $this->blockchain->app->run_query($events_q, $events_params);
+
 		while ($db_event = $db_events->fetch()) {
 			array_push($events, new Event($this, $db_event, false));
 		}
@@ -1271,6 +1308,19 @@ class Game {
 		$db_events = $this->blockchain->app->run_query("SELECT * FROM events WHERE game_id=:game_id AND event_payout_block=:block_id ORDER BY event_index ASC;", [
 			'game_id' => $this->db_game['game_id'],
 			'block_id' => $block_id
+		]);
+		
+		while ($db_event = $db_events->fetch()) {
+			array_push($events, new Event($this, $db_event, false));
+		}
+		return $events;
+	}
+
+	public function events_pending_payout_in_block($block_id) {
+		$events = [];
+		$db_events = $this->blockchain->app->run_query("SELECT * FROM events WHERE game_id=:game_id AND event_final_block<:block_id AND event_payout_block>:block_id ORDER BY event_index ASC;", [
+			'game_id' => $this->db_game['game_id'],
+			'block_id' => $block_id,
 		]);
 		
 		while ($db_event = $db_events->fetch()) {
@@ -1357,7 +1407,7 @@ class Game {
 			$js .= "games[".$game_index."].events = [];\n";
 		}
 		
-		$these_events = $this->events_by_block($mining_block_id, $filter_arr);
+		$these_events = $this->current_events($mining_block_id, $filter_arr);
 		$event_ids = "";
 		
 		for ($i=0; $i<count($these_events); $i++) {
