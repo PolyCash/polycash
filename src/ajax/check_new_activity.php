@@ -100,7 +100,7 @@ if ($include_betting_events) {
 	if (isset($_REQUEST['event_hashes'])) $event_hashes = explode(",", $_REQUEST['event_hashes']);
 	else $event_hashes = [];
 
-	$these_events = $game->events_by_block($blockchain_last_block_id+1, $filter_arr);
+	$these_events = $game->current_events($blockchain_last_block_id+1, $filter_arr);
 	$show_intro_text = false;
 
 	if ($thisuser && !empty($user_game['account_id'])) $account = $app->fetch_account_by_id($user_game['account_id']);
