@@ -414,7 +414,7 @@ if ($uri_parts[1] == "api") {
 					else {
 						$show_internal_params = false;
 						list($game_def_hash, $game_def) = GameDefinition::fetch_game_definition($game, $real_or_defined, $show_internal_params, false);
-						GameDefinition::check_set_game_definition($app, $game_def_hash, $game_def);
+						GameDefinition::check_set_game_definition($app, $game_def_hash, $game_def, $game);
 						
 						$api_output['status_code'] = 1;
 						$api_output['definition_hash'] = $game_def_hash;
