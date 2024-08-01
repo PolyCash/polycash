@@ -1745,7 +1745,7 @@ class App {
 			['int', 'decimal_places', true],
 			['bool', 'finite_events', true],
 			['bool', 'save_every_definition', true],
-			['int', 'recommended_keep_definition_hours', false],
+			['int', 'recommended_keep_definitions_hours', false],
 			['int', 'max_simultaneous_options', true],
 			['string', 'event_type_name', true],
 			['string', 'event_type_name_plural', true],
