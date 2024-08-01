@@ -456,6 +456,11 @@ class App {
 		if (is_resource($target_balances_process)) $process_count++;
 		else $html .= "Failed to start a process for joining txos.\n";
 		
+		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/delete_game_definitions.php"';
+		$delete_game_definitions_process = $this->run_shell_command($cmd, $print_debug);
+		if (is_resource($delete_game_definitions_process)) $process_count++;
+		else $html .= "Failed to start a process for deleting game definitions.\n";
+		
 		$html .= "Started ".$process_count." background processes.\n";
 		return $html;
 	}
@@ -1729,6 +1734,7 @@ class App {
 		];
 	}
 	
+	// array [type, name, affects_game_state]
 	public function game_definition_verbatim_vars() {
 		return [
 			['float', 'protocol_version', true],
@@ -1739,6 +1745,7 @@ class App {
 			['int', 'decimal_places', true],
 			['bool', 'finite_events', true],
 			['bool', 'save_every_definition', true],
+			['int', 'recommended_keep_definition_hours', false],
 			['int', 'max_simultaneous_options', true],
 			['string', 'event_type_name', true],
 			['string', 'event_type_name_plural', true],
@@ -4173,6 +4180,13 @@ class App {
 		else if (date("s", $datetime_time) == "00") $date_format .= " g:ia";
 		else $date_format .= " H:i:s";
 		return date($date_format, $datetime_time);
+	}
+	
+	public function set_game_def_accessed_at($game_definition_id, $time) {
+		$this->run_query("UPDATE game_definitions SET last_accessed_at=:last_accessed_at WHERE game_definition_id=:game_definition_id;", [
+			'last_accessed_at' => $time,
+			'game_definition_id' => $game_definition_id,
+		]);
 	}
 }
 ?>

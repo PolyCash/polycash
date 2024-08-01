@@ -116,7 +116,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 					
 					$show_internal_params = false;
 					list($initial_game_def_hash, $initial_game_def) = GameDefinition::fetch_game_definition($game, "actual", $show_internal_params, false);
-					GameDefinition::check_set_game_definition($app, $initial_game_def_hash, $initial_game_def);
+					GameDefinition::check_set_game_definition($app, $initial_game_def_hash, $initial_game_def, $game);
 					
 					$user_game = $thisuser->ensure_user_in_game($game, false);
 					$user_strategy = $app->fetch_strategy_by_id($user_game['strategy_id']);
@@ -196,7 +196,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 					]);
 					
 					list($final_game_def_hash, $final_game_def) = GameDefinition::fetch_game_definition($game, "actual", $show_internal_params, false);
-					GameDefinition::check_set_game_definition($app, $final_game_def_hash, $final_game_def);
+					GameDefinition::check_set_game_definition($app, $final_game_def_hash, $final_game_def, $game);
 					
 					GameDefinition::record_migration($game, $thisuser->db_user['user_id'], "create_game_by_ui", $show_internal_params, $initial_defined_game_def, $final_defined_game_def);
 					
@@ -304,7 +304,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 					$show_internal_params = false;
 					
 					list($initial_defined_game_def_hash, $initial_defined_game_def) = GameDefinition::fetch_game_definition($game, "defined", $show_internal_params, false);
-					GameDefinition::check_set_game_definition($app, $initial_defined_game_def_hash, $initial_defined_game_def);
+					GameDefinition::check_set_game_definition($app, $initial_defined_game_def_hash, $initial_defined_game_def, $game);
 					
 					$verbatim_vars = $app->event_verbatim_vars();
 					
@@ -352,7 +352,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 					}
 					
 					list($final_defined_game_def_hash, $final_defined_game_def) = GameDefinition::fetch_game_definition($game, "defined", $show_internal_params, false);
-					GameDefinition::check_set_game_definition($app, $final_defined_game_def_hash, $final_defined_game_def);
+					GameDefinition::check_set_game_definition($app, $final_defined_game_def_hash, $final_defined_game_def, $game);
 					
 					GameDefinition::record_migration($game, $thisuser->db_user['user_id'], "change_event_by_ui", $show_internal_params, $initial_defined_game_def, $final_defined_game_def);
 					
@@ -436,7 +436,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 								$entity = $app->check_set_entity($entity_type['entity_type_id'], $name);
 								
 								list($initial_defined_game_def_hash, $initial_defined_game_def) = GameDefinition::fetch_game_definition($game, "defined", $show_internal_params, false);
-								GameDefinition::check_set_game_definition($app, $initial_defined_game_def_hash, $initial_defined_game_def);
+								GameDefinition::check_set_game_definition($app, $initial_defined_game_def_hash, $initial_defined_game_def, $game);
 								
 								$option_index = (int)($app->run_query("SELECT COUNT(*) FROM game_defined_options WHERE game_id=:game_id AND event_index=:event_index;", [
 									'game_id' => $game->db_game['game_id'],
@@ -452,7 +452,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 								]);
 								
 								list($final_defined_game_def_hash, $final_defined_game_def) = GameDefinition::fetch_game_definition($game, "defined", $show_internal_params, false);
-								GameDefinition::check_set_game_definition($app, $final_defined_game_def_hash, $final_defined_game_def);
+								GameDefinition::check_set_game_definition($app, $final_defined_game_def_hash, $final_defined_game_def, $game);
 								
 								GameDefinition::record_migration($game, $thisuser->db_user['user_id'], "create_event_by_ui", $show_internal_params, $initial_defined_game_def, $final_defined_game_def);
 								
@@ -471,7 +471,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 					
 					if ($gdo) {
 						list($initial_defined_game_def_hash, $initial_defined_game_def) = GameDefinition::fetch_game_definition($game, "defined", $show_internal_params, false);
-						GameDefinition::check_set_game_definition($app, $initial_defined_game_def_hash, $initial_defined_game_def);
+						GameDefinition::check_set_game_definition($app, $initial_defined_game_def_hash, $initial_defined_game_def, $game);
 						
 						$app->run_query("DELETE FROM game_defined_options WHERE game_defined_option_id=:game_defined_option_id;", [
 							'game_defined_option_id' => $gdo['game_defined_option_id']
@@ -483,7 +483,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 						]);
 						
 						list($final_defined_game_def_hash, $final_defined_game_def) = GameDefinition::fetch_game_definition($game, "defined", $show_internal_params, false);
-						GameDefinition::check_set_game_definition($app, $final_defined_game_def_hash, $final_defined_game_def);
+						GameDefinition::check_set_game_definition($app, $final_defined_game_def_hash, $final_defined_game_def, $game);
 						
 						GameDefinition::record_migration($game, $thisuser->db_user['user_id'], "delete_option_by_ui", $show_internal_params, $initial_defined_game_def, $final_defined_game_def);
 						
