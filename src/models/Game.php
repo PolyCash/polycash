@@ -59,6 +59,8 @@ class Game {
 		
 		if (!empty($params['pow_reward_type']) && $params['pow_reward_type'] != "none") $params['bulk_add_blocks'] = 0;
 		
+		$params['keep_definitions_hours'] = isset($params['recommended_keep_definitions_hours']) ? $params['recommended_keep_definitions_hours'] : null;
+		
 		if (empty($params['default_buyin_currency_id'])) {
 			$btc_currency = $blockchain->app->fetch_currency_by_abbreviation("BTC");
 			if ($btc_currency) $params['default_buyin_currency_id'] = $btc_currency['currency_id'];
