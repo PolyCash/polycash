@@ -36,6 +36,7 @@ class VirtualStockMarketGameDefinition {
 			"decimal_places": 2,
 			"finite_events": true,
 			"save_every_definition": false,
+			"recommended_keep_definitions_hours": 48,
 			"max_simultaneous_options": 100,
 			"event_type_name": "market",
 			"event_type_name_plural": "markets",

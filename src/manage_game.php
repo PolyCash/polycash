@@ -362,6 +362,7 @@ else {
 					$min_buyin_amount = (float) $_REQUEST['min_buyin_amount'];
 					$min_sellout_amount = (float) $_REQUEST['min_sellout_amount'];
 					$bulk_add_blocks = (int) $_REQUEST['bulk_add_blocks'];
+					$keep_definitions_hours = empty($_REQUEST['keep_definitions_hours']) ? null : (float) $_REQUEST['keep_definitions_hours'];
 					
 					$definitive_game_peer_on = $_REQUEST['definitive_game_peer_on'];
 					if ($definitive_game_peer_on == 1) {
@@ -383,8 +384,8 @@ else {
 							$game->db_game['definitive_game_peer_id'] = $definitive_game_peer['game_peer_id'];
 						}
 					}
-					
-					$app->run_query("UPDATE games SET featured=:featured, public_players=:public_players, faucet_policy=:faucet_policy, hide_module=:hide_module, definitive_game_peer_id=:definitive_game_peer_id, every_event_bet_reminder_minutes=:every_event_bet_reminder_minutes, sec_per_faucet_claim=:sec_per_faucet_claim, min_sec_between_claims=:min_sec_between_claims, bonus_claims=:bonus_claims, default_transaction_fee=:default_transaction_fee, min_buyin_amount=:min_buyin_amount, min_sellout_amount=:min_sellout_amount, bulk_add_blocks=:bulk_add_blocks, sellout_policy=:sellout_policy, sellout_confirmations=:sellout_confirmations WHERE game_id=:game_id;", [
+
+					$app->run_query("UPDATE games SET featured=:featured, public_players=:public_players, faucet_policy=:faucet_policy, hide_module=:hide_module, definitive_game_peer_id=:definitive_game_peer_id, every_event_bet_reminder_minutes=:every_event_bet_reminder_minutes, sec_per_faucet_claim=:sec_per_faucet_claim, min_sec_between_claims=:min_sec_between_claims, bonus_claims=:bonus_claims, default_transaction_fee=:default_transaction_fee, min_buyin_amount=:min_buyin_amount, min_sellout_amount=:min_sellout_amount, bulk_add_blocks=:bulk_add_blocks, sellout_policy=:sellout_policy, sellout_confirmations=:sellout_confirmations, keep_definitions_hours=:keep_definitions_hours WHERE game_id=:game_id;", [
 						'featured' => $featured,
 						'public_players' => $public_players,
 						'faucet_policy' => $faucet_policy,
@@ -401,6 +402,7 @@ else {
 						'bulk_add_blocks' => $bulk_add_blocks,
 						'sellout_policy' => $sellout_policy,
 						'sellout_confirmations' => $sellout_confirmations,
+						'keep_definitions_hours' => $keep_definitions_hours,
 					]);
 					
 					$game->db_game['featured'] = $featured;
@@ -417,6 +419,7 @@ else {
 					$game->db_game['bulk_add_blocks'] = $bulk_add_blocks;
 					$game->db_game['sellout_policy'] = $sellout_policy;
 					$game->db_game['sellout_confirmations'] = $sellout_confirmations;
+					$game->db_game['keep_definitions_hours'] = $keep_definitions_hours;
 					
 					array_push($messages, "Game internal settings have been updated.");
 				}
@@ -857,6 +860,42 @@ else {
 												<option value="0">No</option>
 												<option value="1"<?php if ($game->db_game['bulk_add_blocks']) echo ' selected="selected"'; ?>>Yes</option>
 											</select>
+										</div>
+										<div class="form-group">
+											<?php
+											$hour_options = [
+												2 => '2 hours',
+												6 => '6 hours',
+												12 => '12 hours',
+												24 => '1 day',
+												48 => '2 days',
+												24*7 => '1 week',
+												24*7*4 => '4 weeks',
+												24*365/2 => '6 months',
+												24*365 => '1 year',
+											];
+											if ($game->db_game['keep_definitions_hours'] == null || in_array($game->db_game['keep_definitions_hours'], array_keys($hour_options))) {
+												?>
+												<label for="keep_definitions_hours">How long should game definitions be kept for?</label>
+												<select class="form-control" name="keep_definitions_hours" id="keep_definitions_hours" onchange="thisPageManager.toggle_definitive_game_peer();">
+													<option value="">Forever</option>
+													<?php
+													foreach ($hour_options as $keep_hours => $keep_hours_label) {
+														?>
+														<option value="<?php echo $keep_hours; ?>"<?php if ($game->db_game['keep_definitions_hours'] == $keep_hours) echo ' selected="selected"'; ?>><?php echo $keep_hours_label; ?></option>
+														<?php
+													}
+													?>
+												</select>
+												<?php
+											}
+											else {
+												?>
+												<label for="keep_definitions_hours">How many hours should game definitions be kept for?</label>
+												<input type="text" class="form-control" name="keep_definitions_hours" id="keep_definitions_hours" value="<?php echo $game->db_game['keep_definitions_hours']; ?>" />
+												<?php
+											}
+											?>
 										</div>
 										
 										<input type="submit" class="btn btn-success" value="Save Settings" />

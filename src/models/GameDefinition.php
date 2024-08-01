@@ -150,18 +150,24 @@ class GameDefinition {
 	
 	public static function get_game_definition_by_hash(&$app, &$game_def_hash) {
 		$db_game_def = $app->run_query("SELECT * FROM game_definitions WHERE definition_hash=:definition_hash;", ['definition_hash'=>$game_def_hash])->fetch();
-		if ($db_game_def) return $db_game_def['definition'];
+		if ($db_game_def) {
+			$app->set_game_def_accessed_at($db_game_def['game_definition_id'], time());
+			return $db_game_def['definition'];
+		}
 		else return false;
 	}
 	
-	public static function check_set_game_definition(&$app, &$game_def_hash, &$game_def) {
+	public static function check_set_game_definition(&$app, &$game_def_hash, &$game_def, $game=null) {
 		$existing_def = self::get_game_definition_by_hash($app, $game_def_hash);
 		
 		if (!$existing_def) {
-			$app->run_insert_query("game_definitions", [
+			$create_game_def_params = [
 				'definition_hash' => $game_def_hash,
-				'definition' => self::game_def_to_text($game_def)
-			]);
+				'definition' => self::game_def_to_text($game_def),
+				'last_accessed_at' => time(),
+			];
+			if ($game) $create_game_def_params['game_id'] = $game->db_game['game_id'];
+			$app->run_insert_query("game_definitions", $create_game_def_params);
 		}
 	}
 	
@@ -169,7 +175,7 @@ class GameDefinition {
 		$show_internal_params = false;
 		
 		list($actual_game_def_hash, $actual_game_def) = self::fetch_game_definition($game, "actual", $show_internal_params, false);
-		self::check_set_game_definition($game->blockchain->app, $actual_game_def_hash, $actual_game_def);
+		self::check_set_game_definition($game->blockchain->app, $actual_game_def_hash, $actual_game_def, $game);
 		
 		if ($print_debug) echo "Actual: ".$actual_game_def_hash."\n";
 		
@@ -183,7 +189,7 @@ class GameDefinition {
 		}
 		
 		list($defined_game_def_hash, $defined_game_def) = self::fetch_game_definition($game, "defined", $show_internal_params, false);
-		self::check_set_game_definition($game->blockchain->app, $defined_game_def_hash, $defined_game_def);
+		self::check_set_game_definition($game->blockchain->app, $defined_game_def_hash, $defined_game_def, $game);
 		
 		if ($print_debug) echo "Defined: ".$defined_game_def_hash."\n";
 		
@@ -203,8 +209,8 @@ class GameDefinition {
 		$initial_hash = self::game_def_to_hash($initial_game_def_str);
 		$final_hash = self::game_def_to_hash($final_game_def_str);
 		
-		self::check_set_game_definition($game->blockchain->app, $initial_hash, $initial_game_def);
-		self::check_set_game_definition($game->blockchain->app, $final_hash, $final_game_def);
+		self::check_set_game_definition($game->blockchain->app, $initial_hash, $initial_game_def, $game);
+		self::check_set_game_definition($game->blockchain->app, $final_hash, $final_game_def, $game);
 		
 		$new_migration_params = [
 			'game_id' => $game->db_game['game_id'],
@@ -669,11 +675,11 @@ class GameDefinition {
 								
 								$show_internal_params = false;
 								list($from_game_def_hash, $from_game_def) = self::fetch_game_definition($game, "defined", $show_internal_params, false);
-								self::check_set_game_definition($app, $from_game_def_hash, $from_game_def);
+								self::check_set_game_definition($app, $from_game_def_hash, $from_game_def, $game);
 								
 								$to_game_def_str = self::game_def_to_text($game_def);
 								$to_game_def_hash = self::game_def_to_hash($to_game_def_str);
-								self::check_set_game_definition($app, $to_game_def_hash, $game_def);
+								self::check_set_game_definition($app, $to_game_def_hash, $game_def, $game);
 								
 								if ($from_game_def_hash != $to_game_def_hash) {
 									$error_message .= self::migrate_game_definitions($game, empty($thisuser) ? null : $thisuser->db_user['user_id'], $migration_type, false, $from_game_def, $game_def);

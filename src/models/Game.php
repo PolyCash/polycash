@@ -2486,7 +2486,7 @@ class Game {
 			if (count($payout_events) > 0) {
 				$show_internal_params = false;
 				list($initial_game_def_hash, $initial_game_def) = GameDefinition::fetch_game_definition($this, "defined", $show_internal_params, false);
-				GameDefinition::check_set_game_definition($this->blockchain->app, $initial_game_def_hash, $initial_game_def);
+				GameDefinition::check_set_game_definition($this->blockchain->app, $initial_game_def_hash, $initial_game_def, $this);
 				
 				if (empty($this->db_game['definitive_game_peer_id'])) $allow_change_def = true;
 				else $allow_change_def = false;
@@ -2506,7 +2506,7 @@ class Game {
 				
 				if ($any_payout_changed_def) {
 					list($final_game_def_hash, $final_game_def) = GameDefinition::fetch_game_definition($this, "defined", $show_internal_params, false);
-					GameDefinition::check_set_game_definition($this->blockchain->app, $final_game_def_hash, $final_game_def);
+					GameDefinition::check_set_game_definition($this->blockchain->app, $final_game_def_hash, $final_game_def, $this);
 					
 					if ($initial_game_def_hash !== $final_game_def_hash) {
 						GameDefinition::record_migration($this, null, "set_outcomes", $show_internal_params, $initial_game_def, $final_game_def);
@@ -3297,14 +3297,28 @@ class Game {
 		return $block_id;
 	}
 	
-	public function set_gde_blocks_by_time(&$gde) {
+	public function set_gde_blocks_by_time(&$gde, &$time_to_block_cache) {
 		if (!empty($gde['event_starting_time'])) {
-			$start_block = $this->time_to_block_in_game(strtotime($gde['event_starting_time']));
+			if (isset($time_to_block_cache[$gde['event_starting_time']])) $start_block = $time_to_block_cache[$gde['event_starting_time']];
+			else {
+				$start_block = $this->time_to_block_in_game(strtotime($gde['event_starting_time']));
+				$time_to_block_cache[$gde['event_starting_time']] = $start_block;
+			}
 			
-			$final_block = $this->time_to_block_in_game(strtotime($gde['event_final_time']));
+			if (isset($time_to_block_cache[$gde['event_final_time']])) $final_block = $time_to_block_cache[$gde['event_final_time']];
+			else {
+				$final_block = $this->time_to_block_in_game(strtotime($gde['event_final_time']));
+				$time_to_block_cache[$gde['event_final_time']] = $final_block;
+			}
 			
 			if ($gde['event_payout_time'] == "" || $gde['event_payout_time'] == $gde['event_final_time']) $payout_block = $final_block;
-			else $payout_block = $this->time_to_block_in_game(strtotime($gde['event_payout_time']));
+			else {
+				if (isset($time_to_block_cache[$gde['event_payout_time']])) $payout_block = $time_to_block_cache[$gde['event_payout_time']];
+				else {
+					$payout_block = $this->time_to_block_in_game(strtotime($gde['event_payout_time']));
+					$time_to_block_cache[$gde['event_payout_time']] = $payout_block;
+				}
+			}
 			
 			$this->blockchain->app->run_query("UPDATE game_defined_events SET event_starting_block=:event_starting_block, event_final_block=:event_final_block, event_payout_block=:event_payout_block WHERE game_id=:game_id AND event_index=:event_index;", [
 				'event_starting_block' => $start_block,
@@ -3376,16 +3390,17 @@ class Game {
 			
 			if (!$skip_record_migration) {
 				list($initial_game_def_hash, $initial_game_def) = GameDefinition::fetch_game_definition($this, "defined", $show_internal_params, false);
-				GameDefinition::check_set_game_definition($this->blockchain->app, $initial_game_def_hash, $initial_game_def);
+				GameDefinition::check_set_game_definition($this->blockchain->app, $initial_game_def_hash, $initial_game_def, $this);
 			}
 			
+			$time_to_block_cache = [];
 			foreach ($event_arr as $gde) {
-				$this->set_gde_blocks_by_time($gde);
+				$this->set_gde_blocks_by_time($gde, $time_to_block_cache);
 			}
 			
 			if (!$skip_record_migration) {
 				list($final_game_def_hash, $final_game_def) = GameDefinition::fetch_game_definition($this, "defined", $show_internal_params, false);
-				GameDefinition::check_set_game_definition($this->blockchain->app, $final_game_def_hash, $final_game_def);
+				GameDefinition::check_set_game_definition($this->blockchain->app, $final_game_def_hash, $final_game_def, $this);
 				
 				GameDefinition::record_migration($this, $user_id, "set_blocks_by_ui", $show_internal_params, $initial_game_def, $final_game_def);
 				
