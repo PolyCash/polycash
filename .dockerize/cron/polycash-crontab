@@ -2,6 +2,3 @@ SHELL=/bin/sh
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
 * * * * * root php /var/www/html/src/cron/minutely.php
-* * * * * root php /var/www/html/src/strategies/forex_128_set_odds.php api_key=2eikXpPsu46jrNs2X7HTzHWRRp2yGwq9 coins_per_event=5000 limit=16
-* * * * * root php /var/www/html/src/strategies/forex_128_boost_favorites.php api_key=621QEdV8pp3xyH5Ua6DKmdeY3Q6rty8w coins_per_event=0 bonus=20
-* * * * * root echo "joeygothere16" > /var/log/cron.log
