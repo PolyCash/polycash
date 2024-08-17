@@ -649,28 +649,7 @@ class Game {
 	}
 	
 	public function option_index_range() {
-		if (false && !empty($this->db_game['max_option_index']) && $this->db_game['min_option_index'] !== "") {
-			return array($this->db_game['min_option_index'], $this->db_game['max_option_index']);
-		}
-		else {
-			$range_row = $this->blockchain->app->run_query("SELECT MAX(o.option_index), MIN(o.option_index) FROM options o JOIN events e ON o.event_id=e.event_id WHERE e.game_id=:game_id;", ['game_id'=>$this->db_game['game_id']])->fetch();
-			
-			if ($range_row) {
-				$min = (int) $range_row['MIN(o.option_index)'];
-				$max = (int) $range_row['MAX(o.option_index)'];
-				
-				$this->blockchain->app->run_query("UPDATE games SET max_option_index=:max_option_index, min_option_index=:min_option_index WHERE game_id=:game_id;", [
-					'max_option_index' => $max,
-					'min_option_index' => $min,
-					'game_id' => $this->db_game['game_id']
-				]);
-				$this->db_game['max_option_index'] = $max;
-				$this->db_game['min_option_index'] = $min;
-				
-				return [$min, $max];
-			}
-			else return [false, false];
-		}
+		return [AppSettings::getParam('options_begin_at_index'), AppSettings::getParam('options_begin_at_index')+$this->db_game['max_simultaneous_options']-1];
 	}
 	
 	public function option_index_to_current_option_id($option_index) {
