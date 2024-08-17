@@ -1693,8 +1693,10 @@ class Game {
 							$vote_identifier = $this->blockchain->app->option_index_to_vote_identifier($option_index);
 							$new_option_params = [
 								'event_id' => $event_id,
+								'game_id' => $this->db_game['game_id'],
 								'name' => $game_defined_option['name'],
 								'vote_identifier' => $vote_identifier,
+								'op_event_index' => $game_defined_event['event_index'],
 								'option_index' => $option_index,
 								'event_option_index' => $option_i,
 								'entity_id' => empty($game_defined_option['entity_id']) ? null : $game_defined_option['entity_id'],

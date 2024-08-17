@@ -83,7 +83,7 @@ class GameDefinition {
 			}
 			else {
 				$events_q = "SELECT ev.*, sp.entity_name AS sport_name, lg.entity_name AS league_name FROM events ev LEFT JOIN entities sp ON ev.sport_entity_id=sp.entity_id LEFT JOIN entities lg ON ev.league_entity_id=lg.entity_id WHERE ev.game_id=:game_id ORDER BY ev.event_index ASC;";
-				$options_q = "SELECT ev.event_index, op.name, op.entity_id, op.target_probability FROM events ev JOIN options op ON ev.event_id=op.event_id WHERE ev.game_id=:game_id ORDER BY ev.event_index ASC, op.event_option_index ASC;";
+				$options_q = "SELECT op_event_index AS event_index FROM options WHERE game_id=:game_id ORDER BY op_event_index ASC;";
 			}
 			$db_events = $app->run_query($events_q, ['game_id'=>$game->db_game['game_id']]);
 			$db_options = $app->run_query($options_q, ['game_id'=>$game->db_game['game_id']])->fetchAll(PDO::FETCH_ASSOC);
@@ -114,7 +114,7 @@ class GameDefinition {
 				
 				$j = 0;
 				foreach ($options_by_event_index[$db_event['event_index']] as $option) {
-					$possible_outcome = ["title"=>$option->name];
+					$possible_outcome = ["title"=>'temp'/*$option->name*/];
 					if ($show_internal_params) {
 						if (!empty($option->target_probability)) $possible_outcome['target_probability'] = $option->target_probability;
 						if (!empty($option->entity_id)) $possible_outcome['entity_id'] = $option->entity_id;
