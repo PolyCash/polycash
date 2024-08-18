@@ -3008,23 +3008,30 @@ class Game {
 	}
 	
 	public function account_balance($account_id, $extra_params=[]) {
-		$balance_q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE k.account_id=:account_id AND gio.game_id=:game_id";
-		
+		$address_ids = $this->blockchain->app->get_address_ids_from_account($account_id);
+
+		$io_q = "SELECT io_id FROM transaction_ios WHERE address_id IN (".implode(",", $address_ids).")";
+
 		if (empty($extra_params['include_immature'])) {
-			$balance_q .= " AND io.is_mature=1";
+			$io_q .= " AND is_mature=1";
 		}
-		$balance_q .= " AND (io.spend_status='unspent'";
+
+		$io_q .= " AND (spend_status='unspent'";
 		if (empty($extra_params['confirmed_only'])) {
-			$balance_q .= " || io.spend_status='unconfirmed'";
+			$io_q .= " || spend_status='unconfirmed'";
 		}
-		$balance_q .= ")";
-		
-		$balance_params = [
-			'account_id' => $account_id,
+		$io_q .= ")";
+
+		$io_rows = $this->blockchain->app->run_query($io_q)->fetchAll(PDO::FETCH_ASSOC);
+		$io_ids = [];
+		foreach ($io_rows as $io_row) {
+			array_push($io_ids, $io_row['io_id']);
+		}
+		if (count($io_ids) == 0) return [];
+
+		return (int)($this->blockchain->app->run_query("SELECT SUM(colored_amount) FROM transaction_game_ios WHERE game_id=:game_id AND io_id IN (".implode(",", $io_ids).");", [
 			'game_id' => $this->db_game['game_id']
-		];
-		
-		return (int)($this->blockchain->app->run_query($balance_q, $balance_params)->fetch(PDO::FETCH_NUM)[0]);
+		])->fetch(PDO::FETCH_NUM)[0]);
 	}
 	
 	public function account_balance_at_block($account_id, $block_id, $include_coinbase) {

@@ -3607,12 +3607,17 @@ class App {
 		])->fetch();
 	}
 	
-	public function spendable_ios_in_account($account_id, $game_id, $round_id, $last_block_id, $early_resolved_ios=null) {
+	public function get_address_ids_from_account($account_id) {
 		$address_id_rows = $this->run_query("SELECT address_id FROM address_keys WHERE account_id=:account_id;", ['account_id' => $account_id])->fetchAll(PDO::FETCH_NUM);
 		$address_ids = [];
 		foreach ($address_id_rows as $address_id_row) {
 			array_push($address_ids, $address_id_row[0]);
 		}
+		return $address_ids;
+	}
+
+	public function spendable_ios_in_account($account_id, $game_id, $round_id, $last_block_id, $early_resolved_ios=null) {
+		$address_ids = $this->get_address_ids_from_account($account_id);
 		if (count($address_ids) == 0) return [];
 
 		$spendable_io_rows = $this->run_query("SELECT io_id FROM transaction_ios WHERE address_id IN (".implode(",", $address_ids).") AND spend_status IN ('unspent','unconfirmed') AND is_mature=1;")->fetchAll(PDO::FETCH_ASSOC);
