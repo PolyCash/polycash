@@ -1,4 +1,5 @@
 <?php
+set_time_limit(0);
 require_once(dirname(dirname(__FILE__))."/includes/connect.php");
 
 $script_start_time = microtime(true);

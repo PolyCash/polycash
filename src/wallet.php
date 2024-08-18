@@ -292,7 +292,6 @@ $mature_balance = $thisuser->mature_balance($game, $user_game, $early_resolved_i
 list($user_votes, $votes_value) = $thisuser->user_current_votes($game, $last_block_id, $current_round, $user_game);
 $user_pending_bets = $game->user_pending_bets($user_game);
 $game_pending_bets = $game->pending_bets(true);
-list($vote_supply, $vote_supply_value) = $game->vote_supply($last_block_id, $current_round, $coins_per_vote, true);
 $account_value = $mature_balance+$immature_amount+$unconfirmed_amount+$user_pending_bets+$early_resolved_amount;
 
 $blockchain_last_block_id = $game->blockchain->last_block_id();
@@ -506,7 +505,7 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 					<div class="row">
 						<div class="col-sm-4">Account&nbsp;value:</div>
 						<div class="col-sm-6" style="text-align: right;" id="account_value"><?php
-						echo $game->account_value_html($account_value, $user_game, $game_pending_bets, $vote_supply_value);
+						echo $game->account_value_html($account_value, $user_game, $game_pending_bets);
 						?></div>
 					</div>
 					<div id="wallet_text_stats" style="display: block;">

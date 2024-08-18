@@ -874,7 +874,7 @@ class Game {
 		return $value;
 	}
 	
-	public function account_value_html($account_value, &$user_game, $game_pending_bets, $vote_supply_value) {
+	public function account_value_html($account_value, &$user_game, $game_pending_bets) {
 		$value_disp = $this->display_coins($account_value, false, true);
 		$html = '<font class="greentext"><a href="/accounts/?account_id='.$user_game['account_id'].'">'.$value_disp.'</a></font> '.($value_disp=="1" ? $this->db_game['coin_name'] : $this->db_game['coin_name_plural']);
 		

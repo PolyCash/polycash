@@ -1353,12 +1353,13 @@ class App {
 			$blockchain = new Blockchain($this, $db_game['blockchain_id']);
 			$game = new Game($blockchain, $db_game['game_id']);
 			
-			if (!empty($game->db_game['cached_definition_hash']) && $game->db_game['cached_definition_time'] >= time()-60) {
+			if (!empty($game->db_game['cached_definition_hash']) && $game->db_game['cached_definition_time'] >= time()-(60*30)) {
 				$display_def_hash = GameDefinition::shorten_game_def_hash($game->db_game['cached_definition_hash']);
 			}
 			else {
-				list($display_def_hash, $game_def) = GameDefinition::fetch_game_definition($game, "actual", false, false);
-				$display_def_hash = GameDefinition::shorten_game_def_hash($display_def_hash);
+				//list($display_def_hash, $game_def) = GameDefinition::fetch_game_definition($game, "actual", false, false);
+				//$display_def_hash = GameDefinition::shorten_game_def_hash($display_def_hash);
+				$display_def_hash = 'Pending';
 			}
 			
 			$html .= '<div class="row"><div class="col-sm-5">Game definition:</div><div class="col-sm-7"><a href="/explorer/games/'.$game->db_game['url_identifier'].'/definition/?definition_mode=actual">'.$display_def_hash.'</a></div></div>';
@@ -1393,7 +1394,6 @@ class App {
 			$coins_per_vote = $this->coins_per_vote($game->db_game);
 			
 			$game_pending_bets = $game->pending_bets(true);
-			list($vote_supply, $vote_supply_value) = $game->vote_supply($last_block_id, $current_round, $coins_per_vote, true);
 			$coins_in_existence = $game->coins_in_existence(false, true);
 			
 			$circulation_amount_disp = $this->format_bignum($coins_in_existence/pow(10,$db_game['decimal_places']), false);
@@ -1411,6 +1411,7 @@ class App {
 			$html .= "</div></div>\n";
 			
 			if ($db_game['exponential_inflation_rate'] != 0) {
+				list($vote_supply, $vote_supply_value) = $game->vote_supply($last_block_id, $current_round, $coins_per_vote, true);
 				$unrealized_supply_disp = $this->format_bignum($vote_supply_value/pow(10,$db_game['decimal_places']), false);
 				$html .= '<div class="row"><div class="col-sm-5">Unrealized '.$game->db_game['coin_name_plural'].':</div><div class="col-sm-7">';
 				$html .= $unrealized_supply_disp.' ';
@@ -1418,6 +1419,7 @@ class App {
 				else $html .= $db_game['coin_name_plural'];
 				$html .= "</div></div>\n";
 			}
+			else $vote_supply_value = 0;
 			
 			$total_supply = ($coins_in_existence+$vote_supply_value+$game_pending_bets)/pow(10,$db_game['decimal_places']);
 			$total_supply_disp = $this->format_bignum($total_supply, false);

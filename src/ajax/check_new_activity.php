@@ -202,12 +202,11 @@ if ($include_betting_events) {
 			list($user_votes, $votes_value) = $thisuser->user_current_votes($game, $last_block_id, $current_round, $user_game);
 			$user_pending_bets = $game->user_pending_bets($user_game);
 			$game_pending_bets = $game->pending_bets(true);
-			list($vote_supply, $vote_supply_value) = $game->vote_supply($last_block_id, $current_round, $coins_per_vote, true);
 			$account_value = $mature_balance+$immature_amount+$unconfirmed_amount+$user_pending_bets+$early_resolved_amount;
 			
 			$output['wallet_text_stats'] = $thisuser->wallet_text_stats($game, $blockchain_current_round, $blockchain_last_block_id, $blockchain_block_within_round, $mature_balance, $unconfirmed_amount+$immature_amount, $user_votes, $votes_value, $user_pending_bets, $user_game, $early_resolved_amount);
 			
-			$output['account_value'] = $game->account_value_html($account_value, $user_game, $game_pending_bets, $vote_supply_value);
+			$output['account_value'] = $game->account_value_html($account_value, $user_game, $game_pending_bets);
 		}
 	}
 	else $output['new_mature_ios'] = 0;
