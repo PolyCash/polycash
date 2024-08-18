@@ -163,7 +163,7 @@ class GameDefinition {
 	}
 
 	public static function check_set_game_definition(&$app, &$game_def_hash, &$game_def, $game=null) {
-		if (!$this->check_game_definition_exists($app, $game_def_hash)) {
+		if (!self::check_game_definition_exists($app, $game_def_hash)) {
 			$create_game_def_params = [
 				'definition_hash' => $game_def_hash,
 				'definition' => self::game_def_to_text($game_def),
