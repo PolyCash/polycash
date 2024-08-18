@@ -3009,6 +3009,7 @@ class Game {
 	
 	public function account_balance($account_id, $extra_params=[]) {
 		$address_ids = $this->blockchain->app->get_address_ids_from_account($account_id);
+		if (count($address_ids) == 0) return 0;
 
 		$io_q = "SELECT io_id FROM transaction_ios WHERE address_id IN (".implode(",", $address_ids).")";
 
@@ -3027,7 +3028,7 @@ class Game {
 		foreach ($io_rows as $io_row) {
 			array_push($io_ids, $io_row['io_id']);
 		}
-		if (count($io_ids) == 0) return [];
+		if (count($io_ids) == 0) return 0;
 
 		return (int)($this->blockchain->app->run_query("SELECT SUM(colored_amount) FROM transaction_game_ios WHERE game_id=:game_id AND io_id IN (".implode(",", $io_ids).");", [
 			'game_id' => $this->db_game['game_id']
