@@ -36,9 +36,14 @@ if ($app->running_as_admin()) {
 				if (empty($blockchains[$db_running_game['blockchain_id']])) $blockchains[$db_running_game['blockchain_id']] = new Blockchain($app, $db_running_game['blockchain_id']);
 				$running_game = new Game($blockchains[$db_running_game['blockchain_id']], $db_running_game['game_id']);
 				
+				if ($print_debug) $app->print_debug("Setting cached definitions for ".$running_game->db_game['name']);
 				GameDefinition::set_cached_definition_hashes($running_game, $print_debug);
 				
-				if ($print_debug) echo "Set ".$running_game->db_game['name']." at ".round(microtime(true)-$loop_start_time, 8)."\n";
+				$set_cached_sec = round(microtime(true)-$loop_start_time, 8);
+				$sleep_sec = $set_cached_sec*2;
+				$sleep_usec = round(pow(10,6)*$sleep_sec);
+				if ($print_debug) $app->print_debug("Completed in ".$set_cached_sec." sec, sleeping ".$sleep_sec." sec");
+				usleep($sleep_usec);
 			}
 			
 			$loop_stop_time = microtime(true);

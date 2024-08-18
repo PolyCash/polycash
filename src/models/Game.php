@@ -3564,12 +3564,14 @@ class Game {
 	public function set_cached_fields() {
 		$this->coins_in_existence(false, false);
 		$this->pending_bets(false);
-		
-		$last_block_id = $this->blockchain->last_block_id();
-		$current_round = $this->block_to_round($last_block_id+1);
-		$coins_per_vote = $this->blockchain->app->coins_per_vote($this->db_game);
-		$this->vote_supply($last_block_id, $current_round, $coins_per_vote, false);
-		
+
+		if ($this->db_game['exponential_inflation_rate'] != 0) {
+			$last_block_id = $this->blockchain->last_block_id();
+			$current_round = $this->block_to_round($last_block_id+1);
+			$coins_per_vote = $this->blockchain->app->coins_per_vote($this->db_game);
+			$this->vote_supply($last_block_id, $current_round, $coins_per_vote, false);
+		}
+
 		$this->set_minmax_payout_rates();
 	}
 

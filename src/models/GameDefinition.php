@@ -147,7 +147,7 @@ class GameDefinition {
 	public static function game_def_to_text(&$game_def) {
 		return json_encode($game_def, JSON_PRETTY_PRINT);
 	}
-	
+
 	public static function get_game_definition_by_hash(&$app, &$game_def_hash) {
 		$db_game_def = $app->run_query("SELECT * FROM game_definitions WHERE definition_hash=:definition_hash;", ['definition_hash'=>$game_def_hash])->fetch();
 		if ($db_game_def) {
@@ -156,11 +156,14 @@ class GameDefinition {
 		}
 		else return false;
 	}
-	
+
+	public static function check_game_definition_exists(&$app, &$game_def_hash) {
+		$db_game_def = $app->run_query("SELECT 1 FROM game_definitions WHERE definition_hash=:definition_hash;", ['definition_hash'=>$game_def_hash])->fetch();
+		return isset($db_game_def);
+	}
+
 	public static function check_set_game_definition(&$app, &$game_def_hash, &$game_def, $game=null) {
-		$existing_def = self::get_game_definition_by_hash($app, $game_def_hash);
-		
-		if (!$existing_def) {
+		if (!$this->check_game_definition_exists($app, $game_def_hash)) {
 			$create_game_def_params = [
 				'definition_hash' => $game_def_hash,
 				'definition' => self::game_def_to_text($game_def),
