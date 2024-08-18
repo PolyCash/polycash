@@ -22,7 +22,7 @@ else {
 if ($action == "see_history") {
 	$history_pos = (int) $_REQUEST['history_pos'];
 	
-	list($migrations, $definitionsByHash, $migrationsByToHash, $migrationQuantity) = $app->fetch_recent_migrations($game, $history_pos);
+	list($migrations, $migrationsByToHash, $migrationQuantity) = $app->fetch_recent_migrations($game, $history_pos);
 	
 	include(dirname(__DIR__).'/includes/migration_history.php');
 	

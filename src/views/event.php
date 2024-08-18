@@ -299,7 +299,7 @@ if ($event->db_event['payout_rule'] == "linear") {
 	if (isset($track_price_usd) && $last_block_id < $event->db_event['event_payout_block']) {
 		$track_price_usd_round = $app->round_to($track_price_usd, 0, EXCHANGE_RATE_SIGFIGS, false);
 		$track_price_usd_round_str = $app->round_to($track_price_usd, 0, EXCHANGE_RATE_SIGFIGS, true);
-		echo "Market price: &nbsp; $".$track_price_usd_round_str." &nbsp; (USD/".$event->db_event['track_name_short']." ".$app->round_to(1/$track_price_usd_round, 0, EXCHANGE_RATE_SIGFIGS, true).")";
+		echo "Oracle price: &nbsp; $".$track_price_usd_round_str." &nbsp; (USD/".$event->db_event['track_name_short']." ".$app->round_to(1/$track_price_usd_round, 0, EXCHANGE_RATE_SIGFIGS, true).")";
 		if ($track_price_info['time'] < time() - AppSettings::exchangeRateFreshMaxSec()) echo ' &nbsp; <font class="redtext">'.$app->format_seconds(time()-$track_price_info['time'])." ago</font>";
 		echo "<br/>\n";
 	}
@@ -314,7 +314,7 @@ if ($event->db_event['payout_rule'] == "linear") {
 		$our_buy_price_round_str = $app->round_to($our_buy_price_round, 0, EXCHANGE_RATE_SIGFIGS, true);
 		
 		if ($last_block_id < $event->db_event['event_final_block']) echo 'Buy here for:';
-		else echo 'Bought at:';
+		else echo 'Initiated at:';
 		echo ' &nbsp; $'.$our_buy_price_round_str;
 		if ($our_buy_price_round > 0) echo " &nbsp; (USD/".$event->db_event['track_name_short']." ".$app->round_to(1/$our_buy_price_round, 0, EXCHANGE_RATE_SIGFIGS, true).")";
 		echo "<br/>\n";
