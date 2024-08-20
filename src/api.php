@@ -1,4 +1,5 @@
 <?php
+set_time_limit(0);
 $allow_no_https = true;
 $script_start_time = microtime(true);
 require(AppSettings::srcPath().'/includes/connect.php');

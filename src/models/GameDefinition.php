@@ -159,7 +159,7 @@ class GameDefinition {
 
 	public static function check_game_definition_exists(&$app, &$game_def_hash) {
 		$db_game_def = $app->run_query("SELECT 1 FROM game_definitions WHERE definition_hash=:definition_hash;", ['definition_hash'=>$game_def_hash])->fetch();
-		return isset($db_game_def);
+		return !empty($db_game_def);
 	}
 
 	public static function check_set_game_definition(&$app, &$game_def_hash, &$game_def, $game=null) {
