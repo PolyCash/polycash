@@ -12,14 +12,17 @@ foreach ($migrations as $migration) {
 		$from_definition = json_decode(GameDefinition::get_game_definition_by_hash($app, $migration['from_hash']));
 		$to_definition = json_decode(GameDefinition::get_game_definition_by_hash($app, $migration['to_hash']));
 		
-		list($differences, $difference_summary_lines) = GameDefinition::analyze_definition_differences($app, $from_definition, $to_definition);
-		
-		$migration_summary = ucfirst(strtolower(implode(", ", $difference_summary_lines)));
-		
-		$app->run_query("UPDATE game_definition_migrations SET cached_difference_summary=:cached_difference_summary WHERE migration_id=:migration_id;", [
-			'cached_difference_summary' => $migration_summary,
-			'migration_id' => $migration['migration_id'],
-		]);
+		if ($from_definition && $to_definition) {
+			list($differences, $difference_summary_lines) = GameDefinition::analyze_definition_differences($app, $from_definition, $to_definition);
+
+			$migration_summary = ucfirst(strtolower(implode(", ", $difference_summary_lines)));
+
+			$app->run_query("UPDATE game_definition_migrations SET cached_difference_summary=:cached_difference_summary WHERE migration_id=:migration_id;", [
+				'cached_difference_summary' => $migration_summary,
+				'migration_id' => $migration['migration_id'],
+			]);
+		}
+		else $migration_summary = "";
 	}
 	else $migration_summary = $migration['cached_difference_summary'];
 	?>

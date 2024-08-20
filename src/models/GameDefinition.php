@@ -524,7 +524,7 @@ class GameDefinition {
 			if ($game_def = json_decode($game_definition)) {}
 			else {
 				$decode_error = true;
-				$error_message .= "Error: the game definition you entered could not be imported. Please make sure to enter properly formatted JSON.\n";
+				$error_message .= "Error: the game definition you entered could not be imported: ".$app->json_decode_error_code_to_string(json_last_error())."\n";
 			}
 		}
 		

@@ -4202,5 +4202,43 @@ class App {
 			'game_definition_id' => $game_definition_id,
 		]);
 	}
+
+	public function json_decode_error_code_to_string($json_error_code) {
+		switch ($json_error_code) {
+			case JSON_ERROR_NONE:
+				return 'No errors';
+			break;
+			case JSON_ERROR_DEPTH:
+				return 'Maximum stack depth exceeded';
+			break;
+			case JSON_ERROR_STATE_MISMATCH:
+				return 'Underflow or the modes mismatch';
+			break;
+			case JSON_ERROR_CTRL_CHAR:
+				return 'Unexpected control character found';
+			break;
+			case JSON_ERROR_SYNTAX:
+				return 'Syntax error, malformed JSON';
+			break;
+			case JSON_ERROR_UTF8:
+				return 'Malformed UTF-8 characters, possibly incorrectly encoded';
+			break;
+			default:
+				return 'Unknown error';
+			break;
+		}
+	}
+
+	function format_bytes($bytes, $precision = 2) {
+		$units = array('B', 'KB', 'MB', 'GB', 'TB');
+
+		$bytes = max($bytes, 0);
+		$pow = floor(($bytes ? log($bytes) : 0) / log(1024));
+		$pow = min($pow, count($units) - 1);
+
+		$bytes /= pow(1024, $pow);
+
+		return round($bytes, $precision) . $units[$pow];
+	}
 }
 ?>

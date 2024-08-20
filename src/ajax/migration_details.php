@@ -37,7 +37,10 @@ else {
 		$to_game_def = json_decode(GameDefinition::get_game_definition_by_hash($app, $migration['to_hash']));
 	}
 	
-	list($differences, $difference_summary_lines) = GameDefinition::analyze_definition_differences($app, $from_game_def, $to_game_def);
+	if ($from_game_def && $to_game_def) {
+		list($differences, $difference_summary_lines) = GameDefinition::analyze_definition_differences($app, $from_game_def, $to_game_def);
+	}
+	else $difference_summary_lines = [];
 	?>
 	<div class="modal-header">
 		<b class="modal-title"><?php echo $game->db_game['name']; ?> migration: &nbsp; 

@@ -1823,45 +1823,53 @@ class Game {
 	public function sync_with_definitive_peer($print_debug) {
 		$error_message = "";
 		$definitive_peer = $this->get_definitive_peer();
-		
+
 		if ($print_debug) $this->blockchain->app->print_debug("Syncing with definitive peer..");
-		
+
 		if ($definitive_peer) {
 			$send_hash = $this->db_game['cached_definition_hash'];
-			
+
 			if (empty($send_hash)) {
 				GameDefinition::set_cached_definition_hashes($this);
 				$send_hash = $this->db_game['cached_definition_hash'];
 			}
-			
+
 			$api_url = $definitive_peer['base_url']."/api/".$this->db_game['url_identifier']."/definition/?definition_hash=".$send_hash;
-			
+
 			if ($print_debug) $this->blockchain->app->print_debug($api_url);
 			
-			$api_response = json_decode($this->blockchain->app->safe_fetch_url($api_url));
+			$api_response_raw = $this->blockchain->app->safe_fetch_url($api_url);
 
-			if ($print_debug) $this->blockchain->app->print_debug($api_response->status_code);
-			
-			if ($api_response->status_code == 1) {
-				if ($api_response->definition->url_identifier == $this->db_game['url_identifier']) {
-					if ($api_response->definition_hash == $send_hash) $error_message = "Already in sync.\n";
-					else {
-						$this->blockchain->app->log_message("Syncing ".$this->db_game['name']." from ".$api_url);
-						$ref_user = false;
-						$db_new_game = false;
-						list($mod_game, $mod_game_is_new, $set_game_error) = GameDefinition::set_game_from_definition($this->blockchain->app, $api_response->definition, $ref_user, $error_message, $db_new_game, true);
+			if ($api_response_raw) {
+				$api_response = json_decode($api_response_raw);
+
+				if ($api_response) {
+					if ($print_debug) $this->blockchain->app->print_debug($api_response->status_code);
+
+					if ($api_response->status_code == 1) {
+						if ($api_response->definition->url_identifier == $this->db_game['url_identifier']) {
+							if ($api_response->definition_hash == $send_hash) $error_message = "Already in sync.\n";
+							else {
+								$this->blockchain->app->log_message("Syncing ".$this->db_game['name']." from ".$api_url);
+								$ref_user = false;
+								$db_new_game = false;
+								list($mod_game, $mod_game_is_new, $set_game_error) = GameDefinition::set_game_from_definition($this->blockchain->app, $api_response->definition, $ref_user, $error_message, $db_new_game, true);
+							}
+						}
+						else $error_message .= "Sync canceled: definitive peer tried to change the game identifier.\n";
 					}
+					else $error_message .= $api_response->message."\n";
 				}
-				else $error_message .= "Sync canceled: definitive peer tried to change the game identifier.\n";
+				else $error_message .= "Failed to decode response from definitive peer: ".$this->blockchain->app->json_decode_error_code_to_string(json_last_error())."\n";
 			}
-			else $error_message .= $api_response->message."\n";
-			
+			else $error_message .= "Failed to fetch game definition from definitive peer.\n";
+
 			$error_message .= $this->set_option_images_from_definitive_peer();
 		}
 		else $error_message .= "This game does not have a definitive peer.\n";
-		
+
 		if ($print_debug) $this->blockchain->app->print_debug($error_message);
-		
+
 		return $error_message;
 	}
 	

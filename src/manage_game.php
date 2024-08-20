@@ -514,7 +514,8 @@ else {
 			
 			<div class="container-fluid">
 				<?php
-				if (count($messages) > 0) echo '<div style="margin-top: 15px;">'.$app->render_error_message(implode("<br/>", $messages), 'success').'</div>';
+				$messages_str = implode("<br/>", $messages);
+				if (count($messages) > 0) echo '<div style="margin-top: 15px;">'.$app->render_error_message($messages_str, 'success').'</div>';
 				?>
 				<div class="row game_tabs">
 					<?php

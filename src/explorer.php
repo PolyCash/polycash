@@ -1551,6 +1551,8 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						if (empty($game_def)) {
 							list($game_def_hash, $game_def) = GameDefinition::fetch_game_definition($game, $definition_mode, false, true);
 						}
+
+						$game_def_txt = GameDefinition::game_def_to_text($game_def);
 						?>
 						<div class="panel-heading">
 							<div class="panel-title">Game definition for <?php echo $game->db_game['name']; ?></div>
@@ -1560,8 +1562,12 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 								<div class="col-sm-2"><label class="form-control-static" for="definition_hash">Definition hash:</label></div>
 								<div class="col-sm-10"><input type="text" class="form-control" id="definition_hash" value="<?php echo $game_def_hash; ?>" /></div>
 							</div>
+							<div class="row">
+								<div class="col-sm-2"><div class="my-2"><b>Size:</b></div></div>
+								<div class="col-sm-10"><div class="my-2"><?php echo $app->format_bytes(strlen($game_def_txt)); ?></div></div>
+							</div>
 							
-							<textarea class="definition" id="definition"><?php echo GameDefinition::game_def_to_text($game_def); ?></textarea>
+							<textarea class="definition" id="definition"><?php echo $game_def_txt; ?></textarea>
 						</div>
 						<?php
 					}

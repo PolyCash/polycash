@@ -608,3 +608,11 @@ a.selected {
 	padding: 10px ! important;
 	margin-left: -100px ! important;
 }
+.my-1 {
+	margin-top: 5px;
+	margin-bottom: 5px;
+}
+.my-2 {
+	margin-top: 10px;
+	margin-bottom: 10px;
+}
