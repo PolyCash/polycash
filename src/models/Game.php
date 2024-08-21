@@ -2043,7 +2043,10 @@ class Game {
 		$successful = true;
 		$start_time = microtime(true);
 		$benchmarks_on = $print_debug;
-		if ($benchmarks_on) $benchmarks = [];
+		if ($benchmarks_on) {
+			$benchmarks = [];
+			$benchmark_sec_precision = 6;
+		}
 		if ($print_debug) $this->blockchain->app->print_debug("Adding block ".$block_height." to ".$this->db_game['name']);
 		$bulk_to_block = false;
 		
@@ -2084,7 +2087,7 @@ class Game {
 			}
 
 			if ($benchmarks_on) {
-				$benchmarks['ensure_block'] = microtime(true)-$start_time;
+				$benchmarks['ensure_block'] = round(microtime(true)-$start_time, $benchmark_sec_precision);
 				$ref_time = microtime(true);
 			}
 
@@ -2123,7 +2126,7 @@ class Game {
 			}
 
 			if ($benchmarks_on) {
-				$benchmarks['process_buyins'] = microtime(true)-$ref_time;
+				$benchmarks['process_buyins'] = round(microtime(true)-$ref_time, $benchmark_sec_precision);
 				$ref_time = microtime(true);
 			}
 
@@ -2179,7 +2182,7 @@ class Game {
 			}
 			
 			if ($benchmarks_on) {
-				$benchmarks['process_genesis'] = microtime(true)-$ref_time;
+				$benchmarks['process_genesis'] = round(microtime(true)-$ref_time, $benchmark_sec_precision);
 				$ref_time = microtime(true);
 			}
 
@@ -2454,7 +2457,7 @@ class Game {
 			}
 
 			if ($benchmarks_on) {
-				$benchmarks['process_transactions'] = microtime(true)-$ref_time;
+				$benchmarks['process_transactions'] = round(microtime(true)-$ref_time, $benchmark_sec_precision);
 				$ref_time = microtime(true);
 			}
 
@@ -2471,7 +2474,7 @@ class Game {
 			$this->set_target_scores_at_block($block_height+1);
 
 			if ($benchmarks_on) {
-				$benchmarks['process_option_blocks'] = microtime(true)-$ref_time;
+				$benchmarks['process_option_blocks'] = round(microtime(true)-$ref_time, $benchmark_sec_precision);
 				$ref_time = microtime(true);
 			}
 
@@ -2482,7 +2485,7 @@ class Game {
 			}
 
 			if ($benchmarks_on) {
-				$benchmarks['update_option_votes'] = microtime(true)-$ref_time;
+				$benchmarks['update_option_votes'] = round(microtime(true)-$ref_time, $benchmark_sec_precision);
 				$ref_time = microtime(true);
 			}
 
@@ -2503,69 +2506,39 @@ class Game {
 			}
 			
 			if ($benchmarks_on) {
-				$benchmarks['set_event_outcomes'] = microtime(true)-$ref_time;
+				$benchmarks['set_event_outcomes'] = round(microtime(true)-$ref_time, $benchmark_sec_precision);
 				$ref_time = microtime(true);
 			}
 
 			$payout_events = $this->events_by_payout_block($block_height);
 			
 			if (count($payout_events) > 0) {
-				$show_internal_params = false;
-				list($initial_game_def_hash, $initial_game_def) = GameDefinition::fetch_game_definition($this, "defined", $show_internal_params, false);
-				GameDefinition::check_set_game_definition($this->blockchain->app, $initial_game_def_hash, $initial_game_def, $this);
-				
-				if (empty($this->db_game['definitive_game_peer_id'])) $allow_change_def = true;
-				else $allow_change_def = false;
-				
-				$any_payout_changed_def = false;
 				$payout_resolved_event_ids = [];
-				
+
 				foreach ($payout_events as $payout_event) {
-					$payout_changed_def = $payout_event->pay_out_event($allow_change_def);
-					
-					if ($payout_changed_def) $any_payout_changed_def = true;
-					
+					$payout_event->pay_out_event();
+
 					if ((string)$payout_event->db_event['outcome_index'] !== "" || (string)$payout_event->db_event['track_payout_price'] !== "") {
 						array_push($payout_resolved_event_ids, $payout_event->db_event['event_id']);
 					}
 				}
-				
-				if ($any_payout_changed_def) {
-					list($final_game_def_hash, $final_game_def) = GameDefinition::fetch_game_definition($this, "defined", $show_internal_params, false);
-					GameDefinition::check_set_game_definition($this->blockchain->app, $final_game_def_hash, $final_game_def, $this);
-					
-					if ($initial_game_def_hash !== $final_game_def_hash) {
-						GameDefinition::record_migration($this, null, "set_outcomes", $show_internal_params, $initial_game_def, $final_game_def);
-					}
-				}
-				
+
 				if (count($payout_resolved_event_ids) > 0) {
 					$this->blockchain->app->run_query("UPDATE transaction_game_ios SET is_resolved=1 WHERE event_id IN (".implode(",", $payout_resolved_event_ids).");");
 				}
 			}
 
 			if ($benchmarks_on) {
-				$benchmarks['process_payouts'] = microtime(true)-$ref_time;
+				$benchmarks['process_payouts'] = round(microtime(true)-$ref_time, $benchmark_sec_precision);
 				$ref_time = microtime(true);
 			}
 
 			$this->set_block_stats($game_block);
 
 			if ($benchmarks_on) {
-				$benchmarks['set_block_stats'] = microtime(true)-$ref_time;
+				$benchmarks['set_block_stats'] = round(microtime(true)-$ref_time, $benchmark_sec_precision);
 				$ref_time = microtime(true);
 			}
-
-			$block_load_time = (microtime(true)-$start_time);
-
-			$this->blockchain->app->run_query("UPDATE game_blocks SET locally_saved=1, time_loaded=:current_time, load_time=load_time+:add_load_time, max_game_io_index=:max_game_io_index WHERE game_block_id=:game_block_id;", [
-				'current_time' => time(),
-				'add_load_time' => $block_load_time,
-				'max_game_io_index' => $game_io_index,
-				'game_block_id' => $game_block['game_block_id']
-			]);
-
-			if ($benchmarks_on) $this->blockchain->app->print_debug("Benchmarks (".$block_load_time." sec total): ".json_encode($benchmarks, JSON_PRETTY_PRINT));
 
 			// If nothing was added this block & it's allowed, add game blocks in bulk
 			if ($this->db_game['bulk_add_blocks'] && in_array($this->db_game['buyin_policy'], ["none", "for_sale"]) && $this->db_game['pow_reward_type'] == "none") {
@@ -2619,6 +2592,22 @@ class Game {
 					else $bulk_to_block = false;
 				}
 			}
+
+			if ($benchmarks_on) {
+				$benchmarks['process_bulk'] = round(microtime(true)-$ref_time, $benchmark_sec_precision);
+				$ref_time = microtime(true);
+			}
+
+			$block_load_time = (microtime(true)-$start_time);
+
+			$this->blockchain->app->run_query("UPDATE game_blocks SET locally_saved=1, time_loaded=:current_time, load_time=load_time+:add_load_time, max_game_io_index=:max_game_io_index WHERE game_block_id=:game_block_id;", [
+				'current_time' => time(),
+				'add_load_time' => $block_load_time,
+				'max_game_io_index' => $game_io_index,
+				'game_block_id' => $game_block['game_block_id']
+			]);
+
+			if ($benchmarks_on) $this->blockchain->app->print_debug("Benchmarks (".$block_load_time." sec total): ".json_encode($benchmarks, JSON_PRETTY_PRINT));
 		}
 		else {
 			$successful = false;

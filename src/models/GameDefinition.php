@@ -711,4 +711,31 @@ class GameDefinition {
 		
 		return [$game, $is_new_game, $error_message];
 	}
+
+	public static function set_track_payout_price(&$game, &$game_defined_event, &$reference_currency) {
+		$changed_game_definition = false;
+
+		$db_block = $game->blockchain->fetch_block_by_id($game_defined_event['event_payout_block']);
+		if ($db_block) $ref_time = $db_block['time_mined'];
+		else $ref_time = time();
+
+		$track_entity = $game->blockchain->app->fetch_entity_by_id($game_defined_event['track_entity_id']);
+		$track_price_info = $game->blockchain->app->exchange_rate_between_currencies(1, $track_entity['currency_id'], $ref_time, $reference_currency['currency_id']);
+
+		$track_price_usd = $game->blockchain->app->to_significant_digits($track_price_info['exchange_rate'], 8);
+
+		if ((string)$track_price_usd !== (string)$game_defined_event['track_payout_price']) {
+			$game->blockchain->app->run_query("UPDATE game_defined_events SET track_payout_price=:track_payout_price WHERE game_id=:game_id AND event_index=:event_index;", [
+				'track_payout_price' => $track_price_usd,
+				'game_id' => $game->db_game['game_id'],
+				'event_index' => $game_defined_event['event_index']
+			]);
+
+			$game_defined_event['track_payout_price'] = $track_price_usd;
+
+			$changed_game_definition = true;
+		}
+
+		return $changed_game_definition;
+	}
 }

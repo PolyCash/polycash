@@ -63,6 +63,48 @@ class Forex128GameDefinition {
 		}';
 		
 		$this->game_def = json_decode($this->game_def_base_txt);
+		
+		$this->module_info = [
+			'next_add_events_time' => 0,
+			'next_set_outcomes_time' => 0,
+			'next_set_blocks_time' => 0,
+			'next_fetch_currencies_time' => 0,
+		];
+	}
+
+	public function module_info_fname(&$game) {
+		return dirname(__FILE__).'/'.$game->db_game['game_id'].'.json';
+	}
+
+	public function initialize_module_info(&$game) {
+		$module_info_fname = $this->module_info_fname($game);
+		if (!is_file($module_info_fname)) {
+			$module_info_fh = fopen($module_info_fname, 'w');
+			fwrite($module_info_fh, json_encode($this->module_info, JSON_PRETTY_PRINT));
+			fclose($module_info_fh);
+		}
+	}
+
+	public function read_module_info(&$game) {
+		$module_info_fname = $this->module_info_fname($game);
+		$module_info_filesize = filesize($module_info_fname);
+		if ($module_info_fh = fopen($module_info_fname, 'r')) {
+			if ($module_info_filesize > 0) {
+				$module_info_raw = fread($module_info_fh, filesize($module_info_fname));
+				fclose($module_info_fh);
+				$module_info = json_decode($module_info_raw, true);
+				if (isset($module_info)) $this->module_info = $module_info;
+			}
+			else $this->app->print_debug("Failed to read module info, filesize: ".$module_info_filesize);
+		}
+		else $this->app->print_debug("Failed to read module info from ".$module_info_fname);
+	}
+
+	public function save_module_info(&$game) {
+		$module_info_fname = $this->module_info_fname($game);
+		$module_info_fh = fopen($module_info_fname, 'w');
+		fwrite($module_info_fh, json_encode($this->module_info, JSON_PRETTY_PRINT)) or die("Failed to write ".$module_info_fname);
+		fclose($module_info_fh);
 	}
 	
 	public function load_currencies(&$game) {
