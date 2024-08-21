@@ -63,14 +63,8 @@ class Forex128GameDefinition {
 		}';
 		
 		$this->game_def = json_decode($this->game_def_base_txt);
-	}
-
-	public function module_info_fname(&$game) {
-		return dirname(__FILE__).'/'.$game->db_game['game_id'].'.json';
-	}
-
-	public function default_module_info() {
-		return [
+		
+		$this->module_info = [
 			'next_add_events_time' => 0,
 			'next_set_outcomes_time' => 0,
 			'next_set_blocks_time' => 0,
@@ -78,30 +72,38 @@ class Forex128GameDefinition {
 		];
 	}
 
+	public function module_info_fname(&$game) {
+		return dirname(__FILE__).'/'.$game->db_game['game_id'].'.json';
+	}
+
 	public function initialize_module_info(&$game) {
-		if (!is_file($this->module_info_fname($game))) {
-			$module_info_fh = fopen($this->module_info_fname($game), 'w');
-			fwrite($module_info_fh, json_encode($this->default_module_info(), JSON_PRETTY_PRINT));
+		$module_info_fname = $this->module_info_fname($game);
+		if (!is_file($module_info_fname)) {
+			$module_info_fh = fopen($module_info_fname, 'w');
+			fwrite($module_info_fh, json_encode($this->module_info, JSON_PRETTY_PRINT));
 			fclose($module_info_fh);
 		}
 	}
 
 	public function read_module_info(&$game) {
-		if ($module_info_fh = fopen($this->module_info_fname($game), 'r')) {
-			if (filesize($this->module_info_fname($game)) > 0) {
-				$module_info_raw = fread($module_info_fh, filesize($this->module_info_fname($game)));
+		$module_info_fname = $this->module_info_fname($game);
+		$module_info_filesize = filesize($module_info_fname);
+		if ($module_info_fh = fopen($module_info_fname, 'r')) {
+			if ($module_info_filesize > 0) {
+				$module_info_raw = fread($module_info_fh, filesize($module_info_fname));
 				fclose($module_info_fh);
-				$module_info = json_decode($module_info_raw);
-				return (array) $module_info;
+				$module_info = json_decode($module_info_raw, true);
+				if (isset($module_info)) $this->module_info = $module_info;
 			}
-			else return $this->default_module_info();
+			else $this->app->print_debug("Failed to read module info, filesize: ".$module_info_filesize);
 		}
-		else return $this->default_module_info();
+		else $this->app->print_debug("Failed to read module info from ".$module_info_fname);
 	}
 
-	public function save_module_info(&$game, $module_info) {
-		$module_info_fh = fopen($this->module_info_fname($game), 'w');
-		fwrite($module_info_fh, json_encode($module_info, JSON_PRETTY_PRINT)) or die("Failed to write ".$this->module_info_fname($game));
+	public function save_module_info(&$game) {
+		$module_info_fname = $this->module_info_fname($game);
+		$module_info_fh = fopen($module_info_fname, 'w');
+		fwrite($module_info_fh, json_encode($this->module_info, JSON_PRETTY_PRINT)) or die("Failed to write ".$module_info_fname);
 		fclose($module_info_fh);
 	}
 	
