@@ -658,10 +658,14 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 								echo "<br/>\n";
 							}
 							else {
-								$load_time = $block['load_time'];
-								if ($game) $load_time += $block['game_load_time'];
-								
-								echo AppSettings::getParam('site_name')." took ".number_format($load_time, 2)." seconds to load this block.<br/>\n";
+								if ($game) {
+									echo AppSettings::getParam('site_name')." took ".number_format($block['game_load_time'], 2)." seconds to load this game block";
+									if ($block['time_loaded']) echo " at ".date("Y-m-d H:i:s", $block['time_loaded'])." UTC (".$app->format_seconds(time()-$block['time_loaded'])." ago)";
+									echo ".<br/>\n";
+								}
+								else {
+									echo AppSettings::getParam('site_name')." took ".number_format($block['load_time'], 2)." seconds to load this block.<br/>\n";
+								}
 							}
 							
 							if (empty($game)) {
