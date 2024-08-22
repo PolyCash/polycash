@@ -8,12 +8,12 @@ $app->safe_merge_argv_to_request($argv, $allowed_params);
 
 if ($app->running_as_admin()) {
 	$fetch_frequency_sec = AppSettings::getParam('currency_price_refresh_seconds');
-	if (empty($fetch_frequecy_sec)) $fetch_frequecy_sec = 5*60;
+	if (empty($fetch_frequency_sec)) $fetch_frequecy_sec = 12*60;
 	
 	$last_price_refresh_at = $app->get_site_constant("last_price_refresh_at");
 	
 	if (empty($last_price_refresh_at) || $last_price_refresh_at < time()-$fetch_frequency_sec || !empty($_REQUEST['force'])) {
-		$app->update_all_currency_prices();
+		$app->update_all_currency_prices($print_debug=true);
 		
 		$app->set_site_constant("last_price_refresh_at", time());
 		

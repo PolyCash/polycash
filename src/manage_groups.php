@@ -72,9 +72,9 @@ else {
 					
 					echo "<a href=\"/groups/\">&larr; All Groups</a><br/><br/>\n";
 					
-					$memberships = $app->run_query("SELECT * FROM option_group_memberships m JOIN entities en ON m.entity_id=en.entity_id WHERE m.option_group_id=:option_group_id ORDER BY m.membership_id ASC;", ['option_group_id' => $selected_group['group_id']]);
+					$memberships = $app->fetch_group_members($selected_group['group_id']);
 					
-					while ($membership = $memberships->fetch()) {
+					foreach ($memberships as $membership) {
 						echo $membership['entity_name']."<br/>\n";
 					}
 					
