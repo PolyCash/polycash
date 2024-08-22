@@ -32,19 +32,20 @@ if ($app->running_as_admin()) {
 			$db_running_games = $app->run_query($game_q);
 			
 			while ($db_running_game = $db_running_games->fetch()) {
+				$ref_time = microtime(true);
 				if (empty($blockchains[$db_running_game['blockchain_id']])) $blockchains[$db_running_game['blockchain_id']] = new Blockchain($app, $db_running_game['blockchain_id']);
 				$running_game = new Game($blockchains[$db_running_game['blockchain_id']], $db_running_game['game_id']);
 				
 				if ($running_game->last_block_id() == $running_game->blockchain->last_block_id()) {
 					$running_game->set_cached_fields();
-					if ($print_debug) echo "Set ".$running_game->db_game['name']."\n";
+					if ($print_debug) $app->print_debug("Set cached values for ".$running_game->db_game['name']." in ".round(microtime(true)-$ref_time, 6)." sec");
 				}
-				else if ($print_debug) echo "Skipped ".$running_game."; it's not fully loaded.\n";
+				else if ($print_debug) $app->print_debug("Skipped ".$running_game."; it's not fully loaded.");
 			}
 			
 			$loop_stop_time = microtime(true);
 			$loop_time = $loop_stop_time-$loop_start_time;
-			$loop_target_time = max($loop_target_time, $loop_time*3);
+			$loop_target_time = max($loop_target_time, $loop_time*8);
 			
 			if ($loop_time < $loop_target_time) {
 				$sleep_usec = round(pow(10,6)*($loop_target_time - $loop_time));
