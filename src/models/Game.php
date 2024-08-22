@@ -1853,15 +1853,22 @@ class Game {
 					
 					if (!empty($api_response->url_identifier)) {
 						if ($api_response->url_identifier == $this->db_game['url_identifier']) {
-							$returned_def_hash = GameDefinition::game_def_to_text($api_response);
+							$returned_def_hash = GameDefinition::game_def_to_hash($api_response_raw);
 							$compute_hash_time = round(microtime(true)-$ref_time, 6);
+							$ref_time = microtime(true);
 							
 							if ($returned_def_hash == $send_hash) $error_message .= $this->blockchain->app->log_message($this->db_game['name'].": fetched in ".$fetch_time.", decoded in ".$decode_time.", got hash in ".$compute_hash_time." but not applying game def from peer; Already in sync.");
 							else {
-								$this->blockchain->app->log_message($this->db_game['name'].": fetched in ".$fetch_time.", decoded in ".$decode_time.", got hash in ".$compute_hash_time.", now syncing to ".$returned_def_hash." from ".$api_url);
+								GameDefinition::check_set_game_definition($app, $returned_def_hash, $api_response, $game);
+								$ensure_def_time = round(microtime(true)-$ref_time);
+								$ref_time = microtime(true);
+
+								$this->blockchain->app->log_message($this->db_game['name'].": fetched in ".$fetch_time.", decoded in ".$decode_time.", got hash in ".$compute_hash_time.", ensured def in ".$ensure_def_time.", now syncing to ".$returned_def_hash." from ".$api_url);
 								$ref_user = false;
 								$db_new_game = false;
-								list($mod_game, $mod_game_is_new, $set_game_error) = GameDefinition::set_game_from_definition($this->blockchain->app, $api_response->definition, $ref_user, $error_message, $db_new_game, true);
+								list($mod_game, $mod_game_is_new, $set_game_error) = GameDefinition::set_game_from_definition($this->blockchain->app, $api_response, $ref_user, $error_message, $db_new_game, true);
+								
+								$this->blockchain->app->log_message($this->db_game['name'].": set game from definition in ".round(microtime(true)-$ref_time, 6).(!empty($set_game_error) ? ": ".$set_game_error : ""));
 							}
 						}
 						else $error_message .= $this->blockchain->app->log_message($this->db_game['name'].": fetched in ".$fetch_time.", decoded in ".$decode_time." but sync canceled because definitive peer tried to change the game identifier.");
