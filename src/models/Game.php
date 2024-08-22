@@ -1041,7 +1041,7 @@ class Game {
 			if (empty($sample_block) || $last_block['block_id'] == $sample_block['block_id']) $time_per_block = 0;
 			else $time_per_block = ($last_block['time_loaded']-$sample_block['time_loaded'])/($last_block['block_id']-$sample_block['block_id']);
 			
-			$html .= "<p>Loading ".number_format($missing_game_blocks)." game block";
+			$html .= "<p>Synced to block <a target='_blank' href='/explorer/games/".$this->db_game['url_identifier']."/blocks/".$last_block_loaded."'>".$last_block_loaded."</a>, loading ".number_format($missing_game_blocks)." game block";
 			if ($missing_game_blocks != 1) $html .= "s";
 			
 			if ($missing_game_blocks > 1) {
@@ -1860,7 +1860,7 @@ class Game {
 							if ($returned_def_hash == $send_hash) $error_message .= $this->blockchain->app->log_message($this->db_game['name'].": fetched in ".$fetch_time.", decoded in ".$decode_time.", got hash in ".$compute_hash_time." but not applying game def from peer; Already in sync.");
 							else {
 								GameDefinition::check_set_game_definition($this->blockchain->app, $returned_def_hash, $api_response_raw, $this);
-								$ensure_def_time = round(microtime(true)-$ref_time);
+								$ensure_def_time = round(microtime(true)-$ref_time, 6);
 								$ref_time = microtime(true);
 
 								$this->blockchain->app->log_message($this->db_game['name'].": fetched in ".$fetch_time.", decoded in ".$decode_time.", got hash in ".$compute_hash_time.", ensured def in ".$ensure_def_time.", now syncing to ".$returned_def_hash." from ".$api_url);
@@ -1908,7 +1908,7 @@ class Game {
 				if (time() >= $extra_info['from_reset_time']) $reset_now = true;
 				else {
 					$reset_now = false;
-					if ($print_debug) $this->blockchain->app->print_debug("Game will reset in ".$this->blockchain->app->format_seconds($extra_info['from_reset_time'] - time()));
+					if ($print_debug) $this->blockchain->app->print_debug("Game will reset ".(isset($extra_info['reset_from_block']) ? "to block #".$extra_info['reset_from_block'] : "")." in ".$this->blockchain->app->format_seconds($extra_info['from_reset_time'] - time()));
 				}
 			}
 
