@@ -164,9 +164,12 @@ class GameDefinition {
 
 	public static function check_set_game_definition(&$app, &$game_def_hash, &$game_def, $game=null) {
 		if (!self::check_game_definition_exists($app, $game_def_hash)) {
+			if (is_string($game_def)) $game_def_str = &$game_def;
+			else $game_def_str = self::game_def_to_text($game_def);
+
 			$create_game_def_params = [
 				'definition_hash' => $game_def_hash,
-				'definition' => self::game_def_to_text($game_def),
+				'definition' => $game_def_str,
 				'last_accessed_at' => time(),
 			];
 			if ($game) $create_game_def_params['game_id'] = $game->db_game['game_id'];

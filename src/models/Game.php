@@ -1859,7 +1859,7 @@ class Game {
 							
 							if ($returned_def_hash == $send_hash) $error_message .= $this->blockchain->app->log_message($this->db_game['name'].": fetched in ".$fetch_time.", decoded in ".$decode_time.", got hash in ".$compute_hash_time." but not applying game def from peer; Already in sync.");
 							else {
-								GameDefinition::check_set_game_definition($this->blockchain->app, $returned_def_hash, $api_response, $this);
+								GameDefinition::check_set_game_definition($this->blockchain->app, $returned_def_hash, $api_response_raw, $this);
 								$ensure_def_time = round(microtime(true)-$ref_time);
 								$ref_time = microtime(true);
 
