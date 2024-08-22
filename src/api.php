@@ -396,33 +396,22 @@ if ($uri_parts[1] == "api") {
 						if (!empty($game->db_game['defined_cached_definition_hash']) && !$game->game_definition_is_locked()) {
 							$game_def_hash = $game->db_game['defined_cached_definition_hash'];
 							$definition_txt = GameDefinition::get_game_definition_by_hash($app, $game->db_game['defined_cached_definition_hash']);
-							if ($definition_txt) {
-								$definition = json_decode($definition_txt);
-								$from_cache = true;
-							}
 						}
-						if (empty($definition) && !empty($game->db_game['cached_definition_hash']) && !empty($game->db_game['events_until_block']) && $game->db_game['events_until_block'] >= $game->blockchain->last_block_id()) {
+						if (empty($definition_txt) && !empty($game->db_game['cached_definition_hash']) && !empty($game->db_game['events_until_block']) && $game->db_game['events_until_block'] >= $game->blockchain->last_block_id()) {
 							$game_def_hash = $game->db_game['cached_definition_hash'];
 							$definition_txt = GameDefinition::get_game_definition_by_hash($app, $game->db_game['cached_definition_hash']);
-							if ($definition_txt) {
-								$definition = json_decode($definition_txt);
-								$from_cache = true;
-							}
 						}
-						if (empty($definition) && $allow_non_cached) {
+						if (empty($definition_txt) && $allow_non_cached) {
 							$show_internal_params = false;
 							list($game_def_hash, $definition) = GameDefinition::fetch_game_definition($game, "defined", $show_internal_params, false);
 							GameDefinition::check_set_game_definition($app, $game_def_hash, $definition, $game);
-							$from_cache = false;
+							if ($definition) $definition_txt = game_def_to_text($definition);
 						}
 
-						if (!empty($definition)) {
-							$api_output['status_code'] = 1;
-							$api_output['definition_hash'] = $game_def_hash;
-							$api_output['load_time'] = round(microtime(true)-$ref_time, 6);
-							$api_output['from_cache'] = $from_cache;
-							$api_output['events_until_block'] = $game->db_game['events_until_block'];
-							$api_output['definition'] = &$definition;
+						if (!empty($definition_txt)) {
+							header('Content-Type: application/json');
+							echo $definition_txt;
+							die();
 						}
 						else {
 							$api_output['status_code'] = 4;

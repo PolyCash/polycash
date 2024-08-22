@@ -3674,11 +3674,11 @@ class App {
 	}
 	
 	public function fetch_event_by_id($event_id) {
-		return $this->run_query("SELECT * FROM events WHERE event_id=:event_id;", ['event_id'=>$event_id])->fetch();
+		return $this->run_query("SELECT * FROM events WHERE event_id=:event_id;", ['event_id'=>$event_id])->fetch(PDO::FETCH_ASSOC);
 	}
 	
 	public function fetch_option_by_id($option_id) {
-		return $this->run_query("SELECT * FROM options op JOIN events ev ON op.event_id=ev.event_id WHERE op.option_id=:option_id;", ['option_id'=>$option_id])->fetch();
+		return $this->run_query("SELECT * FROM options op JOIN events ev ON op.event_id=ev.event_id WHERE op.option_id=:option_id;", ['option_id'=>$option_id])->fetch(PDO::FETCH_ASSOC);
 	}
 	
 	public function fetch_options_by_event($event_id, $require_entities=false) {
@@ -3692,7 +3692,7 @@ class App {
 		return $this->run_query("SELECT * FROM options WHERE event_id=:event_id AND event_option_index=:event_option_index;", [
 			'event_id' => $event_id,
 			'event_option_index' => $event_option_index
-		])->fetch();
+		])->fetch(PDO::FETCH_ASSOC);
 	}
 	
 	public function fetch_card_by_peer_and_id($peer_id, $card_id) {
