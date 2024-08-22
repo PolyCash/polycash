@@ -33,14 +33,18 @@ else {
 		$to_game_def = json_decode(GameDefinition::get_game_definition_by_hash($app, $_REQUEST['to_hash']));
 	}
 	else {
-		$from_game_def = json_decode(GameDefinition::get_game_definition_by_hash($app, $migration['from_hash']));
-		$to_game_def = json_decode(GameDefinition::get_game_definition_by_hash($app, $migration['to_hash']));
+		if (empty($migration['cached_difference_summary'])) {
+			$from_game_def = json_decode(GameDefinition::get_game_definition_by_hash($app, $migration['from_hash']));
+			$to_game_def = json_decode(GameDefinition::get_game_definition_by_hash($app, $migration['to_hash']));
+		}
+		else $difference_summary_txt = $migration['cached_difference_summary'];
 	}
 	
-	if ($from_game_def && $to_game_def) {
+	if (!empty($from_game_def) && !empty($to_game_def)) {
 		list($differences, $difference_summary_lines) = GameDefinition::analyze_definition_differences($app, $from_game_def, $to_game_def);
+		$difference_summary_txt = implode(".<br/>\n", $difference_summary_lines);
 	}
-	else $difference_summary_lines = [];
+	else $difference_summary_txt = "";
 	?>
 	<div class="modal-header">
 		<b class="modal-title"><?php echo $game->db_game['name']; ?> migration: &nbsp; 
@@ -66,7 +70,7 @@ else {
 				}
 			}
 		}
-		echo implode(".<br/>\n", $difference_summary_lines);
+		echo $difference_summary_txt;
 		?>
 	</div>
 	<div class="modal-footer">

@@ -401,11 +401,12 @@ if ($uri_parts[1] == "api") {
 							$game_def_hash = $game->db_game['cached_definition_hash'];
 							$definition_txt = GameDefinition::get_game_definition_by_hash($app, $game->db_game['cached_definition_hash']);
 						}
-						if (empty($definition_txt) && $allow_non_cached) {
-							$show_internal_params = false;
-							list($game_def_hash, $definition) = GameDefinition::fetch_game_definition($game, "defined", $show_internal_params, false);
-							GameDefinition::check_set_game_definition($app, $game_def_hash, $definition, $game);
-							if ($definition) $definition_txt = game_def_to_text($definition);
+						if (empty($definition_txt) && $allow_non_cached && !$game->game_definition_is_locked()) {
+							list($game_def_hash, $definition) = GameDefinition::fetch_game_definition($game, "defined", $show_internal_params=false, false);
+							if ($definition) {
+								$definition_txt = GameDefinition::game_def_to_text($definition);
+								GameDefinition::check_set_game_definition($app, $game_def_hash, $definition, $game);
+							}
 						}
 
 						if (!empty($definition_txt)) {
