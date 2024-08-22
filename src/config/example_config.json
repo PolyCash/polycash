@@ -19,7 +19,7 @@
 	"identifier_first_char": 2,
 	"options_begin_at_index": 10,
 	"pageview_tracking_enabled": false,
-	"currency_price_refresh_seconds": 300,
+	"currency_price_refresh_seconds": 720,
 	"invoice_expiration_seconds": 604800,
 	"new_games_per_user": 0,
 	"homepage_fname": "default.php",
@@ -38,5 +38,18 @@
 	"coinbase_passphrase": "",
 	"coinbase_deposit_btc_address": "",
 	"coinbase_deposit_ltc_address": "",
-	"display_sync_game_ids": ""
+	"display_sync_game_ids": "",
+	"oracles": [
+		{
+			"selector_type": "single",
+			"currency": "BTC",
+			"oracle": "coin-desk"
+		},
+		{
+			"selector_type": "group",
+			"group": "128 world currencies",
+			"oracle": "fcs-api",
+			"api_key": ""
+		}
+	]
 }

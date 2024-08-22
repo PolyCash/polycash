@@ -68,7 +68,6 @@ class Forex128GameDefinition {
 			'next_add_events_time' => 0,
 			'next_set_outcomes_time' => 0,
 			'next_set_blocks_time' => 0,
-			'next_fetch_currencies_time' => 0,
 		];
 	}
 

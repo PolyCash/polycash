@@ -59,6 +59,34 @@ Sync mode: Full
 Sync from block: 1
 ```
 
+## Configure currency price oracles
+
+For full functionality in synthetic assets game, you should configure external price oracles for your currencies.  To configure oracles, enter configuration records in the "oracles" section of your src/config/config.json. By default, the coin-desk oracle should be configured for updating the Bitcoin price. The CoinDesk Bitcoin price API does not require an API key, but other oracles may.  If you have installed the Forex 128 game, you can use fcsapi.com as an oracle for currency prices.  After paying for FCS API, enter your API key in your oracle configuration by replacing MyApiKey as shown in this example configuration:
+```
+	"oracles": [
+		{
+			"selector_type": "single",
+			"currency": "BTC",
+			"oracle": "coin-desk"
+		},
+		{
+			"selector_type": "group",
+			"group": "128 world currencies",
+			"oracle": "fcs-api",
+			"api_key": "MyApiKey"
+		}
+	]
+```
+
+You can modify the frequency of price refreshing by modifying the "currency_price_refresh_seconds" value in your src/config/config.json
+
+You can run the price fetch script manually with this command:
+```
+bash
+cd /var/www/html
+php src/cron/fetch_currency_prices.php force=1
+```
+
 ## Make PolyCash Configuration Changes
 
 To make changes to your PolyCash installation, open your configuration file at polycash/src/config/config.json
