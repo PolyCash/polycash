@@ -527,7 +527,7 @@ class Game {
 		$this->blockchain->app->run_query("UPDATE games SET events_until_block=NULL, loaded_until_block=NULL, min_option_index=NULL, max_option_index=NULL, current_pow_reward=NULL WHERE game_id=:game_id;", ['game_id'=>$this->db_game['game_id']]);
 		
 		if ($delete_or_reset == "reset") {
-			$this->blockchain->app->run_query("UPDATE games SET coins_in_existence=0, cached_pending_bets=NULL, cached_vote_supply=NULL, cached_definition_hash=NULL, defined_cached_definition_hash=NULL, cached_definition_time=NULL WHERE game_id=:game_id;", ['game_id'=>$this->db_game['game_id']]);
+			$this->blockchain->app->run_query("UPDATE games SET coins_in_existence=0, cached_pending_bets=NULL, cached_vote_supply=NULL, cached_definition_hash=NULL, defined_cached_definition_hash=NULL, cached_definition_time=NULL, defined_cached_definition_time=NULL WHERE game_id=:game_id;", ['game_id'=>$this->db_game['game_id']]);
 			
 			list($genesis_error, $genesis_error_message) = $this->ensure_genesis_transaction();
 		}
@@ -1856,17 +1856,17 @@ class Game {
 								list($mod_game, $mod_game_is_new, $set_game_error) = GameDefinition::set_game_from_definition($this->blockchain->app, $api_response->definition, $ref_user, $error_message, $db_new_game, true);
 							}
 						}
-						else $error_message .= "Sync canceled: definitive peer tried to change the game identifier.\n";
+						else $error_message .= $this->blockchain->app->log_message($this->db_game['name'].": sync canceled: definitive peer tried to change the game identifier.");
 					}
-					else $error_message .= $api_response->message."\n";
+					else $error_message .= $this->blockchain->app->log_message($this->db_game['name']." did not update from peer due to status: ".$api_response->message);
 				}
-				else $error_message .= "Failed to decode response from definitive peer: ".$this->blockchain->app->json_decode_error_code_to_string(json_last_error())."\n";
+				else $error_message .= $this->blockchain->app->log_message($this->db_game['name'].": failed to decode response from definitive peer: ".$this->blockchain->app->json_decode_error_code_to_string(json_last_error()));
 			}
-			else $error_message .= "Failed to fetch game definition from definitive peer.\n";
+			else $error_message .= $this->blockchain->app->log_message($this->db_game['name'].": failed to fetch game definition from definitive peer.");
 
 			$error_message .= $this->set_option_images_from_definitive_peer();
 		}
-		else $error_message .= "This game does not have a definitive peer.\n";
+		else $error_message .= $this->blockchain->app->log_message($this->db_game['name']." does not have a definitive peer.");
 
 		if ($print_debug) $this->blockchain->app->print_debug($error_message);
 

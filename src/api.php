@@ -384,44 +384,56 @@ if ($uri_parts[1] == "api") {
 				$api_output['last_block_id'] = $game->last_block_id();
 			}
 			else if ($uri_parts[3] == "definition") {
-				$real_or_defined = "defined";
-				$real_or_defined_prefix = $real_or_defined == "real" ? "" : "defined_";
-				
-				$locked_loading = false;
-				
-				if ($real_or_defined == "real"){
-					if (empty($game->db_game['events_until_block']) || $game->last_block_id() < $last_block_id) {
-						$api_output['status_code'] = 2;
-						$api_output['message'] = "This game is currently loading.";
-						$locked_loading = true;
-					}
-				}
-				else { // defined
-					if ($game->game_definition_is_locked()) {
-						$api_output['status_code'] = 4;
-						$api_output['message'] = "Game is locked for changes; please try again soon.";
-						$locked_loading = true;
-					}
-				}
-				
-				if (!$locked_loading) {
-					$client_needs_info = true;
-					if (!empty($_REQUEST['definition_hash']) && $_REQUEST['definition_hash'] == $game->db_game[$real_or_defined_prefix.'cached_definition_hash']) $client_needs_info = false;
-					
-					if (!$client_needs_info) {
+				if (!empty($_REQUEST['definition_hash'])) {
+					if ($_REQUEST['definition_hash'] == $game->db_game['cached_definition_hash'] || $_REQUEST['definition_hash'] == $game->db_game['defined_cached_definition_hash']) {
 						$api_output['status_code'] = 3;
 						$api_output['message'] = "You're already in sync.";
 					}
 					else {
-						$show_internal_params = false;
-						list($game_def_hash, $game_def) = GameDefinition::fetch_game_definition($game, $real_or_defined, $show_internal_params, false);
-						GameDefinition::check_set_game_definition($app, $game_def_hash, $game_def, $game);
-						
-						$api_output['status_code'] = 1;
-						$api_output['definition_hash'] = $game_def_hash;
-						$api_output['events_until_block'] = $game->db_game['events_until_block'];
-						$api_output['definition'] = $game_def;
+						$ref_time = microtime(true);
+						$allow_non_cached = true;
+
+						if (!empty($game->db_game['defined_cached_definition_hash']) && !$game->game_definition_is_locked()) {
+							$game_def_hash = $game->db_game['defined_cached_definition_hash'];
+							$definition_txt = GameDefinition::get_game_definition_by_hash($app, $game->db_game['defined_cached_definition_hash']);
+							if ($definition_txt) {
+								$definition = json_decode($definition_txt);
+								$from_cache = true;
+							}
+						}
+						if (empty($definition) && !empty($game->db_game['cached_definition_hash']) && !empty($game->db_game['events_until_block']) && $game->db_game['events_until_block'] >= $game->blockchain->last_block_id()) {
+							$game_def_hash = $game->db_game['cached_definition_hash'];
+							$definition_txt = GameDefinition::get_game_definition_by_hash($app, $game->db_game['cached_definition_hash']);
+							if ($definition_txt) {
+								$definition = json_decode($definition_txt);
+								$from_cache = true;
+							}
+						}
+						if (empty($definition) && $allow_non_cached) {
+							$show_internal_params = false;
+							list($game_def_hash, $definition) = GameDefinition::fetch_game_definition($game, "defined", $show_internal_params, false);
+							GameDefinition::check_set_game_definition($app, $game_def_hash, $definition, $game);
+							$from_cache = false;
+						}
+
+						if (!empty($definition)) {
+							$api_output['status_code'] = 1;
+							$api_output['definition_hash'] = $game_def_hash;
+							$api_output['load_time'] = round(microtime(true)-$ref_time, 6);
+							$api_output['from_cache'] = $from_cache;
+							$api_output['events_until_block'] = $game->db_game['events_until_block'];
+							$api_output['definition'] = &$definition;
+						}
+						else {
+							$api_output['status_code'] = 4;
+							$api_output['message'] = "Failed to load the game definition.";
+							$api_output['load_time'] = round(microtime(true)-$ref_time, 6);
+						}
 					}
+				}
+				else {
+					$api_output['status_code'] = 2;
+					$api_output['message'] = "Please supply a definition_hash.";
 				}
 			}
 			else if ($uri_parts[3] == "current_events") {

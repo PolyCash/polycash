@@ -104,6 +104,7 @@ class App {
 	
 	public function log_message($message) {
 		$this->run_insert_query("log_messages", ['message' => $message]);
+		return $message;
 	}
 	
 	public function utf8_clean($str) {
@@ -3299,9 +3300,10 @@ class App {
 		@ob_start();
 	}
 	
-	public function print_debug($s) {
+	public function print_debug($s, $write_to_log=false) {
 		echo $s."\n";
 		$this->flush_buffers();
+		if ($write_to_log) $this->log_message($s);
 		return $s;
 	}
 	
