@@ -357,16 +357,16 @@ class GameDefinition {
 			array_push($difference_summary_lines, count($differences['escrow']['changed'])." escrow amount".(count($differences['escrow']['changed']) == 1 ? " was" : "s were")." changed");
 		}
 		if ($differences['events']['new_events'] > 0) {
-			array_push($difference_summary_lines, $differences['events']['new_events']." new event".($differences['events']['new_events'] == 1 ? " was " : "s were")." added");
+			array_push($difference_summary_lines, number_format($differences['events']['new_events'])." new event".($differences['events']['new_events'] == 1 ? " was " : "s were")." added");
 		}
 		if ($differences['events']['removed_events'] > 0) {
-			array_push($difference_summary_lines, $differences['events']['removed_events']." event".($differences['events']['removed_events'] == 1 ? " was" : "s were")." removed");
+			array_push($difference_summary_lines, number_format($differences['events']['removed_events'])." event".($differences['events']['removed_events'] == 1 ? " was" : "s were")." removed");
 		}
 		if ($differences['events']['block_changed_events'] > 0) {
-			array_push($difference_summary_lines, "Blocks were changed in ".$differences['events']['block_changed_events']." event".($differences['events']['block_changed_events'] == 1 ? "" : "s"));
+			array_push($difference_summary_lines, "Blocks were changed in ".number_format($differences['events']['block_changed_events'])." event".($differences['events']['block_changed_events'] == 1 ? "" : "s"));
 		}
 		if ($differences['events']['outcome_changed_events'] > 0) {
-			array_push($difference_summary_lines, "Outcomes were changed for ".$differences['events']['outcome_changed_events']." event".($differences['events']['outcome_changed_events'] == 1 ? "" : "s"));
+			array_push($difference_summary_lines, "Outcomes were changed for ".number_format($differences['events']['outcome_changed_events'])." event".($differences['events']['outcome_changed_events'] == 1 ? "" : "s"));
 		}
 		if ($differences['events']['other_changed_events'] > 0) {
 			array_push($difference_summary_lines, $differences['events']['other_changed_events']." event".($differences['events']['other_changed_events'] != 1 ? "s were" : " was")." changed");

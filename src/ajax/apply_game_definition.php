@@ -1,4 +1,5 @@
 <?php
+set_time_limit(0);
 require(AppSettings::srcPath()."/includes/connect.php");
 require(AppSettings::srcPath()."/includes/get_session.php");
 

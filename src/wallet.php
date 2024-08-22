@@ -453,14 +453,14 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 								'user_id' => $thisuser->db_user['user_id'],
 								'game_id' => $game->db_game['game_id']
 							])->fetchAll();
-							if (count($user_games_by_game) <= 20) $user_game_show_balances = true;
+							if (count($user_games_by_game) <= 2) $user_game_show_balances = true;
 							else $user_game_show_balances = false;
 							
 							foreach ($user_games_by_game as $db_user_game) {
 								echo "<option ";
 								if ($db_user_game['user_game_id'] == $user_game['user_game_id']) echo "selected=\"selected\" ";
 								echo "value=\"".$db_user_game['user_game_id']."\">Account #".$db_user_game['account_id'];
-								if ($user_game_show_balances) echo " &nbsp;&nbsp; ".$game->display_coins($game->account_balance($db_user_game['account_id'])+$game->user_pending_bets($db_user_game), true);
+								if ($user_game_show_balances || $user_game['account_id'] == $db_user_game['account_id']) echo " &nbsp;&nbsp; ".$game->display_coins($game->account_balance($db_user_game['account_id'])+$game->user_pending_bets($db_user_game), true);
 								echo "</option>\n";
 							}
 							?>
