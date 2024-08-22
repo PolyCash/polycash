@@ -80,6 +80,13 @@ For full functionality in synthetic assets game, you should configure external p
 
 You can modify the frequency of price refreshing by modifying the "currency_price_refresh_seconds" value in your src/config/config.json
 
+You can run the price fetch script manually with this command:
+```
+bash
+cd /var/www/html
+php src/cron/fetch_currency_prices.php force=1
+```
+
 ## Make PolyCash Configuration Changes
 
 To make changes to your PolyCash installation, open your configuration file at polycash/src/config/config.json
