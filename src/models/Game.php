@@ -1873,7 +1873,12 @@ class Game {
 						}
 						else $error_message .= $this->blockchain->app->log_message($this->db_game['name'].": fetched in ".$fetch_time.", decoded in ".$decode_time." but sync canceled because definitive peer tried to change the game identifier.");
 					}
-					else $error_message .= $this->blockchain->app->log_message($this->db_game['name'].": fetched in ".$fetch_time.", decoded in ".$decode_time." but response is not a game definition: ".(isset($api_response->message) ? $api_response->message : ""));
+					else {
+						$already_in_sync = isset($api_response->status_code) && $api_response->status_code == 3;
+						$message = $this->db_game['name'].": fetched in ".$fetch_time.", decoded in ".$decode_time." and response is not a game definition: ".(isset($api_response->message) ? $api_response->message : "");
+						if (!$already_in_sync) $error_message .= $this->blockchain->app->log_message($message);
+						else if ($print_debug) $error_message .= $message;
+					}
 				}
 				else $error_message .= $this->blockchain->app->log_message($this->db_game['name'].": fetched in ".$fetch_time." but failed to decode response from definitive peer: ".$this->blockchain->app->json_decode_error_code_to_string(json_last_error()));
 			}
