@@ -1,3 +1,4 @@
+<div class="status_footer">
 <?php
 $display_sync_games = [];
 
@@ -77,7 +78,9 @@ while ($db_blockchain = $online_blockchains->fetch()) {
 	echo "</a>";
 	echo '</div>';
 }
-
+?>
+</div>
+<?php
 foreach ($display_sync_games as $display_sync_game) {
 	?>
 	<div style="display: none;" class="modal fade" id="game<?php echo $display_sync_game->db_game['game_id']; ?>_public_peer_details_modal">

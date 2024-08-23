@@ -15,7 +15,7 @@
 	</div>
 </div>
 <footer class="footer" id="chatWindows"></footer>
-<div class="status_footer" id="status_footer">
+<div id="status_footer">
 	<?php
 	echo $app->render_view('status_footer', [
 		'app' => $app,
