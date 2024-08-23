@@ -1553,7 +1553,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$def_field = 'defined_cached_definition_hash';
 						
 						if (empty($game_def)) {
-							list($game_def_hash, $game_def) = GameDefinition::fetch_game_definition($game, $definition_mode, false, true);
+							list($game_def_hash, $game_def) = GameDefinition::export_game_definition($game, $definition_mode, false, true);
 						}
 
 						$game_def_txt = GameDefinition::game_def_to_text($game_def);

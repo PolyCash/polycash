@@ -1323,7 +1323,7 @@ else {
 				}
 				else if ($next_action == "game_definition") {
 					$show_internal_params = false;
-					list($game_def_hash, $game_def) = GameDefinition::fetch_game_definition($game, "defined", $show_internal_params, false);
+					list($game_def_hash, $game_def) = GameDefinition::export_game_definition($game, "defined", $show_internal_params, false);
 					?>
 					<div class="panel panel-info">
 						<div class="panel-heading">

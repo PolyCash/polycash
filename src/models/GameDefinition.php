@@ -38,7 +38,7 @@ class GameDefinition {
 		];
 	}
 	
-	public static function fetch_game_definition(&$game, $definition_mode, $show_internal_params, $cached_ok) {
+	public static function export_game_definition(&$game, $definition_mode, $show_internal_params, $cached_ok) {
 		$app = $game->blockchain->app;
 		
 		// $definition_mode is "defined" or "actual"
@@ -203,7 +203,7 @@ class GameDefinition {
 		$show_internal_params = false;
 		
 		if (!empty($game->db_game['events_until_block']) && $game->db_game['events_until_block'] >= $game->blockchain->last_block_id()) {
-			list($actual_game_def_hash, $actual_game_def) = self::fetch_game_definition($game, "actual", $show_internal_params, false);
+			list($actual_game_def_hash, $actual_game_def) = self::export_game_definition($game, "actual", $show_internal_params, false);
 			self::check_set_game_definition($game->blockchain->app, $actual_game_def_hash, $actual_game_def, $game);
 			
 			if ($print_debug) $game->blockchain->app->print_debug("Actual: ".$actual_game_def_hash);
@@ -218,7 +218,7 @@ class GameDefinition {
 		else if ($print_debug) $game->blockchain->app->print_debug("Skipping cache actual definition; game events are not fully loaded.");
 		
 		if (!$game->game_definition_is_locked()) {
-			list($defined_game_def_hash, $defined_game_def) = self::fetch_game_definition($game, "defined", $show_internal_params, false);
+			list($defined_game_def_hash, $defined_game_def) = self::export_game_definition($game, "defined", $show_internal_params, false);
 			self::check_set_game_definition($game->blockchain->app, $defined_game_def_hash, $defined_game_def, $game);
 			
 			if ($print_debug) echo "Defined: ".$defined_game_def_hash."\n";
@@ -705,7 +705,7 @@ class GameDefinition {
 								}
 								
 								$show_internal_params = false;
-								list($from_game_def_hash, $from_game_def) = self::fetch_game_definition($game, "defined", $show_internal_params, false);
+								list($from_game_def_hash, $from_game_def) = self::export_game_definition($game, "defined", $show_internal_params, false);
 								self::check_set_game_definition($app, $from_game_def_hash, $from_game_def, $game);
 								
 								$to_game_def_str = self::game_def_to_text($game_def);

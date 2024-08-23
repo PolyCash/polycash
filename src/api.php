@@ -407,7 +407,7 @@ if ($uri_parts[1] == "api") {
 								}
 							}
 							if (empty($definition_txt) && !$game->game_definition_is_locked()) {
-								list($game_def_hash, $definition) = GameDefinition::fetch_game_definition($game, "defined", $show_internal_params=false, false);
+								list($game_def_hash, $definition) = GameDefinition::export_game_definition($game, "defined", $show_internal_params=false, false);
 								if ($definition) {
 									$definition_txt = GameDefinition::game_def_to_text($definition);
 									GameDefinition::check_set_game_definition($app, $game_def_hash, $definition, $game);

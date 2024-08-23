@@ -1273,7 +1273,7 @@ class App {
 				$display_def_hash = GameDefinition::shorten_game_def_hash($game->db_game['cached_definition_hash']);
 			}
 			else {
-				//list($display_def_hash, $game_def) = GameDefinition::fetch_game_definition($game, "actual", false, false);
+				//list($display_def_hash, $game_def) = GameDefinition::export_game_definition($game, "actual", false, false);
 				//$display_def_hash = GameDefinition::shorten_game_def_hash($display_def_hash);
 				$display_def_hash = 'Pending';
 			}

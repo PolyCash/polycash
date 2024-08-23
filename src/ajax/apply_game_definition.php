@@ -14,8 +14,8 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 		if ($app->user_can_edit_game($thisuser, $game)) {
 			$show_internal_params = false;
 			
-			list($defined_game_def_hash, $defined_game_def) = GameDefinition::fetch_game_definition($game, "defined", $show_internal_params, false);
-			list($actual_game_def_hash, $actual_game_def) = GameDefinition::fetch_game_definition($game, "actual", $show_internal_params, false);
+			list($defined_game_def_hash, $defined_game_def) = GameDefinition::export_game_definition($game, "defined", $show_internal_params, false);
+			list($actual_game_def_hash, $actual_game_def) = GameDefinition::export_game_definition($game, "actual", $show_internal_params, false);
 			
 			if ($_REQUEST['from_hash'] == $actual_game_def_hash && $_REQUEST['to_hash'] == $defined_game_def_hash) {
 				GameDefinition::check_set_game_definition($app, $defined_game_def_hash, $defined_game_def, $game);
