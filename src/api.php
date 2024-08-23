@@ -391,25 +391,27 @@ if ($uri_parts[1] == "api") {
 					}
 					else {
 						$ref_time = microtime(true);
-						$allow_non_cached = true;
 						$allow_from_cached_minutes = 10;
+						$postpone_ok = empty($_REQUEST['now']);
 
 						if (!empty($game->db_game['defined_cached_definition_hash']) && $game->db_game['defined_cached_definition_time'] >= time()-($allow_from_cached_minutes*60)) {
 							$game_def_hash = $game->db_game['defined_cached_definition_hash'];
 							$definition_txt = GameDefinition::get_game_definition_by_hash($app, $game->db_game['defined_cached_definition_hash']);
 						}
-						if (empty($definition_txt) && !empty($game->db_game['cached_definition_hash']) && !empty($game->db_game['events_until_block']) && $game->db_game['events_until_block'] >= $game->blockchain->last_block_id() && $game->db_game['cached_definition_time'] >= time()-($allow_from_cached_minutes*60)) {
-							$game_extra_info = $game->fetch_extra_info();
-							if (empty($game_extra_info['pending_reset'])) {
-								$game_def_hash = $game->db_game['cached_definition_hash'];
-								$definition_txt = GameDefinition::get_game_definition_by_hash($app, $game->db_game['cached_definition_hash']);
+						if (empty($definition_txt) && !$postpone_ok) {
+							if (!empty($game->db_game['cached_definition_hash']) && !empty($game->db_game['events_until_block']) && $game->db_game['events_until_block'] >= $game->blockchain->last_block_id() && $game->db_game['cached_definition_time'] >= time()-($allow_from_cached_minutes*60)) {
+								$game_extra_info = $game->fetch_extra_info();
+								if (empty($game_extra_info['pending_reset'])) {
+									$game_def_hash = $game->db_game['cached_definition_hash'];
+									$definition_txt = GameDefinition::get_game_definition_by_hash($app, $game->db_game['cached_definition_hash']);
+								}
 							}
-						}
-						if (empty($definition_txt) && $allow_non_cached && !$game->game_definition_is_locked()) {
-							list($game_def_hash, $definition) = GameDefinition::fetch_game_definition($game, "defined", $show_internal_params=false, false);
-							if ($definition) {
-								$definition_txt = GameDefinition::game_def_to_text($definition);
-								GameDefinition::check_set_game_definition($app, $game_def_hash, $definition, $game);
+							if (empty($definition_txt) && !$game->game_definition_is_locked()) {
+								list($game_def_hash, $definition) = GameDefinition::fetch_game_definition($game, "defined", $show_internal_params=false, false);
+								if ($definition) {
+									$definition_txt = GameDefinition::game_def_to_text($definition);
+									GameDefinition::check_set_game_definition($app, $game_def_hash, $definition, $game);
+								}
 							}
 						}
 
@@ -420,7 +422,7 @@ if ($uri_parts[1] == "api") {
 						}
 						else {
 							$api_output['status_code'] = 4;
-							$api_output['message'] = "Failed to load the game definition.";
+							$api_output['message'] = "Did not return the game definition.";
 							$api_output['load_time'] = round(microtime(true)-$ref_time, 6);
 						}
 					}
