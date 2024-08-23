@@ -6,5 +6,6 @@ $app->output_message(1, "Successfully returned status footer", [
 	'renderedContent' => $app->render_view('status_footer', [
 		'app' => $app,
 		'thisuser' => empty($thisuser) ? null : $thisuser,
+		'display_sync_games' => $app->fetch_display_sync_games(),
 	])
 ]);

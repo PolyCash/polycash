@@ -15,11 +15,25 @@
 	</div>
 </div>
 <footer class="footer" id="chatWindows"></footer>
+<?php
+$display_sync_games = $app->fetch_display_sync_games();
+
+foreach ($display_sync_games as $display_sync_game) {
+	?>
+	<div style="display: none;" class="modal fade" id="game<?php echo $display_sync_game->db_game['game_id']; ?>_public_peer_details_modal">
+		<div class="modal-dialog modal-lg">
+			<div class="modal-content" id="game<?php echo $display_sync_game->db_game['game_id']; ?>_public_peer_details_inner"></div>
+		</div>
+	</div>
+	<?php
+}
+?>
 <div id="status_footer">
 	<?php
 	echo $app->render_view('status_footer', [
 		'app' => $app,
 		'thisuser' => empty($thisuser) ? null : $thisuser,
+		'display_sync_games' => $display_sync_games,
 	]);
 	?>
 </div>

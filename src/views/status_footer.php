@@ -1,18 +1,5 @@
 <div class="status_footer">
 <?php
-$display_sync_games = [];
-
-if (AppSettings::getParam('display_sync_game_ids')) {
-	$display_sync_game_ids = explode(",", AppSettings::getParam('display_sync_game_ids'));
-	foreach ($display_sync_game_ids as $display_sync_game_id) {
-		$display_sync_game = $app->fetch_game_by_id($display_sync_game_id);
-		if (!empty($display_sync_game)) {
-			$display_sync_blockchain = new Blockchain($app, $display_sync_game['blockchain_id']);
-			array_push($display_sync_games, new Game($display_sync_blockchain, $display_sync_game_id));
-		}
-	}
-}
-
 foreach ($display_sync_games as $display_sync_game) { ?>
 	<div class="status_footer_section">
 		<?php
@@ -80,14 +67,3 @@ while ($db_blockchain = $online_blockchains->fetch()) {
 }
 ?>
 </div>
-<?php
-foreach ($display_sync_games as $display_sync_game) {
-	?>
-	<div style="display: none;" class="modal fade" id="game<?php echo $display_sync_game->db_game['game_id']; ?>_public_peer_details_modal">
-		<div class="modal-dialog modal-lg">
-			<div class="modal-content" id="game<?php echo $display_sync_game->db_game['game_id']; ?>_public_peer_details_inner"></div>
-		</div>
-	</div>
-	<?php
-}
-?>

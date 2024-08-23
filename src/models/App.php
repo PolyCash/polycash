@@ -4162,5 +4162,22 @@ class App {
 
 		return round($bytes, $precision) . $units[$pow];
 	}
+	
+	function fetch_display_sync_games() {
+		$display_sync_games = [];
+
+		if (AppSettings::getParam('display_sync_game_ids')) {
+			$display_sync_game_ids = explode(",", AppSettings::getParam('display_sync_game_ids'));
+			foreach ($display_sync_game_ids as $display_sync_game_id) {
+				$display_sync_game = $this->fetch_game_by_id($display_sync_game_id);
+				if (!empty($display_sync_game)) {
+					$display_sync_blockchain = new Blockchain($this, $display_sync_game['blockchain_id']);
+					array_push($display_sync_games, new Game($display_sync_blockchain, $display_sync_game_id));
+				}
+			}
+		}
+
+		return $display_sync_games;
+	}
 }
 ?>
