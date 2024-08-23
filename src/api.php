@@ -392,14 +392,18 @@ if ($uri_parts[1] == "api") {
 					else {
 						$ref_time = microtime(true);
 						$allow_non_cached = true;
+						$allow_from_cached_minutes = 10;
 
-						if (!empty($game->db_game['defined_cached_definition_hash']) && !$game->game_definition_is_locked()) {
+						if (!empty($game->db_game['defined_cached_definition_hash']) && $game->db_game['defined_cached_definition_time'] >= time()-($allow_from_cached_minutes*60)) {
 							$game_def_hash = $game->db_game['defined_cached_definition_hash'];
 							$definition_txt = GameDefinition::get_game_definition_by_hash($app, $game->db_game['defined_cached_definition_hash']);
 						}
-						if (empty($definition_txt) && !empty($game->db_game['cached_definition_hash']) && !empty($game->db_game['events_until_block']) && $game->db_game['events_until_block'] >= $game->blockchain->last_block_id()) {
-							$game_def_hash = $game->db_game['cached_definition_hash'];
-							$definition_txt = GameDefinition::get_game_definition_by_hash($app, $game->db_game['cached_definition_hash']);
+						if (empty($definition_txt) && !empty($game->db_game['cached_definition_hash']) && !empty($game->db_game['events_until_block']) && $game->db_game['events_until_block'] >= $game->blockchain->last_block_id() && $game->db_game['cached_definition_time'] >= time()-($allow_from_cached_minutes*60)) {
+							$game_extra_info = $game->fetch_extra_info();
+							if (empty($game_extra_info['pending_reset'])) {
+								$game_def_hash = $game->db_game['cached_definition_hash'];
+								$definition_txt = GameDefinition::get_game_definition_by_hash($app, $game->db_game['cached_definition_hash']);
+							}
 						}
 						if (empty($definition_txt) && $allow_non_cached && !$game->game_definition_is_locked()) {
 							list($game_def_hash, $definition) = GameDefinition::fetch_game_definition($game, "defined", $show_internal_params=false, false);
