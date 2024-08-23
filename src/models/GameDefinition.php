@@ -2,17 +2,39 @@
 class GameDefinition {
 	public static function migration_types() {
 		return [
-			'create_game_by_ui',
-			'change_event_by_ui',
-			'create_event_by_ui',
-			'delete_option_by_ui',
-			'apply_defined_to_actual',
-			'create_from_text',
-			'set_from_text',
-			'set_from_peer',
-			'set_blocks_by_ui',
-			'changed_by_module',
-			'set_outcomes',
+			'create_game_by_ui' => [
+				'label' => 'Create game by UI',
+			],
+			'change_event_by_ui' => [
+				'label' => 'Change event by UI',
+			],
+			'create_event_by_ui' => [
+				'label' => 'Create event by UI',
+			],
+			'delete_option_by_ui' => [
+				'label' => 'Delete option by UI',
+			],
+			'apply_defined_to_actual' => [
+				'label' => 'Apply defined to actual',
+			],
+			'create_from_text' => [
+				'label' => 'Create from text',
+			],
+			'set_from_text' => [
+				'label' => 'Set from text',
+			],
+			'set_from_peer' => [
+				'label' => 'Set from peer',
+			],
+			'set_blocks_by_ui' => [
+				'label' => 'Set blocks by UI',
+			],
+			'changed_by_module' => [
+				'label' => 'Changed by module',
+			],
+			'set_outcomes' => [
+				'label' => 'Set outcomes',
+			],
 		];
 	}
 	

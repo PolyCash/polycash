@@ -28,9 +28,3 @@ list($migrations, $migrationsByToHash, $migrationQuantity) = $app->fetch_recent_
 	</div>
 	<a href="" onclick="thisPageManager.more_game_history(<?php echo $migrationsPerPage; ?>); return false;">Show More</a>
 </div>
-
-<div style="display: none;" class="modal fade" id="migration_modal">
-	<div class="modal-dialog modal-lg">
-		<div class="modal-content" id="migration_modal_content"></div>
-	</div>
-</div>

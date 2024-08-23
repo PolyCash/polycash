@@ -1,4 +1,5 @@
 <?php
+set_time_limit(0);
 require(AppSettings::srcPath()."/includes/connect.php");
 require(AppSettings::srcPath()."/includes/get_session.php");
 
@@ -25,52 +26,84 @@ if ($action == "see_history") {
 	list($migrations, $migrationsByToHash, $migrationQuantity) = $app->fetch_recent_migrations($game, $history_pos);
 	
 	include(dirname(__DIR__).'/includes/migration_history.php');
-	
 }
 else {
-	if (empty($migration)) {
-		$from_game_def = json_decode(GameDefinition::get_game_definition_by_hash($app, $_REQUEST['from_hash']));
-		$to_game_def = json_decode(GameDefinition::get_game_definition_by_hash($app, $_REQUEST['to_hash']));
+	$message = null;
+	$from_hash = null;
+	$to_hash = null;
+
+	if ($action == "preview_apply") {
+		if (!empty($game->db_game['cached_definition_hash']) && !empty($game->db_game['defined_cached_definition_hash']) && $game->db_game['cached_definition_hash'] != $game->db_game['defined_cached_definition_hash']) {
+			$from_hash = $game->db_game['cached_definition_hash'];
+			$to_hash = $game->db_game['defined_cached_definition_hash'];
+		}
+		else $message = "No changes need to be applied right now.";
 	}
 	else {
-		if (empty($migration['cached_difference_summary'])) {
-			$from_game_def = json_decode(GameDefinition::get_game_definition_by_hash($app, $migration['from_hash']));
-			$to_game_def = json_decode(GameDefinition::get_game_definition_by_hash($app, $migration['to_hash']));
+		if (empty($migration)) {
+			$from_hash = $_REQUEST['from_hash'];
+			$to_hash = $_REQUEST['to_hash'];
 		}
-		else $difference_summary_txt = $migration['cached_difference_summary'];
+		else {
+			$from_hash = $migration['from_hash'];
+			$to_hash = $migration['to_hash'];
+		}
 	}
 	
-	if (!empty($from_game_def) && !empty($to_game_def)) {
-		list($differences, $difference_summary_lines) = GameDefinition::analyze_definition_differences($app, $from_game_def, $to_game_def);
-		$difference_summary_txt = implode(".<br/>\n", $difference_summary_lines);
+	if ($message) {}
+	else if (!empty($migration['cached_difference_summary'])) $difference_summary_txt = $migration['cached_difference_summary'];
+	else {
+		$from_game_def = json_decode(GameDefinition::get_game_definition_by_hash($app, $from_hash));
+		$to_game_def = json_decode(GameDefinition::get_game_definition_by_hash($app, $to_hash));
+		
+		if (!empty($from_game_def) && !empty($to_game_def)) {
+			list($differences, $difference_summary_lines) = GameDefinition::analyze_definition_differences($app, $from_game_def, $to_game_def);
+			$difference_summary_txt = implode(".<br/>\n", $difference_summary_lines);
+		}
+		else $message = "Failed to load differences; game definitions are missing.";
 	}
-	else $difference_summary_txt = "";
 	?>
 	<div class="modal-header">
 		<b class="modal-title"><?php echo $game->db_game['name']; ?> migration: &nbsp; 
-		<a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/definition/<?php echo $migration['from_hash']; ?>"> <?php echo $migration['from_hash']; ?></a> &rarr; <a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/definition/<?php echo $migration['to_hash']; ?>"><?php echo $migration['to_hash']; ?></a></b>
-		
+		<?php if (!$message) { ?>
+		<a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/definition/<?php echo $from_hash; ?>"> <?php echo $from_hash; ?></a> &rarr; <a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/definition/<?php echo $to_hash; ?>"><?php echo $to_hash; ?></a></b>
+		<?php } ?>
+
 		<button type="button" class="close" data-dismiss="modal" aria-label="Close">
 			<span aria-hidden="true">&times;</span>
 		</button>
 	</div>
 	<div class="modal-body">
 		<?php
-		if ($migration) {
-			if ((string)$migration['extra_info'] != "" && $extra_info = json_decode($migration['extra_info'], true)) {
-				if (isset($extra_info['reset_from_block'])) {
-					$reset_from_block = $game->blockchain->fetch_block_by_id($extra_info['reset_from_block']);
-					echo "Reset from block #".$extra_info['reset_from_block'];
-					if ($reset_from_block) echo " (".date("Y-m-d H:i:s", $reset_from_block['time_mined']).")";
-					echo "<br/>\n";
-				}
+		if ($message) echo $message;
+		else {
+			if ($migration) {
+				$migrationTypeInfo = empty(GameDefinition::migration_types()[$migration['migration_type']]) ? null : GameDefinition::migration_types()[$migration['migration_type']];
 				
-				if (isset($extra_info['reset_from_event_index'])) {
-					echo "Reset from event #".$extra_info['reset_from_event_index']."<br/>\n";
+				echo "<table>";
+				echo "<tr><td style='min-width: 170px;'>Migration time:</td><td>".date("Y-m-d H:i:s", $migration['migration_time'])." UTC</td></tr>\n";
+				echo "<tr><td>Migration type:</td><td>".(empty($migrationTypeInfo) ? $migration['migration_type'] : $migrationTypeInfo['label'])."</td></tr>\n";
+
+				if ((string)$migration['extra_info'] != "" && $extra_info = json_decode($migration['extra_info'], true)) {
+					if (isset($extra_info['reset_from_block'])) {
+						$reset_from_block = $game->blockchain->fetch_block_by_id($extra_info['reset_from_block']);
+						echo "<tr><td>Reset from block:</td><td>#".$extra_info['reset_from_block'];
+						if ($reset_from_block) echo " (".date("Y-m-d H:i:s", $reset_from_block['time_mined']).")";
+						echo "</td></tr>\n";
+					}
+					
+					if (isset($extra_info['reset_from_event_index'])) {
+						echo "<tr><td>Reset from event:</td><td>#".$extra_info['reset_from_event_index']."</td></tr>\n";
+					}
 				}
+				echo "</table><br/>\n";
+			}
+			echo $difference_summary_txt;
+			
+			if ($action == "preview_apply") {
+				echo '<br/><br/><a id="apply_def_link" href="" onClick="thisPageManager.apply_game_definition('.$game->db_game['game_id'].', \''.$from_hash.'\', \''.$to_hash.'\'); return false;">Apply Migration</a>';
 			}
 		}
-		echo $difference_summary_txt;
 		?>
 	</div>
 	<div class="modal-footer">
