@@ -11,3 +11,5 @@ $(window).keydown(function(e){
 		}
 	}
 });
+
+thisPageManager.render_status_footer();

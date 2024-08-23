@@ -3438,7 +3438,7 @@ class Game {
 			$show_internal_params = false;
 			
 			if (!$skip_record_migration) {
-				list($initial_game_def_hash, $initial_game_def) = GameDefinition::fetch_game_definition($this, "defined", $show_internal_params, false);
+				list($initial_game_def_hash, $initial_game_def) = GameDefinition::export_game_definition($this, "defined", $show_internal_params, false);
 				GameDefinition::check_set_game_definition($this->blockchain->app, $initial_game_def_hash, $initial_game_def, $this);
 			}
 			
@@ -3448,7 +3448,7 @@ class Game {
 			}
 			
 			if (!$skip_record_migration) {
-				list($final_game_def_hash, $final_game_def) = GameDefinition::fetch_game_definition($this, "defined", $show_internal_params, false);
+				list($final_game_def_hash, $final_game_def) = GameDefinition::export_game_definition($this, "defined", $show_internal_params, false);
 				GameDefinition::check_set_game_definition($this->blockchain->app, $final_game_def_hash, $final_game_def, $this);
 				
 				GameDefinition::record_migration($this, $user_id, "set_blocks_by_ui", $show_internal_params, $initial_game_def, $final_game_def);

@@ -2671,23 +2671,45 @@ var PageManager = function() {
 		}
 		else $('#apply-strategy-btn').hide();
 	}
-	this.apply_game_definition = function(game_id) {
-		if ($('#apply_def_link').html() == "Apply Changes") {
-			$('#apply_def_link').html("Applying...");
-			
+	this.previewApplyDefInProgress = false;
+	this.preview_apply_game_definition = function(game_id) {
+		if (!this.previewApplyDefInProgress) {
+			this.previewApplyDefInProgress = true;
+			$('#preview_apply_def_link').html("Loading...");
 			$.ajax({
-				url: "/ajax/apply_game_definition.php",
-				dataType: "json",
+				url: "/ajax/migration_details.php",
 				data: {
 					game_id: game_id,
-					synchronizer_token: this.synchronizer_token
+					action: "preview_apply",
 				},
-				success: function(apply_response) {
-					$('#apply_def_link').html("Apply Changes");
-					alert(apply_response.message);
+				context: this,
+				success: function(previewResponse) {
+					this.previewApplyDefInProgress = false;
+					console.log('loaded migration preview');
+					console.log(previewResponse);
+					$('#preview_apply_def_link').html("Preview Changes");
+					$('#migration_modal').modal('show');
+					$('#migration_modal_content').html(previewResponse);
 				}
 			});
 		}
+	};
+	this.apply_game_definition = function(game_id, from_hash, to_hash) {
+		$('#apply_def_link').html("Loading...");
+		$.ajax({
+			url: "/ajax/apply_game_definition.php",
+			dataType: "json",
+			data: {
+				game_id: game_id,
+				from_hash: from_hash,
+				to_hash: to_hash,
+				synchronizer_token: this.synchronizer_token
+			},
+			success: function(apply_response) {
+				$('#apply_def_link').html("Apply Migration");
+				alert(apply_response.message);
+			}
+		});
 	}
 	this.filter_changed = function(which_filter) {
 		var filter_value = $('#filter_by_'+which_filter).val();
@@ -3023,6 +3045,23 @@ var PageManager = function() {
 		});
 	};
 	this.open_option_address_link = function(option_index) {};
+	this.render_status_footer = function() {
+		if (!this.previewApplyDefInProgress) {
+			$.ajax({
+				url: "/ajax/status_footer.php",
+				type: "GET",
+				dataType: "json",
+				success: function(footerResponse) {
+					if (footerResponse.renderedContent) $('#status_footer').html(footerResponse.renderedContent);
+					else console.log('Failed to render status footer.');
+				}
+			});
+		}
+		
+		setTimeout(function() {
+			this.render_status_footer();
+		}.bind(this), 10000);
+	};
 }
 var LoginManager = function() {
 	this.regularly_check_username = function() {
