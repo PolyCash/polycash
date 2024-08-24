@@ -145,7 +145,7 @@ if ($app->running_as_admin()) {
 			
 			usleep($sleep_usec);
 		}
-		while (microtime(true) < $script_start_time + ($script_target_time-$loop_target_time));
+		while (microtime(true) < $script_start_time + $script_target_time);
 		
 		if ($print_debug) $app->print_debug("Set ".$total_add_count." addresses as mine, backed up ".$total_add_privkey_count." private keys.");
 		
