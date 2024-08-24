@@ -223,9 +223,14 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							try {
 								$transaction_rpc = $blockchain->coin_rpc->getrawtransaction($tx_hash, true);
 								
-								if ($transaction_rpc && empty($transaction_rpc['blockhash'])) {
+								if ($transaction_rpc && empty($transaction_rpc['message']) && empty($transaction_rpc['blockhash'])) {
 									$blockchain->walletnotify($tx_hash, true);
 									$transaction = $blockchain->fetch_transaction_by_hash($tx_hash);
+								}
+								else if (!empty($transaction_rpc['message'])) {
+									$explore_mode = "simple_message";
+									$mode_error = false;
+									$simple_message = $transaction_rpc['message'];
 								}
 							}
 							catch (Exception $e) {}
@@ -377,7 +382,14 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				}
 				else $coins_per_vote = 0;
 				
-				if ($explore_mode == "events") {
+				if ($explore_mode == "simple_message") {
+					echo '<div class="panel-heading">'."\n";
+					echo '<div class="panel-body">'."\n";
+					echo $simple_message;
+					echo "</div>\n";
+					echo "</div>\n";
+				}
+				else if ($explore_mode == "events") {
 					if (!empty($db_event)) {
 						$last_block_id = $game->last_block_id();
 						
@@ -687,7 +699,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 								$events = $game->events_by_block($block['block_id'], $filter_arr);
 								
 								if (count($events) <= 50) {
-									echo "<p>This block is referenced in ".count($events)." events<br/>\n";
+									echo "<p>This block is referenced in ".number_format(count($events))." events<br/>\n";
 									for ($i=0; $i<count($events); $i++) {
 										echo "<a href=\"/explorer/games/".$game->db_game['url_identifier']."/events/".$events[$i]->db_event['event_index']."\">".$events[$i]->db_event['event_name']."</a><br/>\n";
 									}
@@ -979,7 +991,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						}
 					}
 					
-					echo "<p>This address has been used in ".count($transaction_ios)." transactions.</p>\n";
+					echo "<p>This address has been used in ".number_format(count($transaction_ios))." transactions.</p>\n";
 					
 					echo "<p>Identifier: ".$address['vote_identifier']." (#".$address['option_index'].")</p>\n";
 					
@@ -1357,7 +1369,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							])->fetchAll();
 							
 							echo '<div class="panel-heading"><div class="panel-title">';
-							echo "Showing all ".count($display_utxos)." UTXOs for ".$account['account_name'];
+							echo "Showing all ".number_format(count($display_utxos))." UTXOs for ".$account['account_name'];
 							echo "</div></div>\n";
 							
 							echo '<div class="panel-body">';
@@ -1612,7 +1624,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					echo "</div></div>\n";
 					
 					echo '<div class="panel-body">';
-					echo '<p>Found '.count($matching_events)." matching events.</p>\n";
+					echo '<p>Found '.number_format(count($matching_events))." matching events.</p>\n";
 					
 					foreach ($matching_events as $matching_event) {
 						echo $matching_event['event_index'].'. <a href="/explorer/games/'.$game->db_game['url_identifier'].'/events/'.$matching_event['event_index'].'">'.$matching_event['event_name']."</a><br/>\n";

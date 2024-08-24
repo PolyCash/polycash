@@ -1880,7 +1880,11 @@ class Game {
 						else if ($print_debug) $error_message .= $message;
 					}
 				}
-				else $error_message .= $this->blockchain->app->log_message($this->db_game['name'].": fetched in ".$fetch_time." but failed to decode response from definitive peer: ".$this->blockchain->app->json_decode_error_code_to_string(json_last_error()));
+				else {
+					$message = $this->db_game['name'].": fetched in ".$fetch_time." but failed to decode response from definitive peer: ".$this->blockchain->app->json_decode_error_code_to_string(json_last_error());
+					$message .= ": ".substr($api_response_raw, 0, min(253-strlen($message), strlen($api_response_raw)));
+					$error_message .= $this->blockchain->app->log_message($message);
+				}
 			}
 			else $error_message .= $this->blockchain->app->log_message($this->db_game['name'].": failed to fetch game definition from definitive peer.");
 
