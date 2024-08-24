@@ -28,7 +28,7 @@ if ($app->running_as_admin()) {
 				$set_migration_params['game_id'] = $only_game_id;
 				$set_migration_q .= "game_id=:game_id AND ";
 			}
-			$set_migration_q .= "cached_difference_summary IS NULL AND missing_game_defs_at IS NULL ORDER BY migration_id DESC LIMIT 1;";
+			$set_migration_q .= "(cached_difference_summary IS NULL OR cached_difference_summary='') AND missing_game_defs_at IS NULL ORDER BY migration_id DESC LIMIT 1;";
 			$migration = $app->run_query($set_migration_q, $set_migration_params)->fetch(PDO::FETCH_ASSOC);
 			
 			if ($migration) {
