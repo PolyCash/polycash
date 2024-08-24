@@ -1963,8 +1963,6 @@ class Game {
 			$sync_definitive_message = $this->sync_with_definitive_peer($print_debug);
 			if ($this->db_game['finite_events'] == 1) $ensure_block_id = max($ensure_block_id, $this->max_gde_starting_block());
 			$this->ensure_events_until_block($ensure_block_id, $print_debug);
-			
-			GameDefinition::set_cached_definition_hashes($this);
 		}
 		else if ($this->db_game['finite_events'] == 1) $ensure_block_id = max($ensure_block_id, $this->max_gde_starting_block());
 		
@@ -3456,8 +3454,6 @@ class Game {
 				GameDefinition::check_set_game_definition($this->blockchain->app, $final_game_def_hash, $final_game_def, $this);
 				
 				GameDefinition::record_migration($this, $user_id, "set_blocks_by_ui", $show_internal_params, $initial_game_def, $final_game_def);
-				
-				GameDefinition::set_cached_definition_hashes($this);
 			}
 		}
 		return $log_text;
