@@ -1,7 +1,7 @@
 <?php
 require_once(dirname(dirname(__FILE__))."/includes/connect.php");
 
-$script_target_time = 171;
+$script_target_time = 295;
 $script_start_time = microtime(true);
 
 $allowed_params = ['key', 'print_debug', 'blockchain_id'];
@@ -30,7 +30,7 @@ if ($app->running_as_admin()) {
 		$total_add_count = 0;
 		$total_add_privkey_count = 0;
 		
-		$loop_target_time = 8;
+		$loop_target_time = 60;
 		do {
 			$loop_start_time = microtime(true);
 			

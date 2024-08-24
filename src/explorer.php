@@ -213,27 +213,35 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				
 				if (strpos($tx_hash, " ") === false) {
 					$transaction = $blockchain->fetch_transaction_by_hash($tx_hash);
+					$conflicting_tx_hashes = [];
+					$tx_not_trusted = false;
 					
-					// Allow unconfirmed txns to be loaded by viewing them in explorer, for user convenience
-					// But not confirmed b/c they may be before the blockchain first required block
-					if (!$transaction) {
+					if ($blockchain->db_blockchain['p2p_mode'] == "rpc") {
 						$blockchain->load_coin_rpc();
 						
 						if ($blockchain->coin_rpc) {
-							try {
-								$transaction_rpc = $blockchain->coin_rpc->getrawtransaction($tx_hash, true);
-								
-								if ($transaction_rpc && empty($transaction_rpc['message']) && empty($transaction_rpc['blockhash'])) {
+							$transaction_rpc_raw = $blockchain->coin_rpc->getrawtransaction($tx_hash, true);
+							$transaction_rpc = $blockchain->coin_rpc->gettransaction($tx_hash);
+							
+							if (!empty($transaction_rpc_raw['message']) && empty($transaction_rpc['txid'])) {
+								$simple_message = $transaction_rpc_raw['message'];
+							}
+							
+							if (!$transaction) {
+								if (!empty($transaction_rpc_raw['txid'])) {
 									$blockchain->walletnotify($tx_hash, true);
 									$transaction = $blockchain->fetch_transaction_by_hash($tx_hash);
 								}
-								else if (!empty($transaction_rpc['message'])) {
-									$explore_mode = "simple_message";
-									$mode_error = false;
-									$simple_message = $transaction_rpc['message'];
+								else if ($transaction_rpc['txid']) {
+									$blockchain->walletnotify($tx_hash, true);
+									$transaction = $blockchain->fetch_transaction_by_hash($tx_hash);
 								}
 							}
-							catch (Exception $e) {}
+							
+							if (isset($transaction_rpc['walletconflicts']) && count($transaction_rpc['walletconflicts']) > 0) {
+								$conflicting_tx_hashes = $transaction_rpc['walletconflicts'];
+							}
+							if (isset($transaction_rpc['trusted']) && $transaction_rpc['trusted'] == false) $tx_not_trusted = true;
 						}
 					}
 				}
@@ -374,6 +382,18 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				include(AppSettings::srcPath()."/includes/html_stop.php");
 				die();
 			}
+				
+			if (!empty($simple_message)) {
+				?>
+				<div class="panel panel-default" style="margin-top: 15px;">
+					<div class="panel-heading">
+						<div class="panel-body">
+							<?php echo $simple_message; ?>
+						</div>
+					</div>
+				</div>
+				<?php
+			}
 			?>
 			<div class="panel panel-default" style="margin-top: 15px;">
 				<?php
@@ -382,14 +402,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				}
 				else $coins_per_vote = 0;
 				
-				if ($explore_mode == "simple_message") {
-					echo '<div class="panel-heading">'."\n";
-					echo '<div class="panel-body">'."\n";
-					echo $simple_message;
-					echo "</div>\n";
-					echo "</div>\n";
-				}
-				else if ($explore_mode == "events") {
+				if ($explore_mode == "events") {
 					if (!empty($db_event)) {
 						$last_block_id = $game->last_block_id();
 						
@@ -1072,6 +1085,21 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					echo "</div></div>\n";
 					
 					echo '<div class="panel-body">';
+					
+					if ($tx_not_trusted) {
+						echo '<p class="text-danger">This transaction is not trusted.</p>';
+					}
+					
+					if (count($conflicting_tx_hashes) > 0) {
+						echo "<p>";
+						foreach ($conflicting_tx_hashes as $conflicting_tx_hash) {
+							if ($game) $conflicting_tx_url = '/explorer/games/'.$game->db_game['url_identifier'].'/transactions/'.$conflicting_tx_hash.'/';
+							else $conflicting_tx_url = '/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/transactions/'.$conflicting_tx_hash.'/';
+							
+							echo '<font class="text-danger">Conflicts with <a target="_blank" href="'.$conflicting_tx_url.'">'.$conflicting_tx_hash."</a></font><br/>\n";
+						}
+						echo "</p>\n";
+					}
 					
 					if (empty($game)) {
 						$tx_associated_games = $blockchain->games_by_transaction($transaction);
