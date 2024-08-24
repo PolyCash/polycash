@@ -1,5 +1,5 @@
 <?php
-$migrationsPerPage = 4;
+$migrationsPerPage = 8;
 if (!empty($_REQUEST['history_pos'])) $migrationsPerPage = (int) $_REQUEST['history_pos'];
 list($migrations, $migrationsByToHash, $migrationQuantity) = $app->fetch_recent_migrations($game, $migrationsPerPage);
 ?>

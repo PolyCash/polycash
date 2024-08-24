@@ -393,7 +393,9 @@ class GameDefinition {
 		if ($differences['events']['other_changed_events'] > 0) {
 			array_push($difference_summary_lines, $differences['events']['other_changed_events']." event".($differences['events']['other_changed_events'] != 1 ? "s were" : " was")." changed");
 		}
-		
+
+		if (count($difference_summary_lines) == 0) array_push($difference_summary_lines, "No changes were found.");
+
 		return [$differences, $difference_summary_lines];
 	}
 	
