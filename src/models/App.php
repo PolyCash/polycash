@@ -426,41 +426,55 @@ class App {
 		$set_game_def_process = $this->run_shell_command($cmd, $print_debug);
 		if (is_resource($set_game_def_process)) $process_count++;
 		else $html .= "Failed to start a process for caching game definitions.\n";
+		sleep(0.02);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/set_cached_game_values.php"';
 		$set_game_def_process = $this->run_shell_command($cmd, $print_debug);
 		if (is_resource($set_game_def_process)) $process_count++;
 		else $html .= "Failed to start a process for caching game values.\n";
+		sleep(0.02);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/process_target_balances.php"';
 		$target_balances_process = $this->run_shell_command($cmd, $print_debug);
 		if (is_resource($target_balances_process)) $process_count++;
 		else $html .= "Failed to start a process for target balances.\n";
+		sleep(0.02);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/check_peers_in_sync.php"';
 		$target_balances_process = $this->run_shell_command($cmd, $print_debug);
 		if (is_resource($target_balances_process)) $process_count++;
 		else $html .= "Failed to start a process for peer synchronization.\n";
+		sleep(0.02);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/process_address_backups.php"';
 		$target_balances_process = $this->run_shell_command($cmd, $print_debug);
 		if (is_resource($target_balances_process)) $process_count++;
 		else $html .= "Failed to start a process for address backups.\n";
+		sleep(0.02);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/integrity_checks.php"';
 		$target_balances_process = $this->run_shell_command($cmd, $print_debug);
 		if (is_resource($target_balances_process)) $process_count++;
 		else $html .= "Failed to start a process for integrity checks.\n";
+		sleep(0.02);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/join_txos.php"';
 		$target_balances_process = $this->run_shell_command($cmd, $print_debug);
 		if (is_resource($target_balances_process)) $process_count++;
 		else $html .= "Failed to start a process for joining txos.\n";
+		sleep(0.02);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/delete_game_definitions.php"';
 		$delete_game_definitions_process = $this->run_shell_command($cmd, $print_debug);
 		if (is_resource($delete_game_definitions_process)) $process_count++;
 		else $html .= "Failed to start a process for deleting game definitions.\n";
+		sleep(0.02);
+		
+		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/set_migration_summaries.php"';
+		$set_migration_summaries_process = $this->run_shell_command($cmd, $print_debug);
+		if (is_resource($set_migration_summaries_process)) $process_count++;
+		else $html .= "Failed to start a process for setting migration summaries.\n";
+		sleep(0.02);
 		
 		$html .= "Started ".$process_count." background processes.\n";
 		return $html;
@@ -4178,6 +4192,31 @@ class App {
 		}
 
 		return $display_sync_games;
+	}
+	
+	function set_migration_difference_summary(&$migration) {
+		$from_definition = json_decode(GameDefinition::get_game_definition_by_hash($this, $migration['from_hash']));
+		$to_definition = json_decode(GameDefinition::get_game_definition_by_hash($this, $migration['to_hash']));
+
+		if ($from_definition && $to_definition) {
+			list($differences, $difference_summary_lines) = GameDefinition::analyze_definition_differences($this, $from_definition, $to_definition);
+
+			$migration_summary = ucfirst(strtolower(implode(", ", $difference_summary_lines)));
+
+			$this->run_query("UPDATE game_definition_migrations SET cached_difference_summary=:cached_difference_summary WHERE migration_id=:migration_id;", [
+				'cached_difference_summary' => $migration_summary,
+				'migration_id' => $migration['migration_id'],
+			]);
+		}
+		else {
+			$migration_summary = "";
+			$this->run_query("UPDATE game_definition_migrations SET missing_game_defs_at=:missing_game_defs_at WHERE migration_id=:migration_id;", [
+				'missing_game_defs_at' => time(),
+				'migration_id' => $migration['migration_id'],
+			]);
+		}
+
+		return $migration_summary;
 	}
 }
 ?>
