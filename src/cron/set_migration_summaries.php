@@ -43,7 +43,7 @@ if ($app->running_as_admin()) {
 		}
 		while ($migration && microtime(true)-$script_start_time < $script_target_time);
 
-		$sleep_sec = round($script_target_time - (microtime(true)-$script_start_time), 6);
+		$sleep_sec = max(0, round($script_target_time - (microtime(true)-$script_start_time), 6));
 
 		if ($print_debug) $app->print_debug("Set summary for ".$success_count." migrations, ".$fail_count." failed, in ".round(microtime(true)-$script_start_time, 6)." sec, sleeping ".$sleep_sec." sec.");
 
