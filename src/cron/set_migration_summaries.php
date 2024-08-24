@@ -4,7 +4,7 @@ require_once(dirname(dirname(__FILE__))."/includes/connect.php");
 $script_start_time = microtime(true);
 $script_target_time = 175;
 
-$allowed_params = ['game_id'];
+$allowed_params = ['game_id', 'force'];
 $app->safe_merge_argv_to_request($argv, $allowed_params);
 
 if ($app->running_as_admin()) {
@@ -12,10 +12,12 @@ if ($app->running_as_admin()) {
 
 	$only_game_id = !empty($_REQUEST['game_id']) ? (int) $_REQUEST['game_id'] : null;
 
+	$force = !empty($_REQUEST['force']);
+
 	$process_lock_name = "set_migration_summaries";
 	$process_locked = $app->check_process_running($process_lock_name);
 	
-	if (!$process_locked && $app->lock_process($process_lock_name)) {
+	if ($force || (!$process_locked && $app->lock_process($process_lock_name))) {
 		$success_count = 0;
 		$fail_count = 0;
 		do {
