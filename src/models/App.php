@@ -780,6 +780,12 @@ class App {
 	}
 	
 	public function format_seconds($seconds) {
+		if ($seconds < 0) {
+			$seconds = abs($seconds);
+			$str = "-";
+		}
+		else $str = "";
+
 		$seconds = intval($seconds);
 		$weeks = floor($seconds/(3600*24*7));
 		$days = floor($seconds/(3600*24));
@@ -787,18 +793,18 @@ class App {
 		$minutes = floor($seconds / 60);
 		
 		if ($weeks > 0) {
-			$str = $weeks." week".($weeks == 1 ? "" : "s");
+			$str .= $weeks." week".($weeks == 1 ? "" : "s");
 			$days = $days - 7*$weeks;
 			if ($days > 0) $str .= " and ".$days." day".($days == 1 ? "" : "s");
 			return $str;
 		}
-		else if ($days > 1) return $days." days";
+		else if ($days > 1) return $str.$days." days";
 		else if ($hours > 2) {
-			$str = $hours." hour".($hours == 1 ? "" : "s");
+			$str .= $hours." hour".($hours == 1 ? "" : "s");
 			return $str;
 		}
-		else if ($minutes > 0) return $minutes." minute".($minutes == 1 ? "" : "s");
-		else return $seconds." second".($seconds == 1 ? "" : "s");
+		else if ($minutes > 0) return $str.$minutes." minute".($minutes == 1 ? "" : "s");
+		else return $str.$seconds." second".($seconds == 1 ? "" : "s");
 	}
 	
 	public function game_url_identifier($game_name) {

@@ -1131,15 +1131,17 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						if ($coins_diff > 0) echo " (".$game->display_coins($coins_diff)." destroyed)";
 						echo ".<br/>\n";
 						
-						$votes_in_params = [
-							'votes_field' => "gio.".$game->db_game['payout_weight']."s_created",
-							'transaction_id' => $transaction['transaction_id']
-						];
-						$votes_in = $app->run_query("SELECT SUM(:votes_field) votes_in FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE io.spend_transaction_id=:transaction_id;", $votes_in_params)->fetch();
-						
-						$votes_in_value = $votes_in['votes_in']*$coins_per_votes;
-						
-						echo "This transaction realizes ".$game->display_coins($votes_in_value)." of unrealized gains.<br/>\n";
+						if ($game->db_game['exponential_inflation_rate'] > 0) {
+							$votes_in_params = [
+								'votes_field' => "gio.".$game->db_game['payout_weight']."s_created",
+								'transaction_id' => $transaction['transaction_id']
+							];
+							$votes_in = $app->run_query("SELECT SUM(:votes_field) votes_in FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE io.spend_transaction_id=:transaction_id;", $votes_in_params)->fetch();
+							
+							$votes_in_value = $votes_in['votes_in']*$coins_per_votes;
+							
+							echo "This transaction realizes ".$game->display_coins($votes_in_value)." of unrealized gains.<br/>\n";
+						}
 					}
 					echo "Loaded in ".number_format($transaction['load_time'], 2)." seconds.";
 					echo "<br/>\n";
