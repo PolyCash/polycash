@@ -73,6 +73,7 @@ games.push(new Game(thisPageManager, <?php
 				Play Now
 			<?php } ?>
 			</a>
+			<a href="/<?php echo $game->db_game['url_identifier']; ?>/" class="btn btn-sm btn-danger"><i class="fas fa-info"></i> &nbsp; About</a>
 			<a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/events/" class="btn btn-sm btn-primary"><i class="fas fa-list"></i> &nbsp; <?php echo ucwords($game->db_game['event_type_name']); ?> Results</a>
 			<?php
 			if ($game->db_game['finite_events']) {

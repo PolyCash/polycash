@@ -117,6 +117,7 @@ class CurrencyOracle {
 		foreach ($configured_oracle['group_members'] as $currency) {
 			$pairs_csv .= "USD/".$currency['abbreviation'].",";
 		}
+		$pairs_csv .= "USD/LTC,";
 		$pairs_csv = substr($pairs_csv, 0, strlen($pairs_csv)-1);
 		
 		$fcs_url = "https://fcsapi.com/api-v3/forex/latest?symbol=".$pairs_csv."&access_key=".$configured_oracle['api_key'];

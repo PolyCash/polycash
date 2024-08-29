@@ -57,7 +57,7 @@ else $exchange_rate = 0;
 				else echo 'Play Now';
 				?>
 				</a>
-				<a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/events/" class="btn btn-sm btn-primary"><i class="fas fa-database"></i> &nbsp; Blockchain Explorer</a>
+				<a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/events/" class="btn btn-sm btn-primary"><i class="fas fa-list"></i> &nbsp; <?php echo ucwords($game->db_game['event_type_name']); ?> Results</a>
 				<?php if ($app->user_can_edit_game($thisuser, $game)) { ?>
 				<a class="btn btn-sm btn-warning" href="/manage/<?php echo $game->db_game['url_identifier']; ?>/"><i class="fa fa-edit"></i> Manage this Game</a>
 				<?php } ?>
