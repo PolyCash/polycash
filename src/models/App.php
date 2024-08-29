@@ -1295,7 +1295,6 @@ class App {
 			$game = new Game($blockchain, $db_game['game_id']);
 			
 			if (!empty($game->db_game['cached_definition_hash']) && $game->db_game['cached_definition_time'] >= time()-(60*30)) {
-				$display_def_hash = GameDefinition::shorten_game_def_hash($game->db_game['cached_definition_hash']);
 			}
 			else {
 				//list($display_def_hash, $game_def) = GameDefinition::export_game_definition($game, "actual", false, false);
@@ -1303,7 +1302,10 @@ class App {
 				$display_def_hash = 'Pending';
 			}
 			
-			$html .= '<div class="row"><div class="col-sm-5">Game definition:</div><div class="col-sm-7"><a href="/explorer/games/'.$game->db_game['url_identifier'].'/definition/?definition_mode=actual">'.$display_def_hash.'</a></div></div>';
+			$html .= '<div class="row"><div class="col-sm-5">Game definition:</div><div class="col-sm-7">';
+			$html .= 'Specified: <a href="/explorer/games/'.$game->db_game['url_identifier'].'/definition/?definition_mode=defined">'.GameDefinition::shorten_game_def_hash($game->db_game['defined_cached_definition_hash']).'</a> ('.$this->format_seconds(time() - $game->db_game['defined_cached_definition_time']).' ago)<br/>';
+			$html .= 'Loaded: <a href="/explorer/games/'.$game->db_game['url_identifier'].'/definition/?definition_mode=actual">'.GameDefinition::shorten_game_def_hash($game->db_game['cached_definition_hash']).'</a> ('.$this->format_seconds(time() - $game->db_game['cached_definition_time']).' ago)';
+			$html .= '</div></div>';
 		}
 		
 		if ($db_game['final_round'] > 0) {

@@ -53,8 +53,8 @@ class Event {
 	}
 
 	public function round_voting_stats_all() {
-		$round_voting_stats = $this->round_voting_stats();
-		$stats_all = false;
+		$round_voting_stats = $this->round_voting_stats()->fetchAll(PDO::FETCH_ASSOC);
+		$stats_all = [];
 		$counter = 0;
 		$option_id_csv = "";
 		$option_id_to_rank = [];
@@ -66,7 +66,7 @@ class Event {
 		$unconfirmed_effective_destroy_score = 0;
 		$score_identifier = $this->game->db_game['payout_weight'].'_score';
 		
-		while ($stat = $round_voting_stats->fetch()) {
+		foreach ($round_voting_stats as $stat) {
 			$stats_all[$counter] = $stat;
 			$option_id_csv .= $stat['option_id'].",";
 			$option_id_to_rank[$stat['option_id']] = $counter;
