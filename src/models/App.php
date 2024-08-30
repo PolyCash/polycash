@@ -3137,7 +3137,8 @@ class App {
 		if ($bet_net_delta >= 0) $this_bet_html .= '<font class="greentext">+';
 		else $this_bet_html .= '<font class="redtext">-';
 		$this_bet_html .= $this->format_bignum(abs($bet_net_delta)/pow(10, $game->db_game['decimal_places']));
-		$this_bet_html .= " &nbsp; (".$this->format_percentage($this->to_significant_digits(100*abs($bet_net_delta/$effective_paid), 4))."%";
+		$pct = $effective_paid == 0 ? 0 : $bet_net_delta/$effective_paid;
+		$this_bet_html .= " &nbsp; (".$this->format_percentage($this->to_significant_digits(100*abs($pct), 4))."%";
 		$this_bet_html .= ")</font>";
 		if ($div_td == 'div') $this_bet_html .= "</div>\n";
 		else $this_bet_html .= "&nbsp;&nbsp;</td>\n";
