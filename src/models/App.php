@@ -374,6 +374,12 @@ class App {
 				if (is_resource($remove_untrusted_process)) $process_count++;
 				else $html .= "Failed to start a process for removing untrusted transactions for ".$sync_blockchain['blockchain_name'].".\n";
 				sleep(0.02);
+
+				$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/remove_unconfirmable_transactions.php" blockchain_id='.$sync_blockchain['blockchain_id'];
+				$remove_unconfirmable_process = $this->run_shell_command($cmd, $print_debug);
+				if (is_resource($remove_unconfirmable_process)) $process_count++;
+				else $html .= "Failed to start a process for removing unconfirmable transactions for ".$sync_blockchain['blockchain_name'].".\n";
+				sleep(0.02);
 			}
 		}
 		

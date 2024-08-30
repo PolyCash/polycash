@@ -3115,5 +3115,11 @@ class Blockchain {
 
 		$this->app->run_query($query, $query_params);
 	}
+
+	public function fetch_unconfirmed_transactions() {
+		return $this->app->run_query("SELECT * FROM transactions t WHERE t.blockchain_id=:blockchain_id AND t.block_id IS NULL ORDER BY t.transaction_id DESC;", [
+			'blockchain_id' => $this->db_blockchain['blockchain_id'],
+		])->fetchAll(PDO::FETCH_ASSOC);
+	}
 }
 ?>
