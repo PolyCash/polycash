@@ -427,11 +427,11 @@ for ($i=0; $i<count($round_stats); $i++) {
 			if ($our_buy_price) {
 				if ($round_stats[$i]['event_option_index'] == 0) {
 					$position_price = $our_buy_price-$event->db_event['track_min_price'];
-					$leverage = ($position_price+$event->db_event['track_min_price'])/$position_price;
+					$leverage = $position_price == 0 ? 0 : ($position_price+$event->db_event['track_min_price'])/$position_price;
 				}
 				else {
 					$position_price = $event->db_event['track_max_price']-$our_buy_price;
-					$leverage = ($event->db_event['track_max_price']-$position_price)/$position_price;
+					$leverage = $position_price == 0 ? 0 : ($event->db_event['track_max_price']-$position_price)/$position_price;
 				}
 				
 				?> &nbsp; <font class="greentext">$<?php echo $app->format_percentage($app->to_significant_digits($position_price, EXCHANGE_RATE_SIGFIGS)); ?></font><?php
