@@ -1,7 +1,7 @@
 <?php
 require_once(dirname(dirname(__FILE__))."/includes/connect.php");
 
-$script_target_time = 395;
+$script_target_time = 1230;
 $script_start_time = microtime(true);
 
 $allowed_params = ['key', 'print_debug', 'blockchain_id'];
@@ -27,7 +27,7 @@ if ($app->running_as_admin()) {
 	if (!$process_locked && $app->lock_process($process_lock_name)) {
 		if ($print_debug) $app->print_debug("Removing unconfirmable transactions for ".$blockchain->db_blockchain['blockchain_name']);
 
-		$loop_target_time = 180;
+		$loop_target_time = 600;
 		do {
 			$loop_start_time = microtime(true);
 
