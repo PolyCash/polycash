@@ -3632,6 +3632,10 @@ class Game {
 	public function set_cached_fields() {
 		$this->coins_in_existence(false, false);
 		$this->pending_bets(false);
+		$this->blockchain->app->run_query("UPDATE games SET set_cached_fields_at=:set_cached_fields_at WHERE game_id=:game_id;", [
+			'set_cached_fields_at' => time(),
+			'game_id' => $this->db_game['game_id'],
+		]);
 
 		if ($this->db_game['exponential_inflation_rate'] != 0) {
 			$last_block_id = $this->blockchain->last_block_id();

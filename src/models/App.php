@@ -1376,6 +1376,7 @@ class App {
 			$html .= $total_supply_disp.' ';
 			if ($total_supply_disp == "1") $html .= $db_game['coin_name'];
 			else $html .= $db_game['coin_name_plural'];
+			if (!empty($db_game['set_cached_fields_at'])) $html .= " (".$this->format_seconds(time()-$db_game['set_cached_fields_at'])." ago)";
 			$html .= "</div></div>\n";
 			
 			if (!in_array($db_game['buyin_policy'], ["none","for_sale",""])) {
