@@ -624,8 +624,6 @@ class Blockchain {
 			
 			$this->app->run_query("UPDATE transactions SET fee_amount=amount-output_sum WHERE blockchain_id=".$this->db_blockchain['blockchain_id']." AND block_id=".$block_height." AND has_all_inputs=1 AND has_all_outputs=1 AND output_sum IS NOT NULL;");
 			
-			$this->set_block_stats($db_block);
-			
 			$postprocessing_error = $this->coind_postprocess_block($block_height, $db_block, $ref_time);
 			if ($postprocessing_error) $any_error = true;
 		}
@@ -715,7 +713,6 @@ class Blockchain {
 				}
 				
 				if (!$any_error) {
-					$this->set_block_stats($db_block);
 					$this->try_start_games($block_height);
 				}
 				

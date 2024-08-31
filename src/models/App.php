@@ -380,6 +380,18 @@ class App {
 				if (is_resource($remove_unconfirmable_process)) $process_count++;
 				else $html .= "Failed to start a process for removing unconfirmable transactions for ".$sync_blockchain['blockchain_name'].".\n";
 				sleep(0.02);
+
+				$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/integrity_checks.php" blockchain_id='.$sync_blockchain['blockchain_id'];
+				$integrity_checks_process = $this->run_shell_command($cmd, $print_debug);
+				if (is_resource($integrity_checks_process)) $process_count++;
+				else $html .= "Failed to start a process for integrity checks.\n";
+				sleep(0.02);
+
+				$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/set_blockchain_block_stats.php" blockchain_id='.$sync_blockchain['blockchain_id'];
+				$set_stats_process = $this->run_shell_command($cmd, $print_debug);
+				if (is_resource($set_stats_process)) $process_count++;
+				else $html .= "Failed to start a process for setting block stats.\n";
+				sleep(0.02);
 			}
 		}
 		
@@ -461,12 +473,6 @@ class App {
 		$target_balances_process = $this->run_shell_command($cmd, $print_debug);
 		if (is_resource($target_balances_process)) $process_count++;
 		else $html .= "Failed to start a process for address backups.\n";
-		sleep(0.02);
-		
-		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/integrity_checks.php"';
-		$target_balances_process = $this->run_shell_command($cmd, $print_debug);
-		if (is_resource($target_balances_process)) $process_count++;
-		else $html .= "Failed to start a process for integrity checks.\n";
 		sleep(0.02);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/join_txos.php"';
