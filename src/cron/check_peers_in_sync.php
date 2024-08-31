@@ -4,7 +4,7 @@ require_once(dirname(dirname(__FILE__))."/models/CoinbaseClient.php");
 
 $script_start_time = microtime(true);
 
-$allowed_params = ['print_debug', 'force', 'only_game_id'];
+$allowed_params = ['print_debug', 'force', 'game_id'];
 $app->safe_merge_argv_to_request($argv, $allowed_params);
 
 if ($app->running_as_admin()) {
@@ -15,7 +15,7 @@ if ($app->running_as_admin()) {
 	if (!empty($_REQUEST['force'])) $force=true;
 	
 	$only_game_id = null;
-	if (!empty($_REQUEST['only_game_id'])) $only_game_id = (int) $_REQUEST['only_game_id'];
+	if (!empty($_REQUEST['game_id'])) $only_game_id = (int) $_REQUEST['game_id'];
 	
 	$process_lock_name = "check_peers_in_sync";
 	$process_locked = $app->check_process_running($process_lock_name);
