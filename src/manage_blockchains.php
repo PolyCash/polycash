@@ -248,6 +248,7 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 											}
 										}
 										?>
+										<option value="check_errors">Check for errors</option>
 									</select>
 									
 									<div style="display: none;" class="modal fade" id="event_modal">
@@ -373,6 +374,41 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 				</table>
 				
 				<div style="display: none;" class="modal fade" id="manage_unclaimed_modal"></div>
+
+				<div style="display: none;" class="modal fade" id="check_errors_modal">
+					<div class="modal-dialog modal-lg">
+						<div class="modal-content">
+							<div class="modal-body">
+								<button class="btn btn-sm btn-success" onClick="thisBlockchainManager.showNewCheck();" style="float: right;">+ Check Blockchain</button>
+								
+								<div id="new_blockchain_check_section" style="display: none; border: 1px solid #ccc; padding: 10px; padding-top: 0px; margin-top: 10px; overflow: hidden; width: 100%;">
+									<form id="new_blockchain_check_form" onSubmit="thisBlockchainManager.submitBlockchainCheck(this); return false;">
+										<input type="hidden" name="check_type" value="tx_inputs" />
+										
+										<div class="form-group">
+											<div class="col-sm-4">
+												<label for="new_blockchain_check_from_block">Check from block:</label>
+											</div>
+											<div class="col-sm-8">
+												<input type="text" class="form-control input-sm" id="new_blockchain_check_from_block" name="from_block" value="" />
+											</div>
+										</div>
+										
+										<div class="form-group">
+											<div class="col-sm-4"></div>
+											<div class="col-sm-8">
+												<button class="btn btn-sm btn-secondary" onClick="thisBlockchainManager.hideNewCheck(); return false;">Cancel</button>
+												<button class="btn btn-sm btn-success">Start Blockchain Check</button>
+											</div>
+										</div>
+									</form>
+								</div>
+								
+								<div id="check_errors_list"></div>
+							</div>
+						</div>
+					</div>
+				</div>
 				
 				<div class="modal fade" id="new_blockchain_modal" style="display: none;">
 					<div class="modal-dialog">
@@ -465,14 +501,19 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 		<script type="text/javascript">
 		var BlockchainManager = function(synchronizer_token) {
 			this.synchronizer_token = synchronizer_token;
+			this.current_error_check_blockchain_id = null;
 			
+			$('#check_errors_modal').on("hide.bs.modal", function() {
+				this.regularlyRenderingChecks = false;
+			}.bind(this));
+
 			this.actionSelected = function(blockchain_id, blockchain_name, blockchain_identifier, selectElement) {
 				var action = selectElement.value;
 				selectElement.value = "";
 				
 				var confirm_ok = false;
 				
-				if (action == "set_rpc_credentials" || action == "see_definition" || action == "manage_unclaimed") confirm_ok = true;
+				if (action == "set_rpc_credentials" || action == "see_definition" || action == "manage_unclaimed" || action == "check_errors") confirm_ok = true;
 				else {
 					var confirm_message = "Are you sure you want to ";
 					if (action == "reset") confirm_message += "reset "+blockchain_name+"?";
@@ -491,6 +532,11 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 					}
 					else if (action == "see_definition") {
 						window.open('/explorer/blockchains/'+blockchain_identifier+'/definition/', '_blank');
+					}
+					else if (action == "check_errors") {
+						this.current_error_check_blockchain_id = blockchain_id;
+						this.regularlyRenderingChecks = true;
+						this.regularlyRenderBlockchainChecks();
 					}
 					else if (action == "manage_unclaimed") {
 						$.ajax({
@@ -547,6 +593,69 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 							$('#manage_unclaimed_modal').modal('show');
 						}
 					});
+				}
+			};
+			
+			this.renderBlockchainChecks = function() {
+				$.ajax({
+					url: "/ajax/check_blockchain_errors.php",
+					data: {
+						blockchain_id: this.current_error_check_blockchain_id,
+					},
+					success: function(check_errors_response) {
+						$('#check_errors_list').html(check_errors_response.rendered_content);
+						$('#check_errors_modal').modal('show');
+					}
+				});
+			};
+			
+			this.hideNewCheck = function() {
+				$('#new_blockchain_check_section').hide();
+			};
+			
+			this.showNewCheck = function() {
+				$('#new_blockchain_check_section').hide();
+				$('#new_blockchain_check_section').slideDown('fast');
+			};
+			
+			this.submitBlockchainCheck = function(formEl) {
+				var blockchainCheckParams = {
+					action: 'submit_new_check',
+					synchronizer_token: this.synchronizer_token,
+					blockchain_id: this.current_error_check_blockchain_id,
+				};
+				
+				$.each(formEl.elements, function(elPos, inputEl){
+					if ($(inputEl).attr('name')) blockchainCheckParams[$(inputEl).attr('name')] = inputEl.value;
+				});
+				
+				$.ajax({
+					type: "post",
+					url: "/ajax/check_blockchain_errors.php",
+					dataType: 'json',
+					data: blockchainCheckParams,
+					context: this,
+					success: function(submitResponse) {
+						if (submitResponse.status_code == 1) {
+							this.renderBlockchainChecks();
+							$('#new_blockchain_check_section').hide();
+						}
+						else alert(submitResponse.message);
+					}
+				});
+			};
+			
+			this.regularlyRenderingChecks = false;
+
+			this.regularlyRenderBlockchainChecks = function() {
+				if (this.regularlyRenderingChecks) {
+					this.renderBlockchainChecks();
+				}
+				
+				if (this.regularlyRenderingChecks) {
+					setTimeout(function() {
+						this.regularlyRenderBlockchainChecks();
+					}.bind(this), 5000);
 				}
 			};
 		};
