@@ -35,7 +35,7 @@ if ($app->running_as_admin()) {
 
 			foreach ($inProgressChecks as $inProgressCheck) {
 				$ref_time = microtime(true);
-				$from_block = (string) $inProgressCheck['from_block'] === "" ? $inProgressCheck['from_block'] : $inProgressCheck['processed_to_block']+1;
+				$from_block = (string) $inProgressCheck['processed_to_block'] === "" ? $inProgressCheck['from_block'] : $inProgressCheck['processed_to_block']+1;
 				$to_block = min($from_block+5000-1, $blockchain->db_blockchain['last_complete_block']);
 				$any_error = false;
 				$error_message = null;
