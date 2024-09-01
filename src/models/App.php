@@ -392,6 +392,12 @@ class App {
 				if (is_resource($set_stats_process)) $process_count++;
 				else $html .= "Failed to start a process for setting block stats.\n";
 				sleep(0.02);
+
+				$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/process_blockchain_checks.php" blockchain_id='.$sync_blockchain['blockchain_id'];
+				$blockchain_checks_process = $this->run_shell_command($cmd, $print_debug);
+				if (is_resource($blockchain_checks_process)) $process_count++;
+				else $html .= "Failed to start a process for processing blockchain checks.\n";
+				sleep(0.02);
 			}
 		}
 		

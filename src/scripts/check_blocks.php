@@ -64,62 +64,6 @@ if ($app->running_as_admin()) {
 				$app->flush_buffers();
 			}
 		}
-		else if ($check_method == "tx_inputs") {
-			$check_blocks_params = [
-				'blockchain_id' => $blockchain->db_blockchain['blockchain_id'],
-				'from_block' => $_REQUEST['from_block'],
-				'to_block' => min($blockchain->db_blockchain['last_complete_block'], $_REQUEST['to_block'])
-			];
-			$check_blocks_q = "SELECT internal_block_id, block_id, num_ios_in, num_ios_out FROM blocks WHERE blockchain_id=:blockchain_id AND block_id >= :from_block AND block_id <= :to_block ORDER BY block_id ASC;";
-			
-			$check_blocks = $app->run_query($check_blocks_q, $check_blocks_params)->fetchAll();
-			
-			$app->print_debug($blockchain->db_blockchain['blockchain_name'].": checking ".count($check_blocks)." blocks");
-			
-			echo "<pre>\n";
-			foreach ($check_blocks as $check_block) {
-				echo $check_block['block_id'].": ";
-				
-				$num_trans = $blockchain->set_block_stats($check_block);
-				
-				$num_ios_in = $app->run_query("SELECT COUNT(*) FROM transaction_ios io JOIN transactions t ON io.spend_transaction_id=t.transaction_id WHERE t.block_id=:block_id AND t.blockchain_id=:blockchain_id;", [
-					'block_id' => $check_block['block_id'],
-					'blockchain_id' => $blockchain->db_blockchain['blockchain_id']
-				])->fetch(PDO::FETCH_NUM)[0];
-				
-				$num_ios_out = $app->run_query("SELECT COUNT(*) FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE t.block_id=:block_id AND t.blockchain_id=:blockchain_id;", [
-					'block_id' => $check_block['block_id'],
-					'blockchain_id' => $blockchain->db_blockchain['blockchain_id']
-				])->fetch(PDO::FETCH_NUM)[0];
-				
-				$this_block_error = false;
-				if ($check_block['num_ios_in'] != $num_ios_in) {
-					echo "\n".$num_ios_in." ios in but expected ".$check_block['num_ios_in'];
-					$this_block_error = true;
-				}
-				if ($check_block['num_ios_out'] != $num_ios_out) {
-					echo "\n".$num_ios_out." ios out but expected ".$check_block['num_ios_out'];
-					$this_block_error = true;
-				}
-				
-				list($any_error, $any_ios_in_error, $any_ios_out_error) = BlockchainVerifier::verifyBlock($app, $blockchain->db_blockchain['blockchain_id'], $check_block['block_id']);
-				
-				if ($any_ios_in_error) {
-					$this_block_error = true;
-					echo "\ninvalid ios in";
-				}
-				
-				if ($any_ios_out_error) {
-					$this_block_error = true;
-					echo "\ninvalid ios out";
-				}
-				
-				if (!$this_block_error) echo "ok";
-				echo "\n";
-				$app->flush_buffers();
-			}
-			echo "</pre>\n";
-		}
 	}
 }
 else echo "You need admin privileges to run this script.\n";

@@ -1,5 +1,34 @@
 <?php
 class BlockchainVerifier {
+	public static function newBlockchainCheck($app, $thisuser, $checkParams) {
+		$app->run_insert_query("blockchain_checks", [
+			'blockchain_id' => $checkParams['blockchain_id'],
+			'creator_id' => $thisuser->db_user['user_id'],
+			'from_block' => $checkParams['from_block'],
+			'check_type' => $checkParams['check_type'],
+			'created_at' => time(),
+		]);
+		return self::fetchBlockchainCheck($app, $app->last_insert_id());
+	}
+
+	public static function fetchBlockchainCheck($app, $blockchainCheckId) {
+		return $app->run_query("SELECT * FROM blockchain_checks WHERE blockchain_check_id=:blockchain_check_id;", [
+			'blockchain_check_id' => $blockchainCheckId,
+		])->fetch(PDO::FETCH_ASSOC);
+	}
+
+	public static function fetchChecksForBlockchain($app, $blockchain) {
+		return $app->run_query("SELECT * FROM blockchain_checks WHERE blockchain_id=:blockchain_id ORDER BY created_at DESC;", [
+			'blockchain_id' => $blockchain->db_blockchain['blockchain_id'],
+		])->fetchAll(PDO::FETCH_ASSOC);
+	}
+
+	public static function fetchInProgressChecksForBlockchain($app, $blockchain) {
+		return $app->run_query("SELECT * FROM blockchain_checks WHERE blockchain_id=:blockchain_id AND completed_at IS NULL ORDER BY created_at DESC;", [
+			'blockchain_id' => $blockchain->db_blockchain['blockchain_id'],
+		])->fetchAll(PDO::FETCH_ASSOC);
+	}
+
 	public static function verifyBlock(&$app, $blockchain_id, $block_id) {
 		$any_error = false;
 		$any_ios_in_error = false;
@@ -41,5 +70,21 @@ class BlockchainVerifier {
 			$any_ios_out_error,
 			$total_ios_error,
 		];
+	}
+	
+	public static function setCheckComplete($app, $blockchainCheck, $block_id, $error_message) {
+		$app->run_query("UPDATE blockchain_checks SET first_error_block=:first_error_block, first_error_message=:first_error_message, completed_at=:completed_at WHERE blockchain_check_id=:blockchain_check_id;", [
+			'first_error_block' => $block_id,
+			'first_error_message' => $error_message,
+			'completed_at' => time(),
+			'blockchain_check_id' => $blockchainCheck['blockchain_check_id'],
+		]);
+	}
+	
+	public static function setCheckProcessedToBlock($app, $blockchainCheck, $block_id) {
+		$app->run_query("UPDATE blockchain_checks SET processed_to_block=:processed_to_block WHERE blockchain_check_id=:blockchain_check_id;", [
+			'processed_to_block' => $block_id,
+			'blockchain_check_id' => $blockchainCheck['blockchain_check_id'],
+		]);
 	}
 }
