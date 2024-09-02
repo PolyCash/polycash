@@ -87,4 +87,39 @@ class BlockchainVerifier {
 			'blockchain_check_id' => $blockchainCheck['blockchain_check_id'],
 		]);
 	}
+
+	// Returns [bool $any_error, int $error_from_block, string $error_message]
+	public static function initialChecks($app, $blockchain, $blockchainCheck) {
+		$any_error = false;
+		$first_error_block = null;
+		$first_error_message = null;
+
+		$position_error_transactions = $app->run_query("SELECT t.transaction_id, t.block_id FROM transactions t WHERE t.blockchain_id=:blockchain_id AND t.block_id >= :first_required_block AND t.position_in_block IS NULL ORDER BY t.block_id ASC;", [
+			'blockchain_id' => $blockchain->db_blockchain['blockchain_id'],
+			'first_required_block' => $blockchain->db_blockchain['first_required_block'],
+		])->fetchAll(PDO::FETCH_ASSOC);
+
+		if (count($position_error_transactions) > 0) {
+			$any_error = true;
+			$first_error_block = $position_error_transactions[0]['block_id'];
+			$first_error_message = "Invalid position in block for ".count($position_error_transactions)." transaction".(count($position_error_transactions)==1 ? "" : "s");
+		}
+
+		$missing_input_transactions = $app->run_query("SELECT t.transaction_id, t.block_id FROM transactions t WHERE t.blockchain_id=:blockchain_id AND t.block_id >= :first_required_block AND t.transaction_desc != 'coinbase' AND t.has_all_inputs=0 ORDER BY t.block_id ASC;", [
+			'blockchain_id' => $blockchain->db_blockchain['blockchain_id'],
+			'first_required_block' => $blockchain->db_blockchain['first_required_block'],
+		])->fetchAll(PDO::FETCH_ASSOC);
+
+		if (count($missing_input_transactions) > 0) {
+			if (!$any_error || $missing_input_transactions[0]['block_id'] < $first_error_block) {
+				$first_error_block = $missing_input_transactions[0]['block_id'];
+			}
+			if ($first_error_message === null) $first_error_message = "Found";
+			else $first_error_message .= ", found";
+			$first_error_message .= " ".count($missing_input_transactions)." transaction".(count($missing_input_transactions)==1 ? "" : "s")." with missing inputs.";
+			$any_error = true;
+		}
+
+		return [$any_error, $first_error_block, $first_error_message];
+	}
 }

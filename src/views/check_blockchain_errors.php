@@ -34,7 +34,8 @@ if (count($blockchainChecks) > 0) {
 					<?php
 					if (!empty($blockchainCheck['completed_at'])) {
 						echo "Completed ".$app->format_seconds(time() - $blockchainCheck['completed_at'])." ago";
-						echo ", checked blocks <a target='_blank' href='/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/blocks/".$blockchainCheck['from_block']."'>#".$blockchainCheck['from_block']."</a> to <a target='_blank' href='/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/blocks/".$blockchainCheck['processed_to_block']."'>#".$blockchainCheck['processed_to_block']."</a>";
+						echo ", checked blocks <a target='_blank' href='/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/blocks/".$blockchainCheck['from_block']."'>#".$blockchainCheck['from_block']."</a>";
+						if ((string) $blockchainCheck['processed_to_block'] !== "") echo " to <a target='_blank' href='/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/blocks/".$blockchainCheck['processed_to_block']."'>#".$blockchainCheck['processed_to_block']."</a>";
 						if ((string) $blockchainCheck['first_error_block'] !== "") {
 							echo "<br/><font class='text-danger'>Error on block <a target='_blank' href='/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/blocks/".$blockchainCheck['first_error_block']."'>#".$blockchainCheck['first_error_block']."</a>: ".$blockchainCheck['first_error_message']."</font>";
 						}

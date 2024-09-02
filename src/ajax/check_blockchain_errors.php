@@ -19,6 +19,12 @@ if ($thisuser && $app->user_is_admin($thisuser)) {
 			$blockchainCheck = BlockchainVerifier::newBlockchainCheck($app, $thisuser, $_REQUEST);
 			
 			if ($blockchainCheck) {
+				list($any_error, $first_error_block, $first_error_message) = BlockchainVerifier::initialChecks($app, $blockchain, $blockchainCheck);
+
+				if ($any_error) {
+					BlockchainVerifier::setCheckComplete($app, $blockchainCheck, $first_error_block, $first_error_message);
+				}
+
 				$app->output_message(1, "Successfully initiated blockchain check.");
 			}
 			else $app->output_message(4, "Failed to create blockchain check.");
