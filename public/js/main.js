@@ -1487,6 +1487,9 @@ var PageManager = function() {
 							$('#compose_bets_success').html(place_bets_response.message);
 							$('#compose_bets_success').slideDown('slow');
 							$('#compose_burn_amount').val("");
+
+							this.clear_principal_bet();
+
 							setTimeout(function() {
 								$('#compose_bets_success').slideUp('fast');
 							}, 10000);
@@ -2628,13 +2631,20 @@ var PageManager = function() {
 			});
 		}
 	}
+	this.showing_principal_bet = false;
 	this.toggle_betting_mode = function(to_betting_mode) {
 		if (this.betting_mode !== false) {
 			$('#betting_mode_'+this.betting_mode).hide();
 		}
 		$('#betting_mode_'+to_betting_mode).show();
 		this.betting_mode = to_betting_mode;
-		
+
+		if (to_betting_mode == "principal") {
+			this.showing_principal_bet = true;
+			this.preview_principal_bet();
+		}
+		else this.showing_principal_bet = false;
+
 		$.ajax({
 			url: "/ajax/set_betting_mode.php",
 			data: {
@@ -2643,6 +2653,86 @@ var PageManager = function() {
 				synchronizer_token: this.synchronizer_token
 			}
 		});
+	}
+	this.preview_principal_bet = function() {
+		if (this.showing_principal_bet) {
+			var preview_content = "";
+
+			if ($('#principal_amount').val() != "") {
+				var principal_amount = parseFloat($('#principal_amount').val());
+				if (principal_amount > 0) {
+					var principal_option_id = $('#principal_option_id_0').val();
+					if (principal_option_id) {
+						var this_event = null;
+						var this_option = null;
+						for (var event_pos=0; event_pos<games[0].events.length; event_pos++) {
+							if (typeof games[0].events[event_pos].option_id2option_index[principal_option_id] != "undefined") {
+								this_event = games[0].events[event_pos];
+								this_option = this_event.options[games[0].events[event_pos].option_id2option_index[principal_option_id]];
+							}
+						}
+						if (this_event && this_option) {
+							var effectiveness_factor = this_event.block_id_to_effectiveness_factor(games[0].last_block_id+1);
+							var output_votes = 0;
+							var output_effective_votes = 0;
+							var output_burn_amount = Math.round(principal_amount*Math.pow(10,games[0].decimal_places));
+							var output_effective_burn_amount = Math.round(effectiveness_factor*output_burn_amount);
+
+							var output_cost = output_votes*games[0].coins_per_vote + output_burn_amount;
+							var output_effective_coins = output_effective_votes*games[0].coins_per_vote + output_effective_burn_amount;
+
+							var event_votes = this_event.sum_votes + this_event.sum_unconfirmed_votes + 0;
+							var event_payout = event_votes*games[0].coins_per_vote + this_event.sum_burn_amount + this_event.sum_unconfirmed_burn_amount + output_burn_amount;
+
+							var event_effective_votes = this_event.sum_effective_votes + this_event.sum_unconfirmed_effective_votes;
+							var event_effective_coins = event_effective_votes*games[0].coins_per_vote + this_event.sum_effective_burn_amount + this_event.sum_unconfirmed_effective_burn_amount + output_effective_burn_amount;
+
+							var option_effective_votes = this_option.effective_votes + this_option.unconfirmed_effective_votes + 0;
+							var option_effective_coins = option_effective_votes*games[0].coins_per_vote + this_option.effective_burn_amount + this_option.unconfirmed_effective_burn_amount + output_effective_burn_amount;
+
+							var expected_payout = Math.floor(this_event.payout_rate*event_payout*(output_effective_coins/option_effective_coins));
+
+							preview_content = this.format_coins(output_cost/Math.pow(10,games[0].decimal_places))+" "+games[0].coin_abbreviation+" &rarr; ";
+
+							if (this_event.payout_rule == "binary") {
+								preview_content += this.format_coins(expected_payout/Math.pow(10,games[0].decimal_places));
+								preview_content += " "+games[0].coin_abbreviation;
+
+								if (output_cost > 0) {
+									var payout_factor = expected_payout/output_cost;
+									preview_content += " (x"+this.format_coins(payout_factor)+")";
+								}
+							}
+							else if (this_event.payout_rule == "linear") {
+								var contract_price_size = this_event.track_max_price - this_event.track_min_price;
+								var position_price = contract_price_size*option_effective_coins/event_effective_coins;
+								var effective_paid = event_payout*output_effective_coins/event_effective_coins;
+								var equivalent_contracts = effective_paid/position_price;
+								var borrow_delta = this_option.option_index == 0 ? (-1)*equivalent_contracts*this_event.track_min_price : equivalent_contracts*this_event.track_max_price;
+
+								if (this_option.option_index == 1) {
+									preview_content += "-";
+								}
+
+								preview_content += this.format_coins(equivalent_contracts/Math.pow(10,games[0].decimal_places))+" "+this_event.track_name_short;
+
+								if (borrow_delta != 0) {
+									var borrow_delta_abs = Math.abs(borrow_delta);
+									preview_content += " "+(this_option.option_index == 1 ? "+" : "-")+" ";
+									preview_content += this.format_coins(borrow_delta_abs/Math.pow(10,games[0].decimal_places))+" "+games[0].coin_abbreviation;
+								}
+							}
+						}
+					}
+				}
+			}
+
+			$('#principal_bet_preview').html(preview_content);
+
+			setTimeout(function() {
+				this.preview_principal_bet();
+			}.bind(this), 2000);
+		}
 	}
 	this.scroll_to_event_index_on_refresh = null;
 	this.submit_principal_bet = function() {
@@ -2661,10 +2751,18 @@ var PageManager = function() {
 			},
 			context: this,
 			success: function(principal_bet_response) {
-				$('#principal_bet_btn').html('<i class="fas fa-check-circle"></i> &nbsp; Confirm Bet');
+				this.clear_principal_bet();
 				$('#principal_bet_message').html(principal_bet_response.message);
+				setTimeout(function() {
+					$('#principal_bet_message').slideUp('fast');
+				}, 10000);
 			}
 		});
+	}
+	this.clear_principal_bet = function() {
+		$('#principal_amount').val("");
+		$('#principal_option_id_0').val("");
+		$('#principal_bet_btn').html('<i class="fas fa-check-circle"></i> &nbsp; Confirm Bet');
 	}
 	this.save_featured_strategy = function() {
 		var featured_strategy_id = $("input[name='featured_strategy_id']:checked").val();
