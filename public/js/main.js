@@ -81,7 +81,7 @@ var PlanRound = function(round_id) {
 	this.event_ids = [];
 	this.sum_points = 0;
 };
-var GameEvent = function(game, game_event_index, event_id, real_event_index, num_options, vote_effectiveness_function, effectiveness_param1, option_block_rule, event_name, event_starting_block, event_final_block, payout_rate) {
+var GameEvent = function(game, game_event_index, event_id, real_event_index, num_options, vote_effectiveness_function, effectiveness_param1, option_block_rule, event_name, event_starting_block, event_final_block, payout_rate, payout_rule, track_min_price, track_max_price, track_name_short) {
 	this.game = game;
 	this.game_event_index = game_event_index;
 	this.event_id = event_id;
@@ -95,6 +95,10 @@ var GameEvent = function(game, game_event_index, event_id, real_event_index, num
 	this.event_starting_block = event_starting_block;
 	this.event_final_block = event_final_block;
 	this.payout_rate = payout_rate;
+	this.payout_rule = payout_rule;
+	this.track_min_price = track_min_price;
+	this.track_max_price = track_max_price;
+	this.track_name_short = track_name_short;
 	
 	this.rendered_event_hash = "";
 	
@@ -157,7 +161,7 @@ var GameEvent = function(game, game_event_index, event_id, real_event_index, num
 		else return 1;
 	};
 };
-var Game = function(pageManager, game_id, last_block_id, last_transaction_id, mature_io_ids_csv, payout_weight, game_round_length, fee_amount, game_url_identifier, coin_name, coin_name_plural, chain_coin_name, chain_coin_name_plural, refresh_page, event_ids, logo_image_url, vote_effectiveness_function, effectiveness_param1, seconds_per_block, inflation, exponential_inflation_rate, time_last_block_loaded, decimal_places, blockchain_decimal_places, view_mode, initial_event_index, filter_date, default_betting_mode, render_events, include_betting_events, include_being_determined_events) {
+var Game = function(pageManager, game_id, last_block_id, last_transaction_id, mature_io_ids_csv, payout_weight, game_round_length, fee_amount, game_url_identifier, coin_name, coin_name_plural, coin_abbreviation, chain_coin_name, chain_coin_name_plural, refresh_page, event_ids, logo_image_url, vote_effectiveness_function, effectiveness_param1, seconds_per_block, inflation, exponential_inflation_rate, time_last_block_loaded, decimal_places, blockchain_decimal_places, view_mode, initial_event_index, filter_date, default_betting_mode, render_events, include_betting_events, include_being_determined_events) {
 	Game.numInstances = (Game.numInstances || 0) + 1;
 	this.instance_id = Game.numInstances-1;
 	
@@ -173,6 +177,7 @@ var Game = function(pageManager, game_id, last_block_id, last_transaction_id, ma
 	this.game_url_identifier = game_url_identifier;
 	this.coin_name = coin_name;
 	this.coin_name_plural = coin_name_plural;
+	this.coin_abbreviation = coin_abbreviation;
 	this.chain_coin_name = chain_coin_name;
 	this.chain_coin_name_plural = chain_coin_name_plural;
 	this.refresh_page = refresh_page;
@@ -1080,12 +1085,36 @@ var PageManager = function() {
 				var expected_payout = Math.floor(this_event.payout_rate*event_payout*(output_effective_coins/option_effective_coins));
 				
 				output_val_disp = this.format_coins(output_cost/Math.pow(10,games[0].decimal_places));
-				output_val_disp += " &rarr; "+this.format_coins(expected_payout/Math.pow(10,games[0].decimal_places));
-				output_val_disp += " "+games[0].coin_name_plural;
 				
-				if (output_cost > 0) {
-					var payout_factor = expected_payout/output_cost;
-					output_val_disp += " (x"+this.format_coins(payout_factor)+")";
+				if (this_event.payout_rule == "binary") {
+					output_val_disp += " &rarr; "+this.format_coins(expected_payout/Math.pow(10,games[0].decimal_places));
+					output_val_disp += " "+games[0].coin_name_plural;
+
+					if (output_cost > 0) {
+						var payout_factor = expected_payout/output_cost;
+						output_val_disp += " (x"+this.format_coins(payout_factor)+")";
+					}
+				}
+				else if (this_event.payout_rule == "linear") {
+					output_val_disp += " "+games[0].coin_abbreviation+" &rarr; ";
+
+					var contract_price_size = this_event.track_max_price - this_event.track_min_price;
+					var position_price = contract_price_size*option_effective_coins/event_effective_coins;
+					var effective_paid = event_payout*output_effective_coins/event_effective_coins;
+					var equivalent_contracts = effective_paid/position_price;
+					var borrow_delta = this_option.option_index == 0 ? (-1)*equivalent_contracts*this_event.track_min_price : equivalent_contracts*this_event.track_max_price;
+
+					if (this_option.option_index == 1) {
+						output_val_disp += "-";
+					}
+
+					output_val_disp += this.format_coins(equivalent_contracts/Math.pow(10,games[0].decimal_places))+" "+this_event.track_name_short;
+
+					if (borrow_delta != 0) {
+						var borrow_delta_abs = Math.abs(borrow_delta);
+						output_val_disp += " "+(this_option.option_index == 1 ? "+" : "-")+" ";
+						output_val_disp += this.format_coins(borrow_delta_abs/Math.pow(10,games[0].decimal_places))+" "+games[0].coin_abbreviation;
+					}
 				}
 				
 				$('#output_amount_disp_'+i).html(output_val_disp);
