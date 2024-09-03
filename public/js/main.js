@@ -129,7 +129,7 @@ var GameEvent = function(game, game_event_index, event_id, real_event_index, num
 		if (games[this.game.instance_id].refresh_page == "wallet") {
 			thisPageManager.last_event_index_clicked = this.real_event_index;
 			if (thisPageManager.betting_mode == "inflationary") games[this.game.instance_id].add_option_to_vote(this.game_event_index, option_id);
-			else $('#principal_option_id_'+this.game.instance_id).val(option_id);
+			else thisPageManager.principal_option_selected(option_id);
 		}
 		else window.location = '/wallet/'+games[this.game.instance_id].game_url_identifier+'/?action=start_bet&event_index='+this.real_event_index+'&option_id='+option_id;
 	};
@@ -232,7 +232,6 @@ var Game = function(pageManager, game_id, last_block_id, last_transaction_id, ma
 		return Math.ceil(block_id/this.game_round_length);
 	};
 	this.add_option_to_vote = function(event_index, option_id) {
-		$('#principal_option_id_'+this.instance_id).val(option_id);
 		var this_event = this.events[event_index];
 		var this_option = this_event.options[this_event.option_id2option_index[option_id]];
 		if (this_option) {
@@ -2654,73 +2653,114 @@ var PageManager = function() {
 			}
 		});
 	}
+	this.get_principal_payout_info = function(this_event, this_option, principal_amount) {
+		var effectiveness_factor = this_event.block_id_to_effectiveness_factor(games[0].last_block_id+1);
+		var output_votes = 0;
+		var output_effective_votes = 0;
+		var output_burn_amount = principal_amount*Math.pow(10,games[0].decimal_places);
+		var output_effective_burn_amount = effectiveness_factor*output_burn_amount;
+
+		var output_cost = output_votes*games[0].coins_per_vote + output_burn_amount;
+		var output_effective_coins = output_effective_votes*games[0].coins_per_vote + output_effective_burn_amount;
+
+		var event_votes = this_event.sum_votes + this_event.sum_unconfirmed_votes + 0;
+		var event_payout = event_votes*games[0].coins_per_vote + this_event.sum_burn_amount + this_event.sum_unconfirmed_burn_amount + output_burn_amount;
+
+		var event_effective_votes = this_event.sum_effective_votes + this_event.sum_unconfirmed_effective_votes;
+		var event_effective_coins = event_effective_votes*games[0].coins_per_vote + this_event.sum_effective_burn_amount + this_event.sum_unconfirmed_effective_burn_amount + output_effective_burn_amount;
+
+		var option_effective_votes = this_option.effective_votes + this_option.unconfirmed_effective_votes;
+		var option_effective_coins = option_effective_votes*games[0].coins_per_vote + this_option.effective_burn_amount + this_option.unconfirmed_effective_burn_amount + output_effective_burn_amount;
+
+		var expected_payout = Math.floor(this_event.payout_rate*event_payout*(output_effective_coins/option_effective_coins));
+
+		if (this_event.payout_rule == "linear") {
+			var contract_price_size = this_event.track_max_price - this_event.track_min_price;
+			var position_price = contract_price_size*option_effective_coins/event_effective_coins;
+			var effective_paid = event_payout*output_effective_coins/event_effective_coins;
+			var equivalent_contracts = effective_paid/position_price;
+			var borrow_delta = this_option.option_index == 0 ? (-1)*equivalent_contracts*this_event.track_min_price : equivalent_contracts*this_event.track_max_price;
+		}
+		else {
+			var equivalent_contracts = null;
+			var borrow_delta = null;
+		}
+
+		return [expected_payout, output_cost, equivalent_contracts, borrow_delta];
+	}
+	this.estimate_to_principal_amount = function(this_event, this_option, receive_position, est_principal_amount) {
+		[expected_payout, output_cost, equivalent_contracts, borrow_delta] = this.get_principal_payout_info(this_event, this_option, est_principal_amount);
+
+		var equivalent_contracts_float = equivalent_contracts/Math.pow(10,games[0].decimal_places);
+		var corrective_multiplier = receive_position/equivalent_contracts_float;
+
+		if (Math.abs(1-corrective_multiplier) <= 0.00000001) return est_principal_amount;
+		else return this.estimate_to_principal_amount(this_event, this_option, receive_position, est_principal_amount*corrective_multiplier);
+	}
 	this.preview_principal_bet = function() {
 		if (this.showing_principal_bet) {
 			var preview_content = "";
 
-			if ($('#principal_amount').val() != "") {
-				var principal_amount = parseFloat($('#principal_amount').val());
-				if (principal_amount > 0) {
-					var principal_option_id = $('#principal_option_id_0').val();
-					if (principal_option_id) {
-						var this_event = null;
-						var this_option = null;
-						for (var event_pos=0; event_pos<games[0].events.length; event_pos++) {
-							if (typeof games[0].events[event_pos].option_id2option_index[principal_option_id] != "undefined") {
-								this_event = games[0].events[event_pos];
-								this_option = this_event.options[games[0].events[event_pos].option_id2option_index[principal_option_id]];
+			var principal_option_id = $('#principal_option_id_0').val();
+			if (principal_option_id) {
+				var this_event = null;
+				var this_option = null;
+				for (var event_pos=0; event_pos<games[0].events.length; event_pos++) {
+					if (typeof games[0].events[event_pos].option_id2option_index[principal_option_id] != "undefined") {
+						this_event = games[0].events[event_pos];
+						this_option = this_event.options[games[0].events[event_pos].option_id2option_index[principal_option_id]];
+					}
+				}
+				if (this_event && this_option) {
+					var principal_input_error = false;
+
+					if (this.current_principal_spec_type == "receive_position") {
+						if ($('#receive_position').val() != "") {
+							var receive_position = parseFloat($('#receive_position').val());
+							if (receive_position > 0) {
+								var est_contract_price = (this_event.track_max_price - this_event.track_min_price)/2;
+								var est_principal_amount = receive_position*est_contract_price;
+
+								var principal_amount = this.estimate_to_principal_amount(this_event, this_option, receive_position, est_principal_amount);
+								principal_amount = Math.ceil(principal_amount*Math.pow(10, games[0].decimal_places))/Math.pow(10, games[0].decimal_places);
+
+								$('#principal_amount').val(principal_amount);
 							}
 						}
-						if (this_event && this_option) {
-							var effectiveness_factor = this_event.block_id_to_effectiveness_factor(games[0].last_block_id+1);
-							var output_votes = 0;
-							var output_effective_votes = 0;
-							var output_burn_amount = Math.round(principal_amount*Math.pow(10,games[0].decimal_places));
-							var output_effective_burn_amount = Math.round(effectiveness_factor*output_burn_amount);
+					}
 
-							var output_cost = output_votes*games[0].coins_per_vote + output_burn_amount;
-							var output_effective_coins = output_effective_votes*games[0].coins_per_vote + output_effective_burn_amount;
+					if ($('#principal_amount').val() != "") {
+						var principal_amount = parseFloat($('#principal_amount').val());
+						if (principal_amount > 0) {
+							[expected_payout, output_cost, equivalent_contracts, borrow_delta] = this.get_principal_payout_info(this_event, this_option, principal_amount);
+						}
+						else principal_input_error = true;
+					}
+					else principal_input_error = true;
 
-							var event_votes = this_event.sum_votes + this_event.sum_unconfirmed_votes + 0;
-							var event_payout = event_votes*games[0].coins_per_vote + this_event.sum_burn_amount + this_event.sum_unconfirmed_burn_amount + output_burn_amount;
+					if (!principal_input_error) {
+						preview_content = this.format_coins(output_cost/Math.pow(10,games[0].decimal_places))+" "+games[0].coin_abbreviation+" &rarr; ";
 
-							var event_effective_votes = this_event.sum_effective_votes + this_event.sum_unconfirmed_effective_votes;
-							var event_effective_coins = event_effective_votes*games[0].coins_per_vote + this_event.sum_effective_burn_amount + this_event.sum_unconfirmed_effective_burn_amount + output_effective_burn_amount;
+						if (this_event.payout_rule == "binary") {
+							preview_content += this.format_coins(expected_payout/Math.pow(10,games[0].decimal_places));
+							preview_content += " "+games[0].coin_abbreviation;
 
-							var option_effective_votes = this_option.effective_votes + this_option.unconfirmed_effective_votes + 0;
-							var option_effective_coins = option_effective_votes*games[0].coins_per_vote + this_option.effective_burn_amount + this_option.unconfirmed_effective_burn_amount + output_effective_burn_amount;
-
-							var expected_payout = Math.floor(this_event.payout_rate*event_payout*(output_effective_coins/option_effective_coins));
-
-							preview_content = this.format_coins(output_cost/Math.pow(10,games[0].decimal_places))+" "+games[0].coin_abbreviation+" &rarr; ";
-
-							if (this_event.payout_rule == "binary") {
-								preview_content += this.format_coins(expected_payout/Math.pow(10,games[0].decimal_places));
-								preview_content += " "+games[0].coin_abbreviation;
-
-								if (output_cost > 0) {
-									var payout_factor = expected_payout/output_cost;
-									preview_content += " (x"+this.format_coins(payout_factor)+")";
-								}
+							if (output_cost > 0) {
+								var payout_factor = expected_payout/output_cost;
+								preview_content += " (x"+this.format_coins(payout_factor)+")";
 							}
-							else if (this_event.payout_rule == "linear") {
-								var contract_price_size = this_event.track_max_price - this_event.track_min_price;
-								var position_price = contract_price_size*option_effective_coins/event_effective_coins;
-								var effective_paid = event_payout*output_effective_coins/event_effective_coins;
-								var equivalent_contracts = effective_paid/position_price;
-								var borrow_delta = this_option.option_index == 0 ? (-1)*equivalent_contracts*this_event.track_min_price : equivalent_contracts*this_event.track_max_price;
+						}
+						else if (this_event.payout_rule == "linear") {
+							if (this_option.option_index == 1) {
+								preview_content += "-";
+							}
 
-								if (this_option.option_index == 1) {
-									preview_content += "-";
-								}
+							preview_content += this.format_coins(equivalent_contracts/Math.pow(10,games[0].decimal_places))+" "+this_event.track_name_short;
 
-								preview_content += this.format_coins(equivalent_contracts/Math.pow(10,games[0].decimal_places))+" "+this_event.track_name_short;
-
-								if (borrow_delta != 0) {
-									var borrow_delta_abs = Math.abs(borrow_delta);
-									preview_content += " "+(this_option.option_index == 1 ? "+" : "-")+" ";
-									preview_content += this.format_coins(borrow_delta_abs/Math.pow(10,games[0].decimal_places))+" "+games[0].coin_abbreviation;
-								}
+							if (borrow_delta != 0) {
+								var borrow_delta_abs = Math.abs(borrow_delta);
+								preview_content += " "+(this_option.option_index == 1 ? "+" : "-")+" ";
+								preview_content += this.format_coins(borrow_delta_abs/Math.pow(10,games[0].decimal_places))+" "+games[0].coin_abbreviation;
 							}
 						}
 					}
@@ -2733,6 +2773,51 @@ var PageManager = function() {
 				this.preview_principal_bet();
 			}.bind(this), 2000);
 		}
+	}
+	this.principal_option_selected = function(option_id) {
+		$('#principal_option_id_'+games[0].instance_id).val(option_id);
+		if (this.current_principal_spec_type == "receive_position") {
+			$('#receive_position').val("");
+			$('#principal_amount').val("");
+		}
+
+		var this_event = null;
+		var this_option = null;
+		for (var event_pos=0; event_pos<games[0].events.length; event_pos++) {
+			if (typeof games[0].events[event_pos].option_id2option_index[option_id] != "undefined") {
+				this_event = games[0].events[event_pos];
+				this_option = this_event.options[games[0].events[event_pos].option_id2option_index[option_id]];
+			}
+		}
+		if (this_event && this_option) {
+			if (this_event.payout_rule == "linear") {
+				var buy_or_sell = this_option.option_index == 0 ? 'buy' : 'sell';
+				var optionsAsString = '<option value="spend_amount">Quantity of '+games[0].coin_name_plural+' to spend</option>';
+				optionsAsString += '<option value="receive_position">Quantity of '+this_event.track_name_short+' to '+buy_or_sell+'</option>';
+
+				$("#principal_spec_type").find('option').remove().end().append($(optionsAsString));
+				$("#principal_spec_type").val(this.current_principal_spec_type);
+
+				$('#receive_position_label').html("How many "+this_event.track_name_short+" do you want to "+buy_or_sell+"?");
+				$('#receive_position_abbreviation').html(this_event.track_name_short);
+			}
+			else {
+				$('#principal_spec_type').val("spend_amount");
+				this.principalSpecTypeChanged();
+			}
+		}
+	}
+	this.current_principal_spec_type = 'spend_amount';
+	this.principalSpecTypeChanged = function() {
+		$('#receive_position').val("");
+
+		if ($('#principal_spec_type').val() == "receive_position") {
+			$('#receive_position_section').slideDown('fast');
+		}
+		else {
+			$('#receive_position_section').hide();
+		}
+		this.current_principal_spec_type = $('#principal_spec_type').val();
 	}
 	this.scroll_to_event_index_on_refresh = null;
 	this.submit_principal_bet = function() {
@@ -2751,8 +2836,13 @@ var PageManager = function() {
 			},
 			context: this,
 			success: function(principal_bet_response) {
-				this.clear_principal_bet();
+				$('#principal_bet_btn').html('<i class="fas fa-check-circle"></i> &nbsp; Confirm Bet');
+
 				$('#principal_bet_message').html(principal_bet_response.message);
+				$('#principal_bet_message').show();
+
+				if (principal_bet_response.status_code == 1) this.clear_principal_bet();
+
 				setTimeout(function() {
 					$('#principal_bet_message').slideUp('fast');
 				}, 10000);
@@ -2760,9 +2850,9 @@ var PageManager = function() {
 		});
 	}
 	this.clear_principal_bet = function() {
+		$('#receive_position').val("");
 		$('#principal_amount').val("");
 		$('#principal_option_id_0').val("");
-		$('#principal_bet_btn').html('<i class="fas fa-check-circle"></i> &nbsp; Confirm Bet');
 	}
 	this.save_featured_strategy = function() {
 		var featured_strategy_id = $("input[name='featured_strategy_id']:checked").val();

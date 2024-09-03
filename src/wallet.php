@@ -686,10 +686,30 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 							
 							<form method="get" onsubmit="thisPageManager.submit_principal_bet(); return false;" style="clear: both;">
 								<div class="form-group">
+									<label for="principal_spec_type">How do you want to specify your bet?</label>
+									<div class="row">
+										<div class="col-sm-6">
+											<select class="form-control" id="principal_spec_type" onChange="thisPageManager.principalSpecTypeChanged();">
+												<option value="spend_amount">Quantity of <?php echo $game->db_game['coin_name_plural']; ?> to spend</option>
+												<option value="receive_position">Position to receive</option>
+											</select>
+										</div>
+									</div>
+								</div>
+								<div class="form-group" id="receive_position_section" style="display: none;">
+									<label for="receive_position" id="receive_position_label">How many mimed assets do you want to receive?</label>
+									<div class="row">
+										<div class="col-sm-6">
+											<input class="form-control" type="text" id="receive_position" name="receive_position" style="text-align: right;" />
+										</div>
+										<div class="col-sm-6 form-control-static" id="receive_position_abbreviation"></div>
+									</div>
+								</div>
+								<div class="form-group">
 									<label for="principal_amount">How much do you want to bet?</label>
 									<div class="row">
 										<div class="col-sm-6">
-											<input class="form-control" type="text" id="principal_amount" name="principal_amount" style="text-align: right;" required />
+											<input class="form-control" type="text" id="principal_amount" name="principal_amount" style="text-align: right;" required onFocus="$('#principal_spec_type').val('spend_amount'); thisPageManager.principalSpecTypeChanged();" />
 										</div>
 										<div class="col-sm-6 form-control-static">
 											<?php echo $game->db_game['coin_name_plural']; ?>
