@@ -382,6 +382,7 @@ if ($uri_parts[1] == "api") {
 			if ($uri_parts[3] == "info") {
 				$api_output['status_code'] = 1;
 				$api_output['last_block_id'] = $game->last_block_id();
+				$api_output['game_definition'] = $game->db_game['cached_definition_hash'];
 			}
 			else if ($uri_parts[3] == "definition") {
 				if (!empty($_REQUEST['definition_hash'])) {

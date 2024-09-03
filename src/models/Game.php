@@ -4277,7 +4277,7 @@ class Game {
 					}
 					else {
 						if ($print_debug) $this->blockchain->app->print_debug("Peer is missing checksum for TXO #".$txo_pos.", skipping sync check.");
-						return [null, false];
+						return [null, null];
 					}
 				}
 				else $checksum_section_ok = true;
