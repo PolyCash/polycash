@@ -1424,7 +1424,10 @@ class Blockchain {
 		$last_block = $this->fetch_block_by_id($last_block_id);
 		
 		if (!$last_block && $last_block_id > 1) {
-			if ($print_debug) $this->app->print_debug("Previous block ".$last_block_id." does not exist.");
+			$last_complete_block_id = $this->last_complete_block_id();
+			$message = $this->app->log_message("Previous block ".$last_block_id." is missing while loading blocks for ".$this->db_blockchain['blockchain_name'].", changing to: ".$last_complete_block_id);
+			if ($print_debug) $this->app->print_debug($message);
+			$this->set_last_complete_block($last_complete_block_id);
 			return false;
 		}
 		

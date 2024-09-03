@@ -2902,8 +2902,6 @@ var PageManager = function() {
 				context: this,
 				success: function(previewResponse) {
 					this.previewApplyDefInProgress = false;
-					console.log('loaded migration preview');
-					console.log(previewResponse);
 					$('#preview_apply_def_link').html("Preview Changes");
 					$('#migration_modal').modal('show');
 					$('#migration_modal_content').html(previewResponse);
