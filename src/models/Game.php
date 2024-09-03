@@ -1396,7 +1396,7 @@ class Game {
 			$event_ids .= $event->db_event['event_id'].",";
 			
 			$js .= '
-			games['.$game_index.'].events['.$i.'] = new GameEvent(games['.$game_index.'], '.$i.', '.$event->db_event['event_id'].', '.$event->db_event['event_index'].', '.$event->db_event['num_options'].', "'.$event->db_event['vote_effectiveness_function'].'", "'.$event->db_event['effectiveness_param1'].'", "'.$event->db_event['option_block_rule'].'", '.$this->blockchain->app->quote_escape($event->db_event['event_name']).', '.$event->db_event['event_starting_block'].', '.$event->db_event['event_final_block'].', '.$event->db_event['payout_rate'].');'."\n";
+			games['.$game_index.'].events['.$i.'] = new GameEvent(games['.$game_index.'], '.$i.', '.$event->db_event['event_id'].', '.$event->db_event['event_index'].', '.$event->db_event['num_options'].', "'.$event->db_event['vote_effectiveness_function'].'", "'.$event->db_event['effectiveness_param1'].'", "'.$event->db_event['option_block_rule'].'", '.$this->blockchain->app->quote_escape($event->db_event['event_name']).', '.$event->db_event['event_starting_block'].', '.$event->db_event['event_final_block'].', '.$event->db_event['payout_rate'].', \''.$event->db_event['payout_rule'].'\', \''.$event->db_event['track_min_price'].'\', \''.$event->db_event['track_max_price'].'\', \''.$event->db_event['track_name_short'].'\');'."\n";
 			
 			$options_by_event = $this->blockchain->app->fetch_options_by_event($event->db_event['event_id'], true);
 			
@@ -1496,7 +1496,7 @@ class Game {
 		
 		while ($db_event = $relevant_events->fetch()) {
 			$js .= "if (typeof games[".$game_index."].all_events[".$db_event['event_index']."] == 'undefined') {";
-			$js .= "games[".$game_index."].all_events[".$db_event['event_index']."] = new GameEvent(games[".$game_index."], ".$i.", ".$db_event['event_id'].", ".$db_event['num_options'].', "'.$db_event['vote_effectiveness_function'].'", "'.$db_event['effectiveness_param1'].'", "'.$db_event['option_block_rule'].'", '.$this->blockchain->app->quote_escape($db_event['event_name']).', '.$db_event['event_starting_block'].', '.$db_event['event_final_block'].', '.$db_event['payout_rate'].');';
+			$js .= "games[".$game_index."].all_events[".$db_event['event_index']."] = new GameEvent(games[".$game_index."], ".$i.", ".$db_event['event_id'].", ".$db_event['num_options'].', "'.$db_event['vote_effectiveness_function'].'", "'.$db_event['effectiveness_param1'].'", "'.$db_event['option_block_rule'].'", '.$this->blockchain->app->quote_escape($db_event['event_name']).', '.$db_event['event_starting_block'].', '.$db_event['event_final_block'].', '.$db_event['payout_rate'].', \''.$db_event['payout_rule'].'\', \''.$db_event['track_min_price'].'\', \''.$db_event['track_max_price'].'\', \''.$db_event['track_name_short'].'\');';
 			$js .= "}\n";
 			
 			$options_by_event = $this->blockchain->app->fetch_options_by_event($db_event['event_id']);

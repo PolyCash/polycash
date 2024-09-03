@@ -328,6 +328,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					echo ', "'.$game->db_game['url_identifier'].'"';
 					echo ', "'.$game->db_game['coin_name'].'"';
 					echo ', "'.$game->db_game['coin_name_plural'].'"';
+					echo ', "'.$game->db_game['coin_abbreviation'].'"';
 					echo ', "'.$game->blockchain->db_blockchain['coin_name'].'"';
 					echo ', "'.$game->blockchain->db_blockchain['coin_name_plural'].'"';
 					echo ', "explorer", false';
