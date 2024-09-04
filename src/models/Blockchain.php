@@ -1920,7 +1920,7 @@ class Blockchain {
 	}
 	
 	public function render_transactions_in_block(&$block, $unconfirmed_only) {
-		if (!$unconfirmed_only && $block['locally_saved'] == 1 && !empty($block['transactions_html'])) return $block['transactions_html'];
+		if (AppSettings::cacheRenderBlocksInExplorer() && !$unconfirmed_only && $block['locally_saved'] == 1 && !empty($block['transactions_html'])) return $block['transactions_html'];
 		else {
 			$log_text = "";
 			
@@ -1942,7 +1942,7 @@ class Blockchain {
 				$log_text .= $this->render_transaction($transaction, false, false);
 			}
 			
-			if (!$unconfirmed_only && $block['locally_saved'] == 1) {
+			if (AppSettings::cacheRenderBlocksInExplorer() && !$unconfirmed_only && $block['locally_saved'] == 1) {
 				$this->app->run_query("UPDATE blocks SET transactions_html=:transactions_html WHERE internal_block_id=:internal_block_id;", [
 					'transactions_html' => $log_text,
 					'internal_block_id' => $block['internal_block_id']

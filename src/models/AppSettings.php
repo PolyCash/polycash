@@ -244,5 +244,9 @@ class AppSettings {
 		if ($maxSec === null) return 60*30;
 		else return (int) $maxSec;
 	}
+
+	public static function cacheRenderBlocksInExplorer() {
+		return !empty(self::getParam("cache_render_blocks_in_explorer"));
+	}
 }
 ?>

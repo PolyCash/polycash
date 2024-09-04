@@ -228,6 +228,7 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 											<?php
 										}
 										?>
+										<option value="delete_from_block">Reset blockchain from height</option>
 										<option value="see_definition">See definition</option>
 										<?php
 										if ($blockchain->db_blockchain['p2p_mode'] == "rpc") { ?>
@@ -514,6 +515,16 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 				var confirm_ok = false;
 				
 				if (action == "set_rpc_credentials" || action == "see_definition" || action == "manage_unclaimed" || action == "check_errors") confirm_ok = true;
+				else if (action == "delete_from_block") {
+					var delete_from_block = prompt("What block height would you like to reset the blockchain from?");
+					if (delete_from_block !== null) {
+						if (parseInt(delete_from_block) > 0) {
+							delete_from_block = parseInt(delete_from_block);
+							confirm_ok = true;
+						}
+						else alert("Please enter a valid block height.");
+					}
+				}
 				else {
 					var confirm_message = "Are you sure you want to ";
 					if (action == "reset") confirm_message += "reset "+blockchain_name+"?";
@@ -537,6 +548,18 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 						this.current_error_check_blockchain_id = blockchain_id;
 						this.regularlyRenderingChecks = true;
 						this.regularlyRenderBlockchainChecks();
+					}
+					else if (action == "delete_from_block") {
+						$.ajax({
+							url: "/ajax/delete_blockchain_from_block.php",
+							data: {
+								blockchain_id: blockchain_id,
+								block_id: delete_from_block,
+							},
+							success: function(delete_response) {
+								alert(delete_response.message);
+							}
+						});
 					}
 					else if (action == "manage_unclaimed") {
 						$.ajax({
