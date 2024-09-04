@@ -665,7 +665,7 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 										<b>Inputs:</b><div style="display: none; margin-left: 20px;" id="input_amount_sum"></div><div style="display: inline-block; margin-left: 20px;" id="input_vote_sum"></div><br/>
 										<p>
 											How many <?php echo $game->db_game['coin_name_plural']; ?> do you want to bet?
-											<input class="form-control input-sm" id="compose_burn_amount" placeholder="0" onKeyDown="setTimeout(function(){thisPageManager.set_input_amount_sums(); thisPageManager.refresh_output_amounts();}, 50);" /><font id="max_burn_amount"></font>
+											<input class="form-control input-sm" id="compose_burn_amount" placeholder="0" autocomplete="off" onKeyDown="setTimeout(function(){thisPageManager.set_input_amount_sums(); thisPageManager.refresh_output_amounts();}, 50);" /><font id="max_burn_amount"></font>
 										</p>
 										<p id="compose_input_start_msg"></p>
 									</div>
@@ -700,7 +700,7 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 									<label for="receive_position" id="receive_position_label"></label>
 									<div class="row">
 										<div class="col-sm-6">
-											<input class="form-control" type="text" id="receive_position" name="receive_position" style="text-align: right;" />
+											<input class="form-control" type="text" id="receive_position" name="receive_position" style="text-align: right;" autocomplete="off" />
 										</div>
 										<div class="col-sm-6 form-control-static" id="receive_position_abbreviation"></div>
 									</div>
@@ -709,7 +709,7 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 									<label for="principal_amount">How much do you want to bet?</label>
 									<div class="row">
 										<div class="col-sm-6">
-											<input class="form-control" type="text" id="principal_amount" name="principal_amount" style="text-align: right;" required onFocus="if (thisPageManager.current_principal_spec_type == 'receive_position' && $('#principal_amount').val() != '') {$('#principal_spec_type').val('spend_amount'); thisPageManager.principal_spec_type_changed();}" />
+											<input class="form-control" type="text" id="principal_amount" name="principal_amount" style="text-align: right;" autocomplete="off" required onFocus="if (thisPageManager.current_principal_spec_type == 'receive_position' && $('#principal_amount').val() != '') {$('#principal_spec_type').val('spend_amount'); thisPageManager.principal_spec_type_changed();}" />
 										</div>
 										<div class="col-sm-6 form-control-static">
 											<?php echo $game->db_game['coin_name_plural']; ?>

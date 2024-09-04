@@ -2791,14 +2791,16 @@ var PageManager = function() {
 		}
 
 		$('#principal_option_id_'+games[0].instance_id).val(option_id);
-		this.current_principal_option_id = option_id;
-
-		[this_event, this_option] = games[0].get_event_and_option_from_option_id(option_id);
+		this.current_principal_option_id = option_id === "" ? null : option_id;
 
 		this.refresh_principal_spec_type_options();
 
-		if (this_event && this_event.payout_rule == "binary") {
-			$('#principal_spec_type').val("spend_amount");
+		if (option_id !== "") {
+			[this_event, this_option] = games[0].get_event_and_option_from_option_id(option_id);
+
+			if (this_event && this_event.payout_rule == "binary") {
+				$('#principal_spec_type').val("spend_amount");
+			}
 		}
 
 		this.principal_spec_type_changed();
