@@ -1,4 +1,9 @@
-  </div>
+		<?php
+		if (!empty($thisuser) && $app->user_is_admin($thisuser)) {
+			echo '<div class="loadtime_footer">Loaded in '.round(microtime(true)-$pageload_start_time, 6)." sec</div>";
+		}
+		?>
+	</div>
 </div>
 <div style="display: none;" id="chatWindowTemplate">
 	<div class="chatWindowHeader" id="chatWindowHeaderCHATID">
