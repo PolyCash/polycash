@@ -368,12 +368,6 @@ class App {
 				if (is_resource($my_addresses_process)) $process_count++;
 				else $html .= "Failed to start processing my addresses for ".$sync_blockchain['blockchain_name'].".\n";
 				sleep(0.02);
-		
-				$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/remove_untrusted_transactions.php" blockchain_id='.$sync_blockchain['blockchain_id'];
-				$remove_untrusted_process = $this->run_shell_command($cmd, $print_debug);
-				if (is_resource($remove_untrusted_process)) $process_count++;
-				else $html .= "Failed to start a process for removing untrusted transactions for ".$sync_blockchain['blockchain_name'].".\n";
-				sleep(0.02);
 
 				$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/remove_unconfirmable_transactions.php" blockchain_id='.$sync_blockchain['blockchain_id'];
 				$remove_unconfirmable_process = $this->run_shell_command($cmd, $print_debug);
@@ -3910,7 +3904,7 @@ class App {
 		$account = $this->fetch_account_by_id($account_id);
 		
 		CurrencyAccount::updateAccount($this, $account, [
-			'account_value' => $account_value,
+			'last_notified_account_value' => $account_value,
 		]);
 	}
 	

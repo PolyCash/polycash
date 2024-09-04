@@ -1,4 +1,7 @@
 <?php
+/*
+die("This functionality is disabled.");
+
 require_once(dirname(dirname(__FILE__))."/includes/connect.php");
 
 $script_target_time = 295;
@@ -134,3 +137,4 @@ if ($app->running_as_admin()) {
 	else echo "Remove untrusted transactions process is already running.\n";
 }
 else echo "Please run this script as administrator\n";
+*/
