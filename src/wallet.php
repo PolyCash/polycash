@@ -405,7 +405,7 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 		thisPageManager.render_tx_fee();
 		thisPageManager.reload_compose_bets();
 		thisPageManager.set_select_add_output();
-		
+		thisPageManager.refresh_principal_spec_type_options();
 		<?php
 		if ($_REQUEST['action'] == "start_bet") {
 			?>
@@ -415,7 +415,10 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 				
 				if (show_event_pos !== null) {
 					games[0].scroll_to_event_by_pos(show_event_pos);
-					games[0].add_option_to_vote(show_event_pos, <?php echo (int)$_REQUEST['option_id']; ?>);
+					if (thisPageManager.betting_mode == "inflationary") {
+						games[0].add_option_to_vote(show_event_pos, <?php echo (int)$_REQUEST['option_id']; ?>);
+					}
+					else thisPageManager.principal_option_selected(<?php echo (int)$_REQUEST['option_id']; ?>);
 				}
 			});
 			<?php
@@ -689,15 +692,12 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 									<label for="principal_spec_type">How do you want to specify your bet?</label>
 									<div class="row">
 										<div class="col-sm-6">
-											<select class="form-control" id="principal_spec_type" onChange="thisPageManager.principalSpecTypeChanged();">
-												<option value="spend_amount">Quantity of <?php echo $game->db_game['coin_name_plural']; ?> to spend</option>
-												<option value="receive_position">Position to receive</option>
-											</select>
+											<select class="form-control" id="principal_spec_type" onChange="thisPageManager.principal_spec_type_changed();"></select>
 										</div>
 									</div>
 								</div>
 								<div class="form-group" id="receive_position_section" style="display: none;">
-									<label for="receive_position" id="receive_position_label">How many mimed assets do you want to receive?</label>
+									<label for="receive_position" id="receive_position_label"></label>
 									<div class="row">
 										<div class="col-sm-6">
 											<input class="form-control" type="text" id="receive_position" name="receive_position" style="text-align: right;" />
@@ -709,7 +709,7 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 									<label for="principal_amount">How much do you want to bet?</label>
 									<div class="row">
 										<div class="col-sm-6">
-											<input class="form-control" type="text" id="principal_amount" name="principal_amount" style="text-align: right;" required onFocus="$('#principal_spec_type').val('spend_amount'); thisPageManager.principalSpecTypeChanged();" />
+											<input class="form-control" type="text" id="principal_amount" name="principal_amount" style="text-align: right;" required onFocus="if (thisPageManager.current_principal_spec_type == 'receive_position' && $('#principal_amount').val() != '') {$('#principal_spec_type').val('spend_amount'); thisPageManager.principal_spec_type_changed();}" />
 										</div>
 										<div class="col-sm-6 form-control-static">
 											<?php echo $game->db_game['coin_name_plural']; ?>
@@ -720,7 +720,7 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 									<label for="principal_option_id_0">Which option do you want to bet for?</label>
 									<div class="row">
 										<div class="col-sm-6">
-											<select class="form-control" id="principal_option_id_0" name="principal_option_id"></select>
+											<select class="form-control" id="principal_option_id_0" name="principal_option_id" onChange="thisPageManager.principal_option_selected(this.value);"></select>
 										</div>
 									</div>
 								</div>

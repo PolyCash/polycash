@@ -231,6 +231,19 @@ var Game = function(pageManager, game_id, last_block_id, last_transaction_id, ma
 	this.block_to_round = function(block_id) {
 		return Math.ceil(block_id/this.game_round_length);
 	};
+	this.get_event_and_option_from_option_id = function(option_id) {
+		var this_event = null;
+		var this_option = null;
+
+		for (var event_pos=0; event_pos<this.events.length; event_pos++) {
+			if (typeof this.events[event_pos].option_id2option_index[option_id] != "undefined") {
+				this_event = this.events[event_pos];
+				this_option = this_event.options[this.events[event_pos].option_id2option_index[option_id]];
+			}
+		}
+
+		return [this_event, this_option];
+	};
 	this.add_option_to_vote = function(event_index, option_id) {
 		var this_event = this.events[event_index];
 		var this_option = this_event.options[this_event.option_id2option_index[option_id]];
@@ -2703,18 +2716,12 @@ var PageManager = function() {
 
 			var principal_option_id = $('#principal_option_id_0').val();
 			if (principal_option_id) {
-				var this_event = null;
-				var this_option = null;
-				for (var event_pos=0; event_pos<games[0].events.length; event_pos++) {
-					if (typeof games[0].events[event_pos].option_id2option_index[principal_option_id] != "undefined") {
-						this_event = games[0].events[event_pos];
-						this_option = this_event.options[games[0].events[event_pos].option_id2option_index[principal_option_id]];
-					}
-				}
+				[this_event, this_option] = games[0].get_event_and_option_from_option_id(principal_option_id);
+
 				if (this_event && this_option) {
 					var principal_input_error = false;
 
-					if (this.current_principal_spec_type == "receive_position") {
+					if (this.current_principal_spec_type == "receive_position" && this_event.payout_rule == "linear") {
 						if ($('#receive_position').val() != "") {
 							var receive_position = parseFloat($('#receive_position').val());
 							if (receive_position > 0) {
@@ -2775,49 +2782,75 @@ var PageManager = function() {
 		}
 	}
 	this.principal_option_selected = function(option_id) {
-		$('#principal_option_id_'+games[0].instance_id).val(option_id);
-		if (this.current_principal_spec_type == "receive_position") {
+		if (this.current_principal_option_id !== null) {
 			$('#receive_position').val("");
-			$('#principal_amount').val("");
-		}
 
-		var this_event = null;
-		var this_option = null;
-		for (var event_pos=0; event_pos<games[0].events.length; event_pos++) {
-			if (typeof games[0].events[event_pos].option_id2option_index[option_id] != "undefined") {
-				this_event = games[0].events[event_pos];
-				this_option = this_event.options[games[0].events[event_pos].option_id2option_index[option_id]];
+			if (this.current_principal_spec_type == "receive_position") {
+				$('#principal_amount').val("");
 			}
 		}
-		if (this_event && this_option) {
-			if (this_event.payout_rule == "linear") {
-				var buy_or_sell = this_option.option_index == 0 ? 'buy' : 'sell';
-				var optionsAsString = '<option value="spend_amount">Quantity of '+games[0].coin_name_plural+' to spend</option>';
-				optionsAsString += '<option value="receive_position">Quantity of '+this_event.track_name_short+' to '+buy_or_sell+'</option>';
 
-				$("#principal_spec_type").find('option').remove().end().append($(optionsAsString));
-				$("#principal_spec_type").val(this.current_principal_spec_type);
+		$('#principal_option_id_'+games[0].instance_id).val(option_id);
+		this.current_principal_option_id = option_id;
 
-				$('#receive_position_label').html("How many "+this_event.track_name_short+" do you want to "+buy_or_sell+"?");
-				$('#receive_position_abbreviation').html(this_event.track_name_short);
-			}
-			else {
-				$('#principal_spec_type').val("spend_amount");
-				this.principalSpecTypeChanged();
-			}
+		[this_event, this_option] = games[0].get_event_and_option_from_option_id(option_id);
+
+		this.refresh_principal_spec_type_options();
+
+		if (this_event && this_event.payout_rule == "binary") {
+			$('#principal_spec_type').val("spend_amount");
 		}
+
+		this.principal_spec_type_changed();
 	}
+	this.current_principal_option_id = null;
 	this.current_principal_spec_type = 'spend_amount';
-	this.principalSpecTypeChanged = function() {
-		$('#receive_position').val("");
-
+	this.principal_spec_type_changed = function() {
 		if ($('#principal_spec_type').val() == "receive_position") {
 			$('#receive_position_section').slideDown('fast');
+			setTimeout(function() {
+				$('#receive_position').focus();
+			}, 200);
 		}
 		else {
 			$('#receive_position_section').hide();
+			setTimeout(function() {
+				$('#principal_amount').focus();
+			}, 200);
 		}
 		this.current_principal_spec_type = $('#principal_spec_type').val();
+	}
+	this.refresh_principal_spec_type_options = function() {
+		var option_id = $('#principal_option_id_'+games[0].instance_id).val();
+
+		var this_event = null;
+		var this_option = null;
+
+		if (option_id !== "") {
+			[this_event, this_option] = games[0].get_event_and_option_from_option_id(option_id);
+		}
+
+		if (this_event && this_option && this_event.payout_rule == "linear") {
+			var buy_or_sell = this_option.option_index == 0 ? 'buy' : 'sell';
+			var optionsAsString = '<option value="spend_amount">Quantity of '+games[0].coin_name_plural+' to spend</option>';
+			optionsAsString += '<option value="receive_position">Quantity of '+this_event.track_name_short+' to '+buy_or_sell+'</option>';
+
+			$("#principal_spec_type").find('option').remove().end().append($(optionsAsString));
+			$("#principal_spec_type").val(this.current_principal_spec_type);
+
+			$('#receive_position_label').html("How many "+this_event.track_name_short+" do you want to "+buy_or_sell+"?");
+			$('#receive_position_abbreviation').html(this_event.track_name_short);
+		}
+		else {
+			var optionsAsString = '<option value="spend_amount">Quantity of '+games[0].coin_name_plural+' to spend</option>';
+			optionsAsString += '<option value="receive_position">Position to receive</option>';
+
+			$("#principal_spec_type").find('option').remove().end().append($(optionsAsString));
+			$("#principal_spec_type").val(this.current_principal_spec_type);
+
+			$('#receive_position_label').html("How many mimed assets do you want to receive?");
+			$('#receive_position_abbreviation').html("");
+		}
 	}
 	this.scroll_to_event_index_on_refresh = null;
 	this.submit_principal_bet = function() {
@@ -2853,6 +2886,7 @@ var PageManager = function() {
 		$('#receive_position').val("");
 		$('#principal_amount').val("");
 		$('#principal_option_id_0').val("");
+		this.current_principal_option_id = null;
 	}
 	this.save_featured_strategy = function() {
 		var featured_strategy_id = $("input[name='featured_strategy_id']:checked").val();
