@@ -13,7 +13,7 @@ if ($thisuser && $app->user_is_admin($thisuser)) {
 			$blockchain->delete_blocks_from_height($block['block_id']);
 			$app->output_message(1, "Successfully deleted ".$blockchain->db_blockchain['blockchain_name']." from height #".$block['block_id']);
 		}
-		else $app->output_message(3, "Failed to fetch block #".$block_id.".");
+		else $app->output_message(4, "Failed to fetch block #".$block_id.".");
 	}
 	else $app->output_message(3, "Please reset this blockchain from block #".$blockchain->db_blockchain['first_required_block']." or higher.");
 }
