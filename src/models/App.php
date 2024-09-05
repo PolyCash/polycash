@@ -1257,28 +1257,7 @@ class App {
 		
 		return $db_image;
 	}
-	
-	public function delete_unconfirmable_transactions() {
-		$start_time = microtime(true);
-		$unconfirmed_tx_r = $this->run_query("SELECT * FROM transactions t JOIN blockchains b ON t.blockchain_id=b.blockchain_id WHERE b.online=1 AND t.block_id IS NULL AND t.transaction_desc='transaction' ORDER BY t.blockchain_id ASC;");
-		$game_id = false;
-		$delete_count = 0;
-		
-		while ($unconfirmed_tx = $unconfirmed_tx_r->fetch()) {
-			$blockchain = new Blockchain($this, $unconfirmed_tx['blockchain_id']);
-			
-			$coins_in = $this->transaction_coins_in($unconfirmed_tx['transaction_id']);
-			$coins_out = $this->transaction_coins_out($unconfirmed_tx['transaction_id']);
-			
-			if ($coins_in == 0 || $coins_out > $coins_in) {
-				$success = $blockchain->delete_transaction($unconfirmed_tx);
 
-				if ($success) $delete_count++;
-			}
-		}
-		return "Took ".(microtime(true)-$start_time)." sec to delete $delete_count unconfirmable transactions.";
-	}
-	
 	public function game_info_table(&$db_game) {
 		$html = '<div class="game_info_table">';
 		
@@ -1974,7 +1953,6 @@ class App {
 				
 				$error_message = "Successfully imported the ".$blockchain_def->blockchain_name." blockchain. ";
 				if ($blockchain->db_blockchain['p2p_mode'] == "rpc") $error_message .= "Next please <a href=\"/manage_blockchains/?prompt_action=set_rpc_credentials&blockchain_id=".$blockchain->db_blockchain['blockchain_id']."\">set RPC credentials for ".$blockchain_def->blockchain_name."</a>";
-				else $error_message .= "Next please <a href=\"/scripts/sync_blockchain_initial.php?key=".AppSettings::getParam('operator_key')."&blockchain_id=".$blockchain_id."\">initialize ".$blockchain_def->blockchain_name."</a>";
 				
 				return $blockchain_id;
 			}

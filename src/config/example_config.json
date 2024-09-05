@@ -31,6 +31,7 @@
 	"restrict_ip_address": false,
 	"limited_navigation": false,
 	"cache_render_blocks_in_explorer": false,
+	"allow_run_scripts_by_url": false,
 	"memory_limit": "1024M",
 	"only_user_username": "admin",
 	"only_user_password": null,

@@ -5,7 +5,7 @@ require(AppSettings::srcPath()."/includes/get_session.php");
 $allowed_params = ['blockchain_id', 'block_id', 'print_debug'];
 $app->safe_merge_argv_to_request($argv, $allowed_params);
 
-if ($app->running_as_admin() || $app->user_is_admin($thisuser)) {
+if ($app->running_as_admin() || ($app->user_is_admin($thisuser) && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token']))) {
 	set_time_limit(0);
 	$start_time = microtime(true);
 	

@@ -23,25 +23,24 @@ if ($app->running_as_admin()) {
 		$first_severe_error_block = false;
 		$last_block_id = $game->last_block_id();
 		
-		echo "Last game block loaded was #".$last_block_id."<br/>\n";
+		echo "Last game block loaded was #".$last_block_id."\n";
 		
 		$check_unconfirmed_transactions = $app->run_query("SELECT * FROM transactions WHERE blockchain_id=:blockchain_id AND transaction_desc='transaction' AND block_id IS NULL;", [
 			'blockchain_id' => $blockchain->db_blockchain['blockchain_id']
 		])->fetchAll();
 		
-		echo "Checking ".count($check_unconfirmed_transactions)." unconfirmed transactions in ".$blockchain->db_blockchain['blockchain_name']."<br/>\n";
+		echo "Checking ".count($check_unconfirmed_transactions)." unconfirmed transactions in ".$blockchain->db_blockchain['blockchain_name']."\n";
 		
 		foreach ($check_unconfirmed_transactions as $transaction) {
 			$coins_in = $app->transaction_coins_in($transaction['transaction_id']);
 			$coins_out = $app->transaction_coins_out($transaction['transaction_id']);
 			
 			if ((string) $coins_in !== (string) $coins_out) {
-				echo "TX ".$transaction['tx_hash']." has ".$coins_in." coins in, ".$coins_out." coins out.<br/>\n";
+				echo "TX ".$transaction['tx_hash']." has ".$coins_in." coins in, ".$coins_out." coins out.\n";
 				
 				if ($coins_in == 0) {
-					echo "Deleting ".$transaction['tx_hash']." ...<br/>\n";
-					$app->run_query("DELETE FROM transaction_ios WHERE create_transaction_id=:transaction_id;", ['transaction_id' => $transaction['transaction_id']]);
-					$app->run_query("DELETE FROM transactions WHERE transaction_id=:transaction_id;", ['transaction_id' => $transaction['transaction_id']]);
+					echo "Deleting ".$transaction['tx_hash']." ...\n";
+					$delete_successful = $blockchain->delete_transaction($transaction);
 				}
 			}
 		}
@@ -51,7 +50,7 @@ if ($app->running_as_admin()) {
 			'ref_block_id' => $game->last_block_id()
 		])->fetchAll();
 		
-		echo "Checking ".count($check_game_transactions)." transactions for ".$game->db_game['name']."<br/>\n";
+		echo "Checking ".count($check_game_transactions)." transactions for ".$game->db_game['name']."\n";
 		$severe_threshold = 50;
 		
 		foreach ($check_game_transactions as $transaction) {
@@ -60,24 +59,24 @@ if ($app->running_as_admin()) {
 			
 			if (($coins_in == 0 || $coins_out == 0) || $coins_in < $coins_out || $coins_in-$coins_out > $severe_threshold) {
 				if (!$first_error_block) $first_error_block = $transaction['block_id'];
-				echo 'Block '.$transaction['block_id'].' <a href="/explorer/games/'.$game->db_game['url_identifier'].'/transactions/'.$transaction['transaction_id'].'">TX '.$transaction['transaction_id'].'</a> has '.((string) $coins_in).' coins in and '.((string) $coins_out).' coins out.';
+				echo 'Block '.$transaction['block_id'].' TX '.$transaction['transaction_id'].' has '.((string) $coins_in).' coins in and '.((string) $coins_out).' coins out.';
 				if (abs($coins_in-$coins_out) > $severe_threshold) {
 					if ($first_severe_error_block === false) $first_severe_error_block = $transaction['block_id'];
-					echo "<b>Severe</b>";
+					echo " (Severe)";
 				}
-				echo '<br/>';
+				echo "\n";
 				$error_count++;
 			}
 		}
 		
-		echo $error_count." errors.<br/>\n";
+		echo $error_count." errors.\n";
 		
 		if ($first_error_block) {
 			$reset_block = min($first_error_block, $last_block_id+1);
 			
-			echo "First error was on block #".$first_error_block.", please <a href=\"/scripts/reset_game.php?game_id=".$game->db_game['game_id']."&key=".AppSettings::getParam('operator_key')."&block_id=".$reset_block."\">reset the game from block ".$reset_block."</a>";
-			if ($first_severe_error_block !== false) echo " or <a href=\"/scripts/reset_game.php?game_id=".$game->db_game['game_id']."&key=".AppSettings::getParam('operator_key')."&block_id=".$first_severe_error_block."\">reset the game from block ".$first_severe_error_block."</a>";
-			echo "<br/>\n";
+			echo "First error was on block #".$first_error_block.", please reset the game from block ".$reset_block;
+			if ($first_severe_error_block !== false) echo " or reset the game from block ".$first_severe_error_block;
+			echo "\n";
 		}
 	}
 	echo "Done!\n";

@@ -84,18 +84,24 @@ else {
 		$requested_filename = substr($uri, 0, $extension_pos).".php";
 	}
 	else $requested_filename = false;
-	
+
 	if ($requested_filename && is_file($src_path.$requested_filename)) {
+		$whitelisted_scripts = [
+			$src_path."/scripts/main.php",
+			$src_path."/scripts/reset_blockchain.php",
+			$src_path."/scripts/verify_api.php",
+		];
+
 		$whitelisted_directories = [
 			$src_path,
 			$src_path."/ajax",
 			$src_path."/cron",
-			$src_path."/scripts",
 			$src_path."/strategies",
-			$src_path."/tests"
 		];
-		
-		if (in_array(dirname($src_path.$requested_filename), $whitelisted_directories) || dirname(dirname($src_path.$requested_filename)) == $src_path."/modules") {
+
+		if (AppSettings::allowRunScriptsByUrl()) array_push($whitelisted_directories, $src_path."/scripts");
+
+		if (in_array(dirname($src_path.$requested_filename), $whitelisted_directories) || in_array($src_path.$requested_filename, $whitelisted_scripts) || dirname(dirname($src_path.$requested_filename)) == $src_path."/modules") {
 			include($src_path.$requested_filename);
 		}
 		else Router::Send404();

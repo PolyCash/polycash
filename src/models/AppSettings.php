@@ -248,5 +248,9 @@ class AppSettings {
 	public static function cacheRenderBlocksInExplorer() {
 		return !empty(self::getParam("cache_render_blocks_in_explorer"));
 	}
+
+	public static function allowRunScriptsByUrl() {
+		return !empty(self::getParam("allow_run_scripts_by_url"));
+	}
 }
 ?>
