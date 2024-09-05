@@ -2816,8 +2816,8 @@ class Game {
 				}
 				
 				if ($io['payout_rule'] == "linear") {
-					$html .= " &nbsp; <a href=\"\" onclick=\"$('#gio_details_".$io['game_io_id']."').toggle('fast'); return false;\">Details</a>";
-					$html .= '<div style="display: none; border: 1px solid #ccc; padding: 5px;" id="gio_details_'.$io['game_io_id'].'">';
+					$html .= " &nbsp; <a href=\"\" onclick=\"$('#gio_details_".$in_out."_".$io['game_io_id']."').toggle('fast'); return false;\">Details</a>";
+					$html .= '<div style="display: none; border: 1px solid #ccc; padding: 5px;" id="gio_details_'.$in_out.'_'.$io['game_io_id'].'">';
 					
 					$html .= "Paid ".$this->display_coins($io['destroy_amount']+$inflation_stake);
 					$html .= ' @ $'.$this->blockchain->app->format_bignum($asset_price_usd, false);
