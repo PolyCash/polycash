@@ -553,6 +553,7 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 						$.ajax({
 							url: "/ajax/delete_blockchain_from_block.php",
 							data: {
+								synchronizer_token: this.synchronizer_token,
 								blockchain_id: blockchain_id,
 								block_id: delete_from_block,
 							},

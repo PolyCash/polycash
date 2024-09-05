@@ -59,6 +59,11 @@ Sync mode: Full
 Sync from block: 1
 ```
 
+## Make PolyCash Configuration Changes
+
+To make changes to your PolyCash installation, open your configuration file at polycash/src/config/config.json
+> /src/config/config.json
+
 ## Configure currency price oracles
 
 For full functionality in synthetic assets game, you should configure external price oracles for your currencies.  To configure oracles, enter configuration records in the "oracles" section of your src/config/config.json. By default, the coin-desk oracle should be configured for updating the Bitcoin price. The CoinDesk Bitcoin price API does not require an API key, but other oracles may.  If you have installed the Forex 128 game, you can use fcsapi.com as an oracle for currency prices.  After paying for FCS API, enter your API key in your oracle configuration by replacing MyApiKey as shown in this example configuration:
@@ -87,12 +92,17 @@ cd /var/www/html
 php src/cron/fetch_currency_prices.php force=1
 ```
 
-## Make PolyCash Configuration Changes
+## MySQL Configuration
 
-To make changes to your PolyCash installation, open your configuration file at polycash/src/config/config.json
-> /src/config/config.json
+If you have installed PolyCash with a method other than the default Docker installation, you may need to change MySQL configuration for good performance. You can increase the max allowed packet size, increase the allowed seconds for timeout and disable bin logs to avoid excessive disk usage. To do this, edit your MySQL configuration file which is typically located at /etc/mysql/conf.d/mysql.cnf
+```
+[mysqld]
+max_allowed_packet=1G
+innodb_lock_wait_timeout=1000
+disable_log_bin
+```
 
-### Change PolyCash Memory Limit
+## Change PolyCash Memory Limit
 
 If you run into memory problems, try changing your PolyCash process memory limit.  Edit src/config/config.json and set the "memory_limit" attribute to a value like "4096M"
 
