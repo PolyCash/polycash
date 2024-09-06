@@ -47,10 +47,10 @@ if ($app->running_as_admin()) {
 				
 				if ($set_partitions_error) {
 					$reset_message = "Resetting whole game due to partitions error.";
-					$app->log_message($reset_message." ".$set_partitions_error_message);
+					$app->log_message($reset_message." ".$set_partitions_error_message, true);
 					echo $reset_message."\n";
 					
-					$running_game->schedule_game_reset(null, null, null, null);
+					//$running_game->schedule_game_reset(null, null, null, null);
 				}
 				else {
 					$game_peers = $running_game->fetch_all_peers();

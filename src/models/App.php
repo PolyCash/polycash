@@ -101,9 +101,18 @@ class App {
 		$this->log_message($message);
 		throw new Exception($message);
 	}
-	
-	public function log_message($message) {
+
+	public function log_message($message, $email_to_admin=false) {
 		$this->run_insert_query("log_messages", ['message' => $message]);
+
+		if ($email_to_admin) {
+			$admin_user = $this->fetch_user_by_id($this->get_site_constant("admin_user_id"));
+			if ($admin_user) {
+				$admin_email = !empty($admin_user['notification_email']) ? $admin_user['notification_email'] : $admin_user['username'];
+				$this->mail_async($admin_email, AppSettings::getParam('site_name'), AppSettings::defaultFromEmailAddress(), "New log message", $message, "", "", "");
+			}
+		}
+
 		return $message;
 	}
 	
