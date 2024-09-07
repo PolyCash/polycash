@@ -467,7 +467,7 @@ class GameDefinition {
 			if (self::game_def_to_text($new_game_obj['events'][$i]) != $initial_event_text) {
 				// If only thing changed is outcome, only need to reset from the payout block
 				// otherwise need to reset from the event starting block.
-				
+
 				$new_event_no_outcome = clone $new_game_obj['events'][$i];
 				$initial_event_no_outcome = clone $initial_game_obj['events'][$i];
 				

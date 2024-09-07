@@ -45,9 +45,12 @@ if ($app->running_as_admin()) {
 						$defined_game_def_str = GameDefinition::get_game_definition_by_hash($app, $running_game->db_game['defined_cached_definition_hash']);
 
 						if ($actual_game_def_str && $defined_game_def_str) {
-							$actual_game_def = json_decode($actual_game_def_str, true);
-							$defined_game_def = json_decode($defined_game_def_str, true);
-							$log_message = GameDefinition::migrate_game_definitions($running_game, null, "apply_defined_to_actual", $show_internal_params=false, $actual_game_def, $defined_game_def);
+							$actual_game_def = json_decode($actual_game_def_str);
+							$defined_game_def = json_decode($defined_game_def_str);
+							$message = $app->log_message("Automatically applying defined to actual: ".$running_game->db_game['cached_definition_hash']." -> ".$running_game->db_game['defined_cached_definition_hash']);
+							if ($print_debug) $app->print_debug($message);
+							$migrate_message = GameDefinition::migrate_game_definitions($running_game, null, "apply_defined_to_actual", $show_internal_params=false, $actual_game_def, $defined_game_def);
+							if ($print_debug) $app->print_debug($migrate_message);
 						}
 						else {
 							$message = $app->log_message("Failed to apply defined (".$running_game->db_game['defined_cached_definition_hash'].") to actual (".$running_game->db_game['cached_definition_hash'].") for ".$running_game->db_game['name']." after failing to fetch defs.");
