@@ -388,7 +388,16 @@ class Game {
 	
 	public function reset_blocks_from_block($block_height) {
 		$this->blockchain->app->log_message("Resetting ".$this->db_game['name']." from block ".$block_height);
-		
+
+		$prev_block = $this->fetch_game_block_by_height($block_height-1);
+
+		if (!$prev_block) {
+			$this->blockchain->app->log_message("Failed to fetch block #".($block_height-1)." when resetting ".$this->db_game['name']." from block ".$block_height, true);
+			return null;
+		}
+
+		$delete_from_gio_index = $prev_block['max_game_io_index'] + 1;
+
 		$this->blockchain->app->dbh->beginTransaction();
 		
 		$this->blockchain->app->run_query("DELETE FROM game_blocks WHERE game_id=:game_id AND block_id >= :block_id;", [
@@ -399,11 +408,6 @@ class Game {
 		$this->blockchain->app->run_query("DELETE FROM transaction_game_ios WHERE game_id=:game_id AND game_io_index IS NULL;", [
 			'game_id' => $this->db_game['game_id']
 		]);
-		
-		$prev_block = $this->fetch_game_block_by_height($block_height-1);
-		
-		if ($prev_block) $delete_from_gio_index = $prev_block['max_game_io_index'] + 1;
-		else $delete_from_gio_index = 0;
 		
 		$this->blockchain->app->run_query("DELETE FROM transaction_game_ios WHERE game_id=:game_id AND game_io_index >= :game_io_index;", [
 			'game_id' => $this->db_game['game_id'],

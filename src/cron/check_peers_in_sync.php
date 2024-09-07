@@ -33,8 +33,9 @@ if ($app->running_as_admin()) {
 		foreach ($db_running_games as $db_running_game) {
 			$blockchain = new Blockchain($app, $db_running_game['blockchain_id']);
 			$running_game = new Game($blockchain, $db_running_game['game_id']);
-			
-			if ($running_game->last_block_id() == $blockchain->last_block_id()) {
+			$game_extra_info = $running_game->fetch_extra_info();
+
+			if ($running_game->last_block_id() == $blockchain->last_block_id() && empty($game_extra_info['pending_reset'])) {
 				if (empty($running_game->db_game['last_reset_checksums_at']) || $running_game->db_game['last_reset_checksums_at'] <= time()-$sec_between_reset_checksums) {
 					$running_game->reset_partition_checksums($print_debug);
 				}
@@ -130,7 +131,7 @@ if ($app->running_as_admin()) {
 					else if ($print_debug) $app->print_debug("Game does not need to be reset.");
 				}
 			}
-			else if ($print_debug) $app->print_debug("Skipping ".$running_game->db_game['name'].", it's not in fully loaded.");
+			else if ($print_debug) $app->print_debug("Skipping ".$running_game->db_game['name'].", it's not in fully loaded or has a pending reset.");
 		}
 	}
 	else echo "This process is already running.\n";
