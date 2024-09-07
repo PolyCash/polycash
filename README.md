@@ -102,6 +102,9 @@ innodb_lock_wait_timeout=1000
 disable_log_bin
 ```
 
+## Cron Jobs
+To add cron jobs to your docker container, open your .dockerize/cron folder and create a copy of the "polycash-crontab-example"; name the copy "polycash-crontab". Cronjobs entered in either file will run but the "polycash-crontab" file is not included in this repository so can be used for your own jobs.  These crontabs are copied to /etc/cron.d when docker starts so please restart your container after making changes.
+
 ## Change PolyCash Memory Limit
 
 If you run into memory problems, try changing your PolyCash process memory limit.  Edit src/config/config.json and set the "memory_limit" attribute to a value like "4096M"

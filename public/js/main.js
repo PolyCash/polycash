@@ -246,6 +246,10 @@ var Game = function(pageManager, game_id, last_block_id, last_transaction_id, ma
 	};
 	this.add_option_to_vote = function(event_index, option_id) {
 		var this_event = this.events[event_index];
+		if (this_event && this_event.event_starting_block > this_event.game.last_block_id+1) {
+			alert("That market hasn't started yet");
+			return null;
+		}
 		var this_option = this_event.options[this_event.option_id2option_index[option_id]];
 		if (this_option) {
 			var option_display_name = this_option.name;
@@ -2685,6 +2689,8 @@ var PageManager = function() {
 		var option_effective_votes = this_option.effective_votes + this_option.unconfirmed_effective_votes;
 		var option_effective_coins = option_effective_votes*games[0].coins_per_vote + this_option.effective_burn_amount + this_option.unconfirmed_effective_burn_amount + output_effective_burn_amount;
 
+		var option_frac_of_event = option_effective_coins/event_effective_coins;
+
 		var expected_payout = Math.floor(this_event.payout_rate*event_payout*(output_effective_coins/option_effective_coins));
 
 		if (this_event.payout_rule == "linear") {
@@ -2699,16 +2705,18 @@ var PageManager = function() {
 			var borrow_delta = null;
 		}
 
-		return [expected_payout, output_cost, equivalent_contracts, borrow_delta];
+		return [expected_payout, output_cost, equivalent_contracts, borrow_delta, option_frac_of_event];
 	}
 	this.estimate_to_principal_amount = function(this_event, this_option, receive_position, est_principal_amount) {
-		[expected_payout, output_cost, equivalent_contracts, borrow_delta] = this.get_principal_payout_info(this_event, this_option, est_principal_amount);
+		[expected_payout, output_cost, equivalent_contracts, borrow_delta, option_frac_of_event] = this.get_principal_payout_info(this_event, this_option, est_principal_amount);
+		if (option_frac_of_event < 0.001) return est_principal_amount;
 
 		var equivalent_contracts_float = equivalent_contracts/Math.pow(10,games[0].decimal_places);
 		var corrective_multiplier = receive_position/equivalent_contracts_float;
+		var next_est_principal_amount = est_principal_amount*corrective_multiplier;
 
-		if (Math.abs(1-corrective_multiplier) <= 0.00000001) return est_principal_amount;
-		else return this.estimate_to_principal_amount(this_event, this_option, receive_position, est_principal_amount*corrective_multiplier);
+		if (Math.abs(1-corrective_multiplier) <= 0.00000001) return next_est_principal_amount;
+		else return this.estimate_to_principal_amount(this_event, this_option, receive_position, next_est_principal_amount);
 	}
 	this.preview_principal_bet = function() {
 		if (this.showing_principal_bet) {
@@ -2739,7 +2747,7 @@ var PageManager = function() {
 					if ($('#principal_amount').val() != "") {
 						var principal_amount = parseFloat($('#principal_amount').val());
 						if (principal_amount > 0) {
-							[expected_payout, output_cost, equivalent_contracts, borrow_delta] = this.get_principal_payout_info(this_event, this_option, principal_amount);
+							[expected_payout, output_cost, equivalent_contracts, borrow_delta, option_frac_of_event] = this.get_principal_payout_info(this_event, this_option, principal_amount);
 						}
 						else principal_input_error = true;
 					}
@@ -2782,6 +2790,18 @@ var PageManager = function() {
 		}
 	}
 	this.principal_option_selected = function(option_id) {
+		var this_event = null;
+		var this_option = null;
+
+		if (option_id) {
+			[this_event, this_option] = games[0].get_event_and_option_from_option_id(option_id);
+		}
+
+		if (this_event && this_event.event_starting_block > this_event.game.last_block_id+1) {
+			alert("That market hasn't started yet.");
+			return null;
+		}
+
 		if (this.current_principal_option_id !== null) {
 			$('#receive_position').val("");
 
@@ -2796,8 +2816,6 @@ var PageManager = function() {
 		this.refresh_principal_spec_type_options();
 
 		if (option_id !== "") {
-			[this_event, this_option] = games[0].get_event_and_option_from_option_id(option_id);
-
 			if (this_event && this_event.payout_rule == "binary") {
 				$('#principal_spec_type').val("spend_amount");
 			}
