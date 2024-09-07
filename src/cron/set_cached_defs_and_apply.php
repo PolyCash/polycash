@@ -39,6 +39,25 @@ if ($app->running_as_admin()) {
 				if ($print_debug) $app->print_debug("Setting cached definitions for ".$running_game->db_game['name']);
 				GameDefinition::set_cached_definition_hashes($running_game, $print_debug);
 				
+				if ($running_game->db_game['cached_definition_hash'] != $running_game->db_game['defined_cached_definition_hash']) {
+					if ($running_game->last_block_id() == $running_game->blockchain->last_block_id()) {
+						$actual_game_def_str = GameDefinition::get_game_definition_by_hash($app, $running_game->db_game['cached_definition_hash']);
+						$defined_game_def_str = GameDefinition::get_game_definition_by_hash($app, $running_game->db_game['defined_cached_definition_hash']);
+
+						if ($actual_game_def_str && $defined_game_def_str) {
+							$actual_game_def = json_decode($actual_game_def_str, true);
+							$defined_game_def = json_decode($defined_game_def_str, true);
+							$log_message = GameDefinition::migrate_game_definitions($running_game, null, "apply_defined_to_actual", $show_internal_params=false, $actual_game_def, $defined_game_def);
+						}
+						else {
+							$message = $app->log_message("Failed to apply defined (".$running_game->db_game['defined_cached_definition_hash'].") to actual (".$running_game->db_game['cached_definition_hash'].") for ".$running_game->db_game['name']." after failing to fetch defs.");
+							if ($print_debug) $app->print_debug($message);
+						}
+					}
+					else if ($print_debug) $app->print_debug("Skipping application of game def, ".$running_game->db_game['name']." is not fully loaded.");
+				}
+				else if ($print_debug) $app->print_debug("Skipping application of game def, specified and loaded are the same for ".$running_game->db_game['name'].".");
+
 				$set_cached_sec = round(microtime(true)-$loop_start_time, 8);
 				$sleep_sec = $set_cached_sec*2;
 				$sleep_usec = round(pow(10,6)*$sleep_sec);

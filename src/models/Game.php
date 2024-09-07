@@ -1917,9 +1917,9 @@ class Game {
 			}
 
 			if ($reset_now) {
-				if ($print_debug) $this->blockchain->app->print_debug("Resetting the game..");
-
 				if (array_key_exists("reset_from_block", $extra_info) && $extra_info['reset_from_block'] > $this->db_game['game_starting_block']) {
+					if ($print_debug) $this->blockchain->app->print_debug("Resetting the game from block #".$extra_info['reset_from_block']);
+
 					if ($extra_info['reset_from_block']-1 <= $this->blockchain->last_block_id()) {
 						$reset_from_block = $extra_info['reset_from_block'];
 						$this->reset_blocks_from_block($reset_from_block);
@@ -1939,6 +1939,8 @@ class Game {
 					$this->set_target_scores_at_block($reset_from_block);
 				}
 				else {
+					if ($print_debug) $this->blockchain->app->print_debug("Fully resetting the game...");
+
 					$this->delete_reset_game('reset');
 					$this->set_loaded_until_block($this->db_game['game_starting_block']-1);
 					$this->set_events_until_block($this->db_game['game_starting_block']-1);
@@ -4241,7 +4243,7 @@ class Game {
 				}
 				if ($print_debug) $this->blockchain->app->print_debug("Set ".$num_checksums_to_set." checksums in ".round(microtime(true)-$set_checksums_start_time, 4)." sec");
 			}
-			else $error_message = "No partition checksums were set. Max paid block could not be fetched.";
+			else $error_message = "No partition checksums were set. Max paid block #".($min_unpaid_block-1)." could not be fetched.";
 		}
 		else $error_message = "No partition checksums needed to be set because there was no min unpaid block.";
 		
