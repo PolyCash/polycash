@@ -454,7 +454,7 @@ class App {
 		else $html .= "Failed to start a process for ensuring user addresses.\n";
 		sleep(0.02);
 		
-		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/set_cached_game_definition_hashes.php"';
+		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/set_cached_defs_and_apply.php"';
 		$set_game_def_process = $this->run_shell_command($cmd, $print_debug);
 		if (is_resource($set_game_def_process)) $process_count++;
 		else $html .= "Failed to start a process for caching game definitions.\n";

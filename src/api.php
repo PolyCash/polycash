@@ -386,7 +386,7 @@ if ($uri_parts[1] == "api") {
 			}
 			else if ($uri_parts[3] == "definition") {
 				if (!empty($_REQUEST['definition_hash'])) {
-					if ($_REQUEST['definition_hash'] == $game->db_game['cached_definition_hash'] || $_REQUEST['definition_hash'] == $game->db_game['defined_cached_definition_hash']) {
+					if ($_REQUEST['definition_hash'] == $game->db_game['defined_cached_definition_hash']) {
 						$api_output['status_code'] = 3;
 						$api_output['message'] = "You're already in sync.";
 					}

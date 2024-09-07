@@ -28,14 +28,9 @@ if ($app->running_as_admin()) {
 				$running_game = new Game($blockchains[$db_running_game['blockchain_id']], $db_running_game['game_id']);
 				
 				if (method_exists($running_game->module, "regular_actions")) {
-					$game_last_block_id = $running_game->last_block_id();
-					$blockchain_last_block_id = $running_game->blockchain->last_block_id();
+					if ($print_debug) $app->print_debug("Running regular actions for ".$running_game->db_game['name']);
 					
-					if ($game_last_block_id == $blockchain_last_block_id) {
-						if ($print_debug) echo "Running regular actions for ".$running_game->db_game['name']."\n";
-						
-						$running_game->module->regular_actions($running_game);
-					}
+					$running_game->module->regular_actions($running_game);
 				}
 			}
 			
