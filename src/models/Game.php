@@ -2092,9 +2092,22 @@ class Game {
 			if ($check_game_block) {
 				// The game block already exists. There was an error in a previous load or multiple processes are loading games simultaneously
 				if (empty(AppSettings::getParam('fix_game_blocks_disabled')) && $block_height > 1) {
-					if ($print_debug) $this->blockchain->app->print_debug("Game block already exists: resetting from ".($block_height-1));
-					$this->reset_blocks_from_block($block_height-1);
-					$this->blockchain->app->log_message("Reset ".$this->db_game['name']." due to error on block #".$block_height);
+					$first_missing_info = $this->blockchain->app->run_query("SELECT gb.* FROM game_blocks gb WHERE gb.game_id=:game_id AND NOT EXISTS (SELECT 1 FROM game_blocks gbb WHERE gbb.game_id=:game_id AND gbb.block_id=gb.block_id+1) ORDER BY gb.block_id ASC LIMIT 1;", [
+						'game_id' => $this->db_game['game_id'],
+					])->fetch(PDO::FETCH_ASSOC);
+
+					if ($first_missing_info && $first_missing_info['block_id']+1 < $block_height) {
+						$message = $this->blockchain->app->log_message("Need to reset ".$this->db_game['name']." due to missing block at height #".($first_missing_info['block_id']+1));
+						if ($print_debug) $this->blockchain->app->print_debug($message);
+
+						$this->reset_blocks_from_block($first_missing_info['block_id']+1);
+					}
+					else {
+						$message = $this->blockchain->app->print_debug("Tried to load game block #".$block_height." but it already exists: resetting from ".($block_height-1));
+						if ($print_debug) $this->blockchain->app->print_debug($message);
+
+						$this->reset_blocks_from_block($block_height-1);
+					}
 				}
 				else if ($print_debug) $this->blockchain->app->print_debug("Failed: game block already exists.");
 				
