@@ -138,7 +138,7 @@ if ($app->running_as_admin()) {
 	$betcount_by_user_game = [];
 	$notification_email_by_user_game = [];
 	
-	$linear_table_header_html = '<tr><td>Amt Paid</td><td>Asset Purchased</td><td>Range</td><td>Position Purchased</td><td>Asset Performance</td><td>Position Performance</td></tr>';
+	$linear_table_header_html = '<tr><td>Amt Paid</td><td>Asset Purchased</td><td>Position Purchased</td><td>Asset Performance</td><td>Position Performance</td></tr>';
 	
 	$running_games = $app->run_query("SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE g.game_status='running' GROUP BY g.game_id ORDER BY g.game_id ASC");
 	

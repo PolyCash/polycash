@@ -10,6 +10,8 @@ $pagetitle = AppSettings::getParam('site_name')." - Key Performance Indicators";
 
 include(AppSettings::srcPath()."/includes/html_start.php");
 ?>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <div class="container-fluid">
 	<?php
 	if (!$app->user_is_admin($thisuser)) {
@@ -24,11 +26,7 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 		$to_date = date("Y-m-d", time());
 		if (!empty($_REQUEST['to_date'])) $to_date = date("Y-m-d", strtotime($_REQUEST['to_date']));
 		
-		$signup_chart_url = Analytics::get_chart_url($app, "signups", $from_date, $to_date, 1000, 120, "ffff00");
-		$login_chart_url = Analytics::get_chart_url($app, "logins", $from_date, $to_date, 1000, 120, "ff9900");
-		$conversion_chart_url = Analytics::get_chart_url($app, "currency_conversions", $from_date, $to_date, 1000, 120, "ff5500");
-		$viewer_chart_url = Analytics::get_chart_url($app, "viewers", $from_date, $to_date, 1000, 120, "cc0077");
-		$email_chart_url = Analytics::get_chart_url($app, "emails", $from_date, $to_date, 1000, 120, "7700ff");
+		$chart_height_px = 250;
 		?>
 		<div class="panel panel-default" style="margin-top: 15px;">
 			<div class="panel-heading">
@@ -54,20 +52,40 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 					</form>
 				</div>
 				
-				<h4>User registrations</h4>
-				<img src="<?php echo $signup_chart_url; ?>" style="max-width: 100%; margin: 8px 0px;" />
+				<div>
+					<canvas id="chart_signups" style="height: <?php echo $chart_height_px; ?>px;"></canvas>
+				</div>
+				<script>
+				<?php echo Analytics::get_chart_js($app, "signups", $from_date, $to_date, "User Registrations"); ?>
+				</script>
 				
-				<h4>Unique user logins</h4>
-				<img src="<?php echo $login_chart_url; ?>" style="max-width: 100%; margin: 8px 0px;" />
+				<div>
+					<canvas id="chart_logins" style="height: <?php echo $chart_height_px; ?>px;"></canvas>
+				</div>
+				<script>
+				<?php echo Analytics::get_chart_js($app, "logins", $from_date, $to_date, "Unique User Logins"); ?>
+				</script>
 				
-				<h4>Currency conversions</h4>
-				<img src="<?php echo $conversion_chart_url; ?>" style="max-width: 100%; margin: 8px 0px;" />
+				<div>
+					<canvas id="chart_currency_conversions" style="height: <?php echo $chart_height_px; ?>px;"></canvas>
+				</div>
+				<script>
+				<?php echo Analytics::get_chart_js($app, "currency_conversions", $from_date, $to_date, "Currency Conversions"); ?>
+				</script>
 				
-				<h4>Unique viewers</h4>
-				<img src="<?php echo $viewer_chart_url; ?>" style="max-width: 100%; margin: 8px 0px;" />
+				<div>
+					<canvas id="chart_viewers" style="height: <?php echo $chart_height_px; ?>px;"></canvas>
+				</div>
+				<script>
+				<?php echo Analytics::get_chart_js($app, "viewers", $from_date, $to_date, "Unique Viewers"); ?>
+				</script>
 				
-				<h4>Emails delivered</h4>
-				<img src="<?php echo $email_chart_url; ?>" style="max-width: 100%; margin: 8px 0px;" />
+				<div>
+					<canvas id="chart_emails" style="height: <?php echo $chart_height_px; ?>px;"></canvas>
+				</div>
+				<script>
+				<?php echo Analytics::get_chart_js($app, "emails", $from_date, $to_date, "Emails Delivered"); ?>
+				</script>
 			</div>
 		</div>
 		<?php
