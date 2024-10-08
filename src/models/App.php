@@ -376,31 +376,26 @@ class App {
 				$my_addresses_process = $this->run_shell_command($cmd, $print_debug);
 				if (is_resource($my_addresses_process)) $process_count++;
 				else $html .= "Failed to start processing my addresses for ".$sync_blockchain['blockchain_name'].".\n";
-				sleep(0.02);
 
 				$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/remove_unconfirmable_transactions.php" blockchain_id='.$sync_blockchain['blockchain_id'];
 				$remove_unconfirmable_process = $this->run_shell_command($cmd, $print_debug);
 				if (is_resource($remove_unconfirmable_process)) $process_count++;
 				else $html .= "Failed to start a process for removing unconfirmable transactions for ".$sync_blockchain['blockchain_name'].".\n";
-				sleep(0.02);
 
 				$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/integrity_checks.php" blockchain_id='.$sync_blockchain['blockchain_id'];
 				$integrity_checks_process = $this->run_shell_command($cmd, $print_debug);
 				if (is_resource($integrity_checks_process)) $process_count++;
 				else $html .= "Failed to start a process for integrity checks.\n";
-				sleep(0.02);
 
 				$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/set_blockchain_block_stats.php" blockchain_id='.$sync_blockchain['blockchain_id'];
 				$set_stats_process = $this->run_shell_command($cmd, $print_debug);
 				if (is_resource($set_stats_process)) $process_count++;
 				else $html .= "Failed to start a process for setting block stats.\n";
-				sleep(0.02);
 
 				$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/process_blockchain_checks.php" blockchain_id='.$sync_blockchain['blockchain_id'];
 				$blockchain_checks_process = $this->run_shell_command($cmd, $print_debug);
 				if (is_resource($blockchain_checks_process)) $process_count++;
 				else $html .= "Failed to start a process for processing blockchain checks.\n";
-				sleep(0.02);
 			}
 		}
 		
@@ -411,14 +406,12 @@ class App {
 			$game_loading_process = $this->run_shell_command($cmd, $print_debug);
 			if (is_resource($game_loading_process)) $process_count++;
 			else $html .= "Failed to start a process for loading ".$running_game['game_name'].".\n";
-			sleep(0.02);
 		}
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/mine_blocks.php"';
 		$mine_blocks_process = $this->run_shell_command($cmd, $print_debug);
 		if (is_resource($mine_blocks_process)) $process_count++;
 		else $html .= "Failed to start the block mining process.\n";
-		sleep(0.02);
 		
 		$apply_strategy_games = $this->run_query("SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE b.online=1 AND g.game_status='running'");
 		
@@ -427,80 +420,67 @@ class App {
 			$main_process = $this->run_shell_command($cmd, $print_debug);
 			if (is_resource($main_process)) $process_count++;
 			else $html .= "Failed to start a process for applying strategies for ".$strategy_game['name'].".\n";
-			sleep(0.02);
 		}
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/game_regular_actions.php"';
 		$regular_actions_process = $this->run_shell_command($cmd, $print_debug);
 		if (is_resource($regular_actions_process)) $process_count++;
 		else $html .= "Failed to start a process for game regular actions.\n";
-		sleep(0.02);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/minutely_check_payments.php"';
 		$payments_process = $this->run_shell_command($cmd, $print_debug);
 		if (is_resource($payments_process)) $process_count++;
 		else $html .= "Failed to start a process for processing payments.\n";
-		sleep(0.02);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/fetch_currency_prices.php"';
 		$currency_prices_process = $this->run_shell_command($cmd, $print_debug);
 		if (is_resource($currency_prices_process)) $process_count++;
 		else $html .= "Failed to start a process for updating currency prices.\n";
-		sleep(0.02);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/ensure_user_addresses.php"';
 		$ensure_addresses_process = $this->run_shell_command($cmd, $print_debug);
 		if (is_resource($ensure_addresses_process)) $process_count++;
 		else $html .= "Failed to start a process for ensuring user addresses.\n";
-		sleep(0.02);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/set_cached_defs_and_apply.php"';
 		$set_game_def_process = $this->run_shell_command($cmd, $print_debug);
 		if (is_resource($set_game_def_process)) $process_count++;
 		else $html .= "Failed to start a process for caching game definitions.\n";
-		sleep(0.02);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/set_cached_game_values.php"';
 		$set_game_def_process = $this->run_shell_command($cmd, $print_debug);
 		if (is_resource($set_game_def_process)) $process_count++;
 		else $html .= "Failed to start a process for caching game values.\n";
-		sleep(0.02);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/process_target_balances.php"';
 		$target_balances_process = $this->run_shell_command($cmd, $print_debug);
 		if (is_resource($target_balances_process)) $process_count++;
 		else $html .= "Failed to start a process for target balances.\n";
-		sleep(0.02);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/check_peers_in_sync.php"';
 		$target_balances_process = $this->run_shell_command($cmd, $print_debug);
 		if (is_resource($target_balances_process)) $process_count++;
 		else $html .= "Failed to start a process for peer synchronization.\n";
-		sleep(0.02);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/process_address_backups.php"';
 		$target_balances_process = $this->run_shell_command($cmd, $print_debug);
 		if (is_resource($target_balances_process)) $process_count++;
 		else $html .= "Failed to start a process for address backups.\n";
-		sleep(0.02);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/join_txos.php"';
 		$target_balances_process = $this->run_shell_command($cmd, $print_debug);
 		if (is_resource($target_balances_process)) $process_count++;
 		else $html .= "Failed to start a process for joining txos.\n";
-		sleep(0.02);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/delete_game_definitions.php"';
 		$delete_game_definitions_process = $this->run_shell_command($cmd, $print_debug);
 		if (is_resource($delete_game_definitions_process)) $process_count++;
 		else $html .= "Failed to start a process for deleting game definitions.\n";
-		sleep(0.02);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/set_migration_summaries.php"';
 		$set_migration_summaries_process = $this->run_shell_command($cmd, $print_debug);
 		if (is_resource($set_migration_summaries_process)) $process_count++;
 		else $html .= "Failed to start a process for setting migration summaries.\n";
-		sleep(0.02);
 		
 		$html .= "Started ".$process_count." background processes.\n";
 		return $html;
@@ -3252,7 +3232,7 @@ class App {
 						
 						if ($default_image_id) {
 							$this->run_query("UPDATE entities SET default_image_id=:default_image_id WHERE entity_id=:entity_id;", [
-								'default_image_id' => $csv_params[$image_col],
+								'default_image_id' => $default_image_id,
 								'entity_id' => $member_entity['entity_id']
 							]);
 							$this->run_query("UPDATE options SET image_id=:image_id WHERE entity_id=:entity_id;", [
