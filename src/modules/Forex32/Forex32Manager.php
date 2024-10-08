@@ -212,7 +212,7 @@ class Forex32Manager {
 						"option_name" => "position",
 						"option_name_plural" => "positions",
 						"payout_rule" => "linear",
-						"payout_rate" => 1,
+						"payout_rate" => $this->game->db_game['default_payout_rate'],
 						"outcome_index" => null,
 						"track_min_price" => $price_min,
 						"track_max_price" => $price_max,

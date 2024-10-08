@@ -1380,7 +1380,7 @@ class Game {
 		$account = null;
 		if ($user) {
 			$user_game = $this->blockchain->app->fetch_user_game($user->db_user['user_id'], $this->game_id);
-			$account = $this->blockchain->app->fetch_account_by_id($user_game['account_id']);
+			if ($user_game) $account = $this->blockchain->app->fetch_account_by_id($user_game['account_id']);
 		}
 		
 		if (!$include_content) {

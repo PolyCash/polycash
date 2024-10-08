@@ -204,6 +204,9 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 			else $pagetitle .= " - ".$blockchain->db_blockchain['blockchain_name'];
 		}
 		else {
+			$conflicting_tx_hashes = [];
+			$tx_not_trusted = false;
+
 			if (strlen($uri_parts[5]) < 15) {
 				$tx_id = intval($uri_parts[5]);
 				$transaction = $app->fetch_transaction_by_id($tx_id);
@@ -213,8 +216,6 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				
 				if (strpos($tx_hash, " ") === false) {
 					$transaction = $blockchain->fetch_transaction_by_hash($tx_hash);
-					$conflicting_tx_hashes = [];
-					$tx_not_trusted = false;
 					
 					if ($blockchain->db_blockchain['p2p_mode'] == "rpc") {
 						$blockchain->load_coin_rpc();

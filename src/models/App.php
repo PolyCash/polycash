@@ -1445,7 +1445,7 @@ class App {
 			}
 			
 			$latest_event = $game->latest_event();
-			$html .= '<div class="row"><div class="col-sm-5">Events:</div><div class="col-sm-7">'.(empty($latest_event['event_index']) ? "None" : number_format($latest_event['event_index']))."</div></div>\n";
+			$html .= '<div class="row"><div class="col-sm-5">Events:</div><div class="col-sm-7">'.(empty($latest_event['event_index']) ? "None" : number_format($latest_event['event_index']+1))."</div></div>\n";
 		}
 		
 		$html .= "</div>\n";
@@ -3225,7 +3225,7 @@ class App {
 					}
 				}
 			}
-			
+
 			for ($csv_i=2; $csv_i<count($csv_lines); $csv_i++) {
 				if (!empty($csv_lines[$csv_i])) {
 					$csv_params = explode(",", $csv_lines[$csv_i]);
@@ -3235,9 +3235,10 @@ class App {
 						$default_image_id = null;
 						if ($image_col !== false && !empty($csv_params[$image_col])) $default_image_id = $csv_params[$image_col];
 						else if ($image_hash_col !== false && !empty($csv_params[$image_hash_col])) {
-							if (!empty($image_info_by_hash[$csv_params[$image_hash_col]])) {
-								$info = $image_info_by_hash[$csv_params[$image_hash_col]];
-								$new_im_fname = $group_images_dir."/".$csv_params[$image_hash_col].".".$info['extension'];
+							$image_hash = trim($csv_params[$image_hash_col]);
+							if (!empty($image_info_by_hash[$image_hash])) {
+								$info = $image_info_by_hash[$image_hash];
+								$new_im_fname = $group_images_dir."/".$image_hash.".".$info['extension'];
 								$new_im_fh = fopen($new_im_fname, 'r');
 								$new_im_raw = fread($new_im_fh, filesize($new_im_fname));
 								fclose($new_im_fh);
@@ -3602,6 +3603,18 @@ class App {
 		}
 
 		return array_values($spendable_ios_by_id);
+	}
+
+	public function spendable_ios_in_gameless_account($account_id, $limit=null) {
+		$spendable_ios_q = "SELECT io.* FROM transaction_ios io JOIN address_keys ak ON io.address_id=ak.address_id WHERE ak.account_id=:account_id AND io.spend_status IN ('unspent','unconfirmed')";
+		$spendable_ios_params = [
+			'account_id' => $account_id,
+		];
+		if ($limit !== null) {
+			$spendable_ios_q .= " LIMIT :quantity";
+			$spendable_ios_params['quantity'] = $limit;
+		}
+		return $this->run_limited_query($spendable_ios_q, $spendable_ios_params)->fetchAll(PDO::FETCH_ASSOC);
 	}
 
 	public function early_resolved_ios_in_account($account_id, $game_id, $id_only=true) {
