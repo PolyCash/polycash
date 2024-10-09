@@ -44,7 +44,7 @@ class Forex32GameDefinition {
 			"escrow_address": "XbBMr6efhaMSf52BZfS2cQDuGipeV9kAuD",
 			"genesis_tx_hash": "60ba570967ffbd8849f732009459d9dcc56f4502986a04c28d7f3ca588df821f/1",
 			"genesis_amount": 100000000,
-			"game_starting_block": 303901,
+			"game_starting_block": 304801,
 			"default_payout_rate": 0.9999,
 			"default_vote_effectiveness_function": "constant",
 			"default_effectiveness_param1": 0,
