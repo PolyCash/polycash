@@ -1,5 +1,6 @@
 {
     "blockchain_identifier": "datachain",
+    "definitive_peer": "https://poly.cash",
     "option_group": "32 highly traded currencies",
     "protocol_version": 1.002,
     "name": "Forex 32",
