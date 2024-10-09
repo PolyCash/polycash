@@ -13,6 +13,9 @@ class CurrencyAccount {
 		'join_txos_on_quantity' => [
 			'editableInSettings' => true,
 		],
+		'account_transaction_fee' => [
+			'editableInSettings' => true,
+		],
 	];
 	
 	public static function updateAccount(&$app, &$account, $updateParams) {

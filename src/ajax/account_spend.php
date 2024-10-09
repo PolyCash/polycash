@@ -63,7 +63,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 							
 							if (!$refund_error) {
 								$error_message = false;
-								$transaction_id = $blockchain->create_transaction("transaction", $amounts, false, $io_ids, $address_ids, $fee);
+								$transaction_id = $blockchain->create_transaction("transaction", $amounts, false, $io_ids, $address_ids, $fee, $error_message);
 								
 								if ($transaction_id) {
 									$app->output_message(1, 'Great, your coins have been sent! <a target="_blank" href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/transactions/'.$transaction_id.'">View Transaction</a>', false);
@@ -285,7 +285,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 								$transaction = $app->fetch_transaction_by_id($transaction_id);
 								$app->output_message(1, "/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/transactions/".$transaction['tx_hash']."/", false);
 							}
-							else $app->output_message(7, "Error: ", false);
+							else $app->output_message(7, "Error: ".$error_message, false);
 						}
 						else $app->output_message(6, "Error: not enough coins.", false);
 					}

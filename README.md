@@ -76,7 +76,7 @@ For full functionality in synthetic assets game, you should configure external p
 		},
 		{
 			"selector_type": "group",
-			"group": "128 world currencies",
+			"group": "32 highly traded currencies",
 			"oracle": "fcs-api",
 			"api_key": "MyApiKey"
 		}

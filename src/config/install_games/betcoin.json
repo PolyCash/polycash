@@ -9,6 +9,7 @@
     "decimal_places": 4,
     "finite_events": false,
     "save_every_definition": false,
+    "recommended_keep_definitions_hours": null,
     "max_simultaneous_options": 100,
     "event_type_name": "game",
     "event_type_name_plural": "games",

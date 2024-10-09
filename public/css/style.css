@@ -380,6 +380,7 @@ a.selected {
 }
 .game_event_display {
 	text-align: left;
+	overflow: hidden;
 }
 .select_utxo_image {
 	border-radius: 50%;
