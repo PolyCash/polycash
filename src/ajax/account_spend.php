@@ -285,7 +285,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 								$transaction = $app->fetch_transaction_by_id($transaction_id);
 								$app->output_message(1, "/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/transactions/".$transaction['tx_hash']."/", false);
 							}
-							else $app->output_message(7, "Error: ", false);
+							else $app->output_message(7, "Error: ".$error_message, false);
 						}
 						else $app->output_message(6, "Error: not enough coins.", false);
 					}
