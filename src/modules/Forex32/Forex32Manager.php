@@ -121,7 +121,7 @@ class Forex32Manager {
 		$hours_per_event_cohort = 6;
 		$event_length_hours = 78;
 
-		$game_starting_time = new Datetime("2024-10-06 0:00:00");
+		$game_starting_time = new Datetime("2024-10-08 0:00:00");
 		$game_starting_block = $this->game->db_game['game_starting_block'];
 
 		$hours_since_start = (time() - $game_starting_time->getTimestamp())/3600;
