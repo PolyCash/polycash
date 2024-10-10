@@ -550,7 +550,7 @@ class Game {
 		$show_initial = false;
 		$reference_currency = $this->blockchain->app->get_reference_currency();
 		
-		$db_events = $this->blockchain->app->run_query("SELECT e.*, winner.name AS winner_name FROM events e LEFT JOIN options winner ON e.winning_option_id=winner.option_id WHERE e.game_id=:game_id AND e.event_index >= :from_event_index AND e.event_index <= :to_event_index ORDER BY e.event_index DESC;", [
+		$db_events = $this->blockchain->app->run_query("SELECT e.*, winner.name AS winner_name, ten.forex_pair_shows_nonstandard FROM events e LEFT JOIN options winner ON e.winning_option_id=winner.option_id LEFT JOIN entities ten ON e.track_entity_id=ten.entity_id WHERE e.game_id=:game_id AND e.event_index >= :from_event_index AND e.event_index <= :to_event_index ORDER BY e.event_index DESC;", [
 			'game_id' => $this->db_game['game_id'],
 			'from_event_index' => $from_event_index,
 			'to_event_index' => $to_event_index
@@ -622,12 +622,20 @@ class Game {
 				}
 				$html .= " &nbsp;&nbsp; ";
 				
-				$html .= "<div style='display: inline-block; min-width: 190px;'>".$db_event['track_name_short']." &nbsp; ";
+				$forex_pair = $db_event['forex_pair_shows_nonstandard'] ? $db_event['track_name_short']."/USD" : "USD/".$db_event['track_name_short'];
+				$html .= "<div style='display: inline-block; min-width: 190px;'>".$forex_pair." &nbsp; ";
 				if ($event_effective_bets > 0) {
 					$our_buy_price = ($buy_stake/$event_effective_bets)*($db_event['track_max_price']-$db_event['track_min_price'])+$db_event['track_min_price'];
-					$our_buy_price_round = $this->blockchain->app->round_to($our_buy_price, 0, EXCHANGE_RATE_SIGFIGS, false);
-					$html .= "$".$this->blockchain->app->round_to($our_buy_price, 0, EXCHANGE_RATE_SIGFIGS, true);
-					if ($ref_price_fresh) $html .= " &rarr; $".$this->blockchain->app->round_to($ref_price_usd_round, 0, EXCHANGE_RATE_SIGFIGS, true);
+					if ($db_event['forex_pair_shows_nonstandard']) {
+						$our_buy_price_round = $this->blockchain->app->round_to($our_buy_price, 0, EXCHANGE_RATE_SIGFIGS, false);
+						$html .= $this->blockchain->app->round_to($our_buy_price, 0, EXCHANGE_RATE_SIGFIGS, true);
+						if ($ref_price_fresh) $html .= " &rarr; ".$this->blockchain->app->round_to($ref_price_usd_round, 0, EXCHANGE_RATE_SIGFIGS, true);
+					}
+					else {
+						$our_buy_price_round = $this->blockchain->app->round_to(1/$our_buy_price, 0, EXCHANGE_RATE_SIGFIGS, false);
+						$html .= $this->blockchain->app->round_to($our_buy_price_round, 0, EXCHANGE_RATE_SIGFIGS, true);
+						if ($ref_price_fresh) $html .= " &rarr; ".$this->blockchain->app->round_to(1/$ref_price_usd, 0, EXCHANGE_RATE_SIGFIGS, true);
+					}
 				}
 				$html .= "</div>\n";
 				
@@ -1206,7 +1214,7 @@ class Game {
 			'game_id' => $this->db_game['game_id'],
 			'block_id' => $mining_block_id
 		];
-		$events_q = "SELECT *, sp.entity_name AS sport_name, lg.entity_name AS league_name FROM events ev LEFT JOIN entities sp ON ev.sport_entity_id=sp.entity_id LEFT JOIN entities lg ON ev.league_entity_id=lg.entity_id WHERE ev.game_id=:game_id";
+		$events_q = "SELECT ev.*, sp.entity_name AS sport_name, lg.entity_name AS league_name, ten.forex_pair_shows_nonstandard FROM events ev LEFT JOIN entities sp ON ev.sport_entity_id=sp.entity_id LEFT JOIN entities lg ON ev.league_entity_id=lg.entity_id LEFT JOIN entities ten ON ev.track_entity_id=ten.entity_id WHERE ev.game_id=:game_id";
 		if (!empty($filter_arr['date'])) {
 			$events_q .= " AND DATE(ev.event_final_time)=:filter_date";
 			$events_params['filter_date'] = $filter_arr['date'];
@@ -1400,7 +1408,7 @@ class Game {
 			$event_ids .= $event->db_event['event_id'].",";
 			
 			$js .= '
-			games['.$game_index.'].events['.$i.'] = new GameEvent(games['.$game_index.'], '.$i.', '.$event->db_event['event_id'].', '.$event->db_event['event_index'].', '.$event->db_event['num_options'].', "'.$event->db_event['vote_effectiveness_function'].'", "'.$event->db_event['effectiveness_param1'].'", "'.$event->db_event['option_block_rule'].'", '.$this->blockchain->app->quote_escape($event->db_event['event_name']).', '.$event->db_event['event_starting_block'].', '.$event->db_event['event_final_block'].', '.$event->db_event['payout_rate'].', \''.$event->db_event['payout_rule'].'\', \''.$event->db_event['track_min_price'].'\', \''.$event->db_event['track_max_price'].'\', \''.$event->db_event['track_name_short'].'\');'."\n";
+			games['.$game_index.'].events['.$i.'] = new GameEvent(games['.$game_index.'], '.$i.', '.$event->db_event['event_id'].', '.$event->db_event['event_index'].', '.$event->db_event['num_options'].', "'.$event->db_event['vote_effectiveness_function'].'", "'.$event->db_event['effectiveness_param1'].'", "'.$event->db_event['option_block_rule'].'", '.$this->blockchain->app->quote_escape($event->db_event['event_name']).', '.$event->db_event['event_starting_block'].', '.$event->db_event['event_final_block'].', '.$event->db_event['payout_rate'].', \''.$event->db_event['payout_rule'].'\', \''.$event->db_event['track_min_price'].'\', \''.$event->db_event['track_max_price'].'\', \''.$event->db_event['track_name_short'].'\', '.json_encode($event->db_event['forex_pair_shows_nonstandard']).');'."\n";
 			
 			$options_by_event = $this->blockchain->app->fetch_options_by_event($event->db_event['event_id'], true);
 			
@@ -1492,7 +1500,7 @@ class Game {
 		$to_block_id = ($to_round_id-1)*$this->db_game['round_length']+1;
 		$i=0;
 		
-		$relevant_events = $this->blockchain->app->run_query("SELECT * FROM events WHERE game_id=:game_id AND event_starting_block >= :from_block_id AND event_starting_block <= :to_block_id ORDER BY event_id ASC;", [
+		$relevant_events = $this->blockchain->app->run_query("SELECT ev.*, en.forex_pair_shows_nonstandard FROM events ev LEFT JOIN entities en ON ev.track_entity_id=en.entity_id WHERE ev.game_id=:game_id AND ev.event_starting_block >= :from_block_id AND ev.event_starting_block <= :to_block_id ORDER BY ev.event_id ASC;", [
 			'game_id' => $this->db_game['game_id'],
 			'from_block_id' => $from_block_id,
 			'to_block_id' => $to_block_id
@@ -1500,7 +1508,7 @@ class Game {
 		
 		while ($db_event = $relevant_events->fetch()) {
 			$js .= "if (typeof games[".$game_index."].all_events[".$db_event['event_index']."] == 'undefined') {";
-			$js .= "games[".$game_index."].all_events[".$db_event['event_index']."] = new GameEvent(games[".$game_index."], ".$i.", ".$db_event['event_id'].", ".$db_event['num_options'].', "'.$db_event['vote_effectiveness_function'].'", "'.$db_event['effectiveness_param1'].'", "'.$db_event['option_block_rule'].'", '.$this->blockchain->app->quote_escape($db_event['event_name']).', '.$db_event['event_starting_block'].', '.$db_event['event_final_block'].', '.$db_event['payout_rate'].', \''.$db_event['payout_rule'].'\', \''.$db_event['track_min_price'].'\', \''.$db_event['track_max_price'].'\', \''.$db_event['track_name_short'].'\');';
+			$js .= "games[".$game_index."].all_events[".$db_event['event_index']."] = new GameEvent(games[".$game_index."], ".$i.", ".$db_event['event_id'].", ".$db_event['num_options'].', "'.$db_event['vote_effectiveness_function'].'", "'.$db_event['effectiveness_param1'].'", "'.$db_event['option_block_rule'].'", '.$this->blockchain->app->quote_escape($db_event['event_name']).', '.$db_event['event_starting_block'].', '.$db_event['event_final_block'].', '.$db_event['payout_rate'].', \''.$db_event['payout_rule'].'\', \''.$db_event['track_min_price'].'\', \''.$db_event['track_max_price'].'\', \''.$db_event['track_name_short'].'\', '.json_encode($db_event['forex_pair_shows_nonstandard']).');';
 			$js .= "}\n";
 			
 			$options_by_event = $this->blockchain->app->fetch_options_by_event($db_event['event_id']);

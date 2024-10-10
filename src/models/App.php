@@ -3181,6 +3181,7 @@ class App {
 			$short_name_col = array_search("currency_short_name", $header_vars);
 			$short_name_plural_col = array_search("currency_short_name_plural", $header_vars);
 			$image_hash_col = array_search("image_hash", $header_vars);
+			$forex_pair_shows_nonstandard_col = array_search("forex_pair_shows_nonstandard", $header_vars);
 			$group_params = explode(",", $csv_lines[1]);
 
 			$this->run_insert_query("option_groups", [
@@ -3211,6 +3212,20 @@ class App {
 					$csv_params = explode(",", $csv_lines[$csv_i]);
 					$member_entity = $this->check_set_entity($general_entity_type['entity_type_id'], trim($csv_params[$name_col]));
 					
+					if ($forex_pair_shows_nonstandard_col !== false) {
+						$cell_val = trim($csv_params[$forex_pair_shows_nonstandard_col]);
+						if ((string) $cell_val != "") {
+							$forex_pair_shows_nonstandard = (int) $cell_val;
+							if ((string)$member_entity['forex_pair_shows_nonstandard'] != (string)$forex_pair_shows_nonstandard) {
+								$this->run_query("UPDATE entities SET forex_pair_shows_nonstandard=:forex_pair_shows_nonstandard WHERE entity_id=:entity_id;", [
+									'forex_pair_shows_nonstandard' => $forex_pair_shows_nonstandard,
+									'entity_id' => $member_entity['entity_id'],
+								]);
+								$member_entity['forex_pair_shows_nonstandard'] = $forex_pair_shows_nonstandard;
+							}
+						}
+					}
+
 					if (empty($member_entity['default_image_id'])) {
 						$default_image_id = null;
 						if ($image_col !== false && !empty($csv_params[$image_col])) $default_image_id = $csv_params[$image_col];

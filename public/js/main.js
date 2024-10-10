@@ -81,7 +81,7 @@ var PlanRound = function(round_id) {
 	this.event_ids = [];
 	this.sum_points = 0;
 };
-var GameEvent = function(game, game_event_index, event_id, real_event_index, num_options, vote_effectiveness_function, effectiveness_param1, option_block_rule, event_name, event_starting_block, event_final_block, payout_rate, payout_rule, track_min_price, track_max_price, track_name_short) {
+var GameEvent = function(game, game_event_index, event_id, real_event_index, num_options, vote_effectiveness_function, effectiveness_param1, option_block_rule, event_name, event_starting_block, event_final_block, payout_rate, payout_rule, track_min_price, track_max_price, track_name_short, forex_pair_shows_nonstandard) {
 	this.game = game;
 	this.game_event_index = game_event_index;
 	this.event_id = event_id;
@@ -99,6 +99,7 @@ var GameEvent = function(game, game_event_index, event_id, real_event_index, num
 	this.track_min_price = track_min_price;
 	this.track_max_price = track_max_price;
 	this.track_name_short = track_name_short;
+	this.forex_pair_shows_nonstandard = parseInt(forex_pair_shows_nonstandard);
 	
 	this.rendered_event_hash = "";
 	
@@ -2776,6 +2777,17 @@ var PageManager = function() {
 								var borrow_delta_abs = Math.abs(borrow_delta);
 								preview_content += " "+(this_option.option_index == 1 ? "+" : "-")+" ";
 								preview_content += this.format_coins(borrow_delta_abs/Math.pow(10,games[0].decimal_places))+" "+games[0].coin_abbreviation;
+							}
+
+							var exchange_rate = this_option.option_index == 0 ? (output_cost + borrow_delta_abs)/equivalent_contracts : (borrow_delta_abs - output_cost)/equivalent_contracts;
+
+							preview_content += " &nbsp;&nbsp; ";
+
+							if (this_event.forex_pair_shows_nonstandard) {
+								preview_content += this_event.track_name_short+"/USD: "+this.format_coins(exchange_rate);
+							}
+							else {
+								preview_content += "USD/"+this_event.track_name_short+": "+this.format_coins(1/exchange_rate);
 							}
 						}
 					}
