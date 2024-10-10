@@ -2838,8 +2838,10 @@ class Game {
 						if ($borrow_delta > 0) $html .= '<font class="greentext">+ ';
 						else $html .= '<font class="redtext">- ';
 						$html .= $this->blockchain->app->format_bignum(abs($borrow_delta/pow(10, $this->db_game['decimal_places'])), false);
-						$html .= "</font>\n";
+						$html .= "</font> USD\n";
 					}
+
+					$html .= ' = <font class="greentext">'.$this->display_coins($fair_io_value-$payout_fees, true)."</font>";
 				}
 				
 				if ($io['payout_rule'] == "linear") {
@@ -2847,8 +2849,7 @@ class Game {
 					$html .= '<div style="display: none; border: 1px solid #ccc; padding: 5px;" id="gio_details_'.$in_out.'_'.$io['game_io_id'].'">';
 					
 					$html .= "Paid ".$this->display_coins($io['destroy_amount']+$inflation_stake);
-					$html .= ' @ $'.$this->blockchain->app->format_bignum($asset_price_usd, false)." / contract";
-					$html .= '<br/>'.$this->blockchain->app->format_bignum($equivalent_contracts/pow(10, $this->db_game['decimal_places']), false).' '.$io['track_name_short'].' @ ';
+					$html .= ' @ $'.$this->blockchain->app->format_bignum($asset_price_usd, false)." / contract (";
 
 					if ($io['forex_pair_shows_nonstandard']) {
 						$html .= $this->blockchain->app->round_to($bought_price_usd, 0, EXCHANGE_RATE_SIGFIGS, true)." ".$io['track_name_short']."/USD";
@@ -2857,7 +2858,17 @@ class Game {
 						$html .= $this->blockchain->app->round_to(1/$bought_price_usd, 0, EXCHANGE_RATE_SIGFIGS, true)." USD/".$io['track_name_short'];
 					}
 
-					if ($bought_leverage != 1) $html .= ' &nbsp; ('.$this->blockchain->app->format_bignum($bought_leverage, false).'X leverage)';
+					$html .= ')<br/>'.$this->blockchain->app->format_bignum($equivalent_contracts/pow(10, $this->db_game['decimal_places']), false).' '.$io['track_name_short'];
+
+					if ($borrow_delta != 0) {
+						$html .= ' ';
+						if ($borrow_delta > 0) $html .= '<font class="greentext">+ ';
+						else $html .= '<font class="redtext">- ';
+						$html .= $this->blockchain->app->format_bignum(abs($borrow_delta/pow(10, $this->db_game['decimal_places'])), false);
+						$html .= "</font> USD\n";
+					}
+
+					$html .= '<br/>'.$io['track_name_short']." between $".$this->blockchain->app->format_bignum($io['track_min_price'], false)." and $".$this->blockchain->app->format_bignum($io['track_max_price'], false)." (".$this->blockchain->app->format_bignum($bought_leverage, false).'X leverage)';
 					$html .= '<br/><br/>';
 					
 					if ($io['is_resolved'] == 1) $html .= 'Paid out';
@@ -2872,17 +2883,6 @@ class Game {
 						$html .= $this->blockchain->app->round_to(1/$track_pay_price, 0, EXCHANGE_RATE_SIGFIGS, true)." USD/".$io['track_name_short'];
 						if ($track_price_usd != $track_pay_price) $html .= " (".$this->blockchain->app->round_to(1/$track_price_usd, 0, EXCHANGE_RATE_SIGFIGS, true).")";
 					}
-					$html .= "<br/>\n";
-					if ($io['event_option_index'] != 0) $html .= '-';
-					$html .= $this->blockchain->app->format_bignum($equivalent_contracts/pow(10, $this->db_game['decimal_places']), false).' '.$io['track_name_short'].' ';
-					
-					if ($borrow_delta != 0) {
-						if ($borrow_delta > 0) $html .= '<font class="greentext">+ ';
-						else $html .= '<font class="redtext">- ';
-						$html .= $this->blockchain->app->format_bignum(abs($borrow_delta/pow(10, $this->db_game['decimal_places'])), false);
-						$html .= "</font>\n";
-					}
-					if ($current_leverage && $current_leverage != 1) $html .= " &nbsp; (".$this->blockchain->app->format_bignum($current_leverage, false)."X leverage)\n";
 					$html .= "<br/>\n";
 					
 					if ($payout_fees > 0) {
