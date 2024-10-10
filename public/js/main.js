@@ -1127,13 +1127,26 @@ var PageManager = function() {
 
 					output_val_disp += this.format_coins(equivalent_contracts/Math.pow(10,games[0].decimal_places))+" "+this_event.track_name_short;
 
+					var borrow_delta_abs = Math.abs(borrow_delta);
 					if (borrow_delta != 0) {
-						var borrow_delta_abs = Math.abs(borrow_delta);
 						output_val_disp += " "+(this_option.option_index == 1 ? "+" : "-")+" ";
 						output_val_disp += this.format_coins(borrow_delta_abs/Math.pow(10,games[0].decimal_places))+" "+games[0].coin_abbreviation;
 					}
+
+					if (equivalent_contracts > 0) {
+						var exchange_rate = this_option.option_index == 0 ? (output_cost + borrow_delta_abs)/equivalent_contracts : (borrow_delta_abs - output_cost)/equivalent_contracts;
+
+						output_val_disp += " &nbsp;&nbsp; ";
+
+						if (this_event.forex_pair_shows_nonstandard) {
+							output_val_disp += this_event.track_name_short+"/USD: "+this.format_coins(exchange_rate);
+						}
+						else {
+							output_val_disp += "USD/"+this_event.track_name_short+": "+this.format_coins(1/exchange_rate);
+						}
+					}
 				}
-				
+
 				$('#output_amount_disp_'+i).html(output_val_disp);
 				
 				this.bet_outputs[i].amount = output_io_amount;
@@ -2773,8 +2786,8 @@ var PageManager = function() {
 
 							preview_content += this.format_coins(equivalent_contracts/Math.pow(10,games[0].decimal_places))+" "+this_event.track_name_short;
 
+							var borrow_delta_abs = Math.abs(borrow_delta);
 							if (borrow_delta != 0) {
-								var borrow_delta_abs = Math.abs(borrow_delta);
 								preview_content += " "+(this_option.option_index == 1 ? "+" : "-")+" ";
 								preview_content += this.format_coins(borrow_delta_abs/Math.pow(10,games[0].decimal_places))+" "+games[0].coin_abbreviation;
 							}
