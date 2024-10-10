@@ -2764,10 +2764,10 @@ class Game {
 	public function render_ios_in_transaction($in_out, &$db_transaction, $selected_game_io_id, $selected_address_id, $coins_per_vote, $last_block_id) {
 		$html = '<div class="explorer_ios">';
 		
-		$ios_q = "SELECT a.*, p.*, a.address_id AS address_id, gio.contract_parts, gio.is_game_coinbase, gio.colored_amount AS colored_amount, gio.is_resolved AS is_resolved, gio.game_io_id, gio.game_out_index, gio.game_io_id AS game_io_id, op.*, ev.*, p.contract_parts AS total_contract_parts, p.votes, op.votes AS option_votes, op.effective_destroy_score AS option_effective_destroy_score, ev.destroy_score AS sum_destroy_score, ev.effective_destroy_score AS sum_effective_destroy_score, io.spend_status, io.is_destroy, io.is_separator, io.is_passthrough, io.is_receiver";
+		$ios_q = "SELECT a.*, p.*, a.address_id AS address_id, gio.contract_parts, gio.is_game_coinbase, gio.colored_amount AS colored_amount, gio.is_resolved AS is_resolved, gio.game_io_id, gio.game_out_index, gio.game_io_id AS game_io_id, op.*, ev.*, en.forex_pair_shows_nonstandard, p.contract_parts AS total_contract_parts, p.votes, op.votes AS option_votes, op.effective_destroy_score AS option_effective_destroy_score, ev.destroy_score AS sum_destroy_score, ev.effective_destroy_score AS sum_effective_destroy_score, io.spend_status, io.is_destroy, io.is_separator, io.is_passthrough, io.is_receiver";
 		if ($in_out == "in") $ios_q .= ", t.tx_hash FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id";
 		else $ios_q .= " FROM transaction_ios io";
-		$ios_q .= " JOIN transaction_game_ios gio ON io.io_id=gio.io_id LEFT JOIN transaction_game_ios p ON gio.parent_io_id=p.game_io_id JOIN addresses a ON io.address_id=a.address_id LEFT JOIN options op ON gio.option_id=op.option_id LEFT JOIN events ev ON op.event_id=ev.event_id LEFT JOIN options w ON ev.winning_option_id=w.option_id WHERE gio.game_id=:game_id AND io.";
+		$ios_q .= " JOIN transaction_game_ios gio ON io.io_id=gio.io_id LEFT JOIN transaction_game_ios p ON gio.parent_io_id=p.game_io_id JOIN addresses a ON io.address_id=a.address_id LEFT JOIN options op ON gio.option_id=op.option_id LEFT JOIN events ev ON op.event_id=ev.event_id LEFT JOIN options w ON ev.winning_option_id=w.option_id LEFT JOIN entities en ON ev.track_entity_id=en.entity_id WHERE gio.game_id=:game_id AND io.";
 		if ($in_out == "out") $ios_q .= "create_transaction_id";
 		else $ios_q .= "spend_transaction_id";
 		$ios_q .= "=:transaction_id ORDER BY io.out_index ASC;";
@@ -2847,8 +2847,16 @@ class Game {
 					$html .= '<div style="display: none; border: 1px solid #ccc; padding: 5px;" id="gio_details_'.$in_out.'_'.$io['game_io_id'].'">';
 					
 					$html .= "Paid ".$this->display_coins($io['destroy_amount']+$inflation_stake);
-					$html .= ' @ $'.$this->blockchain->app->format_bignum($asset_price_usd, false);
-					$html .= '<br/>'.$this->blockchain->app->format_bignum($equivalent_contracts/pow(10, $this->db_game['decimal_places']), false).' '.$io['track_name_short'].' @ $'.$this->blockchain->app->format_bignum($bought_price_usd, false);
+					$html .= ' @ $'.$this->blockchain->app->format_bignum($asset_price_usd, false)." / contract";
+					$html .= '<br/>'.$this->blockchain->app->format_bignum($equivalent_contracts/pow(10, $this->db_game['decimal_places']), false).' '.$io['track_name_short'].' @ ';
+
+					if ($io['forex_pair_shows_nonstandard']) {
+						$html .= $this->blockchain->app->round_to($bought_price_usd, 0, EXCHANGE_RATE_SIGFIGS, true)." ".$io['track_name_short']."/USD";
+					}
+					else {
+						$html .= $this->blockchain->app->round_to(1/$bought_price_usd, 0, EXCHANGE_RATE_SIGFIGS, true)." USD/".$io['track_name_short'];
+					}
+
 					if ($bought_leverage != 1) $html .= ' &nbsp; ('.$this->blockchain->app->format_bignum($bought_leverage, false).'X leverage)';
 					$html .= '<br/><br/>';
 					
@@ -2856,8 +2864,14 @@ class Game {
 					else $html .= 'Now valued';
 					$html .= ' at <font class="greentext">'.$this->display_coins($fair_io_value-$payout_fees)."</font>\n";
 					$html .= "@ ";
-					$html .= "$".$this->blockchain->app->format_bignum($track_pay_price, false);
-					if ($track_price_usd != $track_pay_price) $html .= " ($".$this->blockchain->app->format_bignum($track_price_usd, false).")";
+					if ($io['forex_pair_shows_nonstandard']) {
+						$html .= $this->blockchain->app->format_bignum($track_pay_price, false)." ".$io['track_name_short']."/USD";
+						if ($track_price_usd != $track_pay_price) $html .= " (".$this->blockchain->app->format_bignum($track_price_usd, false).")";
+					}
+					else {
+						$html .= $this->blockchain->app->round_to(1/$track_pay_price, 0, EXCHANGE_RATE_SIGFIGS, true)." USD/".$io['track_name_short'];
+						if ($track_price_usd != $track_pay_price) $html .= " (".$this->blockchain->app->round_to(1/$track_price_usd, 0, EXCHANGE_RATE_SIGFIGS, true).")";
+					}
 					$html .= "<br/>\n";
 					if ($io['event_option_index'] != 0) $html .= '-';
 					$html .= $this->blockchain->app->format_bignum($equivalent_contracts/pow(10, $this->db_game['decimal_places']), false).' '.$io['track_name_short'].' ';

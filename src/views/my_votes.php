@@ -71,7 +71,8 @@ foreach ($my_bets as $my_bet) {
 					<?php
 					$bought_price_usd_round = $app->round_to($bought_price_usd, 0, EXCHANGE_RATE_SIGFIGS, false);
 					$track_price_usd_round = $app->round_to($track_price_usd, 0, EXCHANGE_RATE_SIGFIGS, false);
-					echo "USD/".$event->db_event['track_name_short'].": ".$app->round_to(1/$bought_price_usd_round, 0, EXCHANGE_RATE_SIGFIGS, true)." &rarr; ".$app->round_to(1/$track_price_usd_round, 0, EXCHANGE_RATE_SIGFIGS, true);
+					if ($event->db_event['forex_pair_shows_nonstandard']) echo $event->db_event['track_name_short']."/USD: ".$app->round_to($bought_price_usd_round, 0, EXCHANGE_RATE_SIGFIGS, true)." &rarr; ".$app->round_to($track_price_usd_round, 0, EXCHANGE_RATE_SIGFIGS, true);
+					else echo "USD/".$event->db_event['track_name_short'].": ".$app->round_to(1/$bought_price_usd_round, 0, EXCHANGE_RATE_SIGFIGS, true)." &rarr; ".$app->round_to(1/$track_price_usd_round, 0, EXCHANGE_RATE_SIGFIGS, true);
 					?>
 				</div>
 			</div>

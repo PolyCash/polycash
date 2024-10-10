@@ -788,10 +788,10 @@ class App {
 		else $str = "";
 
 		$seconds = intval($seconds);
-		$weeks = floor($seconds/(3600*24*7));
-		$days = floor($seconds/(3600*24));
-		$hours = floor($seconds / 3600);
-		$minutes = floor($seconds / 60);
+		$weeks = round($seconds/(3600*24*7));
+		$days = round($seconds/(3600*24));
+		$hours = round($seconds / 3600);
+		$minutes = round($seconds / 60);
 		
 		if ($weeks > 0) {
 			$str .= $weeks." week".($weeks == 1 ? "" : "s");
@@ -3060,13 +3060,23 @@ class App {
 		else $this_bet_html .= "&nbsp;&nbsp;</td>\n";
 		
 		$track_pay_price_round = $this->round_to($track_pay_price, 0, EXCHANGE_RATE_SIGFIGS, false);
-		$track_pay_price_round_str = $this->round_to($track_pay_price, 0, EXCHANGE_RATE_SIGFIGS, true);
-		$track_pay_price_inv_str = $this->round_to(1/$track_pay_price_round, 0, EXCHANGE_RATE_SIGFIGS, true);
 		$bought_price_usd_round = $this->round_to($bought_price_usd, 0, EXCHANGE_RATE_SIGFIGS, false);
+		
+		if ($bet['forex_pair_shows_nonstandard']) {
+			$bought_rate_disp = $this->round_to($bought_price_usd, 0, EXCHANGE_RATE_SIGFIGS, true);
+			$forex_pair = $bet['track_name_short']."/USD";
+			$track_pay_price_round_str = $this->round_to($track_pay_price, 0, EXCHANGE_RATE_SIGFIGS, true);
+		}
+		else {
+			$bought_rate_disp = $this->round_to(1/$bought_price_usd_round, 0, EXCHANGE_RATE_SIGFIGS, true);
+			$forex_pair = "USD/".$bet['track_name_short'];
+			$track_pay_price_round_str = $this->round_to(1/$track_pay_price, 0, EXCHANGE_RATE_SIGFIGS, true);
+		}
+
 		$bought_price_usd_round_str = $this->round_to($bought_price_usd, 0, EXCHANGE_RATE_SIGFIGS, true);
 		$bought_price_inv_str = $this->round_to(1/$bought_price_usd_round, 0, EXCHANGE_RATE_SIGFIGS, true);
 		
-		$cell_title = "Leverage: ".$this->round_to($bought_leverage, 0, EXCHANGE_RATE_SIGFIGS, true)."X, ".($bet['event_option_index'] == 0 ? "Bought" : "Sold")." @ USD/".$bet['track_name_short'].": ".$bought_price_inv_str;
+		$cell_title = "Leverage: ".$this->round_to($bought_leverage, 0, EXCHANGE_RATE_SIGFIGS, true)."X, ".($bet['event_option_index'] == 0 ? "Bought" : "Sold")." @ ".$forex_pair." ".$bought_rate_disp;
 		if ($div_td == 'div') $this_bet_html .= "<div class=\"col-md-2\" title='".$cell_title."'>";
 		else $this_bet_html .= "<td title='".$cell_title."'>";
 		$this_bet_html .= '<a target="_blank" href="'.AppSettings::getParam('base_url').'/explorer/games/'.$game->db_game['url_identifier'].'/events/'.$bet['event_index'].'">';
@@ -3092,14 +3102,13 @@ class App {
 		if ($track_pay_price_round == $bought_price_usd_round) $track_performance_pct = 0;
 		else $track_performance_pct = 100*(($track_pay_price_round/$bought_price_usd_round)-1);
 		
-		$cell_title = "USD/".$bet['track_name_short'].": ".$bought_price_inv_str." &rarr; ".$track_pay_price_inv_str;
-		if ($div_td == 'div') $this_bet_html .= "<div class=\"col-md-3\" title=\"".$cell_title."\">";
-		else $this_bet_html .= "<td title=\"".$cell_title."\">";
+		if ($div_td == 'div') $this_bet_html .= "<div class=\"col-md-3\">";
+		else $this_bet_html .= "<td>";
 		$this_bet_html .= $bet['track_name_short']." ";
 		if ($track_performance_pct >= 0) $this_bet_html .= '<font class="greentext">+'.$this->format_percentage($this->to_significant_digits($track_performance_pct, 4)).'%</font>';
 		else $this_bet_html .= '<font class="redtext">-'.$this->format_percentage($this->to_significant_digits(abs($track_performance_pct), 4)).'%</font>';
 		
-		$this_bet_html .= " <font style='font-size: 85%'>($".$bought_price_usd_round_str;
+		$this_bet_html .= " <font style='font-size: 85%'>(".$forex_pair." ".$bought_rate_disp;
 		$this_bet_html .= " &rarr; $".$track_pay_price_round_str;
 		$this_bet_html .= ")</font>";
 		if ($div_td == 'div') $this_bet_html .= "</div>\n";
