@@ -28,7 +28,7 @@ class Game {
 	
 	public function display_coins($amount_int, $as_abbreviation=false, $skip_name=false, $err_lower=true) {
 		$amount_float = $amount_int/pow(10, $this->db_game['decimal_places']);
-		$sigfigs = 1+floor(log10($amount_float))+$this->db_game['decimal_places'];
+		$sigfigs = 1+floor(log10(abs($amount_float)))+$this->db_game['decimal_places'];
 		$display_amount = $this->blockchain->app->format_bignum($amount_float, $err_lower, $sigfigs);
 		$str = $display_amount;
 		if (!$skip_name) {

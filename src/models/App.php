@@ -640,9 +640,10 @@ class App {
 		if ($number >= 0) $sign = "";
 		else $sign = "-";
 		
+		$number = abs($number);
+
 		if ($number >= pow(10, 5)) $significant_digits = min(6, $significant_digits);
 		
-		$number = abs($number);
 		$number = $this->to_significant_digits($number, $significant_digits, $err_lower);
 		
 		if ($number >= pow(10, 9)) {
@@ -3109,7 +3110,7 @@ class App {
 		else $this_bet_html .= '<font class="redtext">-'.$this->format_percentage($this->to_significant_digits(abs($track_performance_pct), 4)).'%</font>';
 		
 		$this_bet_html .= " <font style='font-size: 85%'>(".$forex_pair." ".$bought_rate_disp;
-		$this_bet_html .= " &rarr; $".$track_pay_price_round_str;
+		$this_bet_html .= " &rarr; ".$track_pay_price_round_str;
 		$this_bet_html .= ")</font>";
 		if ($div_td == 'div') $this_bet_html .= "</div>\n";
 		else $this_bet_html .= "&nbsp;&nbsp;</td>\n";

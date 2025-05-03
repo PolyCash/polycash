@@ -484,7 +484,7 @@ class GameDefinition {
 					
 					$game->update_game_defined_event($i, [
 						'event_payout_block' => $new_game_obj['events'][$i]->event_payout_block,
-						'track_payout_price' => $new_game_obj['events'][$i]->track_payout_price,
+						'track_payout_price' => isset($new_game_obj['events'][$i]->track_payout_price) ? $new_game_obj['events'][$i]->track_payout_price : null,
 						'outcome_index' => $new_game_obj['events'][$i]->outcome_index,
 					], true);
 				}
@@ -504,6 +504,8 @@ class GameDefinition {
 		
 		$set_events_from_index = $game->blockchain->app->min_excluding_false(array($reset_event_index, $matched_events));
 		
+		$events_start_at_index = $new_game_obj['events'][0]->event_index;
+		
 		if ($set_events_from_index !== false) {
 			$log_message .= "Resetting events from #".$set_events_from_index."\n";
 			
@@ -515,7 +517,7 @@ class GameDefinition {
 			if (!is_numeric($reset_block)) $reset_block = $new_game_obj['events'][$set_events_from_pos]->event_starting_block;
 			
 			if (!empty($new_game_obj['events']) && count($new_game_obj['events']) > 0) {
-				for ($event_pos=$set_events_from_pos; $event_pos<count($new_game_obj['events']); $event_pos++) {
+				for ($event_pos=$set_events_from_pos-$events_start_at_index; $event_pos<count($new_game_obj['events']); $event_pos++) {
 					if (!empty($new_game_obj['events'][$event_pos])) {
 						$gde = get_object_vars($new_game_obj['events'][$event_pos]);
 						$game->blockchain->app->check_set_gde($game, $gde, $event_verbatim_vars, $sports_entity_type['entity_type_id'], $leagues_entity_type['entity_type_id'], $general_entity_type['entity_type_id']);

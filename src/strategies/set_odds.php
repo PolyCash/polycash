@@ -134,17 +134,23 @@ if ($user_game) {
 					$bet_i = 0;
 					
 					foreach ($db_events as $db_event) {
-						$options_by_event = $app->fetch_options_by_event($db_event['event_id']);
+						$options_by_event = $app->fetch_options_by_event($db_event['event_id'])->fetchAll(PDO::FETCH_ASSOC);
 						
 						$address_error = false;
 						$thisevent_io_amounts = [];
 						$thisevent_address_ids = [];
 						
-						while ($option = $options_by_event->fetch()) {
+						$probability_sum = 0;
+						foreach ($options_by_event as $option) {
+							$probability_sum += $option['target_probability'];
+						}
+						$probability_adjuster = 1/$probability_sum;
+						
+						foreach ($options_by_event as $option) {
 							$this_address = $app->fetch_addresses_in_account($account, $option['option_index'], 1)[0];
 							
 							if ($this_address) {
-								$thisbet_io_amount = floor($io_nondestroy_per_event*$option['target_probability']);
+								$thisbet_io_amount = floor($io_nondestroy_per_event*$option['target_probability']*$probability_adjuster);
 								$thisbet_io_separator_amount = floor($thisbet_io_amount*$io_separator_frac);
 								$thisbet_io_regular_amount = $thisbet_io_amount-$thisbet_io_separator_amount;
 								
