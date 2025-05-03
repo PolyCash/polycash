@@ -461,6 +461,8 @@ class GameDefinition {
 		
 		$matched_events = min($num_initial_events, $num_new_events);
 		
+		$events_start_at_index = isset($new_game_obj['events'][0]) ? $new_game_obj['events'][0]->event_index : 0;
+
 		for ($i=0; $i<$matched_events; $i++) {
 			$initial_event_text = self::game_def_to_text($initial_game_obj['events'][$i]);
 			
@@ -482,7 +484,7 @@ class GameDefinition {
 				if (self::game_def_to_text($initial_event_no_outcome) == self::game_def_to_text($new_event_no_outcome)) {
 					$reset_block = $game->blockchain->app->min_excluding_false(array($reset_block, $initial_game_obj['events'][$i]->event_payout_block, $new_game_obj['events'][$i]->event_payout_block));
 					
-					$game->update_game_defined_event($i, [
+					$game->update_game_defined_event($i+$events_start_at_index, [
 						'event_payout_block' => $new_game_obj['events'][$i]->event_payout_block,
 						'track_payout_price' => isset($new_game_obj['events'][$i]->track_payout_price) ? $new_game_obj['events'][$i]->track_payout_price : null,
 						'outcome_index' => $new_game_obj['events'][$i]->outcome_index,
@@ -503,8 +505,6 @@ class GameDefinition {
 		}
 		
 		$set_events_from_index = $game->blockchain->app->min_excluding_false(array($reset_event_index, $matched_events));
-		
-		$events_start_at_index = $new_game_obj['events'][0]->event_index;
 		
 		if ($set_events_from_index !== false) {
 			$log_message .= "Resetting events from #".$set_events_from_index."\n";
@@ -542,7 +542,7 @@ class GameDefinition {
 		if (!empty($game_extra_info->reset_from_event_index)) $log_message .= "Adjusted event index: ".$game_extra_info->reset_from_event_index."\n";
 		
 		$game->update_db_game();
-		
+
 		return $log_message;
 	}
 	
