@@ -49,7 +49,7 @@ if ($app->running_as_admin()) {
 							$defined_game_def = json_decode($defined_game_def_str);
 							$message = $app->log_message("Automatically applying defined to actual: ".$running_game->db_game['cached_definition_hash']." -> ".$running_game->db_game['defined_cached_definition_hash']);
 							if ($print_debug) $app->print_debug($message);
-							$migrate_message = GameDefinition::migrate_game_definitions($running_game, null, "apply_defined_to_actual", $show_internal_params=false, $actual_game_def, $defined_game_def);
+							$migrate_message = GameDefinition::migrate_game_definitions($running_game, null, "apply_defined_to_actual", $show_internal_params=true, $actual_game_def, $defined_game_def);
 							if ($print_debug) $app->print_debug($migrate_message);
 						}
 						else {

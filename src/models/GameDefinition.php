@@ -504,6 +504,19 @@ class GameDefinition {
 			}
 		}
 		
+		if (count($new_game_obj['events']) < count($initial_game_obj['events'])) {
+			$delete_from_event_index = count($new_game_obj['events'])+$events_start_at_index;
+			$game->blockchain->app->run_query("DELETE FROM game_defined_options WHERE game_id=:game_id AND event_index >= :event_index;", [
+				'game_id' => $game->db_game['game_id'],
+				'event_index' => $delete_from_event_index,
+			]);
+			$game->blockchain->app->run_query("DELETE FROM game_defined_events WHERE game_id=:game_id AND event_index >= :event_index;", [
+				'game_id' => $game->db_game['game_id'],
+				'event_index' => $delete_from_event_index,
+			]);
+			$log_message .= "Deleting events from index ".$delete_from_event_index."\n";
+		}
+
 		$set_events_from_index = $game->blockchain->app->min_excluding_false(array($reset_event_index, $matched_events));
 		
 		if ($set_events_from_index !== false) {
