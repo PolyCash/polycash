@@ -322,7 +322,7 @@ class GameDefinition {
 		];
 		
 		if (count($from_def->events) != count($to_def->events)) {
-			if (count($to_def->events) > 0) {
+			if (count($to_def->events) - count($from_def->events) > 0) {
 				$event_differences['new_events'] = count($to_def->events) - count($from_def->events);
 			}
 			else {
@@ -370,7 +370,7 @@ class GameDefinition {
 			array_push($difference_summary_lines, count($differences['base_params'])." game parameter".(count($differences['base_params']) == 1 ? " was" : "s were")." changed");
 		}
 		if (count($differences['escrow']['added']) > 0) {
-			array_push($difference_summary_lines, $differences['escrow']['added']." new amount".($differences['escrow']['added'] != 1 ? "s were" : " was")." added to the escrow");
+			array_push($difference_summary_lines, count($differences['escrow']['added'])." new amount".(count($differences['escrow']['added']) != 1 ? "s were" : " was")." added to the escrow");
 		}
 		if (count($differences['escrow']['removed']) > 0) {
 			array_push($difference_summary_lines, count($differences['escrow']['removed'])." amount".(count($differences['escrow']['removed']) != 1 ? "s were" : " was")." removed from the escrow");
