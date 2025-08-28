@@ -1277,7 +1277,8 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					else {
 						$formatted_amount = number_format($io['amount']/pow(10, $blockchain->db_blockchain['decimal_places']), $blockchain->db_blockchain['decimal_places']);
 						echo "Amount: &nbsp;&nbsp; ".$formatted_amount." ".($formatted_amount == 1 ? $blockchain->db_blockchain['coin_name'] : $blockchain->db_blockchain['coin_name_plural'])."<br/>";
-						echo "Status: &nbsp;&nbsp; ".ucwords($io['spend_status']);
+						echo "Status: &nbsp;&nbsp; ".ucwords($io['spend_status'])."<br/>";
+						echo "Mature: &nbsp;&nbsp; ".($io['is_mature'] ? 'Yes' : 'No');
 					}
 					
 					if ($create_tx || $spend_tx) {

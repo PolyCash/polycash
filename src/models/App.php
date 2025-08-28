@@ -3611,7 +3611,7 @@ class App {
 	}
 
 	public function spendable_ios_in_gameless_account($account_id, $limit=null) {
-		$spendable_ios_q = "SELECT io.* FROM transaction_ios io JOIN address_keys ak ON io.address_id=ak.address_id WHERE ak.account_id=:account_id AND io.spend_status IN ('unspent','unconfirmed')";
+		$spendable_ios_q = "SELECT io.* FROM transaction_ios io JOIN address_keys ak ON io.address_id=ak.address_id WHERE ak.account_id=:account_id AND io.spend_status IN ('unspent','unconfirmed') AND io.is_mature=1";
 		$spendable_ios_params = [
 			'account_id' => $account_id,
 		];

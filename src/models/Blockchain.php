@@ -2168,7 +2168,7 @@ class Blockchain {
 		else {
 			$this->load_coin_rpc();
 			$receivedbyaddress = $this->coin_rpc->getreceivedbyaddress($db_address['address'], $confirmed_only ? 1 : 0);
-			if ($receivedbyaddress === null || $receivedbyaddress === false) return 0;
+			if ($receivedbyaddress === null || $receivedbyaddress === false || isset($receivedbyaddress['message'])) return 0;
 			else return $receivedbyaddress*pow(10, $this->db_blockchain['decimal_places']);
 		}
 	}
