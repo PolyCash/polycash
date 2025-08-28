@@ -1,7 +1,7 @@
 <?php
 require_once(dirname(dirname(__FILE__))."/includes/connect.php");
 
-$allowed_params = ['key', 'blockchain_id', 'print_debug'];
+$allowed_params = ['key', 'blockchain_id', 'print_debug', 'force'];
 $app->safe_merge_argv_to_request($argv, $allowed_params);
 
 if ($app->running_as_admin()) {
@@ -14,7 +14,7 @@ if ($app->running_as_admin()) {
 				$rpc_mining_lock_name = "rpc_mining_".$blockchain->db_blockchain['blockchain_id'];
 				$rpc_mining_already = $app->check_process_running($rpc_mining_lock_name);
 				
-				if (!$rpc_mining_already && $app->lock_process($rpc_mining_lock_name)) {
+				if (!empty($_REQUEST['force']) || (!$rpc_mining_already && $app->lock_process($rpc_mining_lock_name))) {
 					$new_address = $blockchain->coin_rpc->getnewaddress();
 					
 					if ($new_address) {
