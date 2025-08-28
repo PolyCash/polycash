@@ -504,8 +504,8 @@ class GameDefinition {
 			}
 		}
 		
-		if (count($new_game_obj['events']) < count($initial_game_obj['events'])) {
-			$delete_from_event_index = count($new_game_obj['events'])+$events_start_at_index;
+		if (!isset($new_game_obj['events']) || count($new_game_obj['events']) < count($initial_game_obj['events'])) {
+			$delete_from_event_index = !isset($new_game_obj['events']) ? 0 : count($new_game_obj['events'])+$events_start_at_index;
 			$game->blockchain->app->run_query("DELETE FROM game_defined_options WHERE game_id=:game_id AND event_index >= :event_index;", [
 				'game_id' => $game->db_game['game_id'],
 				'event_index' => $delete_from_event_index,
