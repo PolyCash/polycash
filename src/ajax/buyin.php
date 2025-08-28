@@ -144,7 +144,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 				
 				$sec_since_exchange_rate_update = time() - $exchange_rate_as_of;
 				
-				if ($sec_since_exchange_rate_update*2 >= AppSettings::exchangeRateRecencySecForBuyins()) {
+				if ($sec_since_exchange_rate_update >= AppSettings::exchangeRateRecencySecForBuyins()) {
 					$content_html .= '<p class="text-danger">The exchange rate is out of date. If you send '.$buyin_currency['short_name_plural'].' your '.$game->db_game['coin_name_plural'].' may not be received until the exchange rate is updated.</p>';
 				}
 				
