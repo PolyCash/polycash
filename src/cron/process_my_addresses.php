@@ -45,6 +45,8 @@ if ($app->running_as_admin()) {
 					else $process_from_block_height = min($blockchain->last_block_id(), $blockchain->db_blockchain['processed_my_addresses_to_block']+1);
 					
 					$process_from_block = $blockchain->fetch_block_by_id($process_from_block_height);
+					$prior_block = $blockchain->fetch_block_by_id($process_from_block_height-1);
+					if ($prior_block) $process_from_block = $prior_block;
 					
 					if ($process_from_block) {
 						if (!empty($process_from_block['block_hash'])) {
@@ -52,7 +54,7 @@ if ($app->running_as_admin()) {
 							$listsinceblock = $blockchain->coin_rpc->listsinceblock($process_from_block['block_hash']);
 							
 							if (!empty($listsinceblock['transactions']) && count($listsinceblock['transactions']) > 0) {
-								if ($print_debug) $app->print_debug("Checking ".count($listsinceblock['transactions'])." transactions from block ".$process_from_block['block_id']);
+								if ($print_debug) $app->print_debug("Checking ".count($listsinceblock['transactions'])." transactions after block ".$process_from_block['block_id']);
 								
 								$currency_id = $blockchain->currency_id();
 								$add_count = 0;
@@ -114,7 +116,11 @@ if ($app->running_as_admin()) {
 										}
 									}
 									
-									if ($print_debug && $transaction_pos > 0 && $transaction_pos%1000 == 0) $app->print_debug($transaction_pos."/".count($listsinceblock['transactions']).", ".round(100*$transaction_pos/count($listsinceblock['transactions']), 4)."%");
+									if ($print_debug && $transaction_pos > 0 && $transaction_pos%1000 == 0) {
+										$blockinfo = $blockchain->coin_rpc->getblock($my_transaction['blockhash']);
+										$blockchain->set_processed_my_addresses_to_block(max($process_from_block_height, $blockinfo['height']-1));
+										$app->print_debug($transaction_pos."/".count($listsinceblock['transactions']).", block #".$blockinfo['height'].", ".round(100*$transaction_pos/count($listsinceblock['transactions']), 4)."%");
+									}
 									
 									$transaction_pos++;
 								}
@@ -126,7 +132,7 @@ if ($app->running_as_admin()) {
 								
 								if ($print_debug) $app->print_debug("Set ".$add_count." addresses as mine, backed up ".$add_privkey_count." private keys, transferred ".$transfer_count." to account");
 							}
-							else if ($print_debug) $app->print_debug("listsinceblock ".$process_from_block['block_id']." returned 0 transactions.");
+							else if ($print_debug) $app->print_debug("listsinceblock ".$process_from_block['block_id']." returned 0 transactions: ".json_encode($listsinceblock, JSON_PRETTY_PRINT));
 						}
 						else if ($print_debug) $app->print_debug("Block hash not yet set for block #".$process_from_block['block_id']);
 					}
