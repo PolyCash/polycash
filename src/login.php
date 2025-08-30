@@ -66,7 +66,8 @@ else {
 			</div>
 			<div class="panel-body">
 				<p>
-					Don't have an account yet? Please <a href="/register<?php if ($redirect_url) echo '/?redirect_key='.$redirect_url['redirect_key']; ?> ">sign up</a> first.
+					Don't have an account yet? Please <a href="/register<?php if ($redirect_url) echo '/?redirect_key='.$redirect_url['redirect_key']; ?> ">sign up</a> first.<br/>
+					<a href="/reset_password">Forgot Password</a>
 				</p>
 				<form method="post" action="/login">
 					<input type="hidden" name="redirect_key" id="redirect_key" value="<?php if ($redirect_url) echo $redirect_url['redirect_key']; ?>" />
