@@ -9,8 +9,6 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 ?>
 <div class="container-fluid">
 	<?php
-	die("This function is disabled.\n");
-	
 	$noinfo_message = "Sorry but that password reset link has expired. Please <a href=\"/reset_password/\">click here</a> to reset your password.";
 	
 	if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "reset") {
@@ -40,15 +38,14 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 				$app->run_query($update_resettoken_q, $update_resettoken_params);
 				?>
 				Please enter a new password for your user account:<br/>
-				<form action="/reset_password/" method="post" onsubmit="$('#reset_password').val(Sha256.hash($('#reset_password').val())); $('#reset_password_confirm').val(Sha256.hash($('#reset_password_confirm').val()));">
+				<form action="/reset_password/" method="post">
 					<input type="hidden" name="tid" value="<?php echo $reset_token['token_id']; ?>" />
 					<input type="hidden" name="action" value="reset_confirm" />
 					<input type="hidden" name="token2" value="<?php echo $reset_token['token2_key']; ?>" />
-					<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
-					
+
 					<div class="row">
 						<div class="col-md-4 form-control-static">
-							Alias:
+							Username:
 						</div>
 						<div class="col-md-4"><b><?php echo $user['username']; ?></b></div>
 					</div>
@@ -112,7 +109,7 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 				}
 				
 				if ($reset_success) {
-					echo "Your password has successfully been changed! <a href=\"/wallet/\">Click here</a> to log in.<br/><br/>\n";
+					echo "Your password has successfully been changed! <a href=\"/login/\">Click here</a> to log in.<br/><br/>\n";
 				}
 				else {
 					echo "The passwords that you entered didn't match, please <a href=\"/reset_password/\">click here</a> to try again.<br/><br/>\n";
