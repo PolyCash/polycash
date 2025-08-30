@@ -608,6 +608,7 @@ a.selected {
 	min-width: 240px ! important;
 	padding: 10px ! important;
 	margin-left: -100px ! important;
+	margin-top: -50px ! important;
 }
 .my-1 {
 	margin-top: 5px;
