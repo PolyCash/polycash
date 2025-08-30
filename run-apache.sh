@@ -12,6 +12,7 @@ fi
 POLYCASH_CONF_FNAME=/var/www/html/src/config/config.json
 if ! [ -f "$POLYCASH_CONF_FNAME" ]; then
 	cp /var/www/html/.dockerize/polycash/example-config.json "$POLYCASH_CONF_FNAME"
+	chmod 666 "$POLYCASH_CONF_FNAME"
 fi
 
 if ! [ -f "/var/www/html/datacoind" ]; then
