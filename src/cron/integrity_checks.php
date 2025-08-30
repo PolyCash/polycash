@@ -66,7 +66,7 @@ if ($app->running_as_admin()) {
 				if ($fix_from_block !== null) {
 					$message = $app->log_message("Integrity check initiating block deletion from height ".$fix_from_block." on ".$blockchain->db_blockchain['blockchain_name']);
 					if ($print_debug) $app->print_debug($message);
-					//$blockchain->delete_blocks_from_height($fix_from_block);
+					$blockchain->delete_blocks_from_height($fix_from_block);
 				}
 
 				$next_integrity_check_time = strtotime(date("Y-m-d H:00:01")." +6 hours");
