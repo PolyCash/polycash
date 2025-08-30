@@ -41,15 +41,15 @@ if ($app->running_as_admin()) {
 				
 				if ($running_game->db_game['cached_definition_hash'] != $running_game->db_game['defined_cached_definition_hash']) {
 					if ($running_game->last_block_id() == $running_game->blockchain->last_block_id()) {
-						$actual_game_def_str = GameDefinition::get_game_definition_by_hash($app, $running_game->db_game['cached_definition_hash']);
-						$defined_game_def_str = GameDefinition::get_game_definition_by_hash($app, $running_game->db_game['defined_cached_definition_hash']);
+						$show_internal_params = true;
 
-						if ($actual_game_def_str && $defined_game_def_str) {
-							$actual_game_def = json_decode($actual_game_def_str);
-							$defined_game_def = json_decode($defined_game_def_str);
-							$message = $app->log_message("Automatically applying defined to actual: ".$running_game->db_game['cached_definition_hash']." -> ".$running_game->db_game['defined_cached_definition_hash']);
+						list($defined_game_def_hash, $defined_game_def) = GameDefinition::export_game_definition($running_game, "defined", $show_internal_params, false);
+						list($actual_game_def_hash, $actual_game_def) = GameDefinition::export_game_definition($running_game, "actual", $show_internal_params, false);
+
+						if ($actual_game_def && $defined_game_def) {
+							$message = $app->log_message("Automatically applying defined to actual: ".$running_game->db_game['cached_definition_hash']." -> ".$running_game->db_game['defined_cached_definition_hash']." (with internal: ".$actual_game_def_hash." -> ".$defined_game_def_hash);
 							if ($print_debug) $app->print_debug($message);
-							$migrate_message = GameDefinition::migrate_game_definitions($running_game, null, "apply_defined_to_actual", $show_internal_params=true, $actual_game_def, $defined_game_def);
+							$migrate_message = GameDefinition::migrate_game_definitions($running_game, null, "apply_defined_to_actual", $show_internal_params, $actual_game_def, $defined_game_def);
 							if ($print_debug) $app->print_debug($migrate_message);
 						}
 						else {

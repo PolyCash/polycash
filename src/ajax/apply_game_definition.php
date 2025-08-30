@@ -12,7 +12,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 		$game = new Game($blockchain, $db_game['game_id']);
 		
 		if ($app->user_can_edit_game($thisuser, $game)) {
-			$show_internal_params = false;
+			$show_internal_params = true;
 			
 			list($defined_game_def_hash, $defined_game_def) = GameDefinition::export_game_definition($game, "defined", $show_internal_params, false);
 			list($actual_game_def_hash, $actual_game_def) = GameDefinition::export_game_definition($game, "actual", $show_internal_params, false);
