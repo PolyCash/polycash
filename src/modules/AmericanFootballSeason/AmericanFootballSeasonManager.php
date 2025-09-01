@@ -26,7 +26,7 @@ class AmericanFootballSeasonManager {
 			$max_info = $this->app->run_query("SELECT MAX(event_starting_time), MAX(event_index) FROM game_defined_events WHERE game_id=:game_id;", ['game_id' => $this->game->db_game['game_id']])->fetch();
 			
 			if (!empty($max_info['MAX(event_index)'])) $add_event_index = $max_info['MAX(event_index)']+1;
-			else $add_event_index = 1;
+			else $add_event_index = 0;
 			
 			$scrape_url = "http://opensourcebets.com/api/fixtures?sport=american_football&from_date=".date("Y-m-d")."&to_date=2026-03-01";
 			echo $scrape_url."\n";
