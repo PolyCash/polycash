@@ -3422,13 +3422,13 @@ class Game {
 		}
 	}
 	
-	public function event_filter_html($initial_filter_term=null) {
+	public function event_filter_html($game_instance_pos=0, $initial_filter_term=null) {
 		$show_date_filter = false;
 		
 		$html = '
 		<form class="form-inline" onsubmit="return false;">
 			<div class="form-group" style="margin-right: 15px;">
-				<input type="text" id="filter_by_term" class="form-control input-sm" placeholder="Search '.$this->db_game['event_type_name_plural'].'" value="'.(isset($initial_filter_term) ? $initial_filter_term : '').'" />
+				<input type="text" id="filter_by_term_'.$game_instance_pos.'" class="form-control input-sm" placeholder="Search '.$this->db_game['event_type_name_plural'].'" value="'.(isset($initial_filter_term) ? $initial_filter_term : '').'" />
 			</div>';
 		if ($show_date_filter) {
 			$html .= '

@@ -76,7 +76,7 @@ else $exchange_rate = 0;
 	<div style="overflow: auto; margin: 10px 0px;">
 		<div style="float: right;">
 			<?php
-			echo $game->event_filter_html();
+			echo $game->event_filter_html(0, null);
 			?>
 		</div>
 	</div>
