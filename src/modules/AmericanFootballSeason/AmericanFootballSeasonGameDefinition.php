@@ -49,7 +49,7 @@ class AmericanFootballSeasonGameDefinition {
 			"default_option_max_width": 200,
 			"default_payout_block_delay": 0,
 			"view_mode": "default",
-			"order_options_by": "bets",
+			"order_options_by": "option_index",
 			"order_events_by": "event_index",
 			"target_option_block_score": null,
 			"escrow_amounts": [
