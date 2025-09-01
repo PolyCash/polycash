@@ -343,7 +343,7 @@ var Game = function(pageManager, game_id, last_block_id, last_transaction_id, ma
 					event_hashes: _.map(this.events, 'rendered_event_hash').join(","),
 					being_determined_hash: this.being_determined_hash,
 					filter_date: this.filter_date ? this.filter_date : "",
-					filter_term: document.getElementById('filter_by_term') ? encodeURIComponent(document.getElementById('filter_by_term').value) : "",
+					filter_term: document.getElementById('filter_by_term_'+this.instance_id) ? encodeURIComponent(document.getElementById('filter_by_term_'+this.instance_id).value) : "",
 					net_risk_view: document.getElementById('net_risk_view') ? document.getElementById('net_risk_view').value : "",
 					include_betting_events: this.include_betting_events,
 					include_being_determined_events: this.include_being_determined_events,

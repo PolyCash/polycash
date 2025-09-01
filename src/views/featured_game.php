@@ -94,7 +94,7 @@ games.push(new Game(thisPageManager, <?php
 		}
 		
 		if ($include_betting_events) {
-			echo '<div style="margin-bottom: 15px;">'.$game->event_filter_html().'</div>';
+			echo '<div style="margin-bottom: 15px;">'.$game->event_filter_html($game_instance_id, null).'</div>';
 		}
 		?>
 	</center>

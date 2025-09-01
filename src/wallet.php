@@ -625,7 +625,7 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 						<div style="overflow: auto; margin-bottom: 10px;">
 							<div style="float: right;">
 								<?php
-								echo $game->event_filter_html();
+								echo $game->event_filter_html(0, null);
 								?>
 							</div>
 						</div>
