@@ -3412,13 +3412,25 @@ class Game {
 				}
 			}
 			
-			$this->blockchain->app->run_query("UPDATE game_defined_events SET event_starting_block=:event_starting_block, event_final_block=:event_final_block, event_payout_block=:event_payout_block WHERE game_id=:game_id AND event_index=:event_index;", [
+			$update_event_q = "UPDATE game_defined_events SET event_starting_block=:event_starting_block, event_final_block=:event_final_block, event_payout_block=:event_payout_block";
+			$update_event_params = [
 				'event_starting_block' => $start_block,
 				'event_final_block' => $final_block,
 				'event_payout_block' => $payout_block,
 				'game_id' => $this->db_game['game_id'],
 				'event_index' => $gde['event_index']
-			]);
+			];
+
+			if ($this->db_game['set_being_determined_blocks_method'] == "by_final_and_payout" && $payout_block > $final_block + 1) {
+				$update_event_q .= ", event_determined_from_block=:event_being_determined_from_block, event_determined_to_block=:event_being_determined_to_block";
+
+				$update_event_params['event_being_determined_from_block'] = $final_block + 1;
+				$update_event_params['event_being_determined_to_block'] = $payout_block - 1;
+			}
+
+			$update_event_q .= " WHERE game_id=:game_id AND event_index=:event_index;";
+
+			$this->blockchain->app->run_query($update_event_q, $update_event_params);
 		}
 	}
 	
