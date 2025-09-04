@@ -122,6 +122,8 @@ class AmericanFootballSeasonGameDefinition {
 				if (!empty($db_gde['sport_name'])) $event["sport"] = $db_gde['sport_name'];
 				if (!empty($db_gde['league_name'])) $event["league"] = $db_gde['league_name'];
 				if (!empty($db_gde['external_identifier'])) $event["external_identifier"] = $db_gde['external_identifier'];
+				if (isset($db_gde['event_determined_from_block'])) $event["event_determined_from_block"] = $db_gde['event_determined_from_block'];
+				if (isset($db_gde['event_determined_to_block'])) $event["event_determined_to_block"] = $db_gde['event_determined_to_block'];
 				
 				array_push($events, $event);
 			}

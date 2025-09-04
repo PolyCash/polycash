@@ -18,7 +18,7 @@ else {
 	if (!empty($_POST['username'])) {
 		if (!empty($_POST['username']) && !empty($_POST['password'])) {
 			$username = $app->normalize_username($_POST['username']);
-			$password = $app->strong_strip_tags($_POST['password']);
+			$password = $_POST['password'];
 			
 			$old_vars_safe['username'] = $username;
 			
