@@ -1705,6 +1705,7 @@ class App {
 			['string', 'order_options_by', true],
 			['string', 'order_events_by', true],
 			['float', 'target_option_block_score', true],
+			['string', 'set_being_determined_blocks_method', false],
 		];
 	}
 	

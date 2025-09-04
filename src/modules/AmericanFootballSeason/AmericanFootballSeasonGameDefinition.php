@@ -52,6 +52,7 @@ class AmericanFootballSeasonGameDefinition {
 			"order_options_by": "option_index",
 			"order_events_by": "event_index",
 			"target_option_block_score": null,
+			"set_being_determined_blocks_method": "by_final_and_payout",
 			"escrow_amounts": [
 				{
 					"type": "fixed",
@@ -108,6 +109,8 @@ class AmericanFootballSeasonGameDefinition {
 					"event_starting_time" => $db_gde['event_starting_time'],
 					"event_final_time" => $db_gde['event_final_time'],
 					"event_payout_time" => $db_gde['event_payout_time'],
+					"event_determined_from_time" => $db_gde['event_determined_from_time'],
+					"event_determined_to_time" => $db_gde['event_determined_to_time'],
 					"event_name" => $db_gde['event_name'],
 					"option_name" => $db_gde['option_name'],
 					"option_name_plural" => $db_gde['option_name_plural'],
@@ -119,6 +122,8 @@ class AmericanFootballSeasonGameDefinition {
 				if (!empty($db_gde['sport_name'])) $event["sport"] = $db_gde['sport_name'];
 				if (!empty($db_gde['league_name'])) $event["league"] = $db_gde['league_name'];
 				if (!empty($db_gde['external_identifier'])) $event["external_identifier"] = $db_gde['external_identifier'];
+				if (isset($db_gde['event_determined_from_block'])) $event["event_determined_from_block"] = $db_gde['event_determined_from_block'];
+				if (isset($db_gde['event_determined_to_block'])) $event["event_determined_to_block"] = $db_gde['event_determined_to_block'];
 				
 				array_push($events, $event);
 			}
