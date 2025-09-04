@@ -18,14 +18,8 @@ $play_now_url = '/wallet/'.$game->db_game['url_identifier'].'/';
 $just_ended_events = $game->events_by_outcome_block($last_block_id);
 $being_determined_events = $game->events_being_determined_in_block($last_block_id+1);
 
-if (count($being_determined_events) > 0) {
-	$include_being_determined_events = true;
-	$include_betting_events = false;
-}
-else {
-	$include_being_determined_events = false;
-	$include_betting_events = true;
-}
+$include_being_determined_events = count($being_determined_events) > 0;
+$include_betting_events = true;
 ?>
 <script type="text/javascript">
 games.push(new Game(thisPageManager, <?php
@@ -98,6 +92,13 @@ games.push(new Game(thisPageManager, <?php
 		}
 		?>
 	</center>
+	
+	<div id="game<?php echo $counter; ?>_events" class="game_events game_events_short"><?php echo $new_event_html; ?></div>
+	<script type="text/javascript" id="game<?php echo $counter; ?>_new_event_js">
+	<?php echo $new_event_js; ?>
+	</script>
+	<br/>
+
 	<?php
 	if (count($being_determined_events) > 0) {
 		?>
@@ -115,15 +116,6 @@ games.push(new Game(thisPageManager, <?php
 			]);
 			?>
 		</div>
-		<br/>
-		<?php
-	}
-	else {
-		?>
-		<div id="game<?php echo $counter; ?>_events" class="game_events game_events_short"><?php echo $new_event_html; ?></div>
-		<script type="text/javascript" id="game<?php echo $counter; ?>_new_event_js">
-		<?php echo $new_event_js; ?>
-		</script>
 		<br/>
 		<?php
 	}
