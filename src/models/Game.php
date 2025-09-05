@@ -911,7 +911,7 @@ class Game {
 		return $html;
 	}
 	
-	public function send_invitation_email($to_email, &$invitation) {
+	public function send_invitation_email($to_email, &$invitation, &$exchange_rate_currency) {
 		$invite_currency = false;
 		if ($this->db_game['invite_currency'] > 0) {
 			$invite_currency = $this->blockchain->app->fetch_currency_by_id($this->db_game['invite_currency']);
@@ -923,12 +923,13 @@ class Game {
 		if ($this->db_game['short_description'] != "") {
 			$message .= "<p>".$this->db_game['short_description']."</p>";
 		}
-		
-		$message .= "<p>To start playing, accept your invitation by following <a href=\"".AppSettings::getParam('base_url')."/wallet/".$this->db_game['url_identifier']."/?invite_key=".$invitation['invitation_key']."\">this link</a>.</p>";
+
+		$message .= "<p>To start playing, please accept your invitation:</a></p>";
+		$message .= "<p><a style=\"color: #fff; background-color: #3fb618; padding: 8px 15px;\" href=\"".AppSettings::getParam('base_url')."/wallet/".$this->db_game['url_identifier']."/?invite_key=".$invitation['invitation_key']."\">Join ".$this->db_game['name']."</a></p>";
 		
 		$this->db_game['seconds_per_block'] = $this->blockchain->db_blockchain['seconds_per_block'];
 		
-		$table = str_replace('<div class="row"><div class="col-sm-5">', '<tr><td>', $this->blockchain->app->game_info_table($this->db_game));
+		$table = str_replace('<div class="row"><div class="col-sm-5">', '<tr><td>', $this->blockchain->app->game_info_table($this->db_game, $exchange_rate_currency));
 		$table = str_replace('</div><div class="col-sm-7">', '</td><td>', $table);
 		$table = str_replace('</div></div>', '</td></tr>', $table);
 		$table = str_replace('href="', 'href="'.AppSettings::getParam('base_url'), $table);
@@ -4428,6 +4429,16 @@ class Game {
 		
 		if ($lock_time == 0 || $lock_time < time()-(60*10)) return false;
 		else return true;
+	}
+	
+	public function get_default_display_exchange_rate_currency() {
+		$escrow_amounts = EscrowAmount::fetch_escrow_amounts_in_game($this, "actual")->fetchAll(PDO::FETCH_ASSOC);
+
+		if (count($escrow_amounts) == 1) {
+			return $this->blockchain->app->fetch_currency_by_id($escrow_amounts[0]['currency_id']);
+		}
+
+		return $this->blockchain->app->fetch_currency_by_abbreviation("USD");
 	}
 }
 ?>

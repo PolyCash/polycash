@@ -67,7 +67,9 @@ else $exchange_rate = 0;
 			<div style="border: 1px solid #ccc; padding: 10px; background-color: #fff;">
 				<?php
 				$game->db_game['seconds_per_block'] = $game->blockchain->db_blockchain['seconds_per_block'];
-				echo $app->game_info_table($game->db_game);
+				if ($user_game) $exchange_rate_currency = $app->fetch_currency_by_id($user_game['display_currency_id']);
+				else $exchange_rate_currency = $game->get_default_display_exchange_rate_currency();
+				echo $app->game_info_table($game->db_game, $exchange_rate_currency);
 				?>
 			</div>
 		</div>
