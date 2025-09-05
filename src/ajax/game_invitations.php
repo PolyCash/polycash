@@ -66,7 +66,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 						<?php
 					}
 					else if ($action == "send") {
-						$send_to = strip_tags(urldecode($_REQUEST['send_to']));
+						$send_to = strip_tags($_REQUEST['send_to']);
 						$invitation_id = intval($_REQUEST['invitation_id']);
 						
 						$invitation = $app->run_query("SELECT * FROM game_invitations WHERE invitation_id=:invitation_id AND inviter_id=:inviter_id;", [
