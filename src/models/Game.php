@@ -1350,14 +1350,21 @@ class Game {
 		}
 		return $events;
 	}
-	
-	
+
 	public function events_being_determined_in_block($block_id) {
 		$events = [];
-		$db_events = $this->blockchain->app->run_query("SELECT * FROM events WHERE game_id=:game_id AND event_determined_from_block <= :block_id AND event_determined_to_block >= :block_id ORDER BY event_index ASC;", [
-			'game_id' => $this->db_game['game_id'],
-			'block_id' => $block_id
-		]);
+		if ($this->db_game['set_being_determined_blocks_method'] == "by_final_and_payout") {
+			$db_events = $this->blockchain->app->run_query("SELECT * FROM events WHERE game_id=:game_id AND event_final_block <= :block_id AND event_payout_block >= :block_id ORDER BY event_index ASC;", [
+				'game_id' => $this->db_game['game_id'],
+				'block_id' => $block_id
+			]);
+		}
+		else {
+			$db_events = $this->blockchain->app->run_query("SELECT * FROM events WHERE game_id=:game_id AND event_determined_from_block <= :block_id AND event_determined_to_block >= :block_id ORDER BY event_index ASC;", [
+				'game_id' => $this->db_game['game_id'],
+				'block_id' => $block_id
+			]);
+		}
 		
 		while ($db_event = $db_events->fetch()) {
 			array_push($events, new Event($this, $db_event, false));
@@ -3429,14 +3436,6 @@ class Game {
 				'game_id' => $this->db_game['game_id'],
 				'event_index' => $gde['event_index']
 			];
-
-			if ($this->db_game['set_being_determined_blocks_method'] == "by_final_and_payout" && $payout_block > $final_block + 1) {
-				$update_event_q .= ", event_determined_from_block=:event_being_determined_from_block, event_determined_to_block=:event_being_determined_to_block";
-
-				$update_event_params['event_being_determined_from_block'] = $final_block + 1;
-				$update_event_params['event_being_determined_to_block'] = $payout_block - 1;
-			}
-
 			$update_event_q .= " WHERE game_id=:game_id AND event_index=:event_index;";
 
 			$this->blockchain->app->run_query($update_event_q, $update_event_params);
