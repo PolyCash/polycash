@@ -519,7 +519,7 @@ class GameDefinition {
 
 		$set_events_from_index = $reset_event_index;
 		if ($matched_events != count($new_game_obj['events']) || $matched_events != count($initial_game_obj['events'])) {
-			$set_events_from_index = $game->blockchain->app->min_excluding_false($reset_event_index, $matched_events-1+$events_start_at_index);
+			$set_events_from_index = $game->blockchain->app->min_excluding_false($reset_event_index, $matched_events+$events_start_at_index);
 		}
 		
 		if ($set_events_from_index !== false) {
