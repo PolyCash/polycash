@@ -80,7 +80,8 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 								
 								if ($send_method == "email") {
 									if ($invitation['sent_email_id'] == 0) {
-										$email_id = $game->send_invitation_email($send_to, $invitation);
+										$exchange_rate_currency = $game->get_default_display_exchange_rate_currency();
+										$email_id = $game->send_invitation_email($send_to, $invitation, $exchange_rate_currency);
 										
 										$app->output_message(1, "Great, the invitation has been sent.", $invitation);
 									}

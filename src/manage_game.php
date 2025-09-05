@@ -149,6 +149,8 @@ else {
 						array_push($messages, "Required column email was missing.");
 					}
 					else {
+						$exchange_rate_currency = $game->get_default_display_exchange_rate_currency();
+
 						$invite_count = 0;
 						
 						for ($line_i=1; $line_i<count($csv_lines); $line_i++) {
@@ -158,7 +160,7 @@ else {
 							if (!empty($email_address)) {
 								$invitation = false;
 								$game->generate_invitation($thisuser->db_user['user_id'], $invitation, false);
-								$email_id = $game->send_invitation_email($email_address, $invitation);
+								$email_id = $game->send_invitation_email($email_address, $invitation, $exchange_rate_currency);
 								$invite_count++;
 							}
 						}

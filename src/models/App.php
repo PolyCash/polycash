@@ -1248,7 +1248,7 @@ class App {
 		return $db_image;
 	}
 
-	public function game_info_table(&$db_game) {
+	public function game_info_table(&$db_game, $exchange_rate_currency) {
 		$html = '<div class="game_info_table">';
 		
 		$blocks_per_hour = 3600/$db_game['seconds_per_block'];
@@ -1353,8 +1353,8 @@ class App {
 			else $html .= $db_game['coin_name_plural'];
 			if (!empty($db_game['set_cached_fields_at'])) $html .= " (".$this->format_seconds(time()-$db_game['set_cached_fields_at'])." ago)";
 			$html .= "</div></div>\n";
-			
-			if (!in_array($db_game['buyin_policy'], ["none","for_sale",""])) {
+
+			/*if (!in_array($db_game['buyin_policy'], ["none","for_sale",""])) {
 				$escrow_amount_disp = $this->format_bignum($game->escrow_value($last_block_id)/pow(10,$db_game['decimal_places']));
 				$html .= '<div class="row"><div class="col-sm-5">'.ucwords($game->blockchain->db_blockchain['coin_name_plural']).' in escrow:</div><div class="col-sm-7">';
 				$html .= $escrow_amount_disp.' ';
@@ -1369,7 +1369,7 @@ class App {
 				else $html .= $db_game['coin_name_plural'];
 				$html .= ' per '.$game->blockchain->db_blockchain['coin_name'];
 				$html .= "</div></div>\n";
-			}
+			}*/
 		}
 		
 		$html .= '<div class="row"><div class="col-sm-5">Buy-in policy:</div><div class="col-sm-7">';
@@ -1410,6 +1410,17 @@ class App {
 		$html .= "</div></div>\n";
 		
 		if ($game) {
+			if ($coins_in_existence > 0) {
+				list($escrow_value, $exchange_rate_as_of) = $game->escrow_value_in_currency($exchange_rate_currency['currency_id'], $coins_in_existence/pow(10, $game->db_game['decimal_places']));
+
+				$exchange_rate = pow(10, $game->db_game['decimal_places'])*$escrow_value/$coins_in_existence;
+				$exchange_rate_disp = $this->format_bignum($exchange_rate);
+
+				$html .= '<div class="row"><div class="col-sm-5">Current exchange rate:</div><div class="col-sm-7">';
+				$html .= "1 ".$db_game['coin_name']." = ".$exchange_rate_disp." ".$exchange_rate_currency['abbreviation'];
+				$html .= "</div></div>\n";
+			}
+
 			$escrow_amounts = EscrowAmount::fetch_escrow_amounts_in_game($game, "actual")->fetchAll();
 			
 			if (count($escrow_amounts) > 0) {
