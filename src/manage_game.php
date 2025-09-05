@@ -363,7 +363,8 @@ else {
 					$min_sellout_amount = (float) $_REQUEST['min_sellout_amount'];
 					$bulk_add_blocks = (int) $_REQUEST['bulk_add_blocks'];
 					$keep_definitions_hours = empty($_REQUEST['keep_definitions_hours']) ? null : (float) $_REQUEST['keep_definitions_hours'];
-					
+					$num_buffer_address_sets = (string) $_REQUEST['num_buffer_address_sets'] === "" ? null : (int) $_REQUEST['num_buffer_address_sets'];
+
 					$definitive_game_peer_on = $_REQUEST['definitive_game_peer_on'];
 					if ($definitive_game_peer_on == 1) {
 						$definitive_game_peer_url = $_REQUEST['definitive_game_peer'];
@@ -385,7 +386,7 @@ else {
 						}
 					}
 
-					$app->run_query("UPDATE games SET featured=:featured, public_players=:public_players, faucet_policy=:faucet_policy, hide_module=:hide_module, definitive_game_peer_id=:definitive_game_peer_id, every_event_bet_reminder_minutes=:every_event_bet_reminder_minutes, sec_per_faucet_claim=:sec_per_faucet_claim, min_sec_between_claims=:min_sec_between_claims, bonus_claims=:bonus_claims, default_transaction_fee=:default_transaction_fee, min_buyin_amount=:min_buyin_amount, min_sellout_amount=:min_sellout_amount, bulk_add_blocks=:bulk_add_blocks, sellout_policy=:sellout_policy, sellout_confirmations=:sellout_confirmations, keep_definitions_hours=:keep_definitions_hours WHERE game_id=:game_id;", [
+					$app->run_query("UPDATE games SET featured=:featured, public_players=:public_players, faucet_policy=:faucet_policy, hide_module=:hide_module, definitive_game_peer_id=:definitive_game_peer_id, every_event_bet_reminder_minutes=:every_event_bet_reminder_minutes, sec_per_faucet_claim=:sec_per_faucet_claim, min_sec_between_claims=:min_sec_between_claims, bonus_claims=:bonus_claims, default_transaction_fee=:default_transaction_fee, min_buyin_amount=:min_buyin_amount, min_sellout_amount=:min_sellout_amount, bulk_add_blocks=:bulk_add_blocks, sellout_policy=:sellout_policy, sellout_confirmations=:sellout_confirmations, keep_definitions_hours=:keep_definitions_hours, num_buffer_address_sets=:num_buffer_address_sets WHERE game_id=:game_id;", [
 						'featured' => $featured,
 						'public_players' => $public_players,
 						'faucet_policy' => $faucet_policy,
@@ -403,6 +404,7 @@ else {
 						'sellout_policy' => $sellout_policy,
 						'sellout_confirmations' => $sellout_confirmations,
 						'keep_definitions_hours' => $keep_definitions_hours,
+						'num_buffer_address_sets' => $num_buffer_address_sets,
 					]);
 					
 					$game->db_game['featured'] = $featured;
@@ -420,6 +422,7 @@ else {
 					$game->db_game['sellout_policy'] = $sellout_policy;
 					$game->db_game['sellout_confirmations'] = $sellout_confirmations;
 					$game->db_game['keep_definitions_hours'] = $keep_definitions_hours;
+					$game->db_game['num_buffer_address_sets'] = $num_buffer_address_sets;
 					
 					array_push($messages, "Game internal settings have been updated.");
 				}
@@ -898,6 +901,10 @@ else {
 												<?php
 											}
 											?>
+										</div>
+										<div class="form-group">
+											<label for="min_sellout_amount">How many unallocated buffer address sets should be keep for this game?</label>
+											<input type="text" class="form-control" name="num_buffer_address_sets" id="num_buffer_address_sets" placeholder="3" value="<?php echo $game->db_game['num_buffer_address_sets']; ?>" />
 										</div>
 										
 										<input type="submit" class="btn btn-success" value="Save Settings" />

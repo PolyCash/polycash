@@ -14,7 +14,6 @@ if ($app->running_as_admin()) {
 	$process_locked = $app->check_process_running($process_lock_name);
 	
 	if (!$process_locked && $app->lock_process($process_lock_name)) {
-		$buffer_address_sets = 3;
 		$script_target_time = 49;
 		$loop_target_time = 10;
 		
@@ -65,6 +64,10 @@ if ($app->running_as_admin()) {
 					'game_id' => $running_games[$game_i]->db_game['game_id']
 				])->fetchAll();
 				
+				$buffer_address_sets = (string) $running_games[$game_i]->db_game['num_buffer_address_sets'] !== "" ? (int) $running_games[$game_i]->db_game['num_buffer_address_sets'] : 3;
+				
+				if ($print_debug) $app->print_debug($running_games[$game_i]->db_game['name']." has ".count($game_addrsets)." buffer address sets, needs ".$buffer_address_sets);
+
 				if (count($game_addrsets) < $buffer_address_sets) {
 					$num_sets_needed = $buffer_address_sets-count($game_addrsets);
 					
