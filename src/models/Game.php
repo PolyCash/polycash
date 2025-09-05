@@ -924,6 +924,8 @@ class Game {
 			$message .= "<p>".$this->db_game['short_description']."</p>";
 		}
 		
+		$message .= "<p>To start playing, accept your invitation by following <a href=\"".AppSettings::getParam('base_url')."/wallet/".$this->db_game['url_identifier']."/?invite_key=".$invitation['invitation_key']."\">this link</a>.</p>";
+		
 		$this->db_game['seconds_per_block'] = $this->blockchain->db_blockchain['seconds_per_block'];
 		
 		$table = str_replace('<div class="row"><div class="col-sm-5">', '<tr><td>', $this->blockchain->app->game_info_table($this->db_game));
@@ -931,9 +933,8 @@ class Game {
 		$table = str_replace('</div></div>', '</td></tr>', $table);
 		$table = str_replace('href="', 'href="'.AppSettings::getParam('base_url'), $table);
 		
-		$message .= '<table>'.$table.'</table>';
-		$message .= "<p>To start playing, accept your invitation by following <a href=\"".AppSettings::getParam('base_url')."/wallet/".$this->db_game['url_identifier']."/?invite_key=".$invitation['invitation_key']."\">this link</a>.</p>";
-		$message .= "<p>This message was sent to you by ".AppSettings::getParam('site_name')."</p>";
+		$message .= '<div style="border: 1px solid #aaa; padding: 10px; overflow-y: scroll; max-height: 270px;"><table>'.$table.'</table></div>';
+		$message .= "<p>This message was sent to you by <a href=\"".AppSettings::getParam('base_url')."\">".AppSettings::getParam('site_name')."</a></p>";
 		
 		$email_id = $this->blockchain->app->mail_async($to_email, AppSettings::getParam('site_name'), AppSettings::defaultFromEmailAddress(), $subject, $message, "", "", "");
 		
