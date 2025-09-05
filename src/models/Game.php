@@ -918,6 +918,7 @@ class Game {
 		}
 		
 		$subject = "You've been invited to join ".$this->db_game['name'];
+		$message = "";
 		
 		if ($this->db_game['short_description'] != "") {
 			$message .= "<p>".$this->db_game['short_description']."</p>";
