@@ -46,7 +46,7 @@ if ($app->running_as_admin()) {
 						list($defined_game_def_hash, $defined_game_def) = GameDefinition::export_game_definition($running_game, "defined", $show_internal_params, false);
 						list($actual_game_def_hash, $actual_game_def) = GameDefinition::export_game_definition($running_game, "actual", $show_internal_params, false);
 
-						if ($actual_game_def && $defined_game_def) {
+						if ($actual_game_def && $defined_game_def && $running_game->db_game['cached_definition_hash'] && $running_game->db_game['defined_cached_definition_hash']) {
 							$message = $app->log_message("Automatically applying defined to actual: ".$running_game->db_game['cached_definition_hash']." -> ".$running_game->db_game['defined_cached_definition_hash']." (with internal: ".$actual_game_def_hash." -> ".$defined_game_def_hash);
 							if ($print_debug) $app->print_debug($message);
 							$migrate_message = GameDefinition::migrate_game_definitions($running_game, null, "apply_defined_to_actual", $show_internal_params, $actual_game_def, $defined_game_def);
