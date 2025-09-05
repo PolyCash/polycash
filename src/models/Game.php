@@ -1880,7 +1880,9 @@ class Game {
 								$db_new_game = false;
 								list($mod_game, $mod_game_is_new, $set_game_error) = GameDefinition::set_game_from_definition($this->blockchain->app, $api_response, $ref_user, $error_message, $db_new_game, true);
 								
-								$this->blockchain->app->log_message($this->db_game['name'].": set game from definition in ".round(microtime(true)-$ref_time, 6).(!empty($set_game_error) ? ": ".$set_game_error : ""));
+								$temp_message = $this->db_game['name'].": set game from definition in ".round(microtime(true)-$ref_time, 6).(!empty($set_game_error) ? ": ".$set_game_error : "");
+								$error_message .= $temp_message;
+								$this->blockchain->app->log_message($temp_message);
 							}
 						}
 						else $error_message .= $this->blockchain->app->log_message($this->db_game['name'].": fetched in ".$fetch_time.", decoded in ".$decode_time." but sync canceled because definitive peer tried to change the game identifier.");
@@ -1937,18 +1939,22 @@ class Game {
 						$this->reset_blocks_from_block($reset_from_block);
 						$this->set_loaded_until_block($reset_from_block-1);
 						$this->set_events_until_block($reset_from_block-1);
-					}
-					else $this->blockchain->app->log_message("Game #".$this->db_game['game_id']." tried to reset to future block ".$extra_info['reset_from_block']." but last block was ".$this->blockchain->last_block_id().", skipping block reloading.");
 					
-					unset($extra_info['reset_from_block']);
+						unset($extra_info['reset_from_block']);
 
-					if (array_key_exists("reset_from_event_index", $extra_info)) {
-						$this->reset_events_from_index($extra_info['reset_from_event_index']);
-						unset($extra_info['reset_from_event_index']);
+						if (array_key_exists("reset_from_event_index", $extra_info)) {
+							$this->reset_events_from_index($extra_info['reset_from_event_index']);
+							unset($extra_info['reset_from_event_index']);
+						}
+
+						$this->ensure_events_until_block($this->blockchain->last_complete_block_id()+1, $print_debug);
+						$this->set_target_scores_at_block($reset_from_block);
 					}
-
-					$this->ensure_events_until_block($this->blockchain->last_complete_block_id()+1, $print_debug);
-					$this->set_target_scores_at_block($reset_from_block);
+					else {
+						$log_message = "Game #".$this->db_game['game_id']." tried to reset to future block ".$extra_info['reset_from_block']." but last block was ".$this->blockchain->last_block_id().", skipping block reloading.";
+						$this->blockchain->app->log_message($log_message);
+						if ($print_debug) $this->blockchain->app->print_debug($log_message);
+					}
 				}
 				else {
 					if ($print_debug) $this->blockchain->app->print_debug("Fully resetting the game...");
@@ -1978,7 +1984,10 @@ class Game {
 			if ($this->db_game['finite_events'] == 1) $ensure_block_id = max($ensure_block_id, $this->max_gde_starting_block());
 			$this->ensure_events_until_block($ensure_block_id, $print_debug);
 		}
-		else if ($this->db_game['finite_events'] == 1) $ensure_block_id = max($ensure_block_id, $this->max_gde_starting_block());
+		else {
+			if ($print_debug) $this->blockchain->app->print_debug("Not syncing with definitive peer: ".(empty($this->db_game['definitive_game_peer_id']) ? "No definitive peer" : ($this->db_game['loaded_until_block'] != $this->blockchain->last_block_id() ? 'Not loaded to latest block.' : '---')));
+			if ($this->db_game['finite_events'] == 1) $ensure_block_id = max($ensure_block_id, $this->max_gde_starting_block());
+		}
 		
 		// Load events
 		$this->ensure_events_until_block($ensure_block_id, $print_debug);

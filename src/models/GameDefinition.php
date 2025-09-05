@@ -74,7 +74,7 @@ class GameDefinition {
 			
 			$game_definition[$var_name] = $var_val;
 		}
-		
+
 		$escrow_amounts = [];
 		$db_escrow_amounts = EscrowAmount::fetch_escrow_amounts_in_game($game, $definition_mode);
 		$escrow_position = 0;
@@ -517,7 +517,10 @@ class GameDefinition {
 			$log_message .= "Deleting events from index ".$delete_from_event_index."\n";
 		}
 
-		$set_events_from_index = $game->blockchain->app->min_excluding_false(array($reset_event_index, $matched_events));
+		$set_events_from_index = $reset_event_index;
+		if ($matched_events != count($new_game_obj['events']) || $matched_events != count($initial_game_obj['events'])) {
+			$set_events_from_index = $game->blockchain->app->min_excluding_false($reset_event_index, $matched_events+$events_start_at_index);
+		}
 		
 		if ($set_events_from_index !== false) {
 			$log_message .= "Resetting events from #".$set_events_from_index."\n";
@@ -539,22 +542,22 @@ class GameDefinition {
 			}
 		}
 		
-		if (!is_numeric($reset_block)) $reset_block = $game->blockchain->last_block_id();
-		
-		$log_message .= "Resetting blocks from #".$reset_block."\n";
-		
-		$migration = self::record_migration($game, $user_id, $migration_type, $show_internal_params, $initial_game_def, $new_game_def);
-		
-		$game->schedule_game_reset($reset_block, $set_events_from_index, $migration['migration_id']);
-		
-		$game->unlock_game_definition();
-		
-		$game_extra_info = json_decode($game->db_game['extra_info']);
-		
-		if (!empty($game_extra_info->reset_from_block)) $log_message .= "Adjusted reset block: ".$game_extra_info->reset_from_block."\n";
-		if (!empty($game_extra_info->reset_from_event_index)) $log_message .= "Adjusted event index: ".$game_extra_info->reset_from_event_index."\n";
-		
-		$game->update_db_game();
+		if (is_numeric($reset_block)) {
+			$log_message .= "Resetting blocks from #".$reset_block."\n";
+			
+			$migration = self::record_migration($game, $user_id, $migration_type, $show_internal_params, $initial_game_def, $new_game_def);
+			
+			$game->schedule_game_reset($reset_block, $set_events_from_index, $migration['migration_id']);
+			
+			$game->unlock_game_definition();
+			
+			$game_extra_info = json_decode($game->db_game['extra_info']);
+			
+			if (!empty($game_extra_info->reset_from_block)) $log_message .= "Adjusted reset block: ".$game_extra_info->reset_from_block."\n";
+			if (!empty($game_extra_info->reset_from_event_index)) $log_message .= "Adjusted event index: ".$game_extra_info->reset_from_event_index."\n";
+			
+			$game->update_db_game();
+		}
 
 		return $log_message;
 	}
