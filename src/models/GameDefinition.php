@@ -336,12 +336,14 @@ class GameDefinition {
 					$ref_from_event = clone $from_def->events[$event_pos];
 					$ref_from_event->event_starting_block = null;
 					$ref_from_event->event_final_block = null;
+					$ref_from_event->event_determined_from_block = null;
 					$ref_from_event->event_determined_to_block = null;
 					$ref_from_event->event_payout_block = null;
 					
 					$ref_to_event = clone $to_def->events[$event_pos];
 					$ref_to_event->event_starting_block = null;
 					$ref_to_event->event_final_block = null;
+					$ref_to_event->event_determined_from_block = null;
 					$ref_to_event->event_determined_to_block = null;
 					$ref_to_event->event_payout_block = null;
 					
