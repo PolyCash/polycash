@@ -143,31 +143,23 @@ else {
 					$csv_content = file_get_contents($_FILES['csv_file']['tmp_name']);
 					$csv_lines = explode("\n", $csv_content);
 					$header_vars = explode(",", trim(strtolower($csv_lines[0])));
-					$id_col = array_search("user_id", $header_vars);
+					$email_col = array_search("email", $header_vars);
 					
-					if ($id_col === false) {
-						array_push($messages, "Required column user_id was missing.");
+					if ($email_col === false) {
+						array_push($messages, "Required column email was missing.");
 					}
 					else {
 						$invite_count = 0;
 						
 						for ($line_i=1; $line_i<count($csv_lines); $line_i++) {
 							$line_vals = explode(",", trim($csv_lines[$line_i]));
-							$user_id = (int) str_replace('"', '', $line_vals[$id_col]);
+							$email_address = trim(str_replace("'", "", str_replace('"', '', $line_vals[$email_col])));
 							
-							if ($user_id > 0) {
-								$send_to_user = $app->fetch_user_by_id($user_id);
-								
-								if ($send_to_user) {
-									$send_user_game = $app->fetch_user_game($send_to_user['user_id'], $game->db_game['game_id']);
-									
-									if (!$send_user_game) {
-										$invitation = false;
-										$game->generate_invitation($user_id, $invitation, false);
-										$app->send_apply_invitation($send_to_user, $invitation);
-										$invite_count++;
-									}
-								}
+							if (!empty($email_address)) {
+								$invitation = false;
+								$game->generate_invitation($thisuser->db_user['user_id'], $invitation, false);
+								$email_id = $game->send_invitation_email($email_address, $invitation);
+								$invite_count++;
 							}
 						}
 						
