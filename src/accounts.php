@@ -613,8 +613,12 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 						}
 						
 						echo '<div id="addresses_'.$account['account_id'].'" class="tab-pane'.($account_selected_tab == "addresses" ? ' active' : ' fade').'">';
-						$addr_arr = $app->fetch_all_addresses_in_account($account, 500);
-						echo "<p>This account has ".count($addr_arr)." addresses.</p>";
+						
+						$address_limit_int = $account_game && $account_game->db_game['max_simultaneous_options'] > 0 ? 2*$account_game->db_game['max_simultaneous_options'] : 500;
+						$address_limit_int = max(500, min(5000, $address_limit_int));
+						
+						$addr_arr = $app->fetch_all_addresses_in_account($account, $address_limit_int);
+						echo "<p>This account has ".number_format(count($addr_arr))." addresses.</p>";
 						
 						echo '<div style="max-height: 400px; overflow-x: hidden; overflow-y: scroll;">';
 						
