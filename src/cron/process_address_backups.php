@@ -119,9 +119,9 @@ if ($app->running_as_admin()) {
 						$app->run_query("UPDATE address_keys SET exported_backup_at=NOW() WHERE address_key_id IN (".implode(",", $new_address_key_ids).");");
 					}
 					
-					$subject = "Export of private keys for ".AppSettings::getParam("site_domain");
+					$subject = "Backup of private keys for ".AppSettings::getParam("site_domain");
 					
-					$message = "<p>This is a backup for your user account <b>".$backup_user['username']."</b> on the ".AppSettings::getParam("site_domain")." server (User ID: #".$backup_user['user_id']."). This backup includes private keys for ".number_format(count($new_address_key_ids))." new address".(count($new_address_key_ids) == 1 ? "" : "es").".</p><p>".$message."</p><p>Do not delete this email.<br/>Please archive this email for your records or transfer the attached file somewhere for safekeeping.</p><p>Details of this backup are available here:<br/>".AppSettings::getParam('base_url')."/accounts/backups/?view_backup_id=".$backup['export_id']."</p>\n";
+					$message = "<p>This is a backup for your user account <b>".$backup_user['username']."</b> on the ".AppSettings::getParam("site_domain")." server (User ID: #".$backup_user['user_id']."). This backup includes private keys for ".number_format(count($new_address_key_ids))." new address".(count($new_address_key_ids) == 1 ? "" : "es").".</p><p>".$message."</p><p>Please keep this email if you would like to keep a copy of your private keys in your inbox, or delete this email if you want ".AppSettings::getParam('site_name')." to have the only copy of your keys. To maintain your own private keys please install PolyCash on your own computer.</p><p>Details of this backup are available here:<br/>".AppSettings::getParam('base_url')."/accounts/backups/?view_backup_id=".$backup['export_id']."</p>\n";
 					
 					$csv_raw = $app->array2csv($csv_arr);
 					

@@ -897,7 +897,7 @@ else {
 											?>
 										</div>
 										<div class="form-group">
-											<label for="min_sellout_amount">How many unallocated buffer address sets should be keep for this game?</label>
+											<label for="min_sellout_amount">How many unallocated buffer address sets should be kept for this game?</label>
 											<input type="text" class="form-control" name="num_buffer_address_sets" id="num_buffer_address_sets" placeholder="3" value="<?php echo $game->db_game['num_buffer_address_sets']; ?>" />
 										</div>
 										
