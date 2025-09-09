@@ -225,6 +225,7 @@ class AmericanFootballSeasonManager {
 			
 			while ($pastdue_event = $pastdue_r->fetch()) {
 				$scrape_url = "http://opensourcebets.com/api/fixtures?fixture_id=".$pastdue_event['external_identifier'];
+				echo $scrape_url."\n";
 				$scrape_response_raw = file_get_contents($scrape_url);
 				
 				if ($scrape_response_raw) {
@@ -232,8 +233,8 @@ class AmericanFootballSeasonManager {
 					
 					if (!empty($scrape_obj->fixtures[0]->outcome)) {
 						if ($scrape_obj->fixtures[0]->outcome->outcome_type == "successful") {
-							if ($scrape_obj->fixtures[0]->outcome->is_tie) $outcome_index = 1;
-							else $outcome_index = ($scrape_obj->fixtures[0]->outcome->winner->position == 0) ? 0 : 2;
+							if ($scrape_obj->fixtures[0]->outcome->is_tie) $outcome_index = -1;
+							else $outcome_index = ($scrape_obj->fixtures[0]->outcome->winner->position == 0) ? 0 : 1;
 						}
 						else $outcome_index = -1;
 						
@@ -254,7 +255,12 @@ class AmericanFootballSeasonManager {
 				
 				if ($game_def_hash != $actual_game_def_hash) {
 					$log_message = GameDefinition::migrate_game_definitions($this->game, null, "apply_defined_to_actual", $show_internal_params, $actual_game_def, $game_def);
+					echo "Migrating ".$actual_game_def_hash." to ".$game_def_hash."\n";
+				} else {
+					echo "Loaded and specified game definitions are the same.\n";
 				}
+			} else {
+				echo "Found no changes to apply.\n";
 			}
 			
 			$this->game_definition->module_info['last_set_outcomes_time'] = time();

@@ -11,12 +11,11 @@ if ($app->running_as_admin()) {
 	$print_debug = false;
 	if (!empty($_REQUEST['print_debug'])) $print_debug = true;
 	
-	$only_game_id = false;
-	if (!empty($_REQUEST['game_id'])) $only_game_id = (int) $_REQUEST['game_id'];
+	$only_game_id = (int) $_REQUEST['game_id'];
 	
-	$process_lock_name = "set_cached_game_definition";
+	$process_lock_name = "set_cached_game_definition_".$only_game_id;
 	$process_locked = $app->check_process_running($process_lock_name);
-	
+
 	if ($only_game_id || (!$process_locked && $app->lock_process($process_lock_name))) {
 		$app->set_site_constant($process_lock_name, getmypid());
 		
@@ -70,7 +69,7 @@ if ($app->running_as_admin()) {
 			
 			$loop_stop_time = microtime(true);
 			$loop_time = $loop_stop_time-$loop_start_time;
-			$loop_target_time = max($loop_target_time, $loop_time*1.5);
+			$loop_target_time = max($loop_target_time, $loop_time*5);
 			
 			if ($loop_time < $loop_target_time) {
 				$sleep_usec = round(pow(10,6)*($loop_target_time - $loop_time));

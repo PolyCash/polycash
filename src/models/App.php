@@ -406,6 +406,11 @@ class App {
 			$game_loading_process = $this->run_shell_command($cmd, $print_debug);
 			if (is_resource($game_loading_process)) $process_count++;
 			else $html .= "Failed to start a process for loading ".$running_game['game_name'].".\n";
+
+			$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/set_cached_defs_and_apply.php" game_id='.$running_game['game_id'];
+			$set_game_def_process = $this->run_shell_command($cmd, $print_debug);
+			if (is_resource($set_game_def_process)) $process_count++;
+			else $html .= "Failed to start a process for caching game definitions.\n";
 		}
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/mine_blocks.php"';
@@ -441,11 +446,6 @@ class App {
 		$ensure_addresses_process = $this->run_shell_command($cmd, $print_debug);
 		if (is_resource($ensure_addresses_process)) $process_count++;
 		else $html .= "Failed to start a process for ensuring user addresses.\n";
-		
-		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/set_cached_defs_and_apply.php"';
-		$set_game_def_process = $this->run_shell_command($cmd, $print_debug);
-		if (is_resource($set_game_def_process)) $process_count++;
-		else $html .= "Failed to start a process for caching game definitions.\n";
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/set_cached_game_values.php"';
 		$set_game_def_process = $this->run_shell_command($cmd, $print_debug);
