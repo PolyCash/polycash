@@ -594,11 +594,8 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 				</div>
 			</div>
 			<div class="panel-body">
+			<div id="claim_from_faucet_view"></div>
 				<?php
-				if ($faucet_io) {
-					echo '<p><button id="faucet_btn" class="btn btn-success" onclick="thisPageManager.claim_from_faucet();"><i class="fas fa-hand-paper"></i> &nbsp; Claim '.$game->display_coins($faucet_io['colored_amount_sum']).'</button></p>'."\n";
-				}
-				
 				$game_status_explanation = $game->game_status_explanation($thisuser, $user_game);
 				?>
 				<div style="display: <?php if (false && $game->db_game['view_mode'] == "simple") echo "none"; else echo "block"; ?>; overflow: hidden;">

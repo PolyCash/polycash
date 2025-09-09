@@ -28,7 +28,11 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 				$faucet_io = $game->check_faucet($user_game);
 				
 				if ($faucet_io) {
-					$faucet_message .= '<p><button id="faucet_btn" class="btn btn-success" onclick="thisPageManager.claim_from_faucet();"><i class="fas fa-hand-paper"></i> &nbsp; Claim '.$game->display_coins($faucet_io['colored_amount_sum']).'</button></p>'."\n";
+					$faucet_message .= $app->render_view('faucet_button', [
+						'eligible_for_faucet' => $eligible_for_faucet,
+						'faucet_io' => $faucet_io,
+						'game' => $game,
+					]);
 				}
 				else $faucet_message .= "There's no money in the faucet right now.";
 			}
