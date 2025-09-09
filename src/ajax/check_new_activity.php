@@ -252,5 +252,19 @@ if ($include_being_determined_events) {
 	}
 }
 
+list($earliest_join_time, $most_recent_claim_time, $user_faucet_claims, $eligible_for_faucet, $time_available) = $game->user_faucet_info($user_game['user_id'], $user_game['game_id']);
+
+if ($eligible_for_faucet) {
+	$faucet_io = $game->check_faucet($user_game);
+	
+	if ($faucet_io) {
+		$output['claim_from_faucet_view'] = $app->render_view('faucet_button', [
+			'eligible_for_faucet' => $eligible_for_faucet,
+			'faucet_io' => $faucet_io,
+			'game' => $game,
+		]);
+	}
+}
+
 echo json_encode($output);
 ?>

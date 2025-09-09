@@ -353,6 +353,10 @@ var Game = function(pageManager, game_id, last_block_id, last_transaction_id, ma
 				success: function(check_activity_response) {
 					this.refresh_in_progress = false;
 					
+					if (check_activity_response.claim_from_faucet_view && check_activity_response.claim_from_faucet_view != "") {
+						$('#claim_from_faucet_view').html(check_activity_response.claim_from_faucet_view);
+					}
+
 					if (check_activity_response.game_loop_index > this.last_game_loop_index_applied) {
 						if (check_activity_response.new_block == 1) {
 							this.last_block_id = parseInt(check_activity_response.last_block_id);
