@@ -355,6 +355,8 @@ var Game = function(pageManager, game_id, last_block_id, last_transaction_id, ma
 					
 					if (check_activity_response.claim_from_faucet_view && check_activity_response.claim_from_faucet_view != "") {
 						$('#claim_from_faucet_view').html(check_activity_response.claim_from_faucet_view);
+					} else {
+						$('#claim_from_faucet_view').html("");
 					}
 
 					if (check_activity_response.game_loop_index > this.last_game_loop_index_applied) {
