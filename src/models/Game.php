@@ -1945,26 +1945,30 @@ class Game {
 					if ($print_debug) $this->blockchain->app->print_debug("Resetting the game from block #".$extra_info['reset_from_block']);
 
 					if ($extra_info['reset_from_block']-1 <= $this->blockchain->last_block_id()) {
+						if ($print_debug) $this->blockchain->app->print_debug("Resetting from block #".$extra_info['reset_from_block']);
+
 						$reset_from_block = $extra_info['reset_from_block'];
 						$this->reset_blocks_from_block($reset_from_block);
 						$this->set_loaded_until_block($reset_from_block-1);
 						$this->set_events_until_block($reset_from_block-1);
 					
 						unset($extra_info['reset_from_block']);
-
-						if (array_key_exists("reset_from_event_index", $extra_info)) {
-							$this->reset_events_from_index($extra_info['reset_from_event_index']);
-							unset($extra_info['reset_from_event_index']);
-						}
-
-						$this->ensure_events_until_block($this->blockchain->last_complete_block_id()+1, $print_debug);
-						$this->set_target_scores_at_block($reset_from_block);
 					}
 					else {
 						$log_message = "Game #".$this->db_game['game_id']." tried to reset to future block ".$extra_info['reset_from_block']." but last block was ".$this->blockchain->last_block_id().", skipping block reloading.";
 						$this->blockchain->app->log_message($log_message);
 						if ($print_debug) $this->blockchain->app->print_debug($log_message);
 					}
+
+					if (array_key_exists("reset_from_event_index", $extra_info)) {
+						if ($print_debug) $this->blockchain->app->print_debug("Resetting to event index #".$extra_info['reset_from_event_index']);
+
+						$this->reset_events_from_index($extra_info['reset_from_event_index']);
+						unset($extra_info['reset_from_event_index']);
+					}
+
+					$this->ensure_events_until_block($this->blockchain->last_complete_block_id()+1, $print_debug);
+					$this->set_target_scores_at_block(isset($reset_from_block) ? $reset_from_block : $this->blockchain->last_complete_block_id());
 				}
 				else {
 					if ($print_debug) $this->blockchain->app->print_debug("Fully resetting the game...");
