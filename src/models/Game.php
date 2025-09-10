@@ -4023,7 +4023,7 @@ class Game {
 			if ($print_debug) $this->blockchain->app->print_debug("Account #".$donate_from_account['account_id'].", current balance of ".$faucet_balance_float." vs target of ".$donate_from_account['faucet_target_balance']);
 			
 			if ($faucet_balance_float < 0.9*$donate_from_account['faucet_target_balance']) {
-				$quantity_donations = floor(($donate_from_account['faucet_target_balance'] - $faucet_balance_float)/$donate_from_account['faucet_amount_each']);
+				$quantity_donations = min(100, floor(($donate_from_account['faucet_target_balance'] - $faucet_balance_float)/$donate_from_account['faucet_amount_each']));
 				
 				if ($quantity_donations > 0) {
 					if ($print_debug) $this->blockchain->app->print_debug("Making ".$quantity_donations." donations of ".$donate_from_account['faucet_amount_each']);
