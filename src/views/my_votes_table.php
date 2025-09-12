@@ -71,7 +71,7 @@ if (count($confirmed_bets)+count($unconfirmed_bets) > 0) {
 		<div class="my_votes_table">
 			<div class="row my_votes_header">
 				<div class="col-sm-6">Amount Bet</div>
-				<div class="col-sm-6">To Win</div>
+				<div class="col-sm-6">Payout</div>
 			</div>
 			<?php
 			echo $app->render_view('my_votes', [
@@ -79,7 +79,7 @@ if (count($confirmed_bets)+count($unconfirmed_bets) > 0) {
 				'game' => $game,
 				'event' => $event,
 				'my_bets' => $unconfirmed_bets,
-				'color' => 'yellow',
+				'color' => null,
 				'coins_per_vote' => $coins_per_vote,
 				'user_game' => $user_game,
 				'last_block_id' => $last_block_id,
