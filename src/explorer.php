@@ -64,7 +64,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 		$pagetitle = "My bets in ".$game->db_game['name'];
 	}
 	else if ($explore_mode == "events") {
-		$event_id = $uri_parts[5];
+		$event_id = $uri_parts[5] ?? "";
 		
 		if ($event_id === "") {
 			$mode_error = false;
@@ -196,7 +196,11 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 		}
 	}
 	else if ($explore_mode == "transactions") {
-		if ($uri_parts[5] == "unconfirmed") {
+		$selected_tx_hash = $uri_parts[5] ?? '';
+		if (empty($selected_tx_hash)) {
+			Router::Send404();
+		}
+		else if ($selected_tx_hash == "unconfirmed") {
 			$explore_mode = "unconfirmed";
 			$mode_error = false;
 			$pagetitle = "Unconfirmed Transactions";
@@ -207,12 +211,12 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 			$conflicting_tx_hashes = [];
 			$tx_not_trusted = false;
 
-			if (strlen($uri_parts[5]) < 15) {
-				$tx_id = intval($uri_parts[5]);
+			if ((string)$selected_tx_hash == (string)((int) $selected_tx_hash)) {
+				$tx_id = intval($selected_tx_hash);
 				$transaction = $app->fetch_transaction_by_id($tx_id);
 			}
 			else {
-				$tx_hash = trim(strip_tags(urldecode($uri_parts[5])));
+				$tx_hash = trim(strip_tags(urldecode($selected_tx_hash)));
 				
 				if (strpos($tx_hash, " ") === false) {
 					$transaction = $blockchain->fetch_transaction_by_hash($tx_hash);
@@ -233,7 +237,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 									$blockchain->walletnotify($tx_hash, true);
 									$transaction = $blockchain->fetch_transaction_by_hash($tx_hash);
 								}
-								else if ($transaction_rpc['txid']) {
+								else if (isset($transaction_rpc['txid'])) {
 									$blockchain->walletnotify($tx_hash, true);
 									$transaction = $blockchain->fetch_transaction_by_hash($tx_hash);
 								}
@@ -360,22 +364,17 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				include('includes/explorer_top_nav.php');
 				
 				if ($game) {
-					if (in_array($explore_mode, array('blocks','addresses','transactions','utxo'))) {
-						echo "<a class='btn btn-sm btn-primary' href='/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/".$explore_mode;
-						if ($explore_mode == "blocks") {
-							if (!empty($block)) echo "/".$block['block_id'];
-						}
-						else if ($explore_mode == "addresses") echo "/".$address['address'];
-						else if ($explore_mode == "transactions") echo "/".$transaction['tx_hash'];
-						else if ($explore_mode == "utxo") echo "/".$io['tx_hash']."/".$io['out_index'];
-						else if ($explore_mode == "utxos") {
-							if ($account) echo "/?account_id=".$account['account_id'];
-						}
-						echo "'><i class=\"fas fa-link\"></i> &nbsp; View on ".$game->blockchain->db_blockchain['blockchain_name']."</a>\n";
-					}
-					?>
-					<a href="/wallet/<?php echo $game->db_game['url_identifier']; ?>/" class="btn btn-sm btn-success"><i class="fas fa-play-circle"></i> &nbsp; Play Now</a>
-					<?php
+					echo $app->render_view('game_links', [
+						'explore_mode' => $explore_mode,
+						'game' => $game,
+						'blockchain' => $blockchain,
+						'block' => $block ?? null,
+						'io' => $io ?? null,
+						'transaction' => $transaction ?? null,
+						'address' => $address ?? null,
+						'account' => $account ?? null,
+						'my_games' => $app->my_games($thisuser->db_user['user_id'], true)->fetchAll(PDO::FETCH_ASSOC),
+					]);
 				}
 			}
 			

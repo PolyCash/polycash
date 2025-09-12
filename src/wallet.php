@@ -146,6 +146,18 @@ if (!$thisuser) {
 			$explore_mode = "wallet";
 			echo "<br/>\n";
 			include('includes/explorer_top_nav.php');
+
+			echo $app->render_view('game_links', [
+				'explore_mode' => 'wallet',
+				'game' => $game,
+				'blockchain' => $game->blockchain,
+				'block' => null,
+				'io' => null,
+				'transaction' => null,
+				'address' => null,
+				'account' => $user_game,
+				'my_games' => [],
+			]);
 		}
 		
 		include(AppSettings::srcPath()."/includes/html_register.php");
@@ -440,6 +452,18 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 	$explore_mode = "wallet";
 	echo "<br/>\n";
 	include('includes/explorer_top_nav.php');
+	
+	echo $app->render_view('game_links', [
+		'explore_mode' => 'wallet',
+		'game' => $game,
+		'blockchain' => $game->blockchain,
+		'block' => null,
+		'io' => null,
+		'transaction' => null,
+		'address' => null,
+		'account' => $user_game,
+		'my_games' => $app->my_games($thisuser->db_user['user_id'], true)->fetchAll(PDO::FETCH_ASSOC),
+	]);
 	?>
 	<div class="panel panel-default" style="margin-top: 15px;">
 		<div class="panel-heading">
@@ -469,20 +493,6 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 							}
 							?>
 							<option value="new">Create a new account</option>
-						</select>
-					</div>
-					<div style="float: right;">
-						<select class="form-control input-sm" onchange="thisPageManager.change_game(this);">
-							<option value="">-- Switch Games --</option>
-							<?php
-							$my_games = $app->my_games($thisuser->db_user['user_id'], true);
-							
-							while ($my_game = $my_games->fetch()) {
-								echo "<option ";
-								if ($game->db_game['game_id'] == $my_game['game_id']) echo 'selected="selected" ';
-								echo "value=\"".$my_game['url_identifier']."\">".$my_game['name']."</option>\n";
-							}
-							?>
 						</select>
 					</div>
 				</div>
