@@ -2343,13 +2343,13 @@ class Blockchain {
 			$tx_out_info = [];
 			
 			foreach ($relevant_tx_hashes as $relevant_tx_hash => $tx_info) {
-				$raw_tx = $this->coin_rpc->getrawtransaction($relevant_tx_hash, false, $tx_info['blockhash']);
-				if ($raw_tx) {
-					$raw_tx_decoded = $this->coin_rpc->decoderawtransaction($raw_tx);
-					$raw_tx_by_hash[$relevant_tx_hash] = $raw_tx_decoded;
+				$raw_tx = $this->coin_rpc->gettransaction($relevant_tx_hash, false, true);
+
+				if (isset($raw_tx['decoded'])) {
+					$raw_tx_by_hash[$relevant_tx_hash] = $raw_tx['decoded'];
 					
-					if (!empty($raw_tx_decoded['vout'])) {
-						foreach ($raw_tx_decoded['vout'] as $vout_index => $vout_info) {
+					if (!empty($raw_tx['decoded']['vout'])) {
+						foreach ($raw_tx['decoded']['vout'] as $vout_index => $vout_info) {
 							if (isset($vout_info['value'])) {
 								if (!empty($vout_info['scriptPubKey']['address'])) $vout_addresses = [$vout_info['scriptPubKey']['address']];
 								else if (!empty($vout_info['scriptPubKey']['addresses'])) $vout_addresses = $vout_info['scriptPubKey']['addresses'];
