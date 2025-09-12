@@ -21,7 +21,7 @@
 </p>
 
 <?php
-if (count($my_games) > 0) {
+if (count($my_games) > 1) {
 	?>
 	<p>
 		<select class="form-control input-sm" onchange="thisPageManager.change_game(this, '<?php echo $explore_mode; ?>');">

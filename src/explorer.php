@@ -373,7 +373,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						'transaction' => $transaction ?? null,
 						'address' => $address ?? null,
 						'account' => $account ?? null,
-						'my_games' => $app->my_games($thisuser->db_user['user_id'], true)->fetchAll(PDO::FETCH_ASSOC),
+						'my_games' => $thisuser ? $app->my_games($thisuser->db_user['user_id'], true)->fetchAll(PDO::FETCH_ASSOC) : [],
 					]);
 				}
 			}

@@ -155,7 +155,7 @@ if (!$thisuser) {
 				'io' => null,
 				'transaction' => null,
 				'address' => null,
-				'account' => $user_game,
+				'account' => null,
 				'my_games' => [],
 			]);
 		}
@@ -461,7 +461,7 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 		'io' => null,
 		'transaction' => null,
 		'address' => null,
-		'account' => $user_game,
+		'account' => $user_game ?? null,
 		'my_games' => $app->my_games($thisuser->db_user['user_id'], true)->fetchAll(PDO::FETCH_ASSOC),
 	]);
 	?>
