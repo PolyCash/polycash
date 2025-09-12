@@ -1413,7 +1413,7 @@ class App {
 			if ($coins_in_existence > 0) {
 				list($escrow_value, $exchange_rate_as_of) = $game->escrow_value_in_currency($exchange_rate_currency['currency_id'], $coins_in_existence/pow(10, $game->db_game['decimal_places']));
 
-				$exchange_rate = pow(10, $game->db_game['decimal_places'])*$escrow_value/$coins_in_existence;
+				$exchange_rate = pow(10, $game->db_game['decimal_places'])*$escrow_value/($coins_in_existence+$game_pending_bets);
 				$exchange_rate_disp = $this->format_bignum($exchange_rate, false);
 
 				$html .= '<div class="row"><div class="col-sm-5">Current exchange rate:</div><div class="col-sm-7">';
