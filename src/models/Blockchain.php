@@ -2343,28 +2343,27 @@ class Blockchain {
 			$tx_out_info = [];
 			
 			foreach ($relevant_tx_hashes as $relevant_tx_hash => $tx_info) {
-				$raw_tx = $this->coin_rpc->getrawtransaction($relevant_tx_hash, false, $tx_info['blockhash']);
-				if ($raw_tx) {
-					$raw_tx_decoded = $this->coin_rpc->decoderawtransaction($raw_tx);
-					$raw_tx_by_hash[$relevant_tx_hash] = $raw_tx_decoded;
+				$gettransaction = $this->coin_rpc->gettransaction($relevant_tx_hash);
+
+				if ($gettransaction) {
+					$raw_tx_by_hash[$relevant_tx_hash] = $gettransaction;
 					
-					if (!empty($raw_tx_decoded['vout'])) {
-						foreach ($raw_tx_decoded['vout'] as $vout_index => $vout_info) {
-							if (isset($vout_info['value'])) {
-								if (!empty($vout_info['scriptPubKey']['address'])) $vout_addresses = [$vout_info['scriptPubKey']['address']];
-								else if (!empty($vout_info['scriptPubKey']['addresses'])) $vout_addresses = $vout_info['scriptPubKey']['addresses'];
-								
+					if (!empty($gettransaction['details'])) {
+						foreach ($gettransaction['details'] as $vout_info) {
+							if (isset($vout_info['amount'])) {
+								$vout_addresses = [$vout_info['address']];
+
 								$matched_addresses = [];
 								foreach ($vout_addresses as $vout_address) {
 									if (isset($account_addresses_map[$vout_address])) array_push($matched_addresses, $vout_address);
 								}
-								
+
 								if (count($matched_addresses) > 0) {
-									$tx_out_info[$relevant_tx_hash."-".$vout_index] = [
+									$tx_out_info[$relevant_tx_hash."-".$vout_info['vout']] = [
 										'tx_hash' => $relevant_tx_hash,
-										'out_index' => $vout_index,
+										'out_index' => $vout_info['vout'],
 										'addresses' => $matched_addresses,
-										'value' => $vout_info['value'],
+										'value' => $vout_info['amount'],
 										'spent' => false,
 									];
 								}
@@ -2373,14 +2372,12 @@ class Blockchain {
 					}
 				}
 			}
-			
+
 			foreach ($raw_tx_by_hash as $tx_hash => $raw_tx) {
-				if (!empty($raw_tx['vin'])) {
-					foreach ($raw_tx['vin'] as $tx_input) {
-						if (isset($tx_input['txid']) && isset($tx_input['vout'])) {
-							if (isset($tx_out_info[$tx_input['txid']."-".$tx_input['vout']])) {
-								unset($tx_out_info[$tx_input['txid']."-".$tx_input['vout']]);
-							}
+				if (isset($raw_tx['details'])) {
+					foreach ($raw_tx['details'] as $tx_input) {
+						if (isset($tx_input['amount']) && isset($tx_input['category']) && $tx_input['category'] == "send") {
+							unset($tx_out_info[$tx_hash."-".$tx_input['vout']]);
 						}
 					}
 				}
