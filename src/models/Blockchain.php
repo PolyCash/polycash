@@ -2266,14 +2266,13 @@ class Blockchain {
 		
 		$my_tx = $this->coin_rpc->gettransaction($invoice_io['tx_hash']);
 		
-		if ($my_tx && isset($my_tx['blockhash'])) {
-			$raw_tx = $this->coin_rpc->getrawtransaction($invoice_io['tx_hash'], false, $my_tx['blockhash']);
-			if ($raw_tx) {
-				$raw_tx_decoded = $this->coin_rpc->decoderawtransaction($raw_tx);
-				
-				if (!empty($raw_tx_decoded['vout']) && isset($raw_tx_decoded['vout'][$invoice_io['out_index']])) {
-					$vout_info = $raw_tx_decoded['vout'][$invoice_io['out_index']];
-					
+		if ($my_tx) {
+			$raw_tx = $this->coin_rpc->gettransaction($invoice_io['tx_hash'], false, true);
+
+			if (isset($raw_tx['decoded'])) {
+				if (!empty($raw_tx['decoded']['vout']) && isset($raw_tx['decoded']['vout'][$invoice_io['out_index']])) {
+					$vout_info = $raw_tx['decoded']['vout'][$invoice_io['out_index']];
+
 					if (isset($vout_info['value'])) $fetch_io_error = false;
 					else $fetch_io_error = true;
 				}
@@ -2282,7 +2281,7 @@ class Blockchain {
 			else $fetch_io_error = true;
 		}
 		else $fetch_io_error = true;
-		
+
 		return [$vout_info, $fetch_io_error];
 	}
 	
