@@ -3800,7 +3800,7 @@ class Game {
 				$html .= '<div class="row content_row">';
 				if ($invoice['confirmed_amount_paid'] == 0) $display_amount_sold = $this->blockchain->app->format_bignum($invoice['buyin_amount']);
 				else $display_amount_sold = $this->blockchain->app->format_bignum($invoice['confirmed_amount_paid']);
-				$html .= '<div class="col-sm-3">'.$display_amount_sold.' '.($display_amount_sold=="1" ? $this->db_game['coin_name'] : $this->db_game['coin_name_plural']).' sold</div>';
+				$html .= '<div class="col-sm-3">Sell '.$display_amount_sold.' '.($display_amount_sold=="1" ? $this->db_game['coin_name'] : $this->db_game['coin_name_plural']).'</div>';
 				
 				$invoice_ios = $this->blockchain->app->invoice_ios_by_invoice($invoice['invoice_id']);
 				
@@ -3824,7 +3824,7 @@ class Game {
 							
 							list($vout_info, $fetch_io_error) = $sellout_blockchain->rpc_load_txo_by_sellout_invoice_io($invoice_io);
 							
-							if (!$fetch_io_error) $invoice_io_disp = $vout_info['value'];
+							if (!$fetch_io_error) $invoice_io_disp = $this->blockchain->app->format_bignum($vout_info['value']);
 						}
 						
 						if (!$fetch_io_error && $invoice['sync_mode'] == "full") $html .= '<a target="_blank" href="/explorer/blockchains/'.$invoice['url_identifier']."/utxo/".$invoice_io['tx_hash']."/".$invoice_io['out_index'].'/">';

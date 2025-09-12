@@ -104,11 +104,13 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 						}
 					}
 					else if ($_REQUEST['action'] == "check_amount") {
-						$account_balance = $game->account_balance($user_game['account_id']);
+						list($early_resolved_ios, $early_resolved_amount) = $app->early_resolved_ios_in_account($user_game['account_id'], $game->db_game['game_id'], true);
+						$account_balance = $thisuser->mature_balance($game, $user_game, $early_resolved_ios);
+
 						$fee_amount = max(0, (float) $_REQUEST['fee_amount']);
 						
 						if ($account_balance < $sellout_amount*pow(10, $game->db_game['decimal_places'])) {
-							$content_html .= '<p class="text-danger">You don\'t have that many '.$game->db_game['coin_name_plural'].'.</p>';
+							$content_html .= '<p class="text-danger">You don\'t have that many spendable '.$game->db_game['coin_name_plural'].'.</p>';
 						}
 						else if ($game->db_game['min_sellout_amount'] && $sellout_amount < $game->db_game['min_sellout_amount']) {
 							$content_html .= '<p class="text-danger">Please change at least '.$game->db_game['min_sellout_amount'].' '.($game->db_game['min_sellout_amount']=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']).".</p>\n";
@@ -121,7 +123,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 							}
 							else {
 								if ($sellout_receive_amount <= 0) {
-									$content_html .= '<p class="text-danger">That\'s not enough to conver transaction fees.</p>';
+									$content_html .= '<p class="text-danger">That\'s not enough to cover transaction fees.</p>';
 								}
 								else {
 									$sellout_receive_disp = $app->format_bignum($sellout_receive_amount);
@@ -148,7 +150,8 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 					}
 					else if ($_REQUEST['action'] == "confirm") {
 						$sellout_amount = ceil($sellout_amount*pow(10, $game->db_game['decimal_places']));
-						$account_balance = $game->account_balance($user_game['account_id']);
+						list($early_resolved_ios, $early_resolved_amount) = $app->early_resolved_ios_in_account($user_game['account_id'], $game->db_game['game_id'], true);
+						$account_balance = $thisuser->mature_balance($game, $user_game, $early_resolved_ios);
 						$fee_amount = max(0, (float) $_REQUEST['fee_amount']);
 						
 						if ($account_balance >= $sellout_amount) {
