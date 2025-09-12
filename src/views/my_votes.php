@@ -9,7 +9,7 @@ foreach ($my_bets as $my_bet) {
 		if ($event->db_event['payout_rule'] == "binary") {
 			?>
 			<div class="col-sm-6">
-				<font class="<?php echo $color ;?>text">
+				<font <?php echo isset($color) ? 'class="'.$color.'text"' : '' ;?>>
 					<a target="_blank" href="/explorer/games/<?php echo $game->db_game['url_identifier'].'/utxo/'.$my_bet['tx_hash'].'/'.$my_bet['game_out_index']; ?>">
 						Staked <?php echo $app->format_bignum($coin_stake/pow(10,$game->db_game['decimal_places'])); ?>
 					</a> 
@@ -20,8 +20,8 @@ foreach ($my_bets as $my_bet) {
 			<div class="col-sm-6">
 				<font class="<?php echo $color; ?>text">
 					<?php
-					if ($max_payout-$coin_stake > 0) echo '+';
-					echo $game->display_coins($max_payout-$coin_stake)." &nbsp; (x".$app->format_bignum($odds).")";
+					if ($max_payout > 0) echo '+';
+					echo $game->display_coins($max_payout)." &nbsp; (x".$app->format_bignum($odds).")";
 					?>
 				</font>
 			</div>
