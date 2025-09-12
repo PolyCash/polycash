@@ -2220,8 +2220,10 @@ var PageManager = function() {
 			}
 		});
 	}
-	this.change_game = function(select_element) {
-		window.location = '/wallet/'+select_element.value;
+	this.change_game = function(select_element, explore_mode) {
+		window.location = explore_mode == 'wallet' ? '/wallet/'+select_element.value
+			: (explore_mode == "unconfirmed" ? '/explorer/games/'+select_element.value+'/transactions/'+explore_mode
+			: (explore_mode == "game_page" ? '/'+select_element.value : '/explorer/games/'+select_element.value+'/'+explore_mode));
 	}
 	this.change_user_game = function() {
 		window.location = '/wallet/'+games[0].game_url_identifier+'/?action=change_user_game&user_game_id='+$('#select_user_game').val();

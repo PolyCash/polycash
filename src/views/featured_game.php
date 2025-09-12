@@ -63,7 +63,7 @@ games.push(new Game(thisPageManager, <?php
 		<p>
 			<a href="<?php echo $play_now_url; ?>" class="btn btn-sm btn-success"><i class="fas fa-play-circle"></i> &nbsp; 
 			<?php if ($faucet_io) { ?>
-				Join now & receive <?php echo $game->display_coins($faucet_io['colored_amount_sum']); ?>
+				Join now & receive <?php echo $game->display_coins($faucet_io['colored_amount_sum']*($game->db_game['bonus_claims'] > 0 ? $game->db_game['bonus_claims'] : 1)); ?>
 			<?php } else {?>
 				Play Now
 			<?php } ?>

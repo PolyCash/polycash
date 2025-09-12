@@ -34,6 +34,18 @@ else $exchange_rate = 0;
 	$explorer_type = "games";
 	$explore_mode = "about";
 	include('includes/explorer_top_nav.php');
+	
+	echo $app->render_view('game_links', [
+		'explore_mode' => 'game_page',
+		'game' => $game,
+		'blockchain' => $game->blockchain,
+		'block' => null,
+		'io' => null,
+		'transaction' => null,
+		'address' => null,
+		'account' => $user_game ?? null,
+		'my_games' => $thisuser ? $app->my_games($thisuser->db_user['user_id'], true)->fetchAll(PDO::FETCH_ASSOC) : [],
+	]);
 	?>
 	<h2 style="margin-top: 0px;"><?php echo $game->db_game['name']; ?></h2>
 	<div class="row">
@@ -52,7 +64,7 @@ else $exchange_rate = 0;
 				$faucet_io = $game->check_faucet($ref_user_game);
 				
 				if ($faucet_io) {
-					echo 'Join now & receive '.$game->display_coins($faucet_io['colored_amount_sum']);
+					echo 'Join now & receive '.$game->display_coins($faucet_io['colored_amount_sum']*($game->db_game['bonus_claims'] > 0 ? $game->db_game['bonus_claims'] : 1));
 				}
 				else echo 'Play Now';
 				?>

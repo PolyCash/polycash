@@ -17,16 +17,16 @@ if (!empty($blockchain) || !empty($game)) {
 				<li><a <?php if ($explore_mode == 'about') echo 'class="selected" '; ?>href="/<?php echo $game->db_game['url_identifier']; ?>/">About</a></li>
 				<?php } ?>
 				<?php } ?>
-				<li><a <?php if ($explore_mode == 'blocks') echo 'class="selected" '; ?>href="/explorer/<?php echo $explorer_type; ?>/<?php
-				if ($game) echo $game->db_game['url_identifier'];
-				else echo $blockchain->db_blockchain['url_identifier'];
-				?>/blocks/">Blocks</a></li>
 				<?php if ($game) { ?>
 				<li><a <?php if ($explore_mode == 'events') echo 'class="selected" '; ?>href="/explorer/<?php echo $explorer_type; ?>/<?php
 				if ($game) echo $game->db_game['url_identifier'];
 				else echo $blockchain->db_blockchain['url_identifier'];
 				?>/events/">Events</a></li>
 				<?php } ?>
+				<li><a <?php if ($explore_mode == 'blocks') echo 'class="selected" '; ?>href="/explorer/<?php echo $explorer_type; ?>/<?php
+				if ($game) echo $game->db_game['url_identifier'];
+				else echo $blockchain->db_blockchain['url_identifier'];
+				?>/blocks/">Blocks</a></li>
 				<?php if ($game && AppSettings::allUtxosViewEnabled()) { ?>
 				<li><a <?php if ($explore_mode == 'utxos') echo 'class="selected" '; ?>href="/explorer/<?php echo $explorer_type; ?>/<?php
 				echo $game->db_game['url_identifier'];
@@ -45,7 +45,7 @@ if (!empty($blockchain) || !empty($game)) {
 				<li><a <?php if ($explore_mode == 'definition') echo 'class="selected" '; ?>href="/explorer/blockchains/<?php echo $blockchain->db_blockchain['url_identifier']; ?>/definition/">Definition</a>
 				<?php } ?>
 				<?php if ($game) { ?>
-				<li><a <?php if ($explore_mode == 'history') echo 'class="selected" '; ?>href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/history/">History</a></li>
+				<li><a <?php if ($explore_mode == 'history') echo 'class="selected" '; ?>href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/history/">Migration History</a></li>
 				<?php } ?>
 			</ul>
 		</div>
