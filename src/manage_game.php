@@ -798,7 +798,7 @@ else {
 											<input type="text" class="form-control" name="max_claims_at_once" id="max_claims_at_once" value="<?php echo $game->db_game['max_claims_at_once']; ?>" />
 										</div>
 										<div class="form-group">
-											<label for="min_sec_between_claims">If users go for a long time without claiming from the faucet, they may be eligible to claim many times.  How long should these users have to wait after claiming?</label>
+											<label for="min_sec_between_claims">If users go for a long time without claiming from the faucet, they may be eligible to claim many times.  How many seconds should these users have to wait after claiming?</label>
 											<input type="text" class="form-control" name="min_sec_between_claims" id="min_sec_between_claims" value="<?php echo $game->db_game['min_sec_between_claims']; ?>" />
 										</div>
 										<div class="form-group">

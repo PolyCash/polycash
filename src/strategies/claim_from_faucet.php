@@ -14,7 +14,7 @@ if ($user_game) {
 	
 	$last_block_id = $blockchain->last_block_id();
 	
-	$hours_between_applications = 4;
+	$hours_between_applications = 9;
 	
 	$sec_between_applications = 60*60*$hours_between_applications;
 	
