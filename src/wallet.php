@@ -321,6 +321,7 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 	
 	$faucet_ios = $game->check_faucet($user_game, 1);
 	if (count($faucet_ios) > 0) $faucet_io = $faucet_ios[0];
+	else $faucet_io = null;
 
 	$filter_arr['date'] = false;
 	$filter_arr['order_by'] = $game->db_game['order_events_by'];
