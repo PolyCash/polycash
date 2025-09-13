@@ -3376,20 +3376,11 @@ class Game {
 		else return [];
 	}
 
-	public function get_faucet_claim_amount($user_game = null) {		
-		$faucet_account = $this->check_set_faucet_account();
-		$all_faucet_ios = $this->blockchain->app->spendable_ios_in_account($faucet_account['account_id'], $this->db_game['game_id'], false, $this->blockchain->last_block_id(), null);
-
+	public function get_faucet_claim_amount($user_game = null) {
 		if ($user_game) {
 			list($earliest_join_time, $most_recent_claim_time, $user_faucet_claims, $eligible_for_faucet, $time_available, $num_claims_now) = $this->user_faucet_info($user_game['user_id'], $user_game['game_id']);
-
-			if ($eligible_for_faucet) {
-				$num_claims_now = min($num_claims_now, count($all_faucet_ios));
-			} else {
-				$num_claims_now = 0;
-			}
 		} else {
-			$num_claims_now = min($this->db_game['bonus_claims'], count($all_faucet_ios), $this->db_game['max_claims_at_once']);
+			$num_claims_now = min($this->db_game['bonus_claims'], $this->db_game['max_claims_at_once']);
 		}
 
 		$claim_amount_int = 0;
@@ -3939,10 +3930,6 @@ class Game {
 
 		do {			
 			list($earliest_join_time, $most_recent_claim_time, $user_faucet_claims, $eligible_for_faucet, $time_available, $num_claims_now) = $this->user_faucet_info($user_game['user_id'], $user_game['game_id']);
-
-			$faucet_account = $this->check_set_faucet_account();
-			$all_faucet_ios = $this->blockchain->app->spendable_ios_in_account($faucet_account['account_id'], $this->db_game['game_id'], false, $this->blockchain->last_block_id(), null);
-			$num_claims_now = min($num_claims_now, count($all_faucet_ios));
 
 			$faucet_ios = $this->check_faucet($user_game, $num_claims_now);
 

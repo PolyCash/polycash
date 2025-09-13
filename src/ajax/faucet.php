@@ -15,7 +15,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 		
 		if ($action == "claim") {
 			$claim_count = $game->claim_max_from_faucet($user_game);
-			
+
 			if ($claim_count > 0) $app->output_message(1, "Successful!", false);
 			else $app->output_message(4, "No money is available right now from the faucet.", false);
 		}
