@@ -256,8 +256,6 @@ list($earliest_join_time, $most_recent_claim_time, $user_faucet_claims, $eligibl
 
 if ($eligible_for_faucet) {
 	$faucet_account = $game->check_set_faucet_account();
-	$all_faucet_ios = $app->spendable_ios_in_account($faucet_account['account_id'], $game->db_game['game_id'], false, $blockchain->last_block_id(), null);
-	$num_claims_now = min($num_claims_now, count($all_faucet_ios));
 
 	if ($num_claims_now > 0) {
 		$faucet_ios = $game->check_faucet($user_game, $num_claims_now);

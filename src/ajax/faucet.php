@@ -25,8 +25,6 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 			$faucet_message = "";
 
 			$faucet_account = $game->check_set_faucet_account();
-			$all_faucet_ios = $app->spendable_ios_in_account($faucet_account['account_id'], $game->db_game['game_id'], false, $blockchain->last_block_id(), null);
-			$num_claims_now = min($num_claims_now, count($all_faucet_ios));
 
 			$faucet_ios = $game->check_faucet($user_game, $num_claims_now);
 
@@ -45,7 +43,6 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 				if ($time_available) {
 					list($earliest_join_time, $most_recent_claim_time, $user_faucet_claims, $eligible_for_faucet, $time_available, $num_claims_then) = $game->user_faucet_info($user_game['user_id'], $user_game['game_id'], $time_available);
 					$next_claim_amount_int = 0;
-					$num_claims_then = min($num_claims_then, count($all_faucet_ios));
 
 					$ref_user_game = null;
 					$faucet_ios = $game->check_faucet($ref_user_game, $num_claims_then);
