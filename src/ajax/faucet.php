@@ -20,28 +20,43 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 			else $app->output_message(4, "No money is available right now from the faucet.", false);
 		}
 		else if ($action == "check") {
-			list($earliest_join_time, $most_recent_claim_time, $user_faucet_claims, $eligible_for_faucet, $time_available) = $game->user_faucet_info($user_game['user_id'], $user_game['game_id']);
+			list($earliest_join_time, $most_recent_claim_time, $user_faucet_claims, $eligible_for_faucet, $time_available, $num_claims_now) = $game->user_faucet_info($user_game['user_id'], $user_game['game_id']);
 			
 			$faucet_message = "";
-			
-			if ($eligible_for_faucet) {
-				$faucet_io = $game->check_faucet($user_game);
-				
-				if ($faucet_io) {
-					$faucet_message .= $app->render_view('faucet_button', [
-						'eligible_for_faucet' => $eligible_for_faucet,
-						'faucet_io' => $faucet_io,
-						'game' => $game,
-					]);
-				}
-				else $faucet_message .= "There's no money in the faucet right now.";
+
+			$faucet_account = $game->check_set_faucet_account();
+			$all_faucet_ios = $app->spendable_ios_in_account($faucet_account['account_id'], $game->db_game['game_id'], false, $blockchain->last_block_id(), null);
+			$num_claims_now = min($num_claims_now, count($all_faucet_ios));
+
+			$faucet_ios = $game->check_faucet($user_game, $num_claims_now);
+
+			$claim_amount_int = 0;
+			foreach ($faucet_ios as $faucet_io) {
+				$claim_amount_int += $faucet_io['colored_amount_sum'];
+			}
+
+			if ($num_claims_now > 0) {
+				$faucet_message .= $app->render_view('faucet_button', [
+					'claim_amount_int' => $claim_amount_int,
+					'game' => $game,
+				]);
 			}
 			else {
 				if ($time_available) {
-					$ref_user_game = false;
-					$faucet_io = $game->check_faucet($ref_user_game);
-					if ($faucet_io) {
-						$faucet_message .= "You'll be eligible to claim ".$game->display_coins($faucet_io['colored_amount_sum'])." from the faucet in ".$app->format_seconds($time_available-time()).".";
+					list($earliest_join_time, $most_recent_claim_time, $user_faucet_claims, $eligible_for_faucet, $time_available, $num_claims_then) = $game->user_faucet_info($user_game['user_id'], $user_game['game_id'], $time_available);
+					$next_claim_amount_int = 0;
+					$num_claims_then = min($num_claims_then, count($all_faucet_ios));
+
+					$ref_user_game = null;
+					$faucet_ios = $game->check_faucet($ref_user_game, $num_claims_then);
+
+					$next_claim_amount_int = 0;
+					foreach ($faucet_ios as $faucet_io) {
+						$next_claim_amount_int += $faucet_io['colored_amount_sum'];
+					}
+
+					if ($next_claim_amount_int > 0) {
+						$faucet_message .= "You'll be eligible to claim ".$game->display_coins($next_claim_amount_int)." from the faucet in ".$app->format_seconds($time_available-time()).".";
 					}
 					else $faucet_message = "There's no money in the faucet right now.";
 				}
