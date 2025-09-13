@@ -172,7 +172,8 @@ class User {
 				'user_id' => $this->db_user['user_id'],
 				'game_id' => $game->db_game['game_id'],
 				'currency_id' => $currency_id,
-				'account_name' => ucwords($game->blockchain->db_blockchain['coin_name_plural'])." for ".$game->db_game['name']
+				'account_name' => ucwords($game->blockchain->db_blockchain['coin_name_plural'])." for ".$game->db_game['name'],
+				'join_txos_on_quantity' => 10,
 			]);
 			
 			$address_key = $this->app->new_normal_address_key($currency_id, $account);

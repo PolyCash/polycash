@@ -256,10 +256,9 @@ list($earliest_join_time, $most_recent_claim_time, $user_faucet_claims, $eligibl
 
 if ($eligible_for_faucet) {
 	$faucet_account = $game->check_set_faucet_account();
+	$faucet_ios = $game->check_faucet($user_game, $num_claims_now);
 
-	if ($num_claims_now > 0) {
-		$faucet_ios = $game->check_faucet($user_game, $num_claims_now);
-
+	if ($num_claims_now > 0 && count($faucet_ios) > 0) {
 		$claim_amount_int = 0;
 		foreach ($faucet_ios as $faucet_io) {
 			$claim_amount_int += $faucet_io['colored_amount_sum'];

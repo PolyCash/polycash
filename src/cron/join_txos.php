@@ -18,9 +18,10 @@ if ($app->running_as_admin()) {
 	if ((empty($next_join_txos_time) || time() >= $next_join_txos_time) || !empty($_REQUEST['force'])) {
 		if (!empty($_REQUEST['force']) || (!$process_locked && $app->lock_process($process_lock_name))) {
 			$app->set_site_constant($process_lock_name, getmypid());
-			
-			$next_join_txos_time = strtotime(date("Y-m-d H:00:01")." +30 minutes");
-			
+
+			// Run this process in a maximum of 2 minutes, on the minute
+			$next_join_txos_time = strtotime(date("Y-m-d H:i:00")." +2 minutes");
+
 			$game_accounts = $app->run_query("SELECT ca.*, us.transaction_fee FROM currency_accounts ca JOIN user_games ug ON ca.account_id=ug.account_id JOIN user_strategies us ON ug.strategy_id=us.strategy_id WHERE ca.game_id IS NOT NULL AND ca.join_txos_on_quantity IS NOT NULL ORDER BY ca.account_id ASC;")->fetchAll();
 			
 			echo "Checking ".count($game_accounts)." game accounts.\n";
