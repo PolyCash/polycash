@@ -252,15 +252,23 @@ if ($include_being_determined_events) {
 	}
 }
 
-list($earliest_join_time, $most_recent_claim_time, $user_faucet_claims, $eligible_for_faucet, $time_available) = $game->user_faucet_info($user_game['user_id'], $user_game['game_id']);
+list($earliest_join_time, $most_recent_claim_time, $user_faucet_claims, $eligible_for_faucet, $time_available, $num_claims_now) = $game->user_faucet_info($user_game['user_id'], $user_game['game_id']);
 
 if ($eligible_for_faucet) {
-	$faucet_io = $game->check_faucet($user_game);
-	
-	if ($faucet_io) {
+	$faucet_account = $game->check_set_faucet_account();
+	$all_faucet_ios = $app->spendable_ios_in_account($faucet_account['account_id'], $game->db_game['game_id'], false, $blockchain->last_block_id(), null);
+	$num_claims_now = min($num_claims_now, count($all_faucet_ios));
+
+	if ($num_claims_now > 0) {
+		$faucet_ios = $game->check_faucet($user_game, $num_claims_now);
+
+		$claim_amount_int = 0;
+		foreach ($faucet_ios as $faucet_io) {
+			$claim_amount_int += $faucet_io['colored_amount_sum'];
+		}
+
 		$output['claim_from_faucet_view'] = $app->render_view('faucet_button', [
-			'eligible_for_faucet' => $eligible_for_faucet,
-			'faucet_io' => $faucet_io,
+			'claim_amount_int' => $claim_amount_int,
 			'game' => $game,
 		]);
 	}

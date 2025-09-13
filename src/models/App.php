@@ -1158,6 +1158,7 @@ class App {
 					'blockchain' => $blockchain,
 					'counter' => $counter,
 					'game_instance_id' => $counter,
+					'user' => $user,
 				]);
 				$counter++;
 			}

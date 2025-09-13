@@ -319,8 +319,9 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 	
 	$user_strategy = $game->fetch_user_strategy($user_game);
 	
-	$faucet_io = $game->check_faucet($user_game);
-	
+	$faucet_ios = $game->check_faucet($user_game, 1);
+	if (count($faucet_ios) > 0) $faucet_io = $faucet_ios[0];
+
 	$filter_arr['date'] = false;
 	$filter_arr['order_by'] = $game->db_game['order_events_by'];
 	$event_ids = "";

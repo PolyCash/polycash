@@ -60,11 +60,10 @@ else $exchange_rate = 0;
 			<p>
 				<a href="/wallet/<?php echo $game->db_game['url_identifier']; ?>/" class="btn btn-sm btn-success"><i class="fas fa-play-circle"></i> &nbsp; 
 				<?php
-				$ref_user_game = false;
-				$faucet_io = $game->check_faucet($ref_user_game);
-				
-				if ($faucet_io) {
-					echo 'Join now & receive '.$game->display_coins($faucet_io['colored_amount_sum']*($game->db_game['bonus_claims'] > 0 ? $game->db_game['bonus_claims'] : 1));
+				$claim_amount_int = $game->get_faucet_claim_amount($user_game);
+
+				if ($claim_amount_int > 0) {
+					echo 'Join now & receive '.$game->display_coins($claim_amount_int);
 				}
 				else echo 'Play Now';
 				?>

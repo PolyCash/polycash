@@ -8,10 +8,10 @@ $filter_arr = ["order_by" => $game->db_game['order_events_by']];
 $event_ids = "";
 list($new_event_js, $new_event_html) = $game->new_event_js($counter, $user, $filter_arr, $event_ids, true, "featured_games");
 
-if ($user) $user_game = $blockchain->app->fetch_user_game($user->user_id, $game->db_game['game_id']);
+if ($user) $user_game = $blockchain->app->fetch_user_game($user->db_user['user_id'], $game->db_game['game_id']);
 else $user_game = null;
 
-$faucet_io = $game->check_faucet($user_game);
+$claim_amount_int = $game->get_faucet_claim_amount($user_game);
 
 $play_now_url = '/wallet/'.$game->db_game['url_identifier'].'/';
 
@@ -62,8 +62,8 @@ games.push(new Game(thisPageManager, <?php
 		?>
 		<p>
 			<a href="<?php echo $play_now_url; ?>" class="btn btn-sm btn-success"><i class="fas fa-play-circle"></i> &nbsp; 
-			<?php if ($faucet_io) { ?>
-				Join now & receive <?php echo $game->display_coins($faucet_io['colored_amount_sum']*($game->db_game['bonus_claims'] > 0 ? $game->db_game['bonus_claims'] : 1)); ?>
+			<?php if ($claim_amount_int > 0) { ?>
+				Join now & receive <?php echo $game->display_coins($claim_amount_int); ?>
 			<?php } else {?>
 				Play Now
 			<?php } ?>
