@@ -10,6 +10,7 @@ if (!empty($blockchain) || !empty($game)) {
 	<div class="row">
 		<div class="col-sm-7 ">
 			<ul class="list-inline explorer_nav" id="explorer_nav">
+				<li><a href="/">Home</a></li>
 				<?php if ($game) { ?>
 				<li><a <?php if ($explore_mode == 'wallet') echo 'class="selected" '; ?>href="/wallet/<?php echo $game->db_game['url_identifier']; ?>/">Wallet</a></li>
 				<li><a <?php if ($explore_mode == 'my_bets') echo 'class="selected" '; ?>href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/my_bets/">My Bets</a></li>
@@ -45,7 +46,7 @@ if (!empty($blockchain) || !empty($game)) {
 				<li><a <?php if ($explore_mode == 'definition') echo 'class="selected" '; ?>href="/explorer/blockchains/<?php echo $blockchain->db_blockchain['url_identifier']; ?>/definition/">Definition</a>
 				<?php } ?>
 				<?php if ($game) { ?>
-				<li><a <?php if ($explore_mode == 'history') echo 'class="selected" '; ?>href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/history/">Migration History</a></li>
+				<li><a <?php if ($explore_mode == 'history') echo 'class="selected" '; ?>href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/history/">Migrations</a></li>
 				<?php } ?>
 			</ul>
 		</div>

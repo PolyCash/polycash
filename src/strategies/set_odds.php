@@ -23,8 +23,7 @@ if ($user_game) {
 	$amount_per_event = null;
 	if (!empty($_REQUEST['amount_per_event'])) $amount_per_event = (float) $_REQUEST['amount_per_event'];
 	
-	$hours_between_applications = 0.1;
-	$sec_between_applications = 60*60*$hours_between_applications;
+	$sec_between_applications = 180;
 	$rand_sec_offset = rand(0, $sec_between_applications*2);
 	
 	if ($game->last_block_id() != $blockchain->last_block_id()) {
