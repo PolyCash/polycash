@@ -167,7 +167,7 @@ else if ($thisuser) $left_menu_open = $thisuser->db_user['left_menu_open'];
 				?>
 				<li class="header">Navigation</li>
 				<li<?php if ($nav_tab_selected == "home") echo ' class="active"'; ?>><a href="/"><i class="fa fa-home"></i> <span>Home</span></a></li>
-				<li<?php if ($nav_tab_selected == "profile") echo ' class="active"'; ?>><a href="/profile"><i class="fa fa-user"></i> <span>Account Settings</span></a></li>
+				<li<?php if ($nav_tab_selected == "profile") echo ' class="active"'; ?>><a href="/profile"><i class="fa fa-user"></i> <span>My Profile</span></a></li>
 				<?php
 				if (file_exists(AppSettings::srcPath()."/pages/about.php")) { ?>
 					<li<?php if ($nav_tab_selected == "about") echo ' class="active"'; ?>><a href="/about/"><i class="fa fa-info-circle"></i> <span>About</span></a></li>
