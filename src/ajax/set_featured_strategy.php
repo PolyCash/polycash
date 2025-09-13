@@ -11,7 +11,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 	$success_message = "Your strategy has been successfully updated.";
 	
 	if ($featured_strategy_id == 0) {
-		$app->run_query("UPDATE user_strategies SET voting_strategy='manual', featured_strategy_id=NULL WHERE strategy_id=:strategy_id;", [
+		$app->run_query("UPDATE user_strategies SET voting_strategy='manual', featured_strategy_id=NULL, time_next_apply=NULL WHERE strategy_id=:strategy_id;", [
 			'strategy_id' => $user_strategy['strategy_id']
 		]);
 		$app->output_message(1, $success_message, false);
@@ -22,7 +22,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 		])->fetch();
 		
 		if ($featured_strategy && $featured_strategy['game_id'] == $game->db_game['game_id']) {
-			$app->run_query("UPDATE user_strategies SET voting_strategy='featured', featured_strategy_id=:featured_strategy_id WHERE strategy_id=:strategy_id;", [
+			$app->run_query("UPDATE user_strategies SET voting_strategy='featured', featured_strategy_id=:featured_strategy_id, time_next_apply=NULL WHERE strategy_id=:strategy_id;", [
 				'featured_strategy_id' => $featured_strategy['featured_strategy_id'],
 				'strategy_id' => $user_strategy['strategy_id']
 			]);
