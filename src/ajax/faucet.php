@@ -33,7 +33,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 				$claim_amount_int += $faucet_io['colored_amount_sum'];
 			}
 
-			if ($num_claims_now > 0) {
+			if ($num_claims_now > 0 && $claim_amount_int > 0) {
 				$faucet_message .= $app->render_view('faucet_button', [
 					'claim_amount_int' => $claim_amount_int,
 					'game' => $game,
