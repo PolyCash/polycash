@@ -13,8 +13,8 @@ class AppSettings {
 			self::$srcPath = realpath(dirname(dirname(__FILE__)));
 			self::$publicPath = realpath(dirname(dirname(dirname(__FILE__))))."/public";
 			
-			$config_path = self::$srcPath."/config/config.json";
-			
+			$config_path = self::getConfigPath();
+
 			if (is_file($config_path)) {
 				$config_fh = fopen($config_path, 'r');
 				if ($config_str = fread($config_fh, filesize($config_path))) {
@@ -94,6 +94,18 @@ class AppSettings {
 		}
 	}
 	
+	public static function getFirstSecondLevelDomain($hostName) {
+		if (strpos($hostName, ':') !== false) $hostName = substr($hostName, 0, strpos($hostName, ":"));
+		$domainParts = explode(".", $hostName);
+
+		$firstSecondLevelDomain = $domainParts[count($domainParts)-1];
+		if (count($domainParts) > 1) {
+			$firstSecondLevelDomain = $domainParts[count($domainParts)-2].".".$firstSecondLevelDomain;
+		}
+
+		return $firstSecondLevelDomain;
+	}
+
 	public static function getParam($paramName) {
 		if (isset(self::$settings->$paramName)) return self::$settings->$paramName;
 		else return null;
@@ -107,7 +119,8 @@ class AppSettings {
 		$anyError = false;
 		$errorMessage = null;
 		
-		$config_path = self::srcPath()."/config/config.json";
+		$config_path = self::getConfigPath();
+
 		if ($config_fh = fopen($config_path, 'w')) {
 			if (fwrite($config_fh, json_encode($settings, JSON_PRETTY_PRINT))) $anyError = false;
 			else {
@@ -123,6 +136,15 @@ class AppSettings {
 		return [$anyError, $errorMessage];
 	}
 	
+	public static function getConfigPath() {
+		$firstSecondLevelDomain = AppSettings::getFirstSecondLevelDomain($_SERVER['HTTP_HOST']);
+		
+		$domainOverrideConfigPath = self::$srcPath."/config/".$firstSecondLevelDomain.".json";
+
+		if (is_file($domainOverrideConfigPath)) return $domainOverrideConfigPath;
+		else return self::$srcPath."/config/config.json";
+	}
+
 	public static function addJsDependency($jsFile) {
 		self::$jsDependencies[$jsFile] = true;
 	}
