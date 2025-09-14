@@ -794,7 +794,7 @@ class App {
 		$hours = round($seconds / 3600);
 		$minutes = round($seconds / 60);
 		
-		if ($weeks > 0) {
+		if ($weeks > 2) {
 			$str .= $weeks." week".($weeks == 1 ? "" : "s");
 			$days = $days - 7*$weeks;
 			if ($days > 0) $str .= " and ".$days." day".($days == 1 ? "" : "s");

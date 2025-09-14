@@ -41,7 +41,7 @@ class AmericanFootballSeasonManager {
 			
 			foreach ($scrape_obj->fixtures as $api_fixture) {
 				$match_start_time = strtotime($api_fixture->fixture_time);
-				$betting_end_time = $match_start_time-(3600*4);
+				$betting_end_time = $match_start_time-3600;
 				$betting_start_time = max(strtotime(date("Y-m-d H").":00:00"), $match_start_time-(3600*24*$betting_days));
 				
 				$external_identifier = $api_fixture->fixture_id;
@@ -214,7 +214,7 @@ class AmericanFootballSeasonManager {
 		if (!empty($this->game_definition->module_info['last_set_outcomes_time'])) $last_set_outcomes_time = $this->game_definition->module_info['last_set_outcomes_time'];
 		else $last_set_outcomes_time = 0;
 		
-		$frequency_sec = 60*10;
+		$frequency_sec = 120;
 		
 		if ($last_set_outcomes_time < time()-$frequency_sec || $force_run) {
 			$change_count = 0;
