@@ -1223,7 +1223,7 @@ class Blockchain {
 						if ($output_is_destroy[$out_index] == 0 && $output_is_separator[$out_index] == 0 && $output_is_passthrough[$out_index] == 0 && $output_is_receiver[$out_index] == 0) {
 							$io_amount = $outputs[$out_index]["value"]*pow(10,$color_game->db_game['decimal_places']);
 							$regular_amount_sum_total += $io_amount;
-							if ($regular_output['option_index'] != "" && !empty($option_indices_this_block[$regular_output['option_index']])) {
+							if (isset($outputs[$out_index]['option_index']) && !empty($option_indices_this_block[$outputs[$out_index]['option_index']])) {
 								$regular_amount_sum_w_option += $io_amount;
 							}
 						}
