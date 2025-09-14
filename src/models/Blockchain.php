@@ -1214,6 +1214,24 @@ class Blockchain {
 				$game_out_index = 0;
 				$next_separator_i = 0;
 				
+				if ($color_game->db_game['boost_votes_by_missing_out_votes'] == 0) {
+					$boost_votes_by_missing_votes_factor = 1;
+				} else {
+					$regular_amount_sum_w_option = 0;
+					$regular_amount_sum_total = 0;
+					for ($out_index=0; $out_index<count($outputs); $out_index++) {
+						if ($output_is_destroy[$out_index] == 0 && $output_is_separator[$out_index] == 0 && $output_is_passthrough[$out_index] == 0 && $output_is_receiver[$out_index] == 0) {
+							$io_amount = $outputs[$out_index]["value"]*pow(10,$color_game->db_game['decimal_places']);
+							$regular_amount_sum_total += $io_amount;
+							if ($regular_output['option_index'] != "" && !empty($option_indices_this_block[$regular_output['option_index']])) {
+								$regular_amount_sum_w_option += $io_amount;
+							}
+						}
+					}
+
+					if ($regular_amount_sum_w_option == 0 || $regular_amount_sum_total == $regular_amount_sum_w_option) $boost_votes_by_missing_votes_factor = 1;
+					else $boost_votes_by_missing_votes_factor = floor(pow(10, 8)*$regular_amount_sum_total/$regular_amount_sum_w_option)/pow(10, 8);
+				}
 				$insert_q = "INSERT INTO transaction_game_ios (game_id, is_game_coinbase, io_id, address_id, game_out_index, ref_block_id, ref_coin_blocks, ref_round_id, ref_coin_rounds, colored_amount, destroy_amount, option_id, contract_parts, event_id, effectiveness_factor, effective_destroy_amount, is_resolved, resolved_before_spent) VALUES ";
 				$num_gios_added = 0;
 				
@@ -1221,10 +1239,10 @@ class Blockchain {
 					if ($output_is_destroy[$out_index] == 0 && $output_is_separator[$out_index] == 0 && $output_is_passthrough[$out_index] == 0 && $output_is_receiver[$out_index] == 0) {
 						$payout_insert_q = "";
 						$io_amount = $outputs[$out_index]["value"]*pow(10,$color_game->db_game['decimal_places']);
-						
+
 						$gio_amount = floor($tx_game_nondestroy_amount*$io_amount/$tx_chain_regular_sum);
-						$cbd = floor($cbd_in*$io_amount/$tx_chain_regular_sum);
-						$crd = floor($crd_in*$io_amount/$tx_chain_regular_sum);
+						$cbd = floor($cbd_in*$io_amount*$boost_votes_by_missing_votes_factor/$tx_chain_regular_sum);
+						$crd = floor($crd_in*$io_amount*$boost_votes_by_missing_votes_factor/$tx_chain_regular_sum);
 						
 						if ($out_index == $last_regular_output_index) $this_destroy_amount = $tx_game_destroy_amount-$game_destroy_sum;
 						else $this_destroy_amount = floor($tx_game_destroy_amount*$io_amount/$tx_chain_regular_sum);

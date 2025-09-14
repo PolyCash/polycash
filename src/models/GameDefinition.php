@@ -426,7 +426,7 @@ class GameDefinition {
 		for ($i=0; $i<count($verbatim_vars); $i++) {
 			$var = $verbatim_vars[$i];
 			if ($var[2] == true) {
-				if ((string)$initial_game_obj[$var[1]] != (string)$new_game_obj[$var[1]]) {
+				if (array_key_exists($var[1], $initial_game_obj) && array_key_exists($var[1], $new_game_obj) && (string)$initial_game_obj[$var[1]] != (string)$new_game_obj[$var[1]]) {
 					$reset_block = $min_starting_block;
 					
 					$game->blockchain->app->run_query("UPDATE games SET ".$var[1]."=:".$var[1]." WHERE game_id=:game_id;", [

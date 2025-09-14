@@ -1718,6 +1718,7 @@ class App {
 			['string', 'order_events_by', true],
 			['float', 'target_option_block_score', true],
 			['string', 'set_being_determined_blocks_method', true],
+			['bool', 'boost_votes_by_missing_out_votes', true],
 		];
 	}
 	

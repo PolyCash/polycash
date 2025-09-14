@@ -2397,14 +2397,30 @@ class Game {
 							}
 						}
 						
+						if ($this->db_game['boost_votes_by_missing_out_votes'] == 0) {
+							$boost_votes_by_missing_votes_factor = 1;
+						} else {
+							$regular_amount_sum_w_option = 0;
+							$regular_amount_sum_total = 0;
+							foreach ($regular_outputs as $regular_output_pos => $regular_output) {
+								$regular_amount_sum_total += $regular_output['amount'];
+								if ($regular_output['option_index'] != "" && !empty($option_indices_this_block[$regular_output['option_index']])) {
+									$regular_amount_sum_w_option += $regular_output['amount'];
+								}
+							}
+
+							if ($regular_amount_sum_w_option == 0 || $regular_amount_sum_total == $regular_amount_sum_w_option) $boost_votes_by_missing_votes_factor = 1;
+							else $boost_votes_by_missing_votes_factor = floor(pow(10, 8)*$regular_amount_sum_total/$regular_amount_sum_w_option)/pow(10, 8);
+						}
+						
 						$insert_q = "INSERT INTO transaction_game_ios (game_id, io_id, address_id, game_out_index, game_io_index, is_game_coinbase, coin_blocks_destroyed, coin_rounds_destroyed, create_block_id, create_round_id, colored_amount, destroy_amount, option_id, contract_parts, event_id, effectiveness_factor, votes, effective_destroy_amount, is_resolved, resolved_before_spent) VALUES ";
 						
 						foreach ($regular_outputs as $regular_output) {
 							$payout_insert_q = "";
 							
 							$gio_amount = floor($tx_game_nondestroy_amount*$regular_output['amount']/$tx_chain_regular_sum);
-							$cbd = floor($cbd_in*$regular_output['amount']/$tx_chain_regular_sum);
-							$crd = floor($crd_in*$regular_output['amount']/$tx_chain_regular_sum);
+							$cbd = floor($cbd_in*$regular_output['amount']*$boost_votes_by_missing_votes_factor/$tx_chain_regular_sum);
+							$crd = floor($crd_in*$regular_output['amount']*$boost_votes_by_missing_votes_factor/$tx_chain_regular_sum);
 							
 							if ($output_i == count($regular_outputs)-1) $this_destroy_amount = $tx_game_destroy_amount-$game_destroy_sum;
 							else $this_destroy_amount = floor($tx_game_destroy_amount*$regular_output['amount']/$tx_chain_regular_sum);
