@@ -43,7 +43,8 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 				"default_option_max_width": 200,
 				"default_payout_block_delay": 0,
 				"view_mode": "default",
-				"order_events_by": "event_index"
+				"order_events_by": "event_index",
+				"boost_votes_by_missing_out_votes": 1,
 			}';
 			
 			$setup_error = false;
@@ -245,7 +246,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 		}
 		else if ($app->user_can_edit_game($thisuser, $game)) {
 			if ($action == "fetch") {
-				$switch_game = $app->run_query("SELECT game_id, blockchain_id, module, creator_id, event_rule, option_group_id, event_type_name, game_status, block_timing, name, payout_weight, round_length, inflation, exponential_inflation_rate, final_round, invite_cost, invite_currency, coin_name, coin_name_plural, coin_abbreviation, start_condition, buyin_policy, game_buyin_cap, default_vote_effectiveness_function, default_effectiveness_param1, default_max_voting_fraction, game_starting_block, escrow_address, genesis_tx_hash, genesis_amount, default_betting_mode, finite_events, pow_reward_type, initial_pow_reward, blocks_per_pow_reward_ajustment, order_events_by FROM games WHERE game_id=:game_id;", [
+				$switch_game = $app->run_query("SELECT game_id, blockchain_id, module, creator_id, event_rule, option_group_id, event_type_name, game_status, block_timing, name, payout_weight, round_length, inflation, exponential_inflation_rate, final_round, invite_cost, invite_currency, coin_name, coin_name_plural, coin_abbreviation, start_condition, buyin_policy, game_buyin_cap, default_vote_effectiveness_function, default_effectiveness_param1, default_max_voting_fraction, game_starting_block, escrow_address, genesis_tx_hash, genesis_amount, default_betting_mode, finite_events, pow_reward_type, initial_pow_reward, blocks_per_pow_reward_ajustment, order_events_by, boost_votes_by_missing_out_votes FROM games WHERE game_id=:game_id;", [
 					'game_id' => $game->db_game['game_id']
 				])->fetch(PDO::FETCH_ASSOC);
 				
