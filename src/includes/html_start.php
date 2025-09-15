@@ -66,7 +66,6 @@ else if ($thisuser) $left_menu_open = $thisuser->db_user['left_menu_open'];
 					<?php if (empty(AppSettings::getParam('limited_navigation'))) { ?>
 					<?php if (is_file(AppSettings::srcPath()."/pages/about.php")) { ?><li><a href="/about/"><i class="fas fa-info-circle"></i> &nbsp; <span>About</span></a></li><?php } ?>
 					<li><a target="_blank" href="https://medium.com/polycash"><i class="fas fa-rss-square"></i> &nbsp; <span>Our Blog</span></a></li>
-					<li><a href="/pages/PolyCash-whitepaper-v3.pdf"><i class="fas fa-file-alt"></i> &nbsp; <span>Whitepaper</span></a></li>
 					<li><a target="_blank" href="https://github.com/PolyCash/polycash"><i class="fas fa-code"></i> &nbsp; <span>Source Code</span></a></li>
 					<?php } ?>
 					<?php
