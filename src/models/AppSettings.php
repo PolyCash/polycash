@@ -137,6 +137,8 @@ class AppSettings {
 	}
 	
 	public static function getConfigPath() {
+		if (!isset($_SERVER['HTTP_HOST'])) return self::$srcPath."/config/config.json";
+
 		$firstSecondLevelDomain = AppSettings::getFirstSecondLevelDomain($_SERVER['HTTP_HOST']);
 		
 		$domainOverrideConfigPath = self::$srcPath."/config/".$firstSecondLevelDomain.".json";

@@ -545,13 +545,13 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 								if ($transaction['is_mature'] == 0 || $transaction['create_block_id'] == "") $io_render_class = "text-warning";
 								else $io_render_class = "text-success";
 								
+								echo '<div class="col-sm-4" style="text-align: right;">';
+								
 								if ($account_game) {
-									echo '<div class="col-sm-2" style="text-align: right;"><a class="'.$io_render_class.'" target="_blank" href="/explorer/games/'.$account_game->db_game['url_identifier'].'/transactions/'.$transaction['tx_hash'].'/">';
-									echo "+".str_replace(" ", "&nbsp;", $account_game->display_coins($colored_coin_amount));
-									echo '</a></div>';
+									echo "+".str_replace(" ", "&nbsp;", $account_game->display_coins($colored_coin_amount)) . " &nbsp; ";
 								}
 								
-								echo '<div class="col-sm-2" style="text-align: right;"><a class="'.$io_render_class.'" target="_blank" href="/explorer/blockchains/'.$account['blockchain_url_identifier'].'/utxo/'.$transaction['tx_hash'].'/'.$transaction['out_index'].'">';
+								echo '<a class="'.$io_render_class.'" target="_blank" href="/explorer/blockchains/'.$account['blockchain_url_identifier'].'/utxo/'.$transaction['tx_hash'].'/'.$transaction['out_index'].'">';
 								echo "+".$app->format_bignum($transaction['amount']/pow(10,$blockchain->db_blockchain['decimal_places']))."&nbsp;".$account['short_name_plural'];
 								echo '</a></div>';
 								
@@ -591,13 +591,13 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 								echo $transaction['pub_key'];
 								echo '</a></div>';
 								
+								echo '<div class="col-sm-4" style="text-align: right;">';
+								
 								if ($account_game) {
-									echo '<div class="col-sm-2" style="text-align: right;"><a class="redtext" target="_blank" href="/explorer/games/'.$account_game->db_game['url_identifier'].'/transactions/'.$transaction['tx_hash'].'">';
-									echo "-".$account_game->display_coins($colored_coin_amount);
-									echo '</a></div>';
+									echo "-".str_replace(" ", "&nbsp;", $account_game->display_coins($colored_coin_amount)) . " &nbsp; ";
 								}
 								
-								echo '<div class="col-sm-2" style="text-align: right;"><a class="redtext" target="_blank" href="/explorer/blockchains/'.$account['blockchain_url_identifier'].'/transactions/'.$transaction['tx_hash'].'">';
+								echo '<a class="redtext" target="_blank" href="/explorer/blockchains/'.$account['blockchain_url_identifier'].'/transactions/'.$transaction['tx_hash'].'">';
 								echo "-".$app->format_bignum($transaction['amount']/pow(10,$blockchain->db_blockchain['decimal_places']))."&nbsp;".$account['short_name_plural'];
 								echo '</a></div>';
 								

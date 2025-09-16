@@ -115,7 +115,7 @@ class AmericanFootballSeasonManager {
 							'league_entity_id' => $league_entity_id,
 							'event_name' => $event_name,
 							'external_identifier' => $external_identifier,
-							'payout_rate' => 1,
+							'payout_rate' => 0.99,
 							'option_name' => 'team',
 							'option_name_plural' => 'teams',
 							'options' => [
