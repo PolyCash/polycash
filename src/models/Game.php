@@ -2466,7 +2466,7 @@ class Game {
 									$payout_insert_q = "('".$this->db_game['game_id']."', '".$payout_io_id."', '".$payout_address_id."', '".$game_out_index."', '".$game_io_index."', 1, 0, 0, '".$block_height."', '".$round_id."', 0, 0, '".$option_id."', '".$this->db_game['default_contract_parts']."', '".$events_by_option_id[$option_id]->db_event['event_id']."', null, 0, 0, ".$payout_is_resolved.", 1), ";
 									$game_out_index++;
 								}
-								else $insert_q .= "'".($gio_amount+$this_destroy_amount)."', 0, null, null, null, null, null, 0, 1, null";
+								else $insert_q .= "'".$gio_amount."', '".$this_destroy_amount."', null, null, null, null, null, 0, 1, null";
 							}
 							else $insert_q .= "'".$gio_amount."', '".$this_destroy_amount."', null, null, null, null, null, 0, 1, null";
 							
