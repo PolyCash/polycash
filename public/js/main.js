@@ -2220,6 +2220,9 @@ var PageManager = function() {
 			}
 		});
 	}
+	this.change_display_currency = function(select_element, explore_mode, game_url_identifier) {
+		window.location = '/wallet/'+game_url_identifier+'/?action=change_display_currency&display_currency_id='+select_element.value;
+	}
 	this.change_game = function(select_element, explore_mode) {
 		window.location = explore_mode == 'wallet' ? '/wallet/'+select_element.value
 			: (explore_mode == "unconfirmed" ? '/explorer/games/'+select_element.value+'/transactions/'+explore_mode

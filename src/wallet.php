@@ -229,6 +229,16 @@ if ($_REQUEST['action'] == "change_user_game") {
 
 $user_game = $thisuser->ensure_user_in_game($game, false);
 
+if ($_REQUEST['action'] == "change_display_currency" && isset($_REQUEST['display_currency_id']) && (string) $_REQUEST['display_currency_id'] == (string) ((int) $_REQUEST['display_currency_id'])) {
+	$app->run_query("UPDATE user_games SET display_currency_id=:display_currency_id WHERE user_game_id=:user_game_id;", [
+		'display_currency_id' => $_REQUEST['display_currency_id'],
+		'user_game_id' => $user_game['user_game_id'],
+	]);
+
+	header("Location: /wallet/".$game->db_game['url_identifier']."/");
+	die();
+}
+
 if (($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['action'] == "save_voting_strategy_fees") && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'])) {
 	$voting_strategy_id = intval($_REQUEST['voting_strategy_id']);
 	
@@ -469,33 +479,49 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 	?>
 	<div class="panel panel-default" style="margin-top: 15px;">
 		<div class="panel-heading">
-			<div class="panel-title">
+			<div class="panel-title" style="overflow: hidden;">
 				<?php
 				echo $game->db_game['name'];
 				if ($game->db_game['game_status'] == "paused" || $game->db_game['game_status'] == "unstarted") echo " (Paused)";
 				else if ($game->db_game['game_status'] == "completed") echo " (Completed)";
 				?>
-				<div style="float: right; display: inline-block; margin-top: -3px;">
-					<div id="change_user_game">
-						<select id="select_user_game" class="form-control input-sm" onchange="thisPageManager.change_user_game();">
+				<div style="float: right; display: inline-block; overflow: hidden;">
+					<div style="float: right; display: inline-block;">
+						<select id="change_display_currency" class="form-control input-sm" onchange="thisPageManager.change_display_currency(this, 'wallet', '<?php echo $game->db_game['url_identifier']; ?>');">
 							<?php
-							$user_games_by_game = $app->run_query("SELECT * FROM user_games WHERE user_id=:user_id AND game_id=:game_id ORDER BY account_id ASC;", [
-								'user_id' => $thisuser->db_user['user_id'],
-								'game_id' => $game->db_game['game_id']
-							])->fetchAll();
-							if (count($user_games_by_game) <= 3) $user_game_show_balances = true;
-							else $user_game_show_balances = false;
-							
-							foreach ($user_games_by_game as $db_user_game) {
+							$all_currencies = $app->fetch_currencies([])->fetchAll();
+
+							foreach ($all_currencies as $a_currency) {
 								echo "<option ";
-								if ($db_user_game['user_game_id'] == $user_game['user_game_id']) echo "selected=\"selected\" ";
-								echo "value=\"".$db_user_game['user_game_id']."\">Account #".$db_user_game['account_id'];
-								if ($user_game_show_balances || $user_game['account_id'] == $db_user_game['account_id']) echo " &nbsp;&nbsp; ".$game->display_coins($game->account_balance($db_user_game['account_id'])+$game->user_pending_bets($db_user_game), true);
+								if ($a_currency['currency_id'] == $user_game['display_currency_id']) echo "selected=\"selected\" ";
+								echo "value=\"".$a_currency['currency_id']."\">Show value in ".$a_currency['abbreviation']." (".$a_currency['name'].")";
 								echo "</option>\n";
 							}
 							?>
-							<option value="new">Create a new account</option>
 						</select>
+					</div>
+					<div style="float: right; display: inline-block;">
+						<div id="change_user_game">
+							<select id="select_user_game" class="form-control input-sm" onchange="thisPageManager.change_user_game();">
+								<?php
+								$user_games_by_game = $app->run_query("SELECT * FROM user_games WHERE user_id=:user_id AND game_id=:game_id ORDER BY account_id ASC;", [
+									'user_id' => $thisuser->db_user['user_id'],
+									'game_id' => $game->db_game['game_id']
+								])->fetchAll();
+								if (count($user_games_by_game) <= 3) $user_game_show_balances = true;
+								else $user_game_show_balances = false;
+								
+								foreach ($user_games_by_game as $db_user_game) {
+									echo "<option ";
+									if ($db_user_game['user_game_id'] == $user_game['user_game_id']) echo "selected=\"selected\" ";
+									echo "value=\"".$db_user_game['user_game_id']."\">Account #".$db_user_game['account_id'];
+									if ($user_game_show_balances || $user_game['account_id'] == $db_user_game['account_id']) echo " &nbsp;&nbsp; ".$game->display_coins($game->account_balance($db_user_game['account_id'])+$game->user_pending_bets($db_user_game), true);
+									echo "</option>\n";
+								}
+								?>
+								<option value="new">Create a new account</option>
+							</select>
+						</div>
 					</div>
 				</div>
 			</div>
