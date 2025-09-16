@@ -9,11 +9,10 @@ $app->safe_merge_argv_to_request($argv, $allowed_params);
 if ($app->running_as_admin()) {
 	$print_debug = false;
 	if (!empty($_REQUEST['print_debug'])) $print_debug = true;
-	
-	$only_game_id = false;
-	if (!empty($_REQUEST['game_id'])) $only_game_id = (int) $_REQUEST['game_id'];
-	
-	$process_lock_name = "set_cached_game_values";
+
+	$only_game_id = (int) $_REQUEST['game_id'];
+
+	$process_lock_name = "set_cached_game_values_".$only_game_id;
 	$process_locked = $app->check_process_running($process_lock_name);
 	
 	if ($only_game_id || (!$process_locked && $app->lock_process($process_lock_name))) {
