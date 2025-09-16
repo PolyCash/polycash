@@ -1289,7 +1289,7 @@ class Blockchain {
 								$payout_insert_q = "('".$color_game->db_game['game_id']."', 1, '".$payout_io_id."', '".$payout_address_id."', '".$game_out_index."', null, 0, null, 0, 0, 0, '".$option_id."', '".$color_game->db_game['default_contract_parts']."', '".$event->db_event['event_id']."', null, 0, ".$payout_is_resolved.", 1), ";
 								$game_out_index++;
 							}
-							else $insert_q .= "'".($gio_amount+$this_destroy_amount)."', 0, null, null, null, null, 0, 1, 1";
+							else $insert_q .= "'".$gio_amount."', '".$this_destroy_amount."', null, null, null, null, 0, 1, 1";
 						}
 						else $insert_q .= "'".$gio_amount."', '".$this_destroy_amount."', null, null, null, null, 0, 1, 1";
 						
