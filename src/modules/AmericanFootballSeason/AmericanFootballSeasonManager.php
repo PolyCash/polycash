@@ -18,7 +18,7 @@ class AmericanFootballSeasonManager {
 		$frequency_sec = 60*5;
 		$betting_days = 21;
 		
-		if ($last_add_events_time < time()-$frequency_sec || $force_run) {
+		if (($this->game->last_block_id() == $this->game->blockchain->last_block_id() && $last_add_events_time < time()-$frequency_sec) || $force_run) {
 			$api_events = [];
 			$team_entity_type = $this->app->check_set_entity_type("american football team");
 			$general_entity_type = $this->app->check_set_entity_type("general entity");
@@ -204,7 +204,7 @@ class AmericanFootballSeasonManager {
 			$this->game_definition->module_info['last_add_events_time'] = time();
 			$this->game_definition->save_module_info($this->game);
 		}
-		else echo "Ran recently, skipping..\n";
+		else echo "Ran recently or game not fully loaded, skipping..\n";
 	}
 	
 	public function set_outcomes($force_run=false) {
@@ -216,7 +216,7 @@ class AmericanFootballSeasonManager {
 		
 		$frequency_sec = 120;
 		
-		if ($last_set_outcomes_time < time()-$frequency_sec || $force_run) {
+		if (($this->game->last_block_id() == $this->game->blockchain->last_block_id() && $last_set_outcomes_time < time()-$frequency_sec) || $force_run) {
 			$change_count = 0;
 			
 			$pastdue_r = $this->app->run_query("SELECT * FROM game_defined_events WHERE game_id='".$this->game->db_game['game_id']."' AND outcome_index IS NULL AND event_final_block <= ".$this->game->blockchain->last_block_id()." AND external_identifier IS NOT NULL ORDER BY event_index ASC;");
@@ -266,7 +266,7 @@ class AmericanFootballSeasonManager {
 			$this->game_definition->module_info['last_set_outcomes_time'] = time();
 			$this->game_definition->save_module_info($this->game);
 		}
-		else echo "Ran recently, skipping...\n";
+		else echo "Ran recently or game not fully loaded, skipping..\n";
 	}
 	
 	public function set_blocks($force_run = false) {
@@ -278,7 +278,7 @@ class AmericanFootballSeasonManager {
 		
 		$frequency_sec = 60*60*6;
 		
-		if ($last_set_blocks_time < time()-$frequency_sec || $force_run) {
+		if (($this->game->last_block_id() == $this->game->blockchain->last_block_id() && $last_set_blocks_time < time()-$frequency_sec) || $force_run) {
 			$this->game->set_event_blocks(null, false);
 			
 			$show_internal_params = true;
@@ -293,7 +293,7 @@ class AmericanFootballSeasonManager {
 			$this->game_definition->module_info['last_set_blocks_time'] = time();
 			$this->game_definition->save_module_info($this->game);
 		}
-		else echo "Ran recently, skipping...\n";
+		else echo "Ran recently or game not fully loaded, skipping..\n";
 	}
 	
 	public function fix_images($force_run = false) {
@@ -302,7 +302,7 @@ class AmericanFootballSeasonManager {
 		
 		$frequency_sec = 60*30;
 		
-		if ($last_fix_images_time < time()-$frequency_sec || $force_run) {
+		if (($this->game->last_block_id() == $this->game->blockchain->last_block_id() && $last_fix_images_time < time()-$frequency_sec) || $force_run) {
 			$imageless_options = $this->app->run_query("SELECT * FROM game_defined_events gde JOIN game_defined_options gdo ON gde.event_index=gdo.event_index JOIN entities en ON gdo.entity_id=en.entity_id WHERE gdo.game_id=gde.game_id AND gde.game_id='".$this->game->db_game['game_id']."' AND gde.external_identifier IS NOT NULL AND en.default_image_id IS NULL ORDER BY gde.event_index ASC, gdo.option_index ASC;");
 			
 			echo "Trying to fix images for ".$imageless_options->rowCount()." options\n";
@@ -333,7 +333,7 @@ class AmericanFootballSeasonManager {
 			$this->game_definition->module_info['last_fix_images_time'] = time();
 			$this->game_definition->save_module_info($this->game);
 		}
-		else echo "Ran recently, skipping...\n";
+		else echo "Ran recently or game not fully loaded, skipping..\n";
 	}
 }
 ?>
