@@ -1947,31 +1947,46 @@ class Game {
 				if (array_key_exists("reset_from_block", $extra_info) && $extra_info['reset_from_block'] > $this->db_game['game_starting_block']) {
 					if ($print_debug) $this->blockchain->app->print_debug("Resetting the game from block #".$extra_info['reset_from_block']);
 
-					if ($extra_info['reset_from_block']-1 <= $this->blockchain->last_block_id()) {
-						if ($print_debug) $this->blockchain->app->print_debug("Resetting from block #".$extra_info['reset_from_block']);
+					$skip_reset = false;
 
-						$reset_from_block = $extra_info['reset_from_block'];
-						$this->reset_blocks_from_block($reset_from_block);
-						$this->set_loaded_until_block($reset_from_block-1);
-						$this->set_events_until_block($reset_from_block-1);
-					
-						unset($extra_info['reset_from_block']);
+					if ($extra_info['reset_from_block']-1 <= $this->blockchain->last_block_id()) {
+						$prev_block = $this->fetch_game_block_by_height($extra_info['reset_from_block']-1);
+						
+						if ($prev_block) {
+							if ($print_debug) $this->blockchain->app->print_debug("Resetting from block #".$extra_info['reset_from_block']);
+
+							$reset_from_block = $extra_info['reset_from_block'];
+							$this->reset_blocks_from_block($reset_from_block);
+							$this->set_loaded_until_block($reset_from_block-1);
+							$this->set_events_until_block($reset_from_block-1);
+						
+							unset($extra_info['reset_from_block']);
+						} else {
+							$skip_reset = true;
+							$log_message = "Game #".$this->db_game['game_id']." tried to reset to block ".$extra_info['reset_from_block']." but the previous block was missing.";
+							$this->blockchain->app->log_message($log_message);
+							if ($print_debug) $this->blockchain->app->print_debug($log_message);
+						}
 					}
 					else {
+						$skip_reset = true;
+						
 						$log_message = "Game #".$this->db_game['game_id']." tried to reset to future block ".$extra_info['reset_from_block']." but last block was ".$this->blockchain->last_block_id().", skipping block reloading.";
 						$this->blockchain->app->log_message($log_message);
 						if ($print_debug) $this->blockchain->app->print_debug($log_message);
 					}
 
-					if (array_key_exists("reset_from_event_index", $extra_info)) {
+					if (array_key_exists("reset_from_event_index", $extra_info) && !$skip_reset) {
 						if ($print_debug) $this->blockchain->app->print_debug("Resetting to event index #".$extra_info['reset_from_event_index']);
 
 						$this->reset_events_from_index($extra_info['reset_from_event_index']);
 						unset($extra_info['reset_from_event_index']);
 					}
 
-					$this->ensure_events_until_block($this->blockchain->last_complete_block_id()+1, $print_debug);
-					$this->set_target_scores_at_block(isset($reset_from_block) ? $reset_from_block : $this->blockchain->last_complete_block_id());
+					if (!$skip_reset) {
+						$this->ensure_events_until_block($this->blockchain->last_complete_block_id()+1, $print_debug);
+						$this->set_target_scores_at_block(isset($reset_from_block) ? $reset_from_block : $this->blockchain->last_complete_block_id());
+					}
 				}
 				else {
 					if ($print_debug) $this->blockchain->app->print_debug("Fully resetting the game...");
@@ -2016,6 +2031,12 @@ class Game {
 			if ($load_block_height == $this->db_game['game_starting_block']) $game_io_index = $this->max_game_io_index();
 			else {
 				$prev_block = $this->fetch_game_block_by_height($load_block_height-1);
+				if (!$prev_block || !array_key_exists('max_game_io_index', $prev_block)) {
+					$log_message = "Failed to fetch block #".($load_block_height-1)." in game #".$this->db_game['game_id']." terminating block loading.";
+					if ($print_debug) $this->blockchain->app->print_debug($log_message);
+					$this->blockchain->app->log_message($log_message);
+					die();
+				}
 				$game_io_index = $prev_block['max_game_io_index'];
 			}
 			
@@ -2132,12 +2153,14 @@ class Game {
 
 					if ($first_missing_info && $first_missing_info['block_id']+1 < $block_height) {
 						$message = $this->blockchain->app->log_message("Need to reset ".$this->db_game['name']." due to missing block at height #".($first_missing_info['block_id']+1));
+						$this->blockchain->app->log_message($message);
 						if ($print_debug) $this->blockchain->app->print_debug($message);
 
 						$this->reset_blocks_from_block($first_missing_info['block_id']+1);
 					}
 					else {
 						$message = $this->blockchain->app->print_debug("Tried to load game block #".$block_height." but it already exists: resetting from ".($block_height-1));
+						$this->blockchain->app->log_message($message);
 						if ($print_debug) $this->blockchain->app->print_debug($message);
 
 						$this->reset_blocks_from_block($block_height-1);
