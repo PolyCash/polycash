@@ -15,9 +15,7 @@ if ($app->running_as_admin()) {
 	$process_lock_name = "set_cached_game_values_".$only_game_id;
 	$process_locked = $app->check_process_running($process_lock_name);
 	
-	if ($only_game_id || (!$process_locked && $app->lock_process($process_lock_name))) {
-		$app->set_site_constant($process_lock_name, getmypid());
-		
+	if (!$process_locked && $app->lock_process($process_lock_name)) {
 		$script_target_time = 565;
 		$loop_target_time = 30;
 		$blockchains = [];

@@ -1969,8 +1969,6 @@ class Game {
 						}
 					}
 					else {
-						$skip_reset = true;
-						
 						$log_message = "Game #".$this->db_game['game_id']." tried to reset to future block ".$extra_info['reset_from_block']." but last block was ".$this->blockchain->last_block_id().", skipping block reloading.";
 						$this->blockchain->app->log_message($log_message);
 						if ($print_debug) $this->blockchain->app->print_debug($log_message);
@@ -1983,10 +1981,8 @@ class Game {
 						unset($extra_info['reset_from_event_index']);
 					}
 
-					if (!$skip_reset) {
-						$this->ensure_events_until_block($this->blockchain->last_complete_block_id()+1, $print_debug);
-						$this->set_target_scores_at_block(isset($reset_from_block) ? $reset_from_block : $this->blockchain->last_complete_block_id());
-					}
+					$this->ensure_events_until_block($this->blockchain->last_complete_block_id()+1, $print_debug);
+					$this->set_target_scores_at_block(isset($reset_from_block) ? $reset_from_block : $this->blockchain->last_complete_block_id());
 				}
 				else {
 					if ($print_debug) $this->blockchain->app->print_debug("Fully resetting the game...");
