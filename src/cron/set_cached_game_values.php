@@ -39,7 +39,7 @@ if ($app->running_as_admin()) {
 					$running_game->set_cached_fields();
 					if ($print_debug) $app->print_debug("Set cached values for ".$running_game->db_game['name']." in ".round(microtime(true)-$ref_time, 6)." sec");
 				}
-				else if ($print_debug) $app->print_debug("Skipped ".$running_game."; it's not fully loaded.");
+				else if ($print_debug) $app->print_debug("Skipped ".$running_game->db_game['name']."; it's not fully loaded.");
 			}
 			
 			$loop_stop_time = microtime(true);
