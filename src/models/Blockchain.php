@@ -183,7 +183,7 @@ class Blockchain {
 			$this->app->log_message($message);
 			if ($print_debug) $this->app->print_debug($message);
 			
-			$this->delete_blocks_from_height($block_height);
+			$this->delete_blocks_from_height($block_height, "prep_add_block");
 			$this->load_new_blocks($print_debug);
 			$db_block = $this->fetch_block_by_id($block_height);
 		}
@@ -630,7 +630,7 @@ class Blockchain {
 		
 		$this->app->dbh->commit();
 		
-		if ($any_error) $this->delete_blocks_from_height($block_height);
+		if ($any_error) $this->delete_blocks_from_height($block_height, "error_in_add_block_fast");
 		
 		if ($print_debug) $this->app->print_debug("Added block #".$block_height." in ".round(microtime(true)-$ref_time, 4)." sec");
 		
@@ -720,7 +720,7 @@ class Blockchain {
 				if ($postprocessing_error) $any_error = true;
 				
 				if ($any_error) {
-					$this->delete_blocks_from_height($block_height);
+					$this->delete_blocks_from_height($block_height, "error_in_coind_add_block");
 				}
 				
 				if ($print_debug) $this->app->print_debug((microtime(true)-$start_time)." sec");
@@ -1726,7 +1726,7 @@ class Blockchain {
 						
 						$this->app->log_message("Deleting blocks #".$delete_block_height." and above.");
 						
-						$this->delete_blocks_from_height($delete_block_height);
+						$this->delete_blocks_from_height($delete_block_height, "resolving_fork_on_block");
 					}
 				}
 				else if ($print_debug) $this->app->print_debug("No fork detected.");
@@ -1773,7 +1773,9 @@ class Blockchain {
 		}
 	}
 	
-	public function delete_blocks_from_height($block_height) {
+	public function delete_blocks_from_height($block_height, $reason_code) {
+		$this->app->log_message("Deleting blocks from height #".$block_height." for reason: ".$reason_code);
+
 		// Reset IOs that have been confirmed spent ahead of this block
 		$this->app->run_query("UPDATE transaction_ios SET coin_blocks_created=0, spend_transaction_id=NULL, spend_status='unspent', in_index=NULL, spend_block_id=NULL WHERE blockchain_id=:blockchain_id AND spend_block_id >= :spend_block_id;", [
 			'blockchain_id' => $this->db_blockchain['blockchain_id'],
@@ -2736,7 +2738,7 @@ class Blockchain {
 			$this->app->log_message($msg);
 			$log_text .= $message;
 			
-			$this->delete_blocks_from_height($created_block_id);
+			$this->delete_blocks_from_height($created_block_id, "new_block_verification_failed");
 			
 			return false;
 		}

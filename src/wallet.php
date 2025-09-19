@@ -508,14 +508,14 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 									'user_id' => $thisuser->db_user['user_id'],
 									'game_id' => $game->db_game['game_id']
 								])->fetchAll();
-								if (count($user_games_by_game) <= 3) $user_game_show_balances = true;
+								if (false && count($user_games_by_game) <= 3) $user_game_show_balances = true;
 								else $user_game_show_balances = false;
 								
 								foreach ($user_games_by_game as $db_user_game) {
 									echo "<option ";
 									if ($db_user_game['user_game_id'] == $user_game['user_game_id']) echo "selected=\"selected\" ";
 									echo "value=\"".$db_user_game['user_game_id']."\">Account #".$db_user_game['account_id'];
-									if ($user_game_show_balances || $user_game['account_id'] == $db_user_game['account_id']) echo " &nbsp;&nbsp; ".$game->display_coins($game->account_balance($db_user_game['account_id'])+$game->user_pending_bets($db_user_game), true);
+									if ($user_game_show_balances) echo " &nbsp;&nbsp; ".$game->display_coins($game->account_balance($db_user_game['account_id'])+$game->user_pending_bets($db_user_game), true);
 									echo "</option>\n";
 								}
 								?>
@@ -654,7 +654,6 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 					}
 				}
 				?>
-				
 				<div class="row">
 					<div class="col-md-6">
 						<div style="overflow: auto; margin-bottom: 10px;">
@@ -790,11 +789,7 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 			<div class="panel-heading">
 				<div class="panel-title">Play Now</div>
 			</div>
-			<div class="panel-body">
-				<?php
-				echo $game->render_game_players();
-				?>
-			</div>
+			<div class="panel-body"></div>
 		</div>
 	</div>
 	<?php } ?>
@@ -961,7 +956,6 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 			</div>
 		</div>
 	</div>
-	
 	<div class="modal fade" id="notification_modal">
 		<div class="modal-dialog">
 			<div class="modal-content">

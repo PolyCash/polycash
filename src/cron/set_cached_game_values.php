@@ -15,9 +15,7 @@ if ($app->running_as_admin()) {
 	$process_lock_name = "set_cached_game_values_".$only_game_id;
 	$process_locked = $app->check_process_running($process_lock_name);
 	
-	if ($only_game_id || (!$process_locked && $app->lock_process($process_lock_name))) {
-		$app->set_site_constant($process_lock_name, getmypid());
-		
+	if (!$process_locked && $app->lock_process($process_lock_name)) {
 		$script_target_time = 565;
 		$loop_target_time = 30;
 		$blockchains = [];
@@ -39,7 +37,7 @@ if ($app->running_as_admin()) {
 					$running_game->set_cached_fields();
 					if ($print_debug) $app->print_debug("Set cached values for ".$running_game->db_game['name']." in ".round(microtime(true)-$ref_time, 6)." sec");
 				}
-				else if ($print_debug) $app->print_debug("Skipped ".$running_game."; it's not fully loaded.");
+				else if ($print_debug) $app->print_debug("Skipped ".$running_game->db_game['name']."; it's not fully loaded.");
 			}
 			
 			$loop_stop_time = microtime(true);

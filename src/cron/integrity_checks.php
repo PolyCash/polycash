@@ -31,7 +31,7 @@ if ($app->running_as_admin()) {
 			}
 			else $fully_loaded = true;
 			
-			if ($fully_loaded) {
+			if ($fully_loaded || !empty($_REQUEST['force'])) {
 				$fix_from_block = null;
 
 				$false_spent_ios = $app->run_query("SELECT io.io_id, io.create_block_id FROM transaction_ios io WHERE io.blockchain_id=:blockchain_id AND io.spend_status='spent' AND NOT EXISTS (SELECT 1 FROM transactions t WHERE t.transaction_id=io.spend_transaction_id);", [
@@ -66,7 +66,7 @@ if ($app->running_as_admin()) {
 				if ($fix_from_block !== null) {
 					$message = $app->log_message("Integrity check initiating block deletion from height ".$fix_from_block." on ".$blockchain->db_blockchain['blockchain_name']);
 					if ($print_debug) $app->print_debug($message);
-					$blockchain->delete_blocks_from_height($fix_from_block);
+					$blockchain->delete_blocks_from_height($fix_from_block, "integrity_checks");
 				}
 
 				$next_integrity_check_time = strtotime(date("Y-m-d H:00:01")." +6 hours");

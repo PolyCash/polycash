@@ -10,7 +10,7 @@ if ($thisuser && $app->user_is_admin($thisuser) && $app->synchronizer_ok($thisus
 		$block = $blockchain->fetch_block_by_id($block_id);
 		
 		if ($block) {
-			$blockchain->delete_blocks_from_height($block['block_id']);
+			$blockchain->delete_blocks_from_height($block['block_id'], "blockchain_manager");
 			$app->output_message(1, "Successfully deleted ".$blockchain->db_blockchain['blockchain_name']." from height #".$block['block_id']);
 		}
 		else $app->output_message(4, "Failed to fetch block #".$block_id.".");

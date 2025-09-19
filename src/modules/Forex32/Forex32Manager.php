@@ -34,6 +34,11 @@ class Forex32Manager {
 	}
 
 	public function change_game_def($force=false, $print_debug=false) {
+		if ($this->game->last_block_id() != $this->game->blockchain->last_block_id()) {
+			if ($print_debug) $this->app->print_debug("Game is not fully loading, skipping make changes to game definition for game #".$this->game->db_game['game_id']);
+			return;
+		}
+
 		$this->game_definition->initialize_module_info($this->game);
 		$this->game_definition->read_module_info($this->game);
 

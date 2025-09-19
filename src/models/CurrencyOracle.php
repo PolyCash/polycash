@@ -114,10 +114,15 @@ class CurrencyOracle {
 		if ($print_debug) $app->print_debug("Loading prices from fcs-api oracle");
 
 		$pairs_csv = "";
-		foreach ($configured_oracle['group_members'] as $currency) {
-			$pairs_csv .= "USD/".$currency['abbreviation'].",";
+		if (isset($configured_oracle['group_members'])) {
+			foreach ($configured_oracle['group_members'] as $currency) {
+				$pairs_csv .= "USD/".$currency['abbreviation'].",";
+			}
+			$pairs_csv .= "USD/LTC,";
+		} else if (isset($configured_oracle['currency'])) {
+			$pairs_csv .= "USD/".$configured_oracle['currency']['abbreviation'].",";
 		}
-		$pairs_csv .= "USD/LTC,";
+		
 		$pairs_csv = substr($pairs_csv, 0, strlen($pairs_csv)-1);
 		
 		$fcs_url = "https://fcsapi.com/api-v3/forex/latest?symbol=".$pairs_csv."&access_key=".$configured_oracle['api_key'];
