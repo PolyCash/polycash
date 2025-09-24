@@ -51,7 +51,7 @@ $current_round = $game->block_to_round($last_block_id+1);
 $block_within_round = $game->block_id_to_round_index($last_block_id+1);
 $coins_per_vote = $app->coins_per_vote($game->db_game);
 
-$output = false;
+$output = [];
 $output['game_loop_index'] = $game_loop_index;
 
 $output['game_status_explanation'] = $game->game_status_explanation($thisuser, $user_game);

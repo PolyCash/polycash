@@ -16,7 +16,7 @@ class AmericanFootballSeasonManager {
 		else $last_add_events_time = 0;
 		
 		$frequency_sec = 60*5;
-		$betting_days = 21;
+		$betting_days = 14;
 		
 		if (($this->game->last_block_id() == $this->game->blockchain->last_block_id() && $last_add_events_time < time()-$frequency_sec) || $force_run) {
 			$api_events = [];
@@ -55,7 +55,7 @@ class AmericanFootballSeasonManager {
 				
 				if (!$existing_gde) {
 					if ($betting_end_time > time()+(3600*2)) {
-						$payout_time = $match_start_time+(3600*24);
+						$payout_time = $match_start_time+(3600*4);
 						
 						$sport = "American Football";
 						$league = $api_fixture->league;

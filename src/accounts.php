@@ -330,8 +330,8 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 		<div class="panel panel-info" style="margin-top: 15px;">
 			<div class="panel-heading">
 				<?php
-				$show_balances = false;
-				if (count($accounts) <= 50 || !empty($_REQUEST['show_balances'])) $show_balances = true;
+				$show_balances = $selected_account_id ? true : false;
+				if (!empty($_REQUEST['show_balances'])) $show_balances = true;
 				
 				if ($selected_account_id) {
 					$show_balances = true;
