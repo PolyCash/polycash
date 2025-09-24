@@ -2096,7 +2096,7 @@ class Blockchain {
 			if ((string) $this->db_blockchain['first_required_block'] != "" && $block['locally_saved'] == 0 && $block['block_id'] >= $this->db_blockchain['first_required_block']) $html .= "&nbsp;(Pending)";
 			$html .= "</div>";
 			$html .= "<div class=\"col-sm-2";
-			$html .= "\" style=\"text-align: right;\">".number_format($block['num_transactions']);
+			$html .= "\" style=\"text-align: right;\">".number_format($block['num_transactions'] ?? 0);
 			$html .= "&nbsp;transactions</div>\n";
 			$html .= "<div class=\"col-sm-2\" style=\"text-align: right;\">".$block_sum_disp."&nbsp;";
 			if ($game) $html .= $block_sum_disp=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural'];
@@ -2420,12 +2420,18 @@ class Blockchain {
 	
 	public function rpc_createrawtransaction($raw_txin, $raw_txout) {
 		$raw_transaction = $this->coin_rpc->createrawtransaction($raw_txin, $raw_txout);
+
 		try {
 			$signed_raw_transaction = $this->coin_rpc->signrawtransactionwithwallet($raw_transaction);
+			
+			if (!isset($signed_raw_transaction['hex']) && isset($signed_raw_transaction['message'])) {
+				$signed_raw_transaction = $this->coin_rpc->signrawtransaction($raw_transaction);
+			}
 		}
 		catch (Exception $e) {
 			$signed_raw_transaction = $this->coin_rpc->signrawtransaction($raw_transaction);
 		}
+
 		$decoded_transaction = $this->coin_rpc->decoderawtransaction($signed_raw_transaction['hex']);
 		$tx_hash = $decoded_transaction['txid'];
 		
@@ -2954,7 +2960,9 @@ class Blockchain {
 		$error_message = "";
 		
 		do {
-			$new_addr_txt = $this->coin_rpc->getnewaddress("", "legacy");
+			$new_addr_txt = $this->coin_rpc->getnewaddress();
+			if (isset($new_addr_txt['message'])) return $new_addr_txt['message'];
+			
 			$new_addr_db = $this->create_or_fetch_address($new_addr_txt, true, null);
 			$new_addr_count++;
 		}

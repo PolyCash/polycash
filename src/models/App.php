@@ -706,6 +706,7 @@ class App {
 		}
 		
 		if ($created_input_ids && count($created_input_ids) > 0) {
+			$this->run_query("DELETE FROM transaction_game_ios WHERE io_id IN (".implode(",", array_map('intval', $created_input_ids)).");");
 			$this->run_query("DELETE FROM transaction_ios WHERE io_id IN (".implode(",", array_map('intval', $created_input_ids)).");");
 		}
 	}
@@ -1060,7 +1061,7 @@ class App {
 					
 					if ($blockchain->coin_rpc) {
 						try {
-							$address_text = $blockchain->coin_rpc->getnewaddress("", "legacy");
+							$address_text = $blockchain->coin_rpc->getnewaddress();
 						}
 						catch (Exception $e) {
 							$failed = true;

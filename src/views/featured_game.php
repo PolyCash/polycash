@@ -43,7 +43,7 @@ games.push(new Game(thisPageManager, <?php
 	echo ', "'.$game->blockchain->db_blockchain['seconds_per_block'].'"';
 	echo ', "'.$game->db_game['inflation'].'"';
 	echo ', "'.$game->db_game['exponential_inflation_rate'].'"';
-	echo ', "'.$db_last_block['time_mined'].'"';
+	echo ', '.($db_last_block ? '"'.$db_last_block['time_mined'].'"' : 'null');
 	echo ', "'.$game->db_game['decimal_places'].'"';
 	echo ', "'.$game->blockchain->db_blockchain['decimal_places'].'"';
 	echo ', "'.$game->db_game['view_mode'].'"';

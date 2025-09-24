@@ -5,6 +5,8 @@ class Game {
 	public $current_events;
 	public $genesis_hash;
 	public $definitive_peer = false;
+	public $game_id = null;
+	public $module = null;
 	
 	public function __construct(&$blockchain, $game_id) {
 		$this->blockchain = $blockchain;
@@ -1053,7 +1055,7 @@ class Game {
 			$last_block = $this->fetch_game_block_by_height($last_block_loaded);
 			$sample_block = $this->fetch_game_block_by_height(max($this->db_game['game_starting_block'], $last_block_loaded-100));
 			
-			if (empty($sample_block) || $last_block['block_id'] == $sample_block['block_id']) $time_per_block = 0;
+			if (empty($sample_block) || empty($last_block) || $last_block['block_id'] == $sample_block['block_id']) $time_per_block = 0;
 			else $time_per_block = ($last_block['time_loaded']-$sample_block['time_loaded'])/($last_block['block_id']-$sample_block['block_id']);
 			
 			$html .= "<p>Synced to block <a target='_blank' href='/explorer/games/".$this->db_game['url_identifier']."/blocks/".$last_block_loaded."'>".$last_block_loaded."</a>, loading ".number_format($missing_game_blocks)." game block";
@@ -1428,7 +1430,7 @@ class Game {
 			$j=0;
 			while ($option = $options_by_event->fetch()) {
 				$has_votingaddr = "true";
-				$js .= "games[".$game_index."].events[".$i."].options.push(new EventOption(games[".$game_index."].events[".$i."], ".$j.", ".$option['option_id'].", ".$option['option_index'].", ".$this->blockchain->app->quote_escape($option['name']).", 0, ".$has_votingaddr.", ".$this->blockchain->app->quote_escape($option['image_url'])."));\n";
+				$js .= "games[".$game_index."].events[".$i."].options.push(new EventOption(games[".$game_index."].events[".$i."], ".$j.", ".$option['option_id'].", ".$option['option_index'].", ".$this->blockchain->app->quote_escape($option['name']).", 0, ".$has_votingaddr.", ".((string)$option['image_url'] === "" ? "''" : $this->blockchain->app->quote_escape($option['image_url']))."));\n";
 				$j++;
 			}
 			$html .= "<div id='game".$game_index."_event".$i."' class='game_event_inner'><div id='game".$game_index."_event".$i."_display' class='game_event_display'>";

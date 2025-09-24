@@ -4,6 +4,7 @@ class Forex32GameDefinition {
 	public $game_def;
 	public $game_def_base_txt;
 	public $currencies = [];
+	public $module_info = null;
 
 	public function __construct(&$app) {
 		$this->app = $app;
