@@ -504,7 +504,7 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 						<div id="change_user_game">
 							<select id="select_user_game" class="form-control input-sm" onchange="thisPageManager.change_user_game();">
 								<?php
-								$user_games_by_game = $app->run_query("SELECT * FROM user_games WHERE user_id=:user_id AND game_id=:game_id ORDER BY account_id ASC;", [
+								$user_games_by_game = $app->run_query("SELECT ug.user_game_id, ug.account_id, ca.account_name FROM user_games ug LEFT JOIN currency_accounts ca ON ug.account_id=ca.account_id WHERE ug.user_id=:user_id AND ug.game_id=:game_id ORDER BY ug.account_id ASC;", [
 									'user_id' => $thisuser->db_user['user_id'],
 									'game_id' => $game->db_game['game_id']
 								])->fetchAll();
@@ -514,7 +514,7 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 								foreach ($user_games_by_game as $db_user_game) {
 									echo "<option ";
 									if ($db_user_game['user_game_id'] == $user_game['user_game_id']) echo "selected=\"selected\" ";
-									echo "value=\"".$db_user_game['user_game_id']."\">Account #".$db_user_game['account_id'];
+									echo "value=\"".$db_user_game['user_game_id']."\">#".$db_user_game['account_id'].": ".$db_user_game['account_name'];
 									if ($user_game_show_balances) echo " &nbsp;&nbsp; ".$game->display_coins($game->account_balance($db_user_game['account_id'])+$game->user_pending_bets($db_user_game), true);
 									echo "</option>\n";
 								}

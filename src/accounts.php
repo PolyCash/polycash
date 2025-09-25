@@ -264,7 +264,9 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 			foreach (CurrencyAccount::$fieldsInfo as $fieldName => $fieldInfo) {
 				if (array_key_exists($fieldName, $_REQUEST)) {
 					if ((string)$_REQUEST[$fieldName] == "") $_REQUEST[$fieldName] = null;
-					if (!empty($fieldInfo['editableInSettings'])) $updateParams[$fieldName] = $_REQUEST[$fieldName];
+					if (!empty($fieldInfo['editableInSettings'])) {
+						$updateParams[$fieldName] = !empty($fieldInfo['stripTags']) ? htmlspecialchars(strip_tags($_REQUEST[$fieldName])) : $_REQUEST[$fieldName];
+					}
 				}
 			}
 			CurrencyAccount::updateAccount($app, $settings_account, $updateParams);
@@ -669,7 +671,12 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 							<form action="/accounts/?account_id=<?php echo $account['account_id']; ?>" method="post">
 								<input type="hidden" name="action" value="save_settings" />
 								<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
-								
+
+								<div class="form-group">
+									<label for="account_name">Account name:</label>
+									<input type="text" class="form-control" id="account_name" name="account_name" value="<?php echo $account['account_name']; ?>" />
+								</div>
+
 								<?php
 								$join_quantity_suggestions = [
 									10,

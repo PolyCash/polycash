@@ -1,6 +1,10 @@
 <?php
 class CurrencyAccount {
 	public static $fieldsInfo = [
+		'account_name' => [
+			'editableInSettings' => true,
+			'stripTags' => true,
+		],
 		'faucet_donations_on' => [
 			'editableInSettings' => true,
 		],
