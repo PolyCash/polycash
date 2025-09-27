@@ -47,6 +47,7 @@ include(AppSettings::srcPath()."/models/Api.php");
 include(AppSettings::srcPath()."/models/App.php");
 include(AppSettings::srcPath()."/models/CurrencyAccount.php");
 include(AppSettings::srcPath()."/models/CurrencyOracle.php");
+include(AppSettings::srcPath()."/models/Faucet.php");
 include(AppSettings::srcPath()."/models/JsonRPCClient.php");
 include(AppSettings::srcPath()."/models/Blockchain.php");
 include(AppSettings::srcPath()."/models/BlockchainVerifier.php");

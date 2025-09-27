@@ -60,7 +60,7 @@ else $exchange_rate = 0;
 			<p>
 				<a href="/wallet/<?php echo $game->db_game['url_identifier']; ?>/" class="btn btn-sm btn-success"><i class="fas fa-play-circle"></i> &nbsp; 
 				<?php
-				$claim_amount_int = $game->get_faucet_claim_amount($user_game);
+				$claim_amount_int = Faucet::getMaxClaimAmount($app, $thisuser ? $thisuser->db_user['user_id'] : null, $game);
 
 				if ($claim_amount_int > 0) {
 					echo 'Join now & receive '.$game->display_coins($claim_amount_int);

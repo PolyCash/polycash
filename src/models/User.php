@@ -161,7 +161,8 @@ class User {
 				'show_intro_message' => count($game->fetch_featured_strategies()->fetchAll()) > 0 ? 1 : 0,
 				'prompt_notification_preference' => empty($this->db_user['notification_email']) ? 1 : 0,
 				'notification_preference' => 'email',
-				'betting_mode' => 'principal'
+				'betting_mode' => 'principal',
+				'net_risk_view' => 0,
 			];
 			$this->app->run_insert_query("user_games", $new_user_game_params);
 			$user_game_id = $this->app->last_insert_id();

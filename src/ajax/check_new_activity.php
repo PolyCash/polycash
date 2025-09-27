@@ -252,24 +252,31 @@ if ($include_being_determined_events) {
 	}
 }
 
-list($earliest_join_time, $most_recent_claim_time, $user_faucet_claims, $eligible_for_faucet, $time_available, $num_claims_now) = $game->user_faucet_info($user_game['user_id'], $user_game['game_id']);
+$my_faucet_receivers = Faucet::myFaucetReceivers($app, $thisuser->db_user['user_id'], $game->db_game['game_id']);
 
-if ($eligible_for_faucet) {
-	$faucet_account = $game->check_set_faucet_account();
-	$faucet_ios = $game->check_faucet($user_game, $num_claims_now);
+$faucet_view = "";
 
-	if ($num_claims_now > 0 && count($faucet_ios) > 0) {
-		$claim_amount_int = 0;
-		foreach ($faucet_ios as $faucet_io) {
-			$claim_amount_int += $faucet_io['colored_amount_sum'];
-		}
+foreach ($my_faucet_receivers as $my_faucet_receiver) {
+	list($eligible_for_faucet, $time_available, $num_claims_now) = Faucet::faucetReceiveInfo($my_faucet_receiver);
 
-		$output['claim_from_faucet_view'] = $app->render_view('faucet_button', [
+	$faucet_ios = Faucet::getReceivableTxosFromFaucet($app, $game, $my_faucet_receiver, $my_faucet_receiver, $num_claims_now);
+
+	$claim_amount_int = 0;
+	foreach ($faucet_ios as $faucet_io) {
+		$claim_amount_int += $faucet_io['colored_amount_sum'];
+	}
+
+	if ($num_claims_now > 0 && $claim_amount_int > 0) {
+		$faucet_view .= $app->render_view('faucet_button', [
+			'display_from_name' => $my_faucet_receiver['display_from_name'],
 			'claim_amount_int' => $claim_amount_int,
 			'game' => $game,
+			'faucet_id' => $my_faucet_receiver['faucet_id'],
 		]);
 	}
 }
+
+$output['claim_from_faucet_view'] = $faucet_view;
 
 echo json_encode($output);
 ?>

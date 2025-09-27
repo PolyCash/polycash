@@ -344,13 +344,8 @@ else {
 				else if ($last_action == "internal_settings") {
 					$featured = (int)$_REQUEST['featured'];
 					$public_players = (int)$_REQUEST['public_players'];
-					$faucet_policy = $_REQUEST['faucet_policy'];
 					$hide_module = (int)$_REQUEST['hide_module'];
 					$every_event_bet_reminder_minutes = (int) $_REQUEST['every_event_bet_reminder_minutes'];
-					$sec_per_faucet_claim = (int) $_REQUEST['sec_per_faucet_claim'];
-					$min_sec_between_claims = (int) $_REQUEST['min_sec_between_claims'];
-					$bonus_claims = (int) $_REQUEST['bonus_claims'];
-					$max_claims_at_once = (string) $_REQUEST['max_claims_at_once'] !== "" ? (int) $_REQUEST['max_claims_at_once'] : null;
 					$default_transaction_fee = (float) $_REQUEST['default_transaction_fee'];
 					$sellout_policy = (string) $_REQUEST['sellout_policy'];
 					$sellout_confirmations = (int) $_REQUEST['sellout_confirmations'];
@@ -365,9 +360,7 @@ else {
 						$definitive_game_peer_url = $_REQUEST['definitive_game_peer'];
 					}
 					else $definitive_game_peer_url = "";
-					
-					if ($faucet_policy != "on") $faucet_policy = "off";
-					
+
 					$definitive_game_peer_id = "NULL";
 					$game->db_game['definitive_game_peer_id'] = "";
 					
@@ -381,18 +374,13 @@ else {
 						}
 					}
 
-					$app->run_query("UPDATE games SET featured=:featured, public_players=:public_players, faucet_policy=:faucet_policy, hide_module=:hide_module, definitive_game_peer_id=:definitive_game_peer_id, every_event_bet_reminder_minutes=:every_event_bet_reminder_minutes, sec_per_faucet_claim=:sec_per_faucet_claim, min_sec_between_claims=:min_sec_between_claims, bonus_claims=:bonus_claims, max_claims_at_once=:max_claims_at_once, default_transaction_fee=:default_transaction_fee, min_buyin_amount=:min_buyin_amount, min_sellout_amount=:min_sellout_amount, bulk_add_blocks=:bulk_add_blocks, sellout_policy=:sellout_policy, sellout_confirmations=:sellout_confirmations, keep_definitions_hours=:keep_definitions_hours, num_buffer_address_sets=:num_buffer_address_sets WHERE game_id=:game_id;", [
+					$app->run_query("UPDATE games SET featured=:featured, public_players=:public_players, hide_module=:hide_module, definitive_game_peer_id=:definitive_game_peer_id, every_event_bet_reminder_minutes=:every_event_bet_reminder_minutes, default_transaction_fee=:default_transaction_fee, min_buyin_amount=:min_buyin_amount, min_sellout_amount=:min_sellout_amount, bulk_add_blocks=:bulk_add_blocks, sellout_policy=:sellout_policy, sellout_confirmations=:sellout_confirmations, keep_definitions_hours=:keep_definitions_hours, num_buffer_address_sets=:num_buffer_address_sets WHERE game_id=:game_id;", [
 						'featured' => $featured,
 						'public_players' => $public_players,
-						'faucet_policy' => $faucet_policy,
 						'hide_module' => $hide_module,
 						'definitive_game_peer_id' => $definitive_game_peer ? $definitive_game_peer['game_peer_id'] : null,
 						'game_id' => $game->db_game['game_id'],
 						'every_event_bet_reminder_minutes' => $every_event_bet_reminder_minutes,
-						'sec_per_faucet_claim' => $sec_per_faucet_claim,
-						'min_sec_between_claims' => $min_sec_between_claims,
-						'bonus_claims' => $bonus_claims,
-						'max_claims_at_once' => $max_claims_at_once,
 						'default_transaction_fee' => $default_transaction_fee,
 						'min_buyin_amount' => $min_buyin_amount,
 						'min_sellout_amount' => $min_sellout_amount,
@@ -405,13 +393,8 @@ else {
 					
 					$game->db_game['featured'] = $featured;
 					$game->db_game['public_players'] = $public_players;
-					$game->db_game['faucet_policy'] = $faucet_policy;
 					$game->db_game['hide_module'] = $hide_module;
 					$game->db_game['every_event_bet_reminder_minutes'] = $every_event_bet_reminder_minutes;
-					$game->db_game['min_sec_between_claims'] = $min_sec_between_claims;
-					$game->db_game['sec_per_faucet_claim'] = $sec_per_faucet_claim;
-					$game->db_game['bonus_claims'] = $bonus_claims;
-					$game->db_game['max_claims_at_once'] = $max_claims_at_once;
 					$game->db_game['default_transaction_fee'] = $default_transaction_fee;
 					$game->db_game['min_buyin_amount'] = $min_buyin_amount;
 					$game->db_game['min_sellout_amount'] = $min_sellout_amount;
@@ -785,29 +768,6 @@ else {
 												<option value="1">Yes</option>
 												<option value="0"<?php if ($game->db_game['featured'] == 0) echo ' selected="selected"'; ?>>No</option>
 											</select>
-										</div>
-										<div class="form-group">
-											<label for="faucet_policy">Faucet?</label>
-											<select class="form-control" name="faucet_policy" id="faucet_policy">
-												<option value="on">On</option>
-												<option value="off"<?php if ($game->db_game['faucet_policy'] == "off") echo ' selected="selected"'; ?>>Off</option>
-											</select>
-										</div>
-										<div class="form-group">
-											<label for="bonus_claims">How many extra faucet claims should users get upon signing up?</label>
-											<input type="text" class="form-control" name="bonus_claims" id="bonus_claims" value="<?php echo $game->db_game['bonus_claims']; ?>" />
-										</div>
-										<div class="form-group">
-											<label for="sec_per_faucet_claim">How often should users receive one claim from the faucet? Please answer in seconds.</label>
-											<input type="text" class="form-control" name="sec_per_faucet_claim" id="sec_per_faucet_claim" value="<?php echo $game->db_game['sec_per_faucet_claim']; ?>" />
-										</div>
-										<div class="form-group">
-											<label for="min_sec_between_claims">If users go for a long time without claiming from the faucet, they may be eligible to claim many times.  What's the maximum number of claims these users should receive at once?</label>
-											<input type="text" class="form-control" name="max_claims_at_once" id="max_claims_at_once" value="<?php echo $game->db_game['max_claims_at_once']; ?>" />
-										</div>
-										<div class="form-group">
-											<label for="min_sec_between_claims">If users go for a long time without claiming from the faucet, they may be eligible to claim many times.  How many seconds should these users have to wait after claiming?</label>
-											<input type="text" class="form-control" name="min_sec_between_claims" id="min_sec_between_claims" value="<?php echo $game->db_game['min_sec_between_claims']; ?>" />
 										</div>
 										<div class="form-group">
 											<label for="hide_module">Should the game's module be hidden when displaying game definition to the public?</label>

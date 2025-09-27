@@ -5,7 +5,7 @@ class CurrencyAccount {
 			'editableInSettings' => true,
 			'stripTags' => true,
 		],
-		'faucet_donations_on' => [
+		'donate_to_faucet_id' => [
 			'editableInSettings' => true,
 		],
 		'faucet_target_balance' => [

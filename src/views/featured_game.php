@@ -11,7 +11,7 @@ list($new_event_js, $new_event_html) = $game->new_event_js($counter, $user, $fil
 if ($user) $user_game = $blockchain->app->fetch_user_game($user->db_user['user_id'], $game->db_game['game_id']);
 else $user_game = null;
 
-$claim_amount_int = $game->get_faucet_claim_amount($user_game);
+$claim_amount_int = Faucet::getMaxClaimAmount($blockchain->app, $user ? $user->db_user['user_id'] : null, $game);
 
 $play_now_url = '/wallet/'.$game->db_game['url_identifier'].'/';
 

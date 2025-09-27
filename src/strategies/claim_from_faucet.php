@@ -26,10 +26,16 @@ if ($user_game) {
 		$account = $app->fetch_account_by_id($user_game['account_id']);
 		
 		if ($account) {
-			$claim_count = $game->claim_max_from_faucet($user_game);
+			$my_faucet_receivers = Faucet::myFaucetReceivers($app, $user->db_user['user_id'], $game->db_game['game_id']);
 			
+			$claim_count = 0;
+
+			foreach ($my_faucet_receivers as $my_faucet_receiver) {
+				$claim_count += Faucet::claimMaxFromFaucet($app, $game, $user_game, $my_faucet_receiver, $my_faucet_receiver);
+			}
+
 			$app->set_strategy_time_next_apply($user_game['strategy_id'], time()+$sec_between_applications);
-			
+
 			if ($claim_count > 0) $app->output_message(1, "Successfully claimed coins from the faucet.", false);
 			else $app->output_message(5, "No coins were available in the faucet.", false);
 		}
