@@ -846,7 +846,7 @@ class App {
 	public function fetch_game_from_url() {
 		$login_url_parts = explode("/", rtrim(ltrim($_SERVER['REQUEST_URI'], "/"), "/"));
 		
-		if (in_array($login_url_parts[0], ["wallet", "manage", "manage_faucets"]) && count($login_url_parts) > 1) {
+		if (in_array($login_url_parts[0], ["wallet", "manage", "manage_faucets", "donate_to_faucet"]) && count($login_url_parts) > 1) {
 			return $this->fetch_game_by_identifier($login_url_parts[1]);
 		}
 		else return false;

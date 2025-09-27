@@ -1,6 +1,7 @@
 <?php
 require(AppSettings::srcPath()."/includes/connect.php");
 require(AppSettings::srcPath()."/includes/get_session.php");
+$pagetitle = "Manage Faucets";
 $nav_tab_selected = "manage_faucets";
 
 if (!$thisuser) {

@@ -70,3 +70,5 @@ DROP COLUMN `sec_per_faucet_claim`,
 DROP COLUMN `faucet_policy`;
 
 ALTER TABLE `currency_accounts` DROP COLUMN `is_faucet`;
+
+ALTER TABLE `currency_accounts` DROP COLUMN `faucet_amount_each`;

@@ -11,9 +11,6 @@ class CurrencyAccount {
 		'faucet_target_balance' => [
 			'editableInSettings' => true,
 		],
-		'faucet_amount_each' => [
-			'editableInSettings' => true,
-		],
 		'join_txos_on_quantity' => [
 			'editableInSettings' => true,
 		],

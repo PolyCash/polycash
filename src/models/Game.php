@@ -3916,22 +3916,22 @@ class Game {
 		if ($print_debug) $this->blockchain->app->print_debug("Checking ".count($donate_from_accounts)." donating accounts in ".$this->db_game['name'].".");
 		
 		foreach ($donate_from_accounts as $donate_from_account) {
-			$faucet_account = Faucet::fetchById($this->blockchain->app, $donate_from_account['donate_to_faucet_id']);
-			$faucet_balance_int = $this->account_balance($faucet_account['account_id']);
+			$faucet = Faucet::fetchById($this->blockchain->app, $donate_from_account['donate_to_faucet_id']);
+			$faucet_balance_int = $this->account_balance($faucet['account_id']);
 			$faucet_balance_float = $faucet_balance_int/pow(10, $this->db_game['decimal_places']);
 			
 			if ($print_debug) $this->blockchain->app->print_debug("Account #".$donate_from_account['account_id'].", current balance of ".$faucet_balance_float." vs target of ".$donate_from_account['faucet_target_balance']);
 			
 			if ($faucet_balance_float < 0.9*$donate_from_account['faucet_target_balance']) {
-				$quantity_donations = min(100, floor(($donate_from_account['faucet_target_balance'] - $faucet_balance_float)/$donate_from_account['faucet_amount_each']));
+				$quantity_donations = min(100, floor(($donate_from_account['faucet_target_balance'] - $faucet_balance_float)/$faucet['txo_size']));
 				
 				if ($quantity_donations > 0) {
-					if ($print_debug) $this->blockchain->app->print_debug("Making ".$quantity_donations." donations of ".$donate_from_account['faucet_amount_each']);
+					if ($print_debug) $this->blockchain->app->print_debug("Making ".$quantity_donations." donations of ".$faucet['txo_size']);
 					
 					$user_game = $this->blockchain->app->fetch_user_game_by_account_id($donate_from_account['account_id']);
 					$strategy = $this->blockchain->app->fetch_strategy_by_id($user_game['strategy_id']);
 					
-					$game_cost_int = $quantity_donations*$donate_from_account['faucet_amount_each']*pow(10, $this->db_game['decimal_places']);
+					$game_cost_int = $quantity_donations*$faucet['txo_size']*pow(10, $this->db_game['decimal_places']);
 					$fee_int = $strategy['transaction_fee']*pow(10, $this->blockchain->db_blockchain['decimal_places']);
 					
 					$spendable_ios = $this->blockchain->app->spendable_ios_in_account($donate_from_account['account_id'], $this->db_game['game_id'], false, false);
@@ -3954,13 +3954,13 @@ class Game {
 					}
 					
 					$gio_per_io = $gio_input_sum/($io_input_sum-$fee_int);
-					$io_amount_per_donation = ceil($donate_from_account['faucet_amount_each']*pow(10, $this->db_game['decimal_places'])/$gio_per_io);
+					$io_amount_per_donation = ceil($faucet['txo_size']*pow(10, $this->db_game['decimal_places'])/$gio_per_io);
 					$amounts = [];
 					$io_output_sum = 0;
 					$to_address_ids = [];
 					
 					for ($i=0; $i<$quantity_donations; $i++) {
-						$address_key = $this->blockchain->app->new_normal_address_key($faucet_account['currency_id'], $faucet_account);
+						$address_key = $this->blockchain->app->new_normal_address_key($faucet['currency_id'], $faucet);
 						array_push($amounts, $io_amount_per_donation);
 						array_push($to_address_ids, $address_key['address_id']);
 						$io_output_sum += $io_amount_per_donation;

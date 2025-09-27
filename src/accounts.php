@@ -379,6 +379,8 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 						if ($account_game && $account['user_game_id']) {
 							echo '<a href="/wallet/'.$account_game->db_game['url_identifier'].'/?action=change_user_game&user_game_id='.$account['user_game_id'].'" class="btn btn-sm btn-success">Play Now</a> ';
 							echo '<a href="/explorer/games/'.$account_game->db_game['url_identifier'].'/my_bets/?user_game_id='.$account['user_game_id'].'" class="btn btn-sm btn-primary">My Bets</a> ';
+
+							echo '<a class="btn btn-sm btn-default" href="/donate_to_faucet/'.$account_game->db_game['url_identifier'].'/?account_id='.$account['account_id'].'">Donate to Faucet</a> ';
 						}
 						echo '<a href="/accounts/backups" class="btn btn-sm btn-warning">Backup History</a>';
 						
@@ -731,10 +733,6 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 										<div class="form-group">
 											<label for="faucet_target_balance">What do you want to donate the faucet's balance up to?</label>
 											<input type="text" class="form-control" id="faucet_target_balance" name="faucet_target_balance" value="<?php echo $account['faucet_target_balance']; ?>" />
-										</div>
-										<div class="form-group">
-											<label for="faucet_amount_each">How many <?php echo $account_game->db_game['coin_name_plural']; ?> should each person receive per faucet claim?</label>
-											<input type="text" class="form-control" id="faucet_amount_each" name="faucet_amount_each" value="<?php echo $account['faucet_amount_each']; ?>" />
 										</div>
 									</div>
 									<script type="text/javascript">

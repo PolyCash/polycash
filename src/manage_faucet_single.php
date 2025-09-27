@@ -1,4 +1,5 @@
 <?php
+$pagetitle = "Manage Faucet";
 include(AppSettings::srcPath()."/includes/html_start.php");
 
 $uri_parts = explode("/", $_SERVER['REQUEST_URI']);
@@ -70,15 +71,15 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
 		$app->run_query($updateFaucetQ, $updateFaucetParams);
 		$message = "Successfully edited faucet #".$faucet['faucet_id'];
 	} else {
-		$account = $app->create_new_account([
-			'user_id' => $thisuser->db_user['user_id'],
-			'game_id' => $game->db_game['game_id'],
-			'currency_id' => $game->blockchain->currency_id(),
+		$new_user_game = $thisuser->ensure_user_in_game($game, true);
+
+		$new_account = $app->fetch_account_by_id($new_user_game['account_id']);
+		CurrencyAccount::updateAccount($app, $new_account, [
 			'account_name' => $game->db_game['name']." Faucet: ".htmlspecialchars(strip_tags($_REQUEST['display_from_name'])),
 		]);
 
 		$insertFaucetParams['user_id'] = $thisuser->db_user['user_id'];
-		$insertFaucetParams['account_id'] = $account['account_id'];
+		$insertFaucetParams['account_id'] = $new_account['account_id'];
 		$insertFaucetParams['game_id'] = $game->db_game['game_id'];
 		$insertFaucetParams['created_at'] = time();
 		foreach ($faucetFieldsInfo as $fieldName => $fieldInfo) {
@@ -117,12 +118,33 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
 		</div>
 		<div class="panel-body">
 			<p>&larr; <a href="/manage_faucets/<?php echo $game->db_game['url_identifier']; ?>">All my faucets in <?php echo $game->db_game['name']; ?></a></p>
+			
+			<?php if ($faucet) { ?>
+			<p><a class="btn btn-sm btn-default" href="/donate_to_faucet/<?php echo $game->db_game['url_identifier']; ?>/?faucet_id=<?php echo $faucet['faucet_id']; ?>">Donate to this faucet</a></p>
+			<?php } ?>
+
 			<div class="row">
 				<div class="col-lg-6">
 					<form method="post" action="/manage_faucets/<?php echo $game->db_game['url_identifier']; ?>/<?php echo $faucet ? $faucet['faucet_id'] : 'new'; ?>">
-						<?php if ($faucet) { ?>
-						<p>Faucet ID: <?php echo $faucet['faucet_id']; ?></p>
-						<p>Account: <a href="/accounts/?account_id=<?php echo $faucet['account_id']; ?>"><?php echo $faucet['account_id']; ?></a></p>
+						<?php
+						if ($faucet) {
+							$auto_donating_accounts = $app->run_query("SELECT * FROM currency_accounts WHERE donate_to_faucet_id=:faucet_id ORDER BY account_id ASC;", [
+								'faucet_id' => $faucet['faucet_id'],
+							])->fetchAll(PDO::FETCH_ASSOC);
+							?>
+							<p>Faucet ID: <?php echo $faucet['faucet_id']; ?></p>
+							<p>Account: <a href="/accounts/?account_id=<?php echo $faucet['account_id']; ?>"><?php echo $faucet['account_id']; ?></a></p>
+							<p>Auto donating accounts:
+							<?php
+							if (count($auto_donating_accounts) > 0) {
+								foreach ($auto_donating_accounts as $auto_donating_account) {
+									echo '<a href="/accounts/?account_id='.$auto_donating_account['account_id'].'">'.$auto_donating_account['account_id'].'</a> ';
+								}
+							} else {
+								echo "None";
+							}
+							?>
+							</p>
 						<?php } ?>
 						<div class="form-group">
 							<label for="faucet_enabled">Faucet enabled?</label>
