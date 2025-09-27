@@ -32,7 +32,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 		else if ($action == "check") {
 			$my_faucet_receivers = Faucet::myFaucetReceivers($app, $thisuser->db_user['user_id'], $game->db_game['game_id']);
 
-			$faucet_message = "";
+			$faucet_message = "<p>You're in ".count($my_faucet_receivers)." faucet".(count($my_faucet_receivers) == 1 ? "" :"s")."</p>";
 
 			foreach ($my_faucet_receivers as $my_faucet_receiver) {
 				list($eligible_for_faucet, $time_available, $num_claims_now) = Faucet::faucetReceiveInfo($my_faucet_receiver);
@@ -67,7 +67,9 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 						if ($next_claim_amount_int > 0) {
 							$faucet_message .= "<p>You'll be eligible to claim ".$game->display_coins($next_claim_amount_int)." from ".$my_faucet_receiver['display_from_name']." in ".$app->format_seconds($time_available-time()).".</p>";
 						}
+						else $faucet_message .= "<p>".$my_faucet_receiver['display_from_name'].": No money was found in the faucet.</p>";
 					}
+					else $faucet_message .= "<p>".$my_faucet_receiver['display_from_name'].": No money was found in the faucet.</p>";
 				}
 			}
 			
