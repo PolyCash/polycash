@@ -3331,18 +3331,22 @@ class Game {
 				'blockchain_id' => $this->blockchain->db_blockchain['blockchain_id'],
 				'time' => $time
 			])->fetch();
-			
+
 			if ($db_block) {
-				$block_id = max($this->db_game['game_starting_block']+1, $db_block['block_id']);
+				return max($this->db_game['game_starting_block']+1, $db_block['block_id']);
 			}
-			else $block_id = $this->db_game['game_starting_block']+1;
+			else return null;
 		}
 		else {
-			$sec_to_add = $time - time();
+			$last_block = $this->blockchain->fetch_block_by_id($this->blockchain->last_block_id());
+
+			if (!$last_block) return null;
+
+			$sec_to_add = $time - $last_block['time_mined'];
 			$add_blocks = floor($sec_to_add/$this->blockchain->seconds_per_block('average'));
-			$block_id = $this->blockchain->last_block_id()+$add_blocks;
+
+			return $last_block['block_id']+$add_blocks;
 		}
-		return $block_id;
 	}
 	
 	public function set_gde_blocks_by_time(&$gde, &$time_to_block_cache) {
@@ -3367,21 +3371,23 @@ class Game {
 					$time_to_block_cache[$gde['event_payout_time']] = $payout_block;
 				}
 			}
-			
-			$update_event_q = "UPDATE game_defined_events SET event_starting_block=:event_starting_block, event_final_block=:event_final_block, event_payout_block=:event_payout_block";
-			$update_event_params = [
-				'event_starting_block' => $start_block,
-				'event_final_block' => $final_block,
-				'event_payout_block' => $payout_block,
-				'game_id' => $this->db_game['game_id'],
-				'event_index' => $gde['event_index']
-			];
-			$update_event_q .= " WHERE game_id=:game_id AND event_index=:event_index;";
 
-			$this->blockchain->app->run_query($update_event_q, $update_event_params);
+			if ($start_block !== null && $final_block !== null && $payout_block !== null) {
+				$update_event_q = "UPDATE game_defined_events SET event_starting_block=:event_starting_block, event_final_block=:event_final_block, event_payout_block=:event_payout_block";
+				$update_event_params = [
+					'event_starting_block' => $start_block,
+					'event_final_block' => $final_block,
+					'event_payout_block' => $payout_block,
+					'game_id' => $this->db_game['game_id'],
+					'event_index' => $gde['event_index']
+				];
+				$update_event_q .= " WHERE game_id=:game_id AND event_index=:event_index;";
+
+				$this->blockchain->app->run_query($update_event_q, $update_event_params);
+			}
 		}
 	}
-	
+
 	public function event_filter_html($game_instance_pos=0, $initial_filter_term=null) {
 		$show_date_filter = false;
 		

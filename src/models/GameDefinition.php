@@ -401,6 +401,102 @@ class GameDefinition {
 		return [$differences, $difference_summary_lines];
 	}
 	
+	public static function find_reset_block_and_event_index_from_defs(&$app, &$game, &$initial_game_def, &$new_game_def) {
+		$reset_block = false;
+		$reset_event_index = false;
+
+		if (is_array($initial_game_def)) $initial_game_obj = $initial_game_def;
+		else $initial_game_obj = get_object_vars($initial_game_def);
+		
+		if (is_array($new_game_def)) $new_game_obj = $new_game_def;
+		else $new_game_obj = get_object_vars($new_game_def);
+
+		$verbatim_vars = $app->game_definition_verbatim_vars();
+
+		// Check if any base params are different. If so, reset from game starting block
+		for ($i=0; $i<count($verbatim_vars); $i++) {
+			$var = $verbatim_vars[$i];
+			if ($var[2] == true) {
+				if (array_key_exists($var[1], $initial_game_obj) && array_key_exists($var[1], $new_game_obj) && (string)$initial_game_obj[$var[1]] != (string)$new_game_obj[$var[1]]) {
+					$reset_block = $min_starting_block;
+				}
+			}
+		}
+
+		$event_verbatim_vars = $app->event_verbatim_vars();
+		
+		$num_initial_events = 0;
+		if (!empty($initial_game_obj['events'])) $num_initial_events = count($initial_game_obj['events']);
+		$num_new_events = 0;
+		if (!empty($new_game_obj['events'])) $num_new_events = count($new_game_obj['events']);
+		
+		$matched_events = min($num_initial_events, $num_new_events);
+		
+		$events_start_at_index = isset($new_game_obj['events'][0]) ? $new_game_obj['events'][0]->event_index : 0;
+
+		for ($i=0; $i<$matched_events; $i++) {
+			$initial_event_text = self::game_def_to_text($initial_game_obj['events'][$i]);
+			
+			if (self::game_def_to_text($new_game_obj['events'][$i]) != $initial_event_text) {
+				// If only thing changed is outcome, only need to reset from the payout block
+				// otherwise need to reset from the event starting block.
+
+				$new_event_no_outcome = clone $new_game_obj['events'][$i];
+				$initial_event_no_outcome = clone $initial_game_obj['events'][$i];
+				
+				$initial_event_no_outcome->outcome_index = null;
+				$initial_event_no_outcome->track_payout_price = null;
+				$initial_event_no_outcome->event_payout_block = null;
+				
+				$new_event_no_outcome->outcome_index = null;
+				$new_event_no_outcome->track_payout_price = null;
+				$new_event_no_outcome->event_payout_block = null;
+				
+				if (self::game_def_to_text($initial_event_no_outcome) == self::game_def_to_text($new_event_no_outcome)) {
+					$reset_block = $app->min_excluding_false(array($reset_block, $initial_game_obj['events'][$i]->event_payout_block, $new_game_obj['events'][$i]->event_payout_block));
+				}
+				else {
+					$reset_block = $app->min_excluding_false(array($reset_block, $initial_game_obj['events'][$i]->event_starting_block, $new_game_obj['events'][$i]->event_starting_block));
+
+					if ($reset_event_index === false) $reset_event_index = $new_game_obj['events'][$i]->event_index;
+				}
+			}
+		}
+		
+		if (!empty($new_game_obj['events']) && count($new_game_obj['events']) > 0) {
+			for ($i=$matched_events; $i<count($new_game_obj['events']); $i++) {
+				$reset_block = $app->min_excluding_false(array($reset_block, $new_game_obj['events'][$i]->event_starting_block));
+			}
+		}
+
+		$set_events_from_index = $reset_event_index;
+		if ($matched_events != count($new_game_obj['events']) || $matched_events != count($initial_game_obj['events'])) {
+			$set_events_from_index = $app->min_excluding_false([$reset_event_index, $matched_events+$events_start_at_index]);
+		}
+		
+		if ($set_events_from_index !== false) {
+			$events_earliest_affected_block = $game->event_index_to_affected_block($set_events_from_index);
+			$reset_block = $app->min_excluding_false([$reset_block, $events_earliest_affected_block]);
+
+			$set_events_from_pos = $set_events_from_index;
+
+			if (!is_numeric($reset_block)) $reset_block = $new_game_obj['events'][$set_events_from_pos]->event_starting_block;
+		}
+		
+		if (is_numeric($reset_block)) {
+			$set_events_from_index = $app->min_excluding_false([$game->reset_block_to_event_index($reset_block), $set_events_from_index]);
+			
+			if ($set_events_from_index !== false) {
+				$adjusted_from_block = $game->reset_event_index_to_block($set_events_from_index);
+				if ((string)$adjusted_from_block != "" && $adjusted_from_block < $reset_block) {
+					$reset_block = $adjusted_from_block;
+				}
+			}
+		}
+
+		return [$reset_block, $set_events_from_index];
+	}
+
 	public static function migrate_game_definitions(&$game, $user_id, $migration_type, $show_internal_params, &$initial_game_def, &$new_game_def) {
 		$log_message = "";
 		
