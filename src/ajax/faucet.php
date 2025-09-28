@@ -32,44 +32,51 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 		else if ($action == "check") {
 			$my_faucet_receivers = Faucet::myFaucetReceivers($app, $thisuser->db_user['user_id'], $game->db_game['game_id']);
 
-			$faucet_message = "<p>You're in ".count($my_faucet_receivers)." faucet".(count($my_faucet_receivers) == 1 ? "" :"s")."</p>";
+			$num_enabled_receivers = 0;
+			foreach ($my_faucet_receivers as $my_faucet_receiver) {
+				if ($my_faucet_receiver['faucet_enabled']) $num_enabled_receivers++;
+			}
+
+			$faucet_message = "<p>You're in ".$num_enabled_receivers." live faucet".($num_enabled_receivers == 1 ? "" :"s")."</p>";
 
 			foreach ($my_faucet_receivers as $my_faucet_receiver) {
-				list($eligible_for_faucet, $time_available, $num_claims_now) = Faucet::faucetReceiveInfo($my_faucet_receiver);
+				if ($my_faucet_receiver['faucet_enabled']) {
+					list($eligible_for_faucet, $time_available, $num_claims_now) = Faucet::faucetReceiveInfo($my_faucet_receiver);
 
-				$faucet_ios = Faucet::getReceivableTxosFromFaucet($app, $game, $my_faucet_receiver, $my_faucet_receiver, $num_claims_now);
+					$faucet_ios = Faucet::getReceivableTxosFromFaucet($app, $game, $my_faucet_receiver, $my_faucet_receiver, $num_claims_now);
 
-				$claim_amount_int = 0;
-				foreach ($faucet_ios as $faucet_io) {
-					$claim_amount_int += $faucet_io['colored_amount_sum'];
-				}
+					$claim_amount_int = 0;
+					foreach ($faucet_ios as $faucet_io) {
+						$claim_amount_int += $faucet_io['colored_amount_sum'];
+					}
 
-				if ($num_claims_now > 0 && $claim_amount_int > 0) {
-					$faucet_message .= $app->render_view('faucet_button', [
-						'display_from_name' => $my_faucet_receiver['display_from_name'],
-						'claim_amount_int' => $claim_amount_int,
-						'game' => $game,
-						'faucet_id' => $my_faucet_receiver['faucet_id'],
-					]);
-				}
-				else {
-					if ($time_available) {
-						list($eligible_for_faucet, $time_available, $num_claims_then) = Faucet::faucetReceiveInfo($my_faucet_receiver, $time_available);
-						$next_claim_amount_int = 0;
+					if ($num_claims_now > 0 && $claim_amount_int > 0) {
+						$faucet_message .= $app->render_view('faucet_button', [
+							'display_from_name' => $my_faucet_receiver['display_from_name'],
+							'claim_amount_int' => $claim_amount_int,
+							'game' => $game,
+							'faucet_id' => $my_faucet_receiver['faucet_id'],
+						]);
+					}
+					else {
+						if ($time_available) {
+							list($eligible_for_faucet, $time_available, $num_claims_then) = Faucet::faucetReceiveInfo($my_faucet_receiver, $time_available);
+							$next_claim_amount_int = 0;
 
-						$faucet_ios = Faucet::getReceivableTxosFromFaucet($app, $game, null, $my_faucet_receiver, $num_claims_then);
+							$faucet_ios = Faucet::getReceivableTxosFromFaucet($app, $game, null, $my_faucet_receiver, $num_claims_then);
 
-						$next_claim_amount_int = 0;
-						foreach ($faucet_ios as $faucet_io) {
-							$next_claim_amount_int += $faucet_io['colored_amount_sum'];
-						}
+							$next_claim_amount_int = 0;
+							foreach ($faucet_ios as $faucet_io) {
+								$next_claim_amount_int += $faucet_io['colored_amount_sum'];
+							}
 
-						if ($next_claim_amount_int > 0) {
-							$faucet_message .= "<p>You'll be eligible to claim ".$game->display_coins($next_claim_amount_int)." from ".$my_faucet_receiver['display_from_name']." in ".$app->format_seconds($time_available-time()).".</p>";
+							if ($next_claim_amount_int > 0) {
+								$faucet_message .= "<p>You'll be eligible to claim ".$game->display_coins($next_claim_amount_int)." from ".$my_faucet_receiver['display_from_name']." in ".$app->format_seconds($time_available-time()).".</p>";
+							}
+							else $faucet_message .= "<p>".$my_faucet_receiver['display_from_name'].": No money was found in the faucet.</p>";
 						}
 						else $faucet_message .= "<p>".$my_faucet_receiver['display_from_name'].": No money was found in the faucet.</p>";
 					}
-					else $faucet_message .= "<p>".$my_faucet_receiver['display_from_name'].": No money was found in the faucet.</p>";
 				}
 			}
 			
