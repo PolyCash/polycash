@@ -50,6 +50,9 @@ else {
 		}
 	}
 	
+	$intended_reset_block = null;
+	$intended_reset_event_index = null;
+	
 	if ($message) {}
 	else if (!empty($migration['cached_difference_summary'])) $difference_summary_txt = $migration['cached_difference_summary'];
 	else {
@@ -59,6 +62,7 @@ else {
 		if (!empty($from_game_def) && !empty($to_game_def)) {
 			list($differences, $difference_summary_lines) = GameDefinition::analyze_definition_differences($app, $from_game_def, $to_game_def);
 			$difference_summary_txt = implode(".<br/>\n", $difference_summary_lines);
+			[$intended_reset_block, $intended_reset_event_index] = GameDefinition::find_reset_block_and_event_index_from_defs($app, $game, $from_game_def, $to_game_def);
 		}
 		else $message = "Failed to load differences; game definitions are missing.";
 	}
@@ -96,6 +100,13 @@ else {
 						echo "<tr><td>Reset from event:</td><td>#".$extra_info['reset_from_event_index']."</td></tr>\n";
 					}
 				}
+				if (isset($intended_reset_block)) {
+					echo '<tr><td>Should reset from block:</td><td>#'.$intended_reset_block.'</td></tr>';
+				}
+				if (isset($intended_reset_event_index)) {
+					echo '<tr><td>Should reset from event:</td><td>#'.$intended_reset_event_index.'</td></tr>';
+				}
+				
 				echo "</table><br/>\n";
 			}
 			echo $difference_summary_txt;
