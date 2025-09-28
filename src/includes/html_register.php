@@ -36,7 +36,7 @@ if (!empty($_REQUEST['redirect_key']) && empty($redirect_url)) $redirect_url = $
 			
 			<div class="form-group">
 				<label for="username">Please enter an email address for your account:</label>
-				<input id="username" name="username" class="form-control" placeholder="Username" required autocomplete="username" <?php if (!empty($old_vars_safe['username'])) echo ' value="'.$old_vars_safe['username'].'" '; ?>/>
+				<input id="username" name="username" class="form-control" placeholder="Email address" required autocomplete="username" <?php if (!empty($old_vars_safe['username'])) echo ' value="'.$old_vars_safe['username'].'" '; ?>/>
 				<?php
 				if (!empty($error_messages['username'])) {
 					echo '<p class="text-warning">'.$error_messages['username'].'</p>';

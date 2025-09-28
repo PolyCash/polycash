@@ -148,6 +148,8 @@ class Forex32Manager {
 				GameDefinition::check_set_game_definition($this->app, $initial_game_def_hash, $initial_game_def);
 			}
 
+			$any_stopping_error = false;
+
 			$json_events = [];
 
 			$start_cohort = $existing_events_cohort === null ? 0 : $existing_events_cohort+1;
@@ -167,6 +169,11 @@ class Forex32Manager {
 				$event_final_block = $this->game->time_to_block_in_game($final_time->getTimestamp());
 				$event_payout_block = $this->game->time_to_block_in_game($payout_time->getTimestamp());
 
+				if ($event_starting_block === null || $event_final_block === null || $event_payout_block === null) {
+					$any_stopping_error = true;
+					break;
+				}
+
 				for ($currency_i=0; $currency_i<count($this->game_definition->currencies); $currency_i++) {
 					$tracked_currency = $this->game_definition->currencies[$currency_i];
 
@@ -174,10 +181,13 @@ class Forex32Manager {
 					else {
 						$track_price_info = $this->app->exchange_rate_between_currencies(1, $tracked_currency['currency_id'], time(), $this->app->get_reference_currency()['currency_id']);
 
-						//if ($track_price_info['time'] >= time()-(30*60)) {
+						if ($track_price_info['time'] >= time()-(30*60)) {
 							$price_usd = $track_price_info['exchange_rate'];
-						//}
-						//else $price_usd = 0;
+						}
+						else {
+							$any_stopping_error = true;
+							break 2;
+						}
 
 						$latestPriceByCurrencyId[$tracked_currency['currency_id']] = $price_usd;
 					}
@@ -231,65 +241,69 @@ class Forex32Manager {
 				}
 			}
 
-			$verbatim_vars = [
-				"event_index",
-				"event_starting_block",
-				"event_final_block",
-				"event_determined_to_block",
-				"event_payout_block",
-				"event_starting_time",
-				"event_final_time",
-				"event_payout_time",
-				"event_name",
-				"option_name",
-				"option_name_plural",
-				"payout_rule",
-				"payout_rate",
-				"outcome_index",
-				"track_min_price",
-				"track_max_price",
-				"track_name_short",
-			];
-
-			$add_count = count($json_events);
-			if ($print_debug) $this->app->print_debug("Adding ".$add_count." events.");
-
-			$this->app->dbh->beginTransaction();
-
-			foreach ($json_events as $json_event) {
-				$gde_params = [
-					'game_id' => $this->game->db_game['game_id'],
+			if ($any_stopping_error) {
+				if ($print_debug) $this->app->print_debug("There was an error generating events, skipping.");
+			} else {
+				$verbatim_vars = [
+					"event_index",
+					"event_starting_block",
+					"event_final_block",
+					"event_determined_to_block",
+					"event_payout_block",
+					"event_starting_time",
+					"event_final_time",
+					"event_payout_time",
+					"event_name",
+					"option_name",
+					"option_name_plural",
+					"payout_rule",
+					"payout_rate",
+					"outcome_index",
+					"track_min_price",
+					"track_max_price",
+					"track_name_short",
 				];
-				$gde_q = "INSERT INTO game_defined_events SET game_id=:game_id";
-				foreach ($verbatim_vars as $verbatim_var) {
-					$gde_q .= ", ".$verbatim_var."=:".$verbatim_var;
-					$gde_params[$verbatim_var] = $json_event[$verbatim_var];
-				}
-				$this->app->run_query($gde_q, $gde_params);
 
-				$option_index = 0;
-				foreach ($json_event['options'] as $option) {
-					$this->app->run_query("INSERT INTO game_defined_options SET game_id=:game_id, entity_id=:entity_id, event_index=:event_index, option_index=:option_index, name=:name;", [
+				$add_count = count($json_events);
+				if ($print_debug) $this->app->print_debug("Adding ".$add_count." events.");
+
+				$this->app->dbh->beginTransaction();
+
+				foreach ($json_events as $json_event) {
+					$gde_params = [
 						'game_id' => $this->game->db_game['game_id'],
-						'entity_id' => $option['entity_id'],
-						'event_index' => $json_event['event_index'],
-						'option_index' => $option_index,
-						'name' => $option['name'],
-					]);
-					$option_index++;
+					];
+					$gde_q = "INSERT INTO game_defined_events SET game_id=:game_id";
+					foreach ($verbatim_vars as $verbatim_var) {
+						$gde_q .= ", ".$verbatim_var."=:".$verbatim_var;
+						$gde_params[$verbatim_var] = $json_event[$verbatim_var];
+					}
+					$this->app->run_query($gde_q, $gde_params);
+
+					$option_index = 0;
+					foreach ($json_event['options'] as $option) {
+						$this->app->run_query("INSERT INTO game_defined_options SET game_id=:game_id, entity_id=:entity_id, event_index=:event_index, option_index=:option_index, name=:name;", [
+							'game_id' => $this->game->db_game['game_id'],
+							'entity_id' => $option['entity_id'],
+							'event_index' => $json_event['event_index'],
+							'option_index' => $option_index,
+							'name' => $option['name'],
+						]);
+						$option_index++;
+					}
 				}
+
+				$this->app->dbh->commit();
+
+				if (!$skip_record_migration) {
+					list($final_game_def_hash, $final_game_def) = GameDefinition::export_game_definition($this->game, "defined", $show_internal_params, false);
+					GameDefinition::check_set_game_definition($this->app, $final_game_def_hash, $final_game_def);
+					GameDefinition::record_migration($this->game, null, "added_events_by_module", $show_internal_params, $initial_game_def, $final_game_def);
+					$this->game->unlock_game_definition();
+				}
+
+				if ($print_debug) $this->app->print_debug("Done adding events.");
 			}
-
-			$this->app->dbh->commit();
-
-			if (!$skip_record_migration) {
-				list($final_game_def_hash, $final_game_def) = GameDefinition::export_game_definition($this->game, "defined", $show_internal_params, false);
-				GameDefinition::check_set_game_definition($this->app, $final_game_def_hash, $final_game_def);
-				GameDefinition::record_migration($this->game, null, "added_events_by_module", $show_internal_params, $initial_game_def, $final_game_def);
-				$this->game->unlock_game_definition();
-			}
-
-			if ($print_debug) $this->app->print_debug("Done adding events.");
 		}
 		else if ($print_debug) $this->app->print_debug("Did not need to add any events.");
 

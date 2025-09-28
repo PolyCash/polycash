@@ -457,7 +457,7 @@ class GameDefinition {
 				}
 				else {
 					$reset_block = $app->min_excluding_false(array($reset_block, $initial_game_obj['events'][$i]->event_starting_block, $new_game_obj['events'][$i]->event_starting_block));
-					
+
 					if ($reset_event_index === false) $reset_event_index = $new_game_obj['events'][$i]->event_index;
 				}
 			}
@@ -477,9 +477,9 @@ class GameDefinition {
 		if ($set_events_from_index !== false) {
 			$events_earliest_affected_block = $game->event_index_to_affected_block($set_events_from_index);
 			$reset_block = $app->min_excluding_false([$reset_block, $events_earliest_affected_block]);
-			
+
 			$set_events_from_pos = $set_events_from_index;
-			
+
 			if (!is_numeric($reset_block)) $reset_block = $new_game_obj['events'][$set_events_from_pos]->event_starting_block;
 		}
 		
@@ -488,7 +488,9 @@ class GameDefinition {
 			
 			if ($set_events_from_index !== false) {
 				$adjusted_from_block = $game->reset_event_index_to_block($set_events_from_index);
-				if ((string)$adjusted_from_block != "" && $adjusted_from_block < $reset_block) $reset_block = $adjusted_from_block;
+				if ((string)$adjusted_from_block != "" && $adjusted_from_block < $reset_block) {
+					$reset_block = $adjusted_from_block;
+				}
 			}
 		}
 
