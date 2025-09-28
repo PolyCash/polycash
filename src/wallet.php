@@ -293,7 +293,7 @@ if (($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['action'] == "sa
 
 $joined_any_faucets = Faucet::joinAndRequestAllEligibleFaucetsInGame($app, $thisuser, $game);
 
-if ($joined_any_faucets) $my_faucet_receivers = Faucet::myFaucetReceivers($app, $thisuser->db_user['user_id'], $game->db_game['game_id']);
+$my_faucet_receivers = Faucet::myFaucetReceivers($app, $thisuser->db_user['user_id'], $game->db_game['game_id']);
 
 $any_faucet_txos = false;
 foreach ($my_faucet_receivers as $my_faucet_receiver) {

@@ -76,6 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
 		$new_account = $app->fetch_account_by_id($new_user_game['account_id']);
 		CurrencyAccount::updateAccount($app, $new_account, [
 			'account_name' => $game->db_game['name']." Faucet: ".htmlspecialchars(strip_tags($_REQUEST['display_from_name'])),
+			'join_txos_on_quantity' => null,
 		]);
 
 		$insertFaucetParams['user_id'] = $thisuser->db_user['user_id'];
