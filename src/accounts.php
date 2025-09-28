@@ -138,6 +138,12 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 			$donate_blockchain = new Blockchain($app, $db_game['blockchain_id']);
 			$donate_game = new Game($donate_blockchain, $db_game['game_id']);
 			
+			$donate_to_faucet = Faucet::fetchById($app, $_REQUEST['donate_to_faucet_id']);
+			
+			if (!$donate_to_faucet || $donate_to_faucet['user_id'] != $thisuser->db_user['user_id']) {
+				die("Please specify a validate donate_to_faucet_id");
+			}
+			
 			$satoshis_each = pow(10,$db_game['decimal_places'])*$amount_each;
 			$satoshis_each_utxo = ceil($satoshis_each/$utxos_each);
 			$satoshis_each = $satoshis_each_utxo*$utxos_each;
@@ -152,8 +158,6 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 					$gios_by_io = $donate_game->fetch_game_ios_by_io($io_id)->fetchAll();
 					
 					if (count($gios_by_io) > 0) {
-						$faucet_account = $donate_game->check_set_faucet_account();
-						
 						$game_ios = [];
 						$colored_coin_sum = 0;
 						
@@ -173,7 +177,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 							$loop_count = 0;
 							
 							do {
-								$address_key = $app->new_normal_address_key($faucet_account['currency_id'], $faucet_account);
+								$address_key = $app->new_normal_address_key($donate_to_faucet['currency_id'], $donate_to_faucet);
 								
 								array_push($address_ids, $address_key['address_id']);
 								array_push($address_key_ids, $address_key['address_key_id']);
@@ -264,7 +268,9 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 			foreach (CurrencyAccount::$fieldsInfo as $fieldName => $fieldInfo) {
 				if (array_key_exists($fieldName, $_REQUEST)) {
 					if ((string)$_REQUEST[$fieldName] == "") $_REQUEST[$fieldName] = null;
-					if (!empty($fieldInfo['editableInSettings'])) $updateParams[$fieldName] = $_REQUEST[$fieldName];
+					if (!empty($fieldInfo['editableInSettings'])) {
+						$updateParams[$fieldName] = !empty($fieldInfo['stripTags']) ? htmlspecialchars(strip_tags($_REQUEST[$fieldName])) : $_REQUEST[$fieldName];
+					}
 				}
 			}
 			CurrencyAccount::updateAccount($app, $settings_account, $updateParams);
@@ -370,11 +376,21 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 					
 					if ($selected_account_id) {
 						echo '<p>';
-						if ($account_game) {
+						if ($account_game && $account['user_game_id']) {
 							echo '<a href="/wallet/'.$account_game->db_game['url_identifier'].'/?action=change_user_game&user_game_id='.$account['user_game_id'].'" class="btn btn-sm btn-success">Play Now</a> ';
 							echo '<a href="/explorer/games/'.$account_game->db_game['url_identifier'].'/my_bets/?user_game_id='.$account['user_game_id'].'" class="btn btn-sm btn-primary">My Bets</a> ';
+
+							echo '<a class="btn btn-sm btn-default" href="/donate_to_faucet/'.$account_game->db_game['url_identifier'].'/?account_id='.$account['account_id'].'">Donate to Faucet</a> ';
 						}
 						echo '<a href="/accounts/backups" class="btn btn-sm btn-warning">Backup History</a>';
+						
+						if ($account_game) {
+							$thisfaucet = Faucet::fetchByAccountId($app, $account['account_id']);
+							
+							if ($thisfaucet) {
+								echo '<a href="/manage_faucets/'.$account_game->db_game['url_identifier'].'/'.$thisfaucet['faucet_id'].'" class="btn btn-sm btn-secondary">Faucet #'.$thisfaucet['faucet_id'].'</a>';
+							}
+						}
 						echo '</p>';
 					}
 					
@@ -669,7 +685,12 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 							<form action="/accounts/?account_id=<?php echo $account['account_id']; ?>" method="post">
 								<input type="hidden" name="action" value="save_settings" />
 								<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
-								
+
+								<div class="form-group">
+									<label for="account_name">Account name:</label>
+									<input type="text" class="form-control" id="account_name" name="account_name" value="<?php echo $account['account_name']; ?>" />
+								</div>
+
 								<?php
 								$join_quantity_suggestions = [
 									10,
@@ -693,12 +714,19 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 									<input type="text" class="form-control" id="account_transaction_fee" name="account_transaction_fee" value="<?php echo $account['account_transaction_fee']; ?>" />
 								</div>
 
-								<?php if ($account_game) { ?>
+								<?php
+								if ($account_game) {
+									$my_faucets = Faucet::fetchFaucetsManagedByUser($app, $thisuser, $game->db_game['game_id']);
+									?>
 									<div class="form-group">
-										<label for="faucet_donations_on">Would you like to make recurring donations to the faucet account for <?php echo $account_game->db_game['name']; ?>?</label>
-										<select class="form-control" id="faucet_donations_on" name="faucet_donations_on" onChange="faucet_donations_on_changed(this);">
-											<option value="0">No</option>
-											<option value="1" <?php if ($account['faucet_donations_on'] == 1) echo 'selected="selected"'; ?>>Yes</option>
+										<label for="donate_to_faucet_id">Would you like to make recurring donations to any faucet for <?php echo $account_game->db_game['name']; ?>?</label>
+										<select class="form-control" id="donate_to_faucet_id" name="donate_to_faucet_id" onChange="donate_to_faucet_id_changed(this);">
+											<option value="">-- Please Select --</option>
+											<?php
+											foreach ($my_faucets as $my_faucet) {
+												echo '<option value="'.$my_faucet['faucet_id'].'"'.($account['donate_to_faucet_id'] == $my_faucet['faucet_id'] ? ' selected="selected"' : '').'>Faucet #'.$my_faucet['faucet_id'].': '.$my_faucet['account_name'].'</option>';
+											}
+											?>
 										</select>
 									</div>
 									<div id="faucet_donation_params">
@@ -706,17 +734,13 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 											<label for="faucet_target_balance">What do you want to donate the faucet's balance up to?</label>
 											<input type="text" class="form-control" id="faucet_target_balance" name="faucet_target_balance" value="<?php echo $account['faucet_target_balance']; ?>" />
 										</div>
-										<div class="form-group">
-											<label for="faucet_amount_each">How many <?php echo $account_game->db_game['coin_name_plural']; ?> should each person receive per faucet claim?</label>
-											<input type="text" class="form-control" id="faucet_amount_each" name="faucet_amount_each" value="<?php echo $account['faucet_amount_each']; ?>" />
-										</div>
 									</div>
 									<script type="text/javascript">
-									function faucet_donations_on_changed(selectEl) {
+									function donate_to_faucet_id_changed(selectEl) {
 										if (selectEl.value == 0) document.getElementById('faucet_donation_params').style.display = "none";
 										else document.getElementById('faucet_donation_params').style.display = "block";
 									}
-									faucet_donations_on_changed(document.getElementById('faucet_donations_on'));
+									donate_to_faucet_id_changed(document.getElementById('donate_to_faucet_id'));
 									</script>
 								<?php } ?>
 								<button class="btn btn-sm btn-primary">Save Settings</button>
@@ -846,7 +870,21 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 								<input type="hidden" name="donate_game_id" id="donate_game_id" value="" />
 								<input type="hidden" name="account_io_id" id="account_io_id" value="" />
 								<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
-								
+
+								<?php
+								$my_faucets = Faucet::fetchFaucetsManagedByUser($app, $thisuser, $game->db_game['game_id']);
+								?>
+								<div class="form-group">
+									<label for="donate_to_faucet_id">Donate to faucet:</label>
+									<select class="form-control" name="donate_to_faucet_id">
+										<option value="">-- Please Select --</option>
+										<?php
+										foreach ($my_faucets as $my_faucet) {
+											echo '<option value="'.$my_faucet['faucet_id'].'">Faucet #'.$my_faucet['faucet_id'].': '.$my_faucet['account_name'].'</option>';
+										}
+										?>
+									</select>
+								</div>
 								<div class="form-group">
 									<label for="donate_amount_each">How many in-game coins should each person receive?</label>
 									<input type="text" class="form-control" name="donate_amount_each" />

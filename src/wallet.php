@@ -291,6 +291,19 @@ if (($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['action'] == "sa
 	}
 }
 
+$joined_any_faucets = Faucet::joinAndRequestAllEligibleFaucetsInGame($app, $thisuser, $game);
+
+$my_faucet_receivers = Faucet::myFaucetReceivers($app, $thisuser->db_user['user_id'], $game->db_game['game_id']);
+
+$any_faucet_txos = false;
+foreach ($my_faucet_receivers as $my_faucet_receiver) {
+	$faucet_ios = Faucet::getReceivableTxosFromFaucet($app, $game, $my_faucet_receiver, $my_faucet_receiver, 1);
+	if (count($faucet_ios) > 0) {
+		$any_faucet_txos = true;
+		break;
+	}
+}
+
 $pagetitle = $game->db_game['name']." - Wallet";
 
 AppSettings::addJsDependency("jquery.nouislider.js");
@@ -328,10 +341,6 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 	}
 	
 	$user_strategy = $game->fetch_user_strategy($user_game);
-	
-	$faucet_ios = $game->check_faucet($user_game, 1);
-	if (count($faucet_ios) > 0) $faucet_io = $faucet_ios[0];
-	else $faucet_io = null;
 
 	$filter_arr['date'] = false;
 	$filter_arr['order_by'] = $game->db_game['order_events_by'];
@@ -413,7 +422,7 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 		thisPageManager.toggle_betting_mode('<?php echo $user_game['betting_mode']; ?>');
 		thisPageManager.compose_bets_loop();
 		<?php
-		if (!$faucet_io) {
+		if (!$any_faucet_txos) {
 			if ($user_game['show_intro_message'] == 1) { ?>
 				thisPageManager.show_intro_message();
 				<?php
@@ -504,7 +513,7 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 						<div id="change_user_game">
 							<select id="select_user_game" class="form-control input-sm" onchange="thisPageManager.change_user_game();">
 								<?php
-								$user_games_by_game = $app->run_query("SELECT * FROM user_games WHERE user_id=:user_id AND game_id=:game_id ORDER BY account_id ASC;", [
+								$user_games_by_game = $app->run_query("SELECT ug.user_game_id, ug.account_id, ca.account_name FROM user_games ug LEFT JOIN currency_accounts ca ON ug.account_id=ca.account_id WHERE ug.user_id=:user_id AND ug.game_id=:game_id ORDER BY ug.account_id ASC;", [
 									'user_id' => $thisuser->db_user['user_id'],
 									'game_id' => $game->db_game['game_id']
 								])->fetchAll();
@@ -514,7 +523,7 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 								foreach ($user_games_by_game as $db_user_game) {
 									echo "<option ";
 									if ($db_user_game['user_game_id'] == $user_game['user_game_id']) echo "selected=\"selected\" ";
-									echo "value=\"".$db_user_game['user_game_id']."\">Account #".$db_user_game['account_id'];
+									echo "value=\"".$db_user_game['user_game_id']."\">#".$db_user_game['account_id'].": ".$db_user_game['account_name'];
 									if ($user_game_show_balances) echo " &nbsp;&nbsp; ".$game->display_coins($game->account_balance($db_user_game['account_id'])+$game->user_pending_bets($db_user_game), true);
 									echo "</option>\n";
 								}
@@ -585,13 +594,9 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 					<button class="btn btn-sm btn-danger" onclick="thisPageManager.show_featured_strategies(); return false;"><i class="fas fa-list"></i> &nbsp; Change my strategy</button>
 					<?php
 				}
-				
-				if ($game->db_game['faucet_policy'] == "on") { ?>
-					<button class="btn btn-sm btn-default" onclick="thisPageManager.check_faucet(<?php echo $game->db_game['game_id']; ?>);"><i class="fas fa-tint"></i> &nbsp; Check Faucet</button>
-					<?php
-				}
 				?>
-				
+				<button class="btn btn-sm btn-default" onclick="thisPageManager.check_faucet(<?php echo $game->db_game['game_id']; ?>);"><i class="fas fa-tint"></i> &nbsp; Check Faucet</button>
+
 				<a class="btn btn-sm btn-primary" href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/my_bets/"><i class="fas fa-chart-line"></i> &nbsp; My Bets</a>
 			</div>
 			

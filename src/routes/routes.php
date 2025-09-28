@@ -63,6 +63,12 @@ else if ($uri_parts[1] == "directory") {
 else if ($uri_parts[1] == "manage") {
 	include($src_path."/manage_game.php");
 }
+else if ($uri_parts[1] == "manage_faucets") {
+	include($src_path."/manage_faucets.php");
+}
+else if ($uri_parts[1] == "donate_to_faucet") {
+	include($src_path."/donate_to_faucet.php");
+}
 else if ($uri_parts[1] == "manage_blockchains") {
 	include($src_path."/manage_blockchains.php");
 }

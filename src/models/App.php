@@ -846,7 +846,7 @@ class App {
 	public function fetch_game_from_url() {
 		$login_url_parts = explode("/", rtrim(ltrim($_SERVER['REQUEST_URI'], "/"), "/"));
 		
-		if (in_array($login_url_parts[0], ["wallet", "manage"]) && count($login_url_parts) > 1) {
+		if (in_array($login_url_parts[0], ["wallet", "manage", "manage_faucets", "donate_to_faucet"]) && count($login_url_parts) > 1) {
 			return $this->fetch_game_by_identifier($login_url_parts[1]);
 		}
 		else return false;
@@ -3884,16 +3884,15 @@ class App {
 	
 	public function create_new_account($params) {
 		$params['time_created'] = time();
-		
+
 		if (!isset($params['game_id'])) $params['game_id'] = null;
 		if (!isset($params['user_id'])) $params['user_id'] = null;
-		if (!isset($params['is_faucet'])) $params['is_faucet'] = 0;
 		if (!isset($params['is_escrow_account'])) $params['is_escrow_account'] = 0;
 		if (!isset($params['is_game_sale_account'])) $params['is_game_sale_account'] = 0;
 		if (!isset($params['is_blockchain_sale_account'])) $params['is_blockchain_sale_account'] = 0;
-		
+
 		$this->run_insert_query("currency_accounts", $params);
-		
+
 		return $this->fetch_account_by_id($this->last_insert_id());
 	}
 	

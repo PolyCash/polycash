@@ -149,6 +149,7 @@ else if ($thisuser) $left_menu_open = $thisuser->db_user['left_menu_open'];
 						<li id="tabcell5"><a <?php if ($nav_tab_selected == "wallet") echo 'href="" onclick="thisPageManager.tab_clicked(5); return false;"'; else echo 'href="/wallet/'.$game->db_game['url_identifier'].'/?initial_tab=5"'; ?>><i class="fa fa-envelope"></i> <span>Invitations</span></a></li>
 						<li<?php if ($nav_tab_selected == "explorer" && $explore_mode != "my_bets") echo ' class="active"'; ?>><a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/events/"><i class="fa fa-cube"></i> <span>Explorer</span></a></li>
 					<?php } ?>
+					<li<?php if ($nav_tab_selected == "manage_faucets") echo ' class="active"'; ?>><a href="/manage_faucets/<?php echo $game->db_game['url_identifier']; ?>/"><i class="fa fa-tint"></i> <span>Manage Faucets</span></a></li>
 					<?php if ($app->user_can_edit_game($thisuser, $game)) { ?>
 					<li<?php if ($nav_tab_selected == "peers") echo ' class="active"'; ?>><a href="/peers/<?php echo $game->db_game['url_identifier']; ?>"><i class="fa fa-wifi"></i> <span>Manage Peers</span></a></li>
 					<li<?php if ($nav_tab_selected == "manage_game") echo ' class="active"'; ?>><a href="/manage/<?php echo $game->db_game['url_identifier']; ?>/?next=internal_settings"><i class="fa fa-edit"></i> <span>Manage this Game</span></a></li>

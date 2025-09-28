@@ -1,13 +1,14 @@
 <?php
 class CurrencyAccount {
 	public static $fieldsInfo = [
-		'faucet_donations_on' => [
+		'account_name' => [
+			'editableInSettings' => true,
+			'stripTags' => true,
+		],
+		'donate_to_faucet_id' => [
 			'editableInSettings' => true,
 		],
 		'faucet_target_balance' => [
-			'editableInSettings' => true,
-		],
-		'faucet_amount_each' => [
 			'editableInSettings' => true,
 		],
 		'join_txos_on_quantity' => [

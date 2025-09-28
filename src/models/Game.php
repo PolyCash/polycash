@@ -3254,20 +3254,6 @@ class Game {
 		])->fetch(PDO::FETCH_NUM)[0]);
 	}
 	
-	public function check_set_faucet_account() {
-		$faucet_account = $this->blockchain->app->run_query("SELECT * FROM currency_accounts WHERE is_faucet=1 AND game_id=:game_id ORDER BY account_id DESC;", ['game_id'=>$this->db_game['game_id']])->fetch();
-		
-		if ($faucet_account) return $faucet_account;
-		else {
-			return $this->blockchain->app->create_new_account([
-				'currency_id' => $this->blockchain->currency_id(),
-				'game_id' => $this->db_game['game_id'],
-				'account_name' => $this->db_game['name'].' Faucet',
-				'is_faucet' => 1
-			]);
-		}
-	}
-	
 	public function check_set_game_sale_account(&$admin_user) {
 		$game_sale_account = $this->blockchain->app->run_query("SELECT * FROM currency_accounts WHERE is_game_sale_account=1 AND game_id=:game_id ORDER BY account_id DESC;", [
 			'game_id' => $this->db_game['game_id']
@@ -3313,122 +3299,6 @@ class Game {
 			return (int) $joined_at['MIN(created_at)'];
 		}
 		else return false;
-	}
-	
-	public function most_recent_faucet_claim($user_id, $game_id) {
-		$claim_info = $this->blockchain->app->run_query("SELECT MAX(latest_claim_time) FROM user_games WHERE user_id=:user_id AND game_id=:game_id;", [
-			'user_id' => $user_id,
-			'game_id' => $game_id
-		])->fetch();
-		
-		if ($claim_info) {
-			return (int) $claim_info['MAX(latest_claim_time)'];
-		}
-		else return false;
-	}
-	
-	public function user_faucet_claims($user_id, $game_id) {
-		$user_faucet_claims = $this->blockchain->app->run_query("SELECT SUM(faucet_claims) FROM user_games WHERE user_id=:user_id AND game_id=:game_id;", [
-			'user_id' => $user_id,
-			'game_id' => $game_id
-		])->fetch();
-		
-		return (int) $user_faucet_claims['SUM(faucet_claims)'];
-	}
-	
-	public function user_faucet_info($user_id, $game_id, $overrideTime = null) {
-		$checkAtTime = $overrideTime ? $overrideTime : time();
-
-		$earliest_join_time = $this->earliest_join_time($user_id, $game_id);
-		$most_recent_claim_time = $this->most_recent_faucet_claim($user_id, $game_id);
-		$user_faucet_claims = $this->user_faucet_claims($user_id, $game_id);
-		$eligible_for_faucet = false;
-		$time_available = false;
-		$num_claims_now = 0;
-
-		$sec_per_faucet_claim = $this->db_game['sec_per_faucet_claim'];
-		$min_sec_between_claims = $this->db_game['min_sec_between_claims'];
-
-		if ($earliest_join_time) {
-			$sec_since_joined = $checkAtTime - $earliest_join_time;
-			$total_claims_for_user = floor($sec_since_joined/$sec_per_faucet_claim) + $this->db_game['bonus_claims'];
-
-			$owed_claims = $total_claims_for_user - $user_faucet_claims;
-
-			$seeking_claim = $user_faucet_claims+1;
-			$seeking_claim_after_bonus = $seeking_claim - $this->db_game['bonus_claims'];
-
-			$time_claim_available = $earliest_join_time + ($seeking_claim_after_bonus*$sec_per_faucet_claim);
-
-			if ($owed_claims > 0) {
-				$sec_since_last_claim = $checkAtTime - $most_recent_claim_time;
-
-				if ($sec_since_last_claim >= $min_sec_between_claims) {
-					$max_claims_at_once = (string) $this->db_game['max_claims_at_once'] === "" ? 1 : max(1, $this->db_game['max_claims_at_once']);
-					$num_claims_now = min($owed_claims, $max_claims_at_once);
-
-					$eligible_for_faucet = true;
-					$time_available = $checkAtTime;
-				} else {
-					$time_available = $most_recent_claim_time + $min_sec_between_claims;
-					$eligible_for_faucet = false;
-				}
-			} else {
-				$eligible_for_faucet = false;
-				$time_available = $time_claim_available;
-			}
-		}
-
-		return [
-			$earliest_join_time,
-			$most_recent_claim_time,
-			$user_faucet_claims,
-			$eligible_for_faucet,
-			$time_available,
-			$num_claims_now,
-		];
-	}
-	
-	public function check_faucet(&$user_game, $quantity = 1) {
-		if ($this->db_game['faucet_policy'] != "on") return [];
-
-		$eligible_for_faucet = false;
-
-		if ($user_game) {
-			list($earliest_join_time, $most_recent_claim_time, $user_faucet_claims, $eligible_for_faucet, $time_available, $num_claims_now) = $this->user_faucet_info($user_game['user_id'], $user_game['game_id']);
-		}
-
-		if (!empty($user_game) && !$eligible_for_faucet) return [];
-
-		// Only give out coins when the game is fully loaded
-		if (empty($user_game) || $this->last_block_id() >= $this->blockchain->last_block_id()-1) {
-			$faucet_account = $this->check_set_faucet_account();
-			
-			return $this->blockchain->app->run_limited_query("SELECT *, SUM(gio.colored_amount) AS colored_amount_sum FROM address_keys k JOIN transaction_game_ios gio ON gio.address_id=k.address_id JOIN transaction_ios io ON gio.io_id=io.io_id WHERE gio.game_id=:game_id AND k.account_id=:account_id AND io.spend_status IN ('unspent', 'unconfirmed') GROUP BY k.address_id ORDER BY colored_amount_sum DESC, gio.game_io_index ASC LIMIT :quantity;", [
-				'game_id' => $this->db_game['game_id'],
-				'account_id' => $faucet_account['account_id'],
-				'quantity' => $quantity,
-			])->fetchAll(PDO::FETCH_ASSOC);
-		}
-		else return [];
-	}
-
-	public function get_faucet_claim_amount($user_game = null) {
-		if ($user_game) {
-			list($earliest_join_time, $most_recent_claim_time, $user_faucet_claims, $eligible_for_faucet, $time_available, $num_claims_now) = $this->user_faucet_info($user_game['user_id'], $user_game['game_id']);
-		} else {
-			$num_claims_now = min($this->db_game['bonus_claims'], $this->db_game['max_claims_at_once']);
-		}
-
-		$claim_amount_int = 0;
-		if ($num_claims_now > 0) {
-			$faucet_ios = $this->check_faucet($user_game, $num_claims_now);
-			foreach ($faucet_ios as $faucet_io) {
-				$claim_amount_int += $faucet_io['colored_amount_sum'];
-			}
-		}
-
-		return $claim_amount_int;
 	}
 
 	public function ensure_genesis_transaction() {
@@ -3961,41 +3831,6 @@ class Game {
 		else return false;
 	}
 	
-	public function claim_max_from_faucet(&$user_game) {
-		$keep_claiming = true;
-		$claim_count = 0;
-
-		do {			
-			list($earliest_join_time, $most_recent_claim_time, $user_faucet_claims, $eligible_for_faucet, $time_available, $num_claims_now) = $this->user_faucet_info($user_game['user_id'], $user_game['game_id']);
-
-			$faucet_ios = $this->check_faucet($user_game, $num_claims_now);
-
-			if (count($faucet_ios) > 0) {
-				foreach ($faucet_ios as $faucet_io) {
-					$this->blockchain->app->run_query("UPDATE address_keys SET account_id=:account_id WHERE address_key_id=:address_key_id;", [
-						'account_id' => $user_game['account_id'],
-						'address_key_id' => $faucet_io['address_key_id']
-					]);
-					$this->blockchain->app->run_query("UPDATE addresses SET user_id=:user_id WHERE address_id=:address_id;", [
-						'user_id' => $user_game['user_id'],
-						'address_id' => $faucet_io['address_id']
-					]);
-					$this->blockchain->app->run_query("UPDATE user_games SET faucet_claims=faucet_claims+1, latest_claim_time=:latest_claim_time WHERE user_game_id=:user_game_id;", [
-						'user_game_id' => $user_game['user_game_id'],
-						'latest_claim_time' => time()
-					]);
-
-					$claim_count++;
-				}
-			} else {
-				$keep_claiming = false;
-			}
-		}
-		while ($keep_claiming);
-
-		return $claim_count;
-	}
-	
 	public function set_target_scores_at_block($block_id) {
 		$starting_events = $this->events_by_starting_block($block_id);
 		
@@ -4074,33 +3909,37 @@ class Game {
 	}
 	
 	public function make_auto_donations($print_debug=false) {
-		$donate_from_accounts = $this->blockchain->app->run_query("SELECT * FROM currency_accounts ca WHERE ca.game_id=:game_id AND faucet_donations_on=1;", [
+		$donate_from_accounts = $this->blockchain->app->run_query("SELECT * FROM currency_accounts WHERE game_id=:game_id AND donate_to_faucet_id IS NOT NULL;", [
 			'game_id' => $this->db_game['game_id'],
 		])->fetchAll(PDO::FETCH_ASSOC);
-		
-		$faucet_account = $this->check_set_faucet_account();
 		
 		if ($print_debug) $this->blockchain->app->print_debug("Checking ".count($donate_from_accounts)." donating accounts in ".$this->db_game['name'].".");
 		
 		foreach ($donate_from_accounts as $donate_from_account) {
-			$faucet_balance_int = $this->account_balance($faucet_account['account_id']);
+			$faucet = Faucet::fetchById($this->blockchain->app, $donate_from_account['donate_to_faucet_id']);
+			$faucet_balance_int = $this->account_balance($faucet['account_id']);
 			$faucet_balance_float = $faucet_balance_int/pow(10, $this->db_game['decimal_places']);
 			
 			if ($print_debug) $this->blockchain->app->print_debug("Account #".$donate_from_account['account_id'].", current balance of ".$faucet_balance_float." vs target of ".$donate_from_account['faucet_target_balance']);
 			
 			if ($faucet_balance_float < 0.9*$donate_from_account['faucet_target_balance']) {
-				$quantity_donations = min(100, floor(($donate_from_account['faucet_target_balance'] - $faucet_balance_float)/$donate_from_account['faucet_amount_each']));
+				$quantity_donations = min(100, floor(($donate_from_account['faucet_target_balance'] - $faucet_balance_float)/$faucet['txo_size']));
 				
 				if ($quantity_donations > 0) {
-					if ($print_debug) $this->blockchain->app->print_debug("Making ".$quantity_donations." donations of ".$donate_from_account['faucet_amount_each']);
+					if ($print_debug) $this->blockchain->app->print_debug("Making ".$quantity_donations." donations of ".$faucet['txo_size']);
 					
 					$user_game = $this->blockchain->app->fetch_user_game_by_account_id($donate_from_account['account_id']);
 					$strategy = $this->blockchain->app->fetch_strategy_by_id($user_game['strategy_id']);
 					
-					$game_cost_int = $quantity_donations*$donate_from_account['faucet_amount_each']*pow(10, $this->db_game['decimal_places']);
+					$game_cost_int = $quantity_donations*$faucet['txo_size']*pow(10, $this->db_game['decimal_places']);
 					$fee_int = $strategy['transaction_fee']*pow(10, $this->blockchain->db_blockchain['decimal_places']);
 					
 					$spendable_ios = $this->blockchain->app->spendable_ios_in_account($donate_from_account['account_id'], $this->db_game['game_id'], false, false);
+					
+					if (count($spendable_ios) == 0) {
+						if ($print_debug) $this->blockchain->app->print_debug("No spendable IOs in account #".$donate_from_account['account_id'].", skipping");
+						continue;
+					}
 					
 					$gio_input_sum = 0;
 					$io_input_sum = 0;
@@ -4115,13 +3954,13 @@ class Game {
 					}
 					
 					$gio_per_io = $gio_input_sum/($io_input_sum-$fee_int);
-					$io_amount_per_donation = ceil($donate_from_account['faucet_amount_each']*pow(10, $this->db_game['decimal_places'])/$gio_per_io);
+					$io_amount_per_donation = ceil($faucet['txo_size']*pow(10, $this->db_game['decimal_places'])/$gio_per_io);
 					$amounts = [];
 					$io_output_sum = 0;
 					$to_address_ids = [];
 					
 					for ($i=0; $i<$quantity_donations; $i++) {
-						$address_key = $this->blockchain->app->new_normal_address_key($faucet_account['currency_id'], $faucet_account);
+						$address_key = $this->blockchain->app->new_normal_address_key($faucet['currency_id'], $faucet);
 						array_push($amounts, $io_amount_per_donation);
 						array_push($to_address_ids, $address_key['address_id']);
 						$io_output_sum += $io_amount_per_donation;

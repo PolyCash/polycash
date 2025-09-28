@@ -687,9 +687,9 @@ var PageManager = function() {
 			}
 		});
 	}
-	this.claim_from_faucet = function() {
-		var faucet_btn_txt = $('#faucet_btn').html();
-		$('#faucet_btn').html("Loading...");
+	this.claim_from_faucet = function(faucet_id) {
+		var faucet_btn_txt = $('#faucet_btn_'+faucet_id).html();
+		$('#faucet_btn_'+faucet_id).html("Loading...");
 		
 		$.ajax({
 			url: "/ajax/faucet.php",
@@ -697,10 +697,11 @@ var PageManager = function() {
 			data: {
 				game_id: games[0].game_id,
 				action: "claim",
+				faucet_id: faucet_id,
 				synchronizer_token: this.synchronizer_token
 			},
 			success: function(faucet_response) {
-				$('#faucet_btn').html(faucet_btn_txt);
+				$('#faucet_btn_'+faucet_id).html(faucet_btn_txt);
 				
 				if (faucet_response.status_code == 1) {
 					window.location = '/wallet/'+games[0].game_url_identifier+'/';
@@ -2226,7 +2227,8 @@ var PageManager = function() {
 	this.change_game = function(select_element, explore_mode) {
 		window.location = explore_mode == 'wallet' ? '/wallet/'+select_element.value
 			: (explore_mode == "unconfirmed" ? '/explorer/games/'+select_element.value+'/transactions/'+explore_mode
-			: (explore_mode == "game_page" ? '/'+select_element.value : '/explorer/games/'+select_element.value+'/'+explore_mode));
+			: (explore_mode == "game_page" ? '/'+select_element.value
+			: (explore_mode == "manage_faucets" ? '/manage_faucets/'+select_element.value : '/explorer/games/'+select_element.value+'/'+explore_mode)));
 	}
 	this.change_user_game = function() {
 		window.location = '/wallet/'+games[0].game_url_identifier+'/?action=change_user_game&user_game_id='+$('#select_user_game').val();
