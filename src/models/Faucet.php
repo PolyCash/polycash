@@ -125,6 +125,26 @@ class Faucet {
 			$faucet_ios = self::getReceivableTxosFromFaucet($app, $game, $my_faucet_receiver, $faucet, $num_claims_now);
 
 			if (count($faucet_ios) > 0) {
+				$address_ids = [];
+				$claim_amounts_int = [];
+				foreach ($faucet_ios as $faucet_io) {
+					$address_ids[] = $faucet_io['address_id'];
+					$claim_amounts_int[] = $faucet_io['colored_amount_sum'];
+				}
+
+				$app->run_insert_query("faucet_claims", [
+					'faucet_id' => $faucet['faucet_id'],
+					'user_id' => $to_user_game['user_id'],
+					'receiver_id' => $my_faucet_receiver['receiver_id'],
+					'from_account_id' => $faucet['account_id'],
+					'to_account_id' => $to_user_game['account_id'],
+					'claim_count' => count($faucet_ios),
+					'address_ids' => implode(",", $address_ids),
+					'game_amounts_int' => implode(",", $claim_amounts_int),
+					'ip_address' => AppSettings::getParam('pageview_tracking_enabled') ? $_SERVER['REMOTE_ADDR'] : null,
+					'claim_time' => time(),
+				]);
+
 				foreach ($faucet_ios as $faucet_io) {
 					$app->run_query("UPDATE address_keys SET account_id=:account_id WHERE address_key_id=:address_key_id;", [
 						'account_id' => $to_user_game['account_id'],
@@ -141,7 +161,6 @@ class Faucet {
 
 					$claim_count++;
 				}
-				if ($claim_count > 2) $keep_claiming = false;
 			} else {
 				$keep_claiming = false;
 			}
