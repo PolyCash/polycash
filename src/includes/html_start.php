@@ -72,7 +72,7 @@ else if ($thisuser) $left_menu_open = $thisuser->db_user['left_menu_open'];
 					<?php
 					if (empty($thisuser)) {
 						if (empty($redirect_url)) $redirect_url = $app->get_redirect_url($_SERVER['REQUEST_URI']);
-						echo '<li><a href="/login/?redirect_key='.$redirect_url['redirect_key'].'"><i class="fas fa-key"></i> &nbsp; <span>Log In</span></a></li>';
+						echo '<li><a href="/login/'.(isset($redirect_url) ? '?redirect_key='.$redirect_url['redirect_key'] : '').'"><i class="fas fa-key"></i> &nbsp; <span>Log In</span></a></li>';
 					}
 					else { ?>
 						<li class="dropdown user user-menu">

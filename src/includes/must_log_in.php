@@ -3,7 +3,7 @@ if (empty($thisuser)) {
 	$pagetitle = "Please log in.";
 	
 	$redirect_url = $app->get_redirect_url($_SERVER['REQUEST_URI']);
-	$redirect_key = $redirect_url['redirect_key'];
+	if ($redirect_url) $redirect_key = $redirect_url['redirect_key'];
 	
 	include(AppSettings::srcPath().'/includes/html_start.php');
 	?>

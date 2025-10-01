@@ -29,6 +29,7 @@
 	"disable_address_generation": false,
 	"fix_game_blocks_disabled": false,
 	"restrict_ip_address": false,
+	"redirect_keys_enabled": true,
 	"limited_navigation": false,
 	"cache_render_blocks_in_explorer": false,
 	"allow_run_scripts_by_url": false,

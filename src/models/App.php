@@ -549,6 +549,8 @@ class App {
 	}
 	
 	public function get_redirect_url($url) {
+		if (! AppSettings::getParam('redirect_keys_enabled')) return null;
+
 		$url = strip_tags($url);
 		
 		$redirect_url = $this->run_query("SELECT * FROM redirect_urls WHERE url=:url;", ['url'=>$url])->fetch();
@@ -568,6 +570,8 @@ class App {
 	}
 
 	public function get_redirect_by_key($redirect_key) {
+		if (! AppSettings::getParam('redirect_keys_enabled')) return null;
+
 		return $this->run_query("SELECT * FROM redirect_urls WHERE redirect_key=:redirect_key;", ['redirect_key'=>$redirect_key])->fetch();
 	}
 	
