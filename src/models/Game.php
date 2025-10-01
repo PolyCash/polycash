@@ -2688,7 +2688,7 @@ class Game {
 					}
 					
 					$bulk_from_block = $block_height+1;
-					$bulk_to_block = $next_required_block_id-1;
+					$bulk_to_block = min($this->blockchain->last_complete_block_id(), $next_required_block_id-1);
 					$ref_time = time();
 					
 					if ($bulk_from_block < $bulk_to_block) {

@@ -31,11 +31,12 @@ if ($app->running_as_admin()) {
 			}
 			else $fully_loaded = true;
 			
-			if ($fully_loaded || !empty($_REQUEST['force'])) {
+			if ($fully_loaded) {
 				$fix_from_block = null;
 
-				$false_spent_ios = $app->run_query("SELECT io.io_id, io.create_block_id FROM transaction_ios io WHERE io.blockchain_id=:blockchain_id AND io.spend_status='spent' AND NOT EXISTS (SELECT 1 FROM transactions t WHERE t.transaction_id=io.spend_transaction_id);", [
+				$false_spent_ios = $app->run_query("SELECT io.io_id, io.create_block_id FROM transaction_ios io WHERE io.blockchain_id=:blockchain_id AND io.spend_status='spent' AND io.create_block_id >= :first_required_block_id AND NOT EXISTS (SELECT 1 FROM transactions t WHERE t.transaction_id=io.spend_transaction_id);", [
 					'blockchain_id' => $blockchain->db_blockchain['blockchain_id'],
+					'first_required_block_id' => $blockchain->db_blockchain['first_required_block'],
 				])->fetchAll(PDO::FETCH_ASSOC);
 
 				if (count($false_spent_ios) > 0) {
@@ -47,8 +48,9 @@ if ($app->running_as_admin()) {
 					if ($print_debug) $app->print_debug($message);
 				}
 				
-				$tx_missing_position = $app->run_query("SELECT t.transaction_id, t.block_id FROM transactions t WHERE t.blockchain_id=:blockchain_id AND t.position_in_block IS NULL AND t.block_id IS NOT NULL ORDER BY t.block_id ASC LIMIT 1;", [
+				$tx_missing_position = $app->run_query("SELECT t.transaction_id, t.block_id FROM transactions t WHERE t.blockchain_id=:blockchain_id AND t.position_in_block IS NULL AND t.block_id IS NOT NULL AND t.block_id >= :first_required_block_id ORDER BY t.block_id ASC LIMIT 1;", [
 					'blockchain_id' => $blockchain->db_blockchain['blockchain_id'],
+					'first_required_block_id' => $blockchain->db_blockchain['first_required_block'],
 				])->fetch(PDO::FETCH_ASSOC);
 				
 				if ($tx_missing_position) {
