@@ -391,14 +391,18 @@ class Game {
 	public function reset_blocks_from_block($block_height) {
 		$this->blockchain->app->log_message("Resetting ".$this->db_game['name']." from block ".$block_height);
 
-		$prev_block = $this->fetch_game_block_by_height($block_height-1);
+		if ($block_height == $this->db_game['game_starting_block']) {
+			$delete_from_gio_index = 0;
+		} else {
+			$prev_block = $this->fetch_game_block_by_height($block_height-1);
 
-		if (!$prev_block) {
-			$this->blockchain->app->log_message("Failed to fetch block #".($block_height-1)." when resetting ".$this->db_game['name']." from block ".$block_height, true);
-			return null;
+			if (!$prev_block) {
+				$this->blockchain->app->log_message("Failed to fetch block #".($block_height-1)." when resetting ".$this->db_game['name']." from block ".$block_height, true);
+				return null;
+			}
+
+			$delete_from_gio_index = $prev_block['max_game_io_index'] + 1;
 		}
-
-		$delete_from_gio_index = $prev_block['max_game_io_index'] + 1;
 
 		$this->blockchain->app->dbh->beginTransaction();
 		
@@ -2157,11 +2161,11 @@ class Game {
 						$this->reset_blocks_from_block($first_missing_info['block_id']+1);
 					}
 					else {
-						$message = $this->blockchain->app->print_debug("Tried to load game block #".$block_height." but it already exists: resetting from ".($block_height-1));
+						$message = $this->blockchain->app->print_debug("Tried to load game block #".$block_height." but it already exists: resetting from ".(max($this->db_game['game_starting_block'], $block_height-1)));
 						$this->blockchain->app->log_message($message);
 						if ($print_debug) $this->blockchain->app->print_debug($message);
 
-						$this->reset_blocks_from_block($block_height-1);
+						$this->reset_blocks_from_block(max($this->db_game['game_starting_block'], $block_height-1));
 					}
 				}
 				else if ($print_debug) $this->blockchain->app->print_debug("Failed: game block already exists.");
