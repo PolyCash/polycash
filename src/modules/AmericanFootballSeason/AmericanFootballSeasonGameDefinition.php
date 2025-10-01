@@ -133,7 +133,7 @@ class AmericanFootballSeasonGameDefinition {
 	}
 	
 	public function regular_actions(&$game) {
-		if (is_file(dirname(__FILE__)."/AmericanFootballSeasonManager.php")) {
+		if (is_file(dirname(__FILE__)."/AmericanFootballSeasonManager.php") && !$game->get_definitive_peer()) {
 			include_once(dirname(__FILE__)."/AmericanFootballSeasonManager.php");
 			$manager = new AmericanFootballSeasonManager($this, $this->app, $game);
 			$manager->add_events();

@@ -2161,7 +2161,7 @@ class Game {
 						$this->reset_blocks_from_block($first_missing_info['block_id']+1);
 					}
 					else {
-						$message = $this->blockchain->app->print_debug("Tried to load game block #".$block_height." but it already exists: resetting from ".(max($this->db_game['game_starting_block'], $block_height-1)));
+						$message = "Tried to load game block #".$block_height." but it already exists: resetting from ".(max($this->db_game['game_starting_block'], $block_height-1));
 						$this->blockchain->app->log_message($message);
 						if ($print_debug) $this->blockchain->app->print_debug($message);
 

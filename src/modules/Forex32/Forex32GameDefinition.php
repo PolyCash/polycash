@@ -192,7 +192,7 @@ class Forex32GameDefinition {
 	}
 
 	public function regular_actions(&$game) {
-		if (is_file(dirname(__FILE__)."/Forex32Manager.php")) {
+		if (is_file(dirname(__FILE__)."/Forex32Manager.php") && !$game->get_definitive_peer()) {
 			include_once(dirname(__FILE__)."/Forex32Manager.php");
 			$manager = new Forex32Manager($this, $this->app, $game);
 			if (method_exists($manager, "regular_actions")) $manager->regular_actions();
