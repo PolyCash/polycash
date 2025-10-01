@@ -1983,8 +1983,8 @@ class Game {
 						unset($extra_info['reset_from_event_index']);
 					}
 
-					$this->ensure_events_until_block($this->blockchain->last_complete_block_id()+1, $print_debug);
-					$this->set_target_scores_at_block(isset($reset_from_block) ? $reset_from_block : $this->blockchain->last_complete_block_id());
+					$this->ensure_events_until_block($this->blockchain->last_complete_block()+1, $print_debug);
+					$this->set_target_scores_at_block(isset($reset_from_block) ? $reset_from_block : $this->blockchain->last_complete_block());
 				}
 				else {
 					if ($print_debug) $this->blockchain->app->print_debug("Fully resetting the game...");
@@ -2002,7 +2002,7 @@ class Game {
 		}
 
 		$load_block_height = $this->db_game['loaded_until_block']+1;
-		$to_block_height = $this->blockchain->last_complete_block_id();
+		$to_block_height = $this->blockchain->last_complete_block();
 		$ensure_block_id = $this->blockchain->last_block_id()+1;
 		
 		// Load events
@@ -2688,7 +2688,7 @@ class Game {
 					}
 					
 					$bulk_from_block = $block_height+1;
-					$bulk_to_block = min($this->blockchain->last_complete_block_id(), $next_required_block_id-1);
+					$bulk_to_block = min($this->blockchain->last_complete_block(), $next_required_block_id-1);
 					$ref_time = time();
 					
 					if ($bulk_from_block < $bulk_to_block) {

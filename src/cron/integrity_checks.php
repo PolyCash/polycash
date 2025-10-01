@@ -24,7 +24,7 @@ if ($app->running_as_admin()) {
 				
 				if ($blockchain->coin_rpc) {
 					$blockchaininfo = $blockchain->coin_rpc->getblockchaininfo();
-					if (isset($blockchaininfo['headers']) && $blockchain->last_complete_block_id() == $blockchaininfo['headers']) $fully_loaded = true;
+					if (isset($blockchaininfo['headers']) && $blockchain->last_complete_block() == $blockchaininfo['headers']) $fully_loaded = true;
 					else $fully_loaded = false;
 				}
 				else $fully_loaded = false;
