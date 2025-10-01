@@ -28,9 +28,8 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 			else {
 				if ($game) $url = "/explorer/games/".$game->db_game['url_identifier']."/addresses/".$db_address['address']."/?action=claim";
 				else $url = "/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/addresses/".$db_address['address']."/?action=claim";
-				
-				$redirect_url = $app->get_redirect_url($url);
-				$app->output_message(2, $redirect_url['redirect_key'], false);
+
+				$app->output_message(2, $url, false);
 			}
 		}
 		else $app->output_message(3, "Permission denied.", false);

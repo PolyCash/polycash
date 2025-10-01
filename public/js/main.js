@@ -2216,7 +2216,7 @@ var PageManager = function() {
 			},
 			success: function(claim_response) {
 				if (claim_response.status_code == 1) window.location = window.location;
-				else if (claim_response.status_code == 2) window.location = '/wallet/?redirect_key='+claim_response.message;
+				else if (claim_response.status_code == 2) window.location = claim_response.message;
 				else alert(claim_response.message);
 			}
 		});
