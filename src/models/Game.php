@@ -2688,8 +2688,16 @@ class Game {
 					}
 					
 					$bulk_from_block = $block_height+1;
-					$bulk_to_block = min($this->blockchain->last_complete_block(), $next_required_block_id-1);
-					$ref_time = time();
+					if ($benchmarks_on) {
+						$benchmarks['process_bulk_pre'] = round(microtime(true)-$ref_time, $benchmark_sec_precision);
+						$ref_time = microtime(true);
+					}
+					$last_complete_block_id = $this->blockchain->last_complete_block();
+					if ($benchmarks_on) {
+						$benchmarks['process_bulk_last_complete_block'] = round(microtime(true)-$ref_time, $benchmark_sec_precision);
+						$ref_time = microtime(true);
+					}
+					$bulk_to_block = min($last_complete_block_id, $next_required_block_id-1);
 					
 					if ($bulk_from_block < $bulk_to_block) {
 						if ($print_debug) $this->blockchain->app->print_debug("Adding ".($bulk_to_block-$bulk_from_block)." game blocks in bulk.. ".$bulk_from_block." to ".$bulk_to_block);
@@ -2700,14 +2708,13 @@ class Game {
 						}
 						$bulk_insert_q = substr($bulk_insert_q, 0, -2).";";
 						$this->blockchain->app->run_query($bulk_insert_q);
+						if ($benchmarks_on) {
+							$benchmarks['process_bulk_insert'] = round(microtime(true)-$ref_time, $benchmark_sec_precision);
+							$ref_time = microtime(true);
+						}
 					}
 					else $bulk_to_block = false;
 				}
-			}
-
-			if ($benchmarks_on) {
-				$benchmarks['process_bulk'] = round(microtime(true)-$ref_time, $benchmark_sec_precision);
-				$ref_time = microtime(true);
 			}
 
 			$block_load_time = (microtime(true)-$start_time);

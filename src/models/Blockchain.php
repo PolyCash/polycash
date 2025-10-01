@@ -87,7 +87,14 @@ class Blockchain {
 	}
 
 	public function last_complete_block() {
-		return $this->app->get_site_constant("last_complete_block_".$this->db_blockchain['blockchain_id']);
+		$last_complete_block = $this->app->get_site_constant("last_complete_block_".$this->db_blockchain['blockchain_id']);
+		
+		if ((string) $last_complete_block === "") {
+			$last_complete_block_id = $this->last_complete_block_id();
+			$this->app->set_site_constant("last_complete_block_".$this->db_blockchain['blockchain_id'], $last_complete_block_id);
+			return $last_complete_block_id;
+		}
+		else return $last_complete_block;
 	}
 
 	public function last_complete_block_id() {
