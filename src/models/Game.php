@@ -1972,7 +1972,6 @@ class Game {
 
 				$this->set_extra_info($extra_info);
 				$this->update_db_game();
-				$this->set_loaded_until_block(null);
 			}
 		}
 
@@ -2680,11 +2679,12 @@ class Game {
 					$bulk_to_block = min($last_complete_block_id, $next_required_block_id-1);
 					
 					if ($bulk_from_block < $bulk_to_block) {
+						$now_time = time();
 						if ($print_debug) $this->blockchain->app->print_debug("Adding ".($bulk_to_block-$bulk_from_block)." game blocks in bulk.. ".$bulk_from_block." to ".$bulk_to_block);
 						
 						$bulk_insert_q = "INSERT INTO game_blocks (game_id, block_id, locally_saved, num_transactions, time_created, time_loaded, load_time, max_game_io_index) VALUES ";
 						for ($bulk_block_id=$bulk_from_block; $bulk_block_id<=$bulk_to_block; $bulk_block_id++) {
-							$bulk_insert_q .= "(".$this->db_game['game_id'].", ".$bulk_block_id.", 1, 0, ".$ref_time.", ".$ref_time.", 0, ".(int)$game_io_index."), ";
+							$bulk_insert_q .= "(".$this->db_game['game_id'].", ".$bulk_block_id.", 1, 0, ".$now_time.", ".$now_time.", 0, ".(int)$game_io_index."), ";
 						}
 						$bulk_insert_q = substr($bulk_insert_q, 0, -2).";";
 						$this->blockchain->app->run_query($bulk_insert_q);
