@@ -670,12 +670,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 								}
 								else {
 									if (!empty($block['num_transactions'])) {
-										$load_time = $app->run_query("SELECT SUM(load_time) FROM transactions WHERE blockchain_id=:blockchain_id AND block_id=:block_id;", [
-											'blockchain_id' => $blockchain->db_blockchain['blockchain_id'],
-											'block_id' => $block['block_id']
-										])->fetch()['SUM(load_time)'];
-										
-										echo "Still loading... ".number_format($load_time, 2)." seconds elapsed.\n";
+										echo "Still loading...\n";
 									}
 									else {
 										echo AppSettings::getParam('site_name')." hasn't loaded this block yet.\n";
@@ -878,14 +873,11 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 								$pending_blocks = $last_block_id - $complete_block_id;
 								
 								if ($pending_blocks > 0) {
-									$loadtime = $app->run_query("SELECT COUNT(*), SUM(load_time) FROM blocks WHERE blockchain_id=:blockchain_id AND locally_saved=1 AND block_id >= :ref_block;", [
-										'blockchain_id' => $blockchain->db_blockchain['blockchain_id'],
-										'ref_block' => $complete_block_id-10
-									])->fetch();
-									
-									if ($loadtime['COUNT(*)'] > 0) $avg_loadtime = $loadtime['SUM(load_time)']/$loadtime['COUNT(*)'];
-									else $avg_loadtime = 0;
-									
+									$sample_size = 10;
+									$ref_block = $blockchain->fetch_block_by_id(max($blockchain->db_blockchain['first_required_block'], $complete_block_id-$sample_size));
+
+									$avg_loadtime = (time() - $ref_block['time_loaded'])/$sample_size;
+			
 									$sec_left = round($avg_loadtime*$pending_blocks);
 									echo "<p>".number_format($pending_blocks)." blocks haven't loaded yet (".$app->format_seconds($sec_left)." left)</p>\n";
 								}

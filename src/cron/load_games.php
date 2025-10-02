@@ -16,11 +16,11 @@ if ($app->running_as_admin()) {
 	$never_stop = false;
 	if (!empty($_REQUEST['never_stop'])) $never_stop = true;
 	
-	$only_game_id = empty($_REQUEST['game_id']) ? false : (int) $_REQUEST['game_id'];
+	$only_game_id = (int) $_REQUEST['game_id'];
 	
-	$process_lock_name = "load_game".($only_game_id ? "_".$only_game_id : "");
+	$process_lock_name = "load_game_".$only_game_id;
 	$process_locked = $app->check_process_running($process_lock_name);
-	
+
 	if (!$process_locked && $app->lock_process($process_lock_name)) {
 		$blockchains = [];
 		

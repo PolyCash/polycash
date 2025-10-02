@@ -33,6 +33,7 @@ class Blockchain {
 			'blockchain_id' => $this->db_blockchain['blockchain_id']
 		]);
 		$this->db_blockchain['last_complete_block'] = $block_id;
+		$this->app->set_site_constant("last_complete_block_".$this->db_blockchain['blockchain_id'], $block_id);
 	}
 	
 	public function associated_games($filter_statuses) {
@@ -84,7 +85,18 @@ class Blockchain {
 		if ($block) return $block['block_id'];
 		else return false;
 	}
-	
+
+	public function last_complete_block() {
+		$last_complete_block = $this->app->get_site_constant("last_complete_block_".$this->db_blockchain['blockchain_id']);
+		
+		if ((string) $last_complete_block === "") {
+			$last_complete_block_id = $this->last_complete_block_id();
+			$this->app->set_site_constant("last_complete_block_".$this->db_blockchain['blockchain_id'], $last_complete_block_id);
+			return $last_complete_block_id;
+		}
+		else return $last_complete_block;
+	}
+
 	public function last_complete_block_id() {
 		$complete_block_params = [
 			'blockchain_id' => $this->db_blockchain['blockchain_id']
@@ -662,7 +674,9 @@ class Blockchain {
 		}
 		$update_block_q .= "load_time=load_time+:add_load_time WHERE internal_block_id=:internal_block_id;";
 		$this->app->run_query($update_block_q, $update_block_params);
-		
+
+		$this->app->set_site_constant("last_complete_block_".$this->db_blockchain['blockchain_id'], $block_height);
+
 		return $any_error;
 	}
 	
@@ -1423,7 +1437,7 @@ class Blockchain {
 			return false;
 		}
 		
-		$last_block_id = $this->db_blockchain['last_complete_block'];
+		$last_block_id = $this->last_complete_block();
 		
 		if ($last_block_id < 0) {
 			if ($print_debug) $this->app->print_debug("Tried to load block #".$last_block_id);
@@ -1442,7 +1456,7 @@ class Blockchain {
 		$last_block = $this->fetch_block_by_id($last_block_id);
 		
 		if (!$last_block && $last_block_id > 1) {
-			$last_complete_block_id = $this->last_complete_block_id();
+			$last_complete_block_id = $this->last_complete_block();
 			$message = $this->app->log_message("Previous block ".$last_block_id." is missing while loading blocks for ".$this->db_blockchain['blockchain_name'].", changing to: ".$last_complete_block_id);
 			if ($print_debug) $this->app->print_debug($message);
 			$this->set_last_complete_block($last_complete_block_id);
@@ -2759,6 +2773,8 @@ class Blockchain {
 			$this->set_block_stats($block);
 			$this->render_transactions_in_block($block, false);
 			
+			$this->app->set_site_constant("last_complete_block_".$this->db_blockchain['blockchain_id'], $block['block_id']);
+			
 			return $created_block_id;
 		}
 	}
@@ -2973,11 +2989,13 @@ class Blockchain {
 	}
 	
 	public function set_average_seconds_per_block($force_set) {
-		$avg = $this->app->run_query("SELECT AVG(sec_since_prev_block) FROM `blocks` WHERE blockchain_id=:blockchain_id AND sec_since_prev_block < :max_seconds_per_block AND sec_since_prev_block>1 AND block_id>:block_id;", [
+		$last_complete_block = $this->last_complete_block();
+		
+		$avg = $this->app->run_query("SELECT SUM(sec_since_prev_block) AS sum_sec FROM `blocks` WHERE blockchain_id=:blockchain_id AND block_id>:from_block_id AND block_id <= :to_block_id;", [
 			'blockchain_id' => $this->db_blockchain['blockchain_id'],
-			'max_seconds_per_block' => ($this->seconds_per_block('target')*10),
-			'block_id' => $this->db_blockchain['last_complete_block']-100
-		])->fetch();
+			'from_block_id' => $last_complete_block-100,
+			'to_block_id' => $last_complete_block,
+		])->fetch()['sum_sec']/100;
 		
 		$this->app->run_query("UPDATE blockchains SET average_seconds_per_block=:average_seconds_per_block WHERE blockchain_id=:blockchain_id;", [
 			'average_seconds_per_block' => $avg['AVG(sec_since_prev_block)'],

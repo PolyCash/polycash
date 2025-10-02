@@ -92,7 +92,7 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 							if ((string) $first_required_block == "") $update_params['last_complete_block'] = null;
 							else if ($first_required_block < $existing_blockchain->db_blockchain['first_required_block']) $update_params['last_complete_block'] = $first_required_block-1;
 							else {
-								$last_complete_block_id = $existing_blockchain->last_complete_block_id();
+								$last_complete_block_id = $existing_blockchain->last_complete_block();
 								if ($last_complete_block_id < 0) $last_complete_block_id = null;
 								$update_params['last_complete_block'] = $last_complete_block_id;
 							}
