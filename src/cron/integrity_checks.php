@@ -44,7 +44,7 @@ if ($app->running_as_admin()) {
 						if ($fix_from_block === null || !empty($false_spent_io['create_block_id']) && $false_spent_io['create_block_id'] < $fix_from_block) $fix_from_block = (int) $false_spent_io['create_block_id'];
 					}
 
-					$message = $app->log_message("Integrity check found ".count($false_spent_ios)." txos incorrectly marked as spent from height ".$fix_from_block." on ".$blockchain->db_blockchain['blockchain_name']);
+					$message = $app->log_message("Integrity check found ".count($false_spent_ios)." txos incorrectly marked as spent from height ".$fix_from_block." on ".$blockchain->db_blockchain['blockchain_name']."; please delete the blockchain from that height.", true);
 					if ($print_debug) $app->print_debug($message);
 				}
 				
@@ -57,7 +57,7 @@ if ($app->running_as_admin()) {
 					$block_missing_position = $blockchain->fetch_block_by_id($tx_missing_position['block_id']);
 					
 					if ($block_missing_position && $block_missing_position['locally_saved']) {
-						$message = $app->log_message("Integrity check found confirmed transactions missing position in block from height ".$tx_missing_position['block_id']." on ".$blockchain->db_blockchain['blockchain_name']);
+						$message = $app->log_message("Integrity check found confirmed transactions missing position in block from height ".$tx_missing_position['block_id']." on ".$blockchain->db_blockchain['blockchain_name']."; please delete the blockchain from that height.", true);
 						if ($print_debug) $app->print_debug($message);
 
 						if ($fix_from_block === null) $fix_from_block = $tx_missing_position['block_id'];
@@ -68,7 +68,7 @@ if ($app->running_as_admin()) {
 				if ($fix_from_block !== null) {
 					$message = $app->log_message("Integrity check initiating block deletion from height ".$fix_from_block." on ".$blockchain->db_blockchain['blockchain_name']);
 					if ($print_debug) $app->print_debug($message);
-					$blockchain->delete_blocks_from_height($fix_from_block, "integrity_checks");
+					//$blockchain->delete_blocks_from_height($fix_from_block, "integrity_checks");
 				}
 
 				$next_integrity_check_time = strtotime(date("Y-m-d H:00:01")." +6 hours");

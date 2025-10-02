@@ -987,15 +987,7 @@ class Game {
 		
 		$total_game_blocks = 1 + $last_block_id - $this->db_game['game_starting_block'];
 		
-		$missingheader_blocks = $this->blockchain->app->run_query("SELECT COUNT(*) FROM blocks WHERE blockchain_id=:blockchain_id AND block_id >= :block_id AND block_hash IS NULL;", [
-			'blockchain_id' => $this->blockchain->db_blockchain['blockchain_id'],
-			'block_id' => $this->db_game['game_starting_block']
-		])->fetch()['COUNT(*)'];
-		
-		$missing_blocks = $this->blockchain->app->run_query("SELECT COUNT(*) FROM blocks WHERE blockchain_id=:blockchain_id AND block_id >= :block_id AND locally_saved=0;", [
-			'blockchain_id' => $this->blockchain->db_blockchain['blockchain_id'],
-			'block_id' => $this->db_game['game_starting_block']
-		])->fetch()['COUNT(*)'];
+		$missing_blocks = $this->blockchain->last_block_id() - $this->blockchain->last_complete_block();
 		
 		$last_block_loaded = $this->last_block_id();
 		$missing_game_blocks = $last_block_id - max($this->db_game['game_starting_block']-1, $last_block_loaded);
@@ -1004,44 +996,22 @@ class Game {
 		
 		$block_fraction = 0;
 		if ($missing_blocks > 0) {
-			$loading_block_id = $this->blockchain->db_blockchain['last_complete_block']+1;
-			
-			$sample_size = 10;
-			$time_data = $this->blockchain->app->run_query("SELECT SUM(load_time), COUNT(*) FROM blocks WHERE blockchain_id=:blockchain_id AND locally_saved=1 AND block_id >= :from_block_id AND block_id<:to_block_id;", [
-				'blockchain_id' => $this->blockchain->db_blockchain['blockchain_id'],
-				'from_block_id' => $loading_block_id-$sample_size,
-				'to_block_id' => $loading_block_id
-			])->fetch();
-			if ($time_data['COUNT(*)'] > 0) $time_per_block = $time_data['SUM(load_time)']/$time_data['COUNT(*)'];
-			else $time_per_block = 0;
-			
-			$loading_block = $this->blockchain->app->run_query("SELECT * FROM blocks WHERE blockchain_id=:blockchain_id AND block_id=:block_id;", [
-				'blockchain_id' => $this->blockchain->db_blockchain['blockchain_id'],
-				'block_id' => $loading_block_id
-			])->fetch();
-			
-			if ($loading_block) {
-				$loading_transactions = $this->blockchain->set_block_stats($loading_block);
-				if ($loading_block['num_transactions'] > 0) $block_fraction = $loading_transactions/$loading_block['num_transactions'];
-				else $block_fraction = 0;
-			}
+			$sample_size = 100;
+			$ref_block = $this->blockchain->fetch_block_by_id(max($this->blockchain->db_blockchain['first_required_block'], $this->blockchain->db_blockchain['last_complete_block']-$sample_size));
+
+			$time_per_block = (time() - $ref_block['time_loaded'])/$sample_size;
 		}
 		else $time_per_block = 0;
 		
 		if ($total_game_blocks == 0) {
-			$headers_pct_complete = 100;
 			$blocks_pct_complete = 100;
 		}
 		else {
-			$headers_pct_complete = 100*($total_game_blocks-$missingheader_blocks)/$total_game_blocks;
 			$blocks_pct_complete = 100*($total_game_blocks-$missing_blocks)/$total_game_blocks;
 		}
 		$est_time_remaining = $missing_blocks*$time_per_block;
 		
 		if ($missing_blocks > 0) $html .= "<p>Loading blocks.. ".round($blocks_pct_complete, 2)."% complete (".number_format($missing_blocks)." blocks remain.. ".$this->blockchain->app->format_seconds($est_time_remaining)." left).</p>\n";
-		if ($loading_block) {
-			$html .= "<p>Loaded ".$loading_transactions."/".$loading_block['num_transactions']." in block <a href=\"/explorer/games/".$this->db_game['url_identifier']."/blocks/".$loading_block_id."\">#".$loading_block_id."</a>.</p>\n";
-		}
 		
 		if ($this->db_game['events_until_block'] < $last_block_id) {
 			if (empty($this->db_game['events_until_block'])) $events_until_block = $this->db_game['game_starting_block'];
@@ -2037,6 +2007,7 @@ class Game {
 					$log_message = "Failed to fetch block #".($load_block_height-1)." in game #".$this->db_game['game_id']." terminating block loading.";
 					if ($print_debug) $this->blockchain->app->print_debug($log_message);
 					$this->blockchain->app->log_message($log_message);
+					$this->set_loaded_until_block(null);
 					die();
 				}
 				$game_io_index = $prev_block['max_game_io_index'];
@@ -2161,7 +2132,7 @@ class Game {
 						$this->reset_blocks_from_block($first_missing_info['block_id']+1);
 					}
 					else {
-						$message = "Tried to load game block #".$block_height." but it already exists: resetting from ".(max($this->db_game['game_starting_block'], $block_height-1));
+						$message = "Tried to load game block #".$block_height." in game #".$this->db_game['game_id']." but it already exists: resetting from ".(max($this->db_game['game_starting_block'], $block_height-1));
 						$this->blockchain->app->log_message($message);
 						if ($print_debug) $this->blockchain->app->print_debug($message);
 

@@ -2989,11 +2989,13 @@ class Blockchain {
 	}
 	
 	public function set_average_seconds_per_block($force_set) {
-		$avg = $this->app->run_query("SELECT AVG(sec_since_prev_block) FROM `blocks` WHERE blockchain_id=:blockchain_id AND sec_since_prev_block < :max_seconds_per_block AND sec_since_prev_block>1 AND block_id>:block_id;", [
+		$last_complete_block = $this->last_complete_block();
+		
+		$avg = $this->app->run_query("SELECT SUM(sec_since_prev_block) AS sum_sec FROM `blocks` WHERE blockchain_id=:blockchain_id AND block_id>:from_block_id AND block_id <= :to_block_id;", [
 			'blockchain_id' => $this->db_blockchain['blockchain_id'],
-			'max_seconds_per_block' => ($this->seconds_per_block('target')*10),
-			'block_id' => $this->db_blockchain['last_complete_block']-100
-		])->fetch();
+			'from_block_id' => $last_complete_block-100,
+			'to_block_id' => $last_complete_block,
+		])->fetch()['sum_sec']/100;
 		
 		$this->app->run_query("UPDATE blockchains SET average_seconds_per_block=:average_seconds_per_block WHERE blockchain_id=:blockchain_id;", [
 			'average_seconds_per_block' => $avg['AVG(sec_since_prev_block)'],

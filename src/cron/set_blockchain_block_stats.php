@@ -19,7 +19,7 @@ if ($app->running_as_admin()) {
 	if (!empty($_REQUEST['force']) || (!$process_locked && $app->lock_process($process_lock_name))) {
 		$keep_looping = true;
 		do {
-			$blocks = $app->run_query("SELECT block_id, internal_block_id FROM blocks WHERE blockchain_id=:blockchain_id AND locally_saved=1 AND (sum_coins_out=0 OR sum_coins_out IS NULL) ORDER BY block_id DESC LIMIT 500;", [
+			$blocks = $app->run_query("SELECT block_id, internal_block_id FROM blocks WHERE blockchain_id=:blockchain_id AND locally_saved=1 AND sum_coins_out IS NULL ORDER BY block_id ASC LIMIT 500;", [
 				'blockchain_id' => $blockchain->db_blockchain['blockchain_id'],
 			])->fetchAll(PDO::FETCH_ASSOC);
 
