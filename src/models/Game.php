@@ -1972,6 +1972,7 @@ class Game {
 
 				$this->set_extra_info($extra_info);
 				$this->update_db_game();
+				$this->set_loaded_until_block(null);
 			}
 		}
 
@@ -2132,11 +2133,15 @@ class Game {
 						$this->reset_blocks_from_block($first_missing_info['block_id']+1);
 					}
 					else {
-						$message = "Tried to load game block #".$block_height." in game #".$this->db_game['game_id']." but it already exists: resetting from ".(max($this->db_game['game_starting_block'], $block_height-1));
+						$this->set_loaded_until_block(null);
+
+						$reset_from_block_id = max($this->db_game['game_starting_block'], $this->db_game['loaded_until_block']+1);
+
+						$message = "Tried to load game block #".$block_height." in game #".$this->db_game['game_id']." but it already exists: resetting from ".$reset_from_block_id;
 						$this->blockchain->app->log_message($message);
 						if ($print_debug) $this->blockchain->app->print_debug($message);
 
-						$this->reset_blocks_from_block(max($this->db_game['game_starting_block'], $block_height-1));
+						$this->reset_blocks_from_block($reset_from_block_id);
 					}
 				}
 				else if ($print_debug) $this->blockchain->app->print_debug("Failed: game block already exists.");
