@@ -193,12 +193,15 @@ if (empty($game)) {
 				<div class="panel-heading">
 					<div class="panel-title">Please select a game:</div>
 				</div>
-				<div class="panel-body">
+				<div class="panel-body" style="line-height: 220%;">
+					What game would you like to play?<br/>
+					<ul>
 					<?php
 					foreach ($my_games as $user_game) {
-						echo "<a href=\"/wallet/".$user_game['url_identifier']."/\">".$user_game['name']."</a><br/>\n";
+						echo "<li><a href=\"/wallet/".$user_game['url_identifier']."/\">".$user_game['name']."</a></li>\n";
 					}
 					?>
+					</ul>
 				</div>
 				<?php
 			}

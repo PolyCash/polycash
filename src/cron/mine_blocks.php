@@ -96,7 +96,7 @@ if ($app->running_as_admin()) {
 			
 			if ($print_debug) $app->print_debug("Script run time: ".(microtime(true)-$script_start_time).", sleeping ".$sleep_usec/pow(10,6)." seconds.");
 			
-			usleep($sleep_usec);
+			if ($sleep_usec > 0) usleep($sleep_usec);
 		}
 		while (microtime(true) < $script_start_time + ($script_target_time-$loop_target_time));
 		
