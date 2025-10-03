@@ -2998,10 +2998,10 @@ class Blockchain {
 		])->fetch()['sum_sec']/100;
 		
 		$this->app->run_query("UPDATE blockchains SET average_seconds_per_block=:average_seconds_per_block WHERE blockchain_id=:blockchain_id;", [
-			'average_seconds_per_block' => $avg['AVG(sec_since_prev_block)'],
+			'average_seconds_per_block' => $avg,
 			'blockchain_id' => $this->db_blockchain['blockchain_id']
 		]);
-		$this->db_blockchain['average_seconds_per_block'] = $avg['AVG(sec_since_prev_block)'];
+		$this->db_blockchain['average_seconds_per_block'] = $avg;
 	}
 	
 	public function last_active_time() {
