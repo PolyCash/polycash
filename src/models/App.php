@@ -549,29 +549,26 @@ class App {
 	}
 	
 	public function get_redirect_url($url) {
+		$url = strip_tags($url);
+
+		$redirect_url = $this->run_query("SELECT * FROM redirect_urls WHERE url=:url;", ['url'=>$url])->fetch();
+
+		if ($redirect_url) return $redirect_url;
+
 		if (! AppSettings::getParam('redirect_keys_enabled')) return null;
 
-		$url = strip_tags($url);
-		
-		$redirect_url = $this->run_query("SELECT * FROM redirect_urls WHERE url=:url;", ['url'=>$url])->fetch();
-		
-		if (!$redirect_url) {
-			$this->run_insert_query("redirect_urls", [
-				'redirect_key' => $this->random_string(24),
-				'url' => $url,
-				'time_created' => time()
-			]);
-			
-			$redirect_url_id = $this->last_insert_id();
-			
-			$redirect_url = $this->run_query("SELECT * FROM redirect_urls WHERE redirect_url_id=:redirect_url_id;", ['redirect_url_id'=>$redirect_url_id])->fetch();
-		}
-		return $redirect_url;
+		$this->run_insert_query("redirect_urls", [
+			'redirect_key' => $this->random_string(24),
+			'url' => $url,
+			'time_created' => time()
+		]);
+
+		$redirect_url_id = $this->last_insert_id();
+
+		return $this->run_query("SELECT * FROM redirect_urls WHERE redirect_url_id=:redirect_url_id;", ['redirect_url_id'=>$redirect_url_id])->fetch();
 	}
 
 	public function get_redirect_by_key($redirect_key) {
-		if (! AppSettings::getParam('redirect_keys_enabled')) return null;
-
 		return $this->run_query("SELECT * FROM redirect_urls WHERE redirect_key=:redirect_key;", ['redirect_key'=>$redirect_key])->fetch();
 	}
 	
@@ -1022,11 +1019,15 @@ class App {
 	
 	public function new_normal_address_key($currency_id, &$account) {
 		$failed_gen_address = false;
+		$max_attempts = 12;
+		$attempts = 0;
 		do {
 			$address_key = $this->new_address_key($currency_id, $account);
+
 			if (!$address_key) $failed_gen_address = true;
+			$attempts++;
 		}
-		while (!$failed_gen_address && ($address_key['is_separator_address'] == 1 || $address_key['is_destroy_address'] == 1 || $address_key['is_passthrough_address'] == 1));
+		while ($attempts < $max_attempts && !$failed_gen_address && ($address_key['is_separator_address'] == 1 || $address_key['is_destroy_address'] == 1 || $address_key['is_passthrough_address'] == 1));
 		
 		if ($address_key) return $address_key;
 		else return false;
@@ -1065,7 +1066,11 @@ class App {
 					
 					if ($blockchain->coin_rpc) {
 						try {
-							$address_text = $blockchain->coin_rpc->getnewaddress();
+							if ($blockchain->db_blockchain['blockchain_name'] == "Dogecoin") {
+								$address_text = $blockchain->coin_rpc->getnewaddress();
+							} else {
+								$address_text = $blockchain->coin_rpc->getnewaddress("", "legacy");
+							}
 						}
 						catch (Exception $e) {
 							$failed = true;
@@ -1089,7 +1094,7 @@ class App {
 			else {
 				$db_address = $blockchain->create_or_fetch_address($address_text, true, null);
 				
-				if ($reject_destroy_addresses && $db_address['is_destroy_address'] == 1) return $this->new_address_key($currency_id, $account, $reject_destroy_addresses);
+				if ($reject_destroy_addresses && $db_address['is_destroy_address'] == 1) return false;
 				else {
 					if ($account) {
 						$this->run_query("UPDATE addresses SET user_id=:user_id WHERE address_id=:address_id;", [
