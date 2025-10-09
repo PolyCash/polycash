@@ -2976,7 +2976,11 @@ class Blockchain {
 		$error_message = "";
 		
 		do {
-			$new_addr_txt = $this->coin_rpc->getnewaddress();
+			if ($this->db_blockchain['blockchain_name'] == "Dogecoin") {
+				$new_addr_txt = $this->coin_rpc->getnewaddress();
+			} else {
+				$new_addr_txt = $this->coin_rpc->getnewaddress("", "legacy");
+			}
 			if (isset($new_addr_txt['message'])) return $new_addr_txt['message'];
 			
 			$new_addr_db = $this->create_or_fetch_address($new_addr_txt, true, null);

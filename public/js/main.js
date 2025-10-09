@@ -688,8 +688,7 @@ var PageManager = function() {
 		});
 	}
 	this.claim_from_faucet = function(faucet_id) {
-		var faucet_btn_txt = $('#faucet_btn_'+faucet_id).html();
-		$('#faucet_btn_'+faucet_id).html("Loading...");
+		$('#faucet_btn_'+faucet_id).html("Claiming...");
 		
 		$.ajax({
 			url: "/ajax/faucet.php",
@@ -701,13 +700,7 @@ var PageManager = function() {
 				synchronizer_token: this.synchronizer_token
 			},
 			success: function(faucet_response) {
-				$('#faucet_btn_'+faucet_id).html(faucet_btn_txt);
-				
-				if (faucet_response.status_code == 1) {
-					window.location = '/wallet/'+games[0].game_url_identifier+'/';
-					return false;
-				}
-				else alert(faucet_response.message);
+				if (faucet_response.status_code != 1) alert(faucet_response.message);
 				
 				games[0].refresh_if_needed();
 			}
