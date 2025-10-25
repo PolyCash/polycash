@@ -3343,6 +3343,7 @@ class App {
 				'position' => $member_i,
 				'entity_name' => $member['entity_name'],
 				'entity_type' => $member['entity_type'],
+				'entity_id' => $member['entity_id'],
 				'image_url' => AppSettings::getParam('base_url').$this->image_url($member)
 			]);
 			$member_i++;

@@ -16,6 +16,7 @@ if ($app->running_as_admin()) {
 	
 	if (!$process_locked && $app->lock_process($process_lock_name)) {
 		$loop_target_time = 5;
+		$loop_pos = 0;
 		do {
 			$loop_start_time = microtime(true);
 			
@@ -55,8 +56,8 @@ if ($app->running_as_admin()) {
 					}
 				}
 				else {
-					if ($mineable_blockchain->last_block_id()%10 == 0) $mineable_blockchain->set_average_seconds_per_block(false);
-					
+					if ($loop_pos%10 == 0) $mineable_blockchain->set_average_seconds_per_block(false);
+
 					$speedup_factor = $mineable_blockchain->seconds_per_block('average')/$mineable_blockchain->seconds_per_block('target');
 					$remaining_prob = round($speedup_factor*$loop_target_time/$mineable_blockchain->seconds_per_block('target'), 4);
 					
@@ -73,7 +74,7 @@ if ($app->running_as_admin()) {
 						if ($print_debug) echo "\n".$mineable_blockchain->db_blockchain['blockchain_name']." (".$rand_num." vs ".$block_prob."): ";
 						
 						if ($rand_num <= $block_prob) {
-							if ($print_debug) echo "FOUND A BLOCK!!\n";
+							if ($print_debug) echo "Found a block\n";
 							$txt = "";
 							$mineable_blockchain->new_block($txt);
 							if ($print_debug) echo $txt."\n";
@@ -94,9 +95,11 @@ if ($app->running_as_admin()) {
 			$loop_time = $loop_stop_time-$loop_start_time;
 			$sleep_usec = round(pow(10,6)*($loop_target_time - $loop_time));
 			
-			if ($print_debug) $app->print_debug("Script run time: ".(microtime(true)-$script_start_time).", sleeping ".$sleep_usec/pow(10,6)." seconds.");
+			if ($print_debug) $app->print_debug("Script run time: ".(microtime(true)-$script_start_time).", loop ".$loop_pos.", sleeping ".$sleep_usec/pow(10,6)." seconds.");
 			
 			if ($sleep_usec > 0) usleep($sleep_usec);
+			
+			$loop_pos++;
 		}
 		while (microtime(true) < $script_start_time + ($script_target_time-$loop_target_time));
 		
