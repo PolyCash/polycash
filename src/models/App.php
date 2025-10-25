@@ -1023,11 +1023,9 @@ class App {
 		$attempts = 0;
 		do {
 			$address_key = $this->new_address_key($currency_id, $account);
-
-			if (!$address_key) $failed_gen_address = true;
 			$attempts++;
 		}
-		while ($attempts < $max_attempts && !$failed_gen_address && ($address_key['is_separator_address'] == 1 || $address_key['is_destroy_address'] == 1 || $address_key['is_passthrough_address'] == 1));
+		while ($attempts < $max_attempts && (empty($address_key) || ($address_key['is_separator_address'] == 1 || $address_key['is_destroy_address'] == 1 || $address_key['is_passthrough_address'] == 1)));
 		
 		if ($address_key) return $address_key;
 		else return false;
