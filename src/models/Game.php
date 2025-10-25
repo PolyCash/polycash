@@ -3916,7 +3916,15 @@ class Game {
 			if ($print_debug) $this->blockchain->app->print_debug("Account #".$donate_from_account['account_id'].", current balance of ".$faucet_balance_float." vs target of ".$donate_from_account['faucet_target_balance']);
 			
 			if ($faucet_balance_float < 0.9*$donate_from_account['faucet_target_balance']) {
-				$quantity_donations = min(100, floor(($donate_from_account['faucet_target_balance'] - $faucet_balance_float)/$faucet['txo_size']));
+				$spendable_ios = $this->blockchain->app->spendable_ios_in_account($donate_from_account['account_id'], $this->db_game['game_id'], false, false);
+				$spendable_balance_int = 0;
+				
+				foreach ($spendable_ios as $spendable_io) {
+					$spendable_balance_int += $spendable_io['coins'];
+				}
+				$spendable_balance_float = $spendable_balance_int/pow(10, $this->db_game['decimal_places']);
+				$amount_to_donate = min($donate_from_account['faucet_target_balance'] - $faucet_balance_float, $spendable_balance_float);
+				$quantity_donations = min(100, floor($amount_to_donate/$faucet['txo_size']));
 				
 				if ($quantity_donations > 0) {
 					if ($print_debug) $this->blockchain->app->print_debug("Making ".$quantity_donations." donations of ".$faucet['txo_size']);
@@ -3926,8 +3934,6 @@ class Game {
 					
 					$game_cost_int = $quantity_donations*$faucet['txo_size']*pow(10, $this->db_game['decimal_places']);
 					$fee_int = $strategy['transaction_fee']*pow(10, $this->blockchain->db_blockchain['decimal_places']);
-					
-					$spendable_ios = $this->blockchain->app->spendable_ios_in_account($donate_from_account['account_id'], $this->db_game['game_id'], false, false);
 					
 					if (count($spendable_ios) == 0) {
 						if ($print_debug) $this->blockchain->app->print_debug("No spendable IOs in account #".$donate_from_account['account_id'].", skipping");
@@ -3946,6 +3952,11 @@ class Game {
 						$input_io_pos++;
 					}
 					
+					if ($game_cost_int > $gio_input_sum) {
+						if ($print_debug) $this->blockchain->app->print_debug("You can't afford this donation.");
+						continue;
+					}
+					
 					$gio_per_io = $gio_input_sum/($io_input_sum-$fee_int);
 					$io_amount_per_donation = ceil($faucet['txo_size']*pow(10, $this->db_game['decimal_places'])/$gio_per_io);
 					$amounts = [];
@@ -3954,6 +3965,10 @@ class Game {
 					
 					for ($i=0; $i<$quantity_donations; $i++) {
 						$address_key = $this->blockchain->app->new_normal_address_key($faucet['currency_id'], $faucet);
+						if (!$address_key) {
+							if ($print_debug) $this->blockchain->app->print_debug("Donation failed: failed to generate an address key.");
+							die();
+						}
 						array_push($amounts, $io_amount_per_donation);
 						array_push($to_address_ids, $address_key['address_id']);
 						$io_output_sum += $io_amount_per_donation;
@@ -3980,8 +3995,9 @@ class Game {
 						}
 						else if ($print_debug) $this->blockchain->app->print_debug("Donation failed: ".$error_message);
 					}
-					else if ($print_debug) $this->blockchain->app->print_debug("Account balance is too low to donate to the faucet.");
+					else if ($print_debug) $this->blockchain->app->print_debug("Account balance is too low to donate to the faucet (".$spendable_balance_float.").");
 				}
+				else if ($print_debug) $this->blockchain->app->print_debug("Account balance is too low to donate to the faucet (".$spendable_balance_float.").");
 			}
 		}
 	}
