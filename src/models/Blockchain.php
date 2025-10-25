@@ -1439,11 +1439,7 @@ class Blockchain {
 		
 		$last_block_id = $this->last_complete_block();
 		
-		if ($last_block_id < 0) {
-			if ($print_debug) $this->app->print_debug("Tried to load block #".$last_block_id);
-			return false;
-		}
-		else if ((string) $this->db_blockchain['first_required_block'] == "") {
+		if ((string) $this->db_blockchain['first_required_block'] == "") {
 			list($any_error, $light_sync_error) = $this->light_sync($print_debug);
 			if ($any_error && $print_debug) $this->app->print_debug($light_sync_error);
 			return false;
