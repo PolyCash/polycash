@@ -15,7 +15,11 @@ if ($app->running_as_admin()) {
 				$rpc_mining_already = $app->check_process_running($rpc_mining_lock_name);
 				
 				if (!empty($_REQUEST['force']) || (!$rpc_mining_already && $app->lock_process($rpc_mining_lock_name))) {
-					$new_address = $blockchain->coin_rpc->getnewaddress();
+					if ($blockchain->db_blockchain['blockchain_name'] == "Dogecoin") {
+						$new_address = $blockchain->coin_rpc->getnewaddress();
+					} else {
+						$new_addr_txt = $blockchain->coin_rpc->getnewaddress("", "legacy");
+					}
 					
 					if ($new_address) {
 						echo "Generating block...\n";

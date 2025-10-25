@@ -2955,6 +2955,8 @@ class Blockchain {
 	}
 	
 	public function seconds_per_block($target_or_average) {
+		$this->db_blockchain = $this->app->fetch_blockchain_by_id($this->db_blockchain['blockchain_id']);
+
 		if ($target_or_average == "target") return $this->db_blockchain['seconds_per_block'];
 		else {
 			if (empty($this->db_blockchain['average_seconds_per_block'])) return $this->db_blockchain['seconds_per_block'];
@@ -2989,19 +2991,22 @@ class Blockchain {
 	}
 	
 	public function set_average_seconds_per_block($force_set) {
-		$last_complete_block = $this->last_complete_block();
+		$last_block = $this->last_block_id();
 		
-		$avg = $this->app->run_query("SELECT SUM(sec_since_prev_block) AS sum_sec FROM `blocks` WHERE blockchain_id=:blockchain_id AND block_id>:from_block_id AND block_id <= :to_block_id;", [
+		$block_info = $this->app->run_query("SELECT time_mined FROM `blocks` WHERE blockchain_id=:blockchain_id AND block_id <= :block_id;", [
 			'blockchain_id' => $this->db_blockchain['blockchain_id'],
-			'from_block_id' => $last_complete_block-100,
-			'to_block_id' => $last_complete_block,
-		])->fetch()['sum_sec']/100;
+			'block_id' => $last_block-40,
+		])->fetch();
 		
-		$this->app->run_query("UPDATE blockchains SET average_seconds_per_block=:average_seconds_per_block WHERE blockchain_id=:blockchain_id;", [
-			'average_seconds_per_block' => $avg,
-			'blockchain_id' => $this->db_blockchain['blockchain_id']
-		]);
-		$this->db_blockchain['average_seconds_per_block'] = $avg;
+		if ($block_info && isset($block_info['time_mined'])) {
+			$avg = (time() - $block_info['time_mined'])/40;
+
+			$this->app->run_query("UPDATE blockchains SET average_seconds_per_block=:average_seconds_per_block WHERE blockchain_id=:blockchain_id;", [
+				'average_seconds_per_block' => $avg,
+				'blockchain_id' => $this->db_blockchain['blockchain_id']
+			]);
+			$this->db_blockchain['average_seconds_per_block'] = $avg;
+		}
 	}
 	
 	public function last_active_time() {
