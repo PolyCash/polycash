@@ -18,7 +18,7 @@ if ($app->running_as_admin()) {
 					if ($blockchain->db_blockchain['blockchain_name'] == "Dogecoin") {
 						$new_address = $blockchain->coin_rpc->getnewaddress();
 					} else {
-						$new_addr_txt = $blockchain->coin_rpc->getnewaddress("", "legacy");
+						$new_address = $blockchain->coin_rpc->getnewaddress("", "legacy");
 					}
 					
 					if ($new_address) {
