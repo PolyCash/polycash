@@ -3330,7 +3330,7 @@ class Game {
 			if (!$last_block) return null;
 
 			$sec_to_add = $time - $last_block['time_mined'];
-			$add_blocks = floor($sec_to_add/$this->blockchain->seconds_per_block('average'));
+			$add_blocks = floor($sec_to_add/$this->blockchain->seconds_per_block('target'));
 
 			return $last_block['block_id']+$add_blocks;
 		}
