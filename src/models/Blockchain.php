@@ -2993,7 +2993,7 @@ class Blockchain {
 	public function set_average_seconds_per_block($force_set) {
 		$last_block = $this->last_block_id();
 		
-		$block_info = $this->app->run_query("SELECT time_mined FROM `blocks` WHERE blockchain_id=:blockchain_id AND block_id <= :block_id;", [
+		$block_info = $this->app->run_query("SELECT time_mined FROM `blocks` WHERE blockchain_id=:blockchain_id AND block_id = :block_id;", [
 			'blockchain_id' => $this->db_blockchain['blockchain_id'],
 			'block_id' => $last_block-40,
 		])->fetch();
