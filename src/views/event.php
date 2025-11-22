@@ -6,10 +6,7 @@ $max_block_id = min($event->db_event['event_final_block'], $last_block_id);
 
 $coins_per_vote = $app->coins_per_vote($game->db_game);
 
-$display_mode = "slim";
-
 $option_max_width = $event->db_event['option_max_width'];
-if ($display_mode == "slim") $option_max_width = min(100, $option_max_width);
 
 $sq_px_per_pct_point = pow($option_max_width, 2)/100;
 $min_px_diam = 20;
@@ -442,6 +439,13 @@ for ($i=0; $i<count($round_stats); $i++) {
 		if ($show_odds_as_pct) {
 			?> &nbsp; (<?php echo $pct_votes; ?>%) <?php
 		}
+		$inline_stats = "";
+		if ($round_stats[$i]['hp']) {
+			$inline_stats .= "HP: ".$round_stats[$i]['hp'];
+		}
+		if ($inline_stats !== "") {
+			echo "<br/>".$inline_stats;
+		}
 		if ($clickable) { ?>
 			</div>
 			<?php
@@ -490,7 +494,7 @@ for ($i=0; $i<count($round_stats); $i++) {
 			if ($round_stats[$i]['image_id'] > 0) $bg_im_url = $app->image_url($round_stats[$i]);
 			else if (!empty($round_stats[$i]['content_url'])) $bg_im_url = $round_stats[$i]['content_url'];
 			else $bg_im_url = "";
-			if ($bg_im_url != "") echo 'background-image: url('.$app->quote_escape($bg_im_url).');';
+			if ($bg_im_url != "") echo 'background-size: 80% 80%; background-image: url('.$app->quote_escape($bg_im_url).');';
 			
 			if ($clickable) echo 'cursor: pointer;';
 			if ($event->db_event['event_winning_rule'] == "max_below_cap" && $option_votes > $max_sum_votes) echo 'opacity: 0.5;';
