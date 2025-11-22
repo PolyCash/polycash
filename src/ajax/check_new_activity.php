@@ -231,6 +231,18 @@ if ($thisuser && $refresh_page == "wallet") {
 }
 else $output['new_messages'] = 0;
 
+if ($game->db_game['module'] == "MonsterDuels") {
+	$being_determined_event = $game->module->being_determined_event($game);
+	
+	if ($being_determined_event && $being_determined_event->db_event['event_index'] != $_REQUEST['md_bde_index']) {
+		$base_options_formatted = $game->module->fetch_base_monsters($being_determined_event);
+		$output['monsterduels_js'] = 'games[0].monster_duels_being_determined_event_index = '.$being_determined_event->db_event['event_index'].";\n";
+		$output['monsterduels_js'] .= "thisMonsterDuelsManager.winner = true;\n";
+		$output['monsterduels_js'] .= "thisMonsterDuelsManager = new MonsterDuelsManager(".$game->db_game['game_id'].", '".$game->db_game['url_identifier']."', ".$being_determined_event->db_event['event_index'].", ".json_encode($base_options_formatted, JSON_PRETTY_PRINT).", 2.5);\n";
+		$output['monsterduels_js'] .= "thisMonsterDuelsManager.initialize();\n";
+	}
+}
+
 if ($include_being_determined_events) {
 	$just_ended_events = $game->events_by_outcome_block($last_block_id);
 	$being_determined_events = $game->events_being_determined_in_block($last_block_id+1);

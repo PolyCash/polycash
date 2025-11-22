@@ -49,7 +49,7 @@ class MonsterDuelsGameDefinition {
 			"default_payout_block_delay": 0,
 			"default_payout_rule": "binary",
 			"view_mode": "default",
-			"order_options_by": "option_index",
+			"order_options_by": "bets",
 			"order_events_by": "event_index",
 			"target_option_block_score": 100,
 			"boost_votes_by_missing_out_votes": true,
@@ -100,6 +100,30 @@ class MonsterDuelsGameDefinition {
 		$module_info_fh = fopen($module_info_fname, 'w');
 		fwrite($module_info_fh, json_encode($this->module_info, JSON_PRETTY_PRINT)) or die("Failed to write ".$module_info_fname);
 		fclose($module_info_fh);
+	}
+
+	public function fetch_base_monsters($event) {
+		$baseOptions = $this->app->run_query("SELECT op.option_index, op.entity_id, op.event_option_index, en.entity_name, en.hp, en.best_attack_name, en.level, en.color, en.body_shape, i.image_id, i.access_key, i.extension FROM options op JOIN entities en ON op.entity_id=en.entity_id LEFT JOIN images i ON en.default_image_id=i.image_id WHERE op.event_id=:event_id", ['event_id' => $event->db_event['event_id']])->fetchAll(PDO::FETCH_ASSOC);
+
+		$baseOptionsFormatted = [];
+		
+		foreach ($baseOptions as $baseOption) {
+			$baseOptionsFormatted[] = [
+				'option_index' => (int) $baseOption['option_index'],
+				'entity_id' => (int) $baseOption['entity_id'],
+				'entity_name' => $baseOption['entity_name'],
+				'event_option_index' => (int) $baseOption['event_option_index'],
+				'hp' => (int) $baseOption['hp'],
+				'best_attack_name' => $baseOption['best_attack_name'],
+				'level' => $baseOption['level'],
+				'color' => $baseOption['color'],
+				'body_shape' => $baseOption['body_shape'],
+				'image_url' => "/images/custom/".$baseOption['image_id']."_".$baseOption['access_key'].".".$baseOption['extension'],
+				'eliminated' => false,
+			];
+		}
+
+		return $baseOptionsFormatted;
 	}
 
 	public function events_starting_between_blocks(&$game, $from_block, $to_block) {
@@ -159,8 +183,23 @@ class MonsterDuelsGameDefinition {
 		return $events;
 	}
 
+	public function being_determined_event(&$game) {
+		$fetchEventQuery = "SELECT * FROM events WHERE game_id=:game_id AND event_final_time < :current_time AND event_payout_time >= :current_time ORDER BY event_index ASC LIMIT 1;";
+
+		$fetchEventParams = [
+			'game_id' => $game->db_game['game_id'],
+			'current_time' => date("Y-m-d H:i:s"),
+		];
+
+		$db_event = $this->app->run_query($fetchEventQuery, $fetchEventParams)->fetch();
+		
+		if (!$db_event) return null;
+		
+		return new Event($game, $db_event, $db_event['event_id']);
+	}
+
 	public function set_event_outcome(&$game, &$event) {
-		$payout_block = $game->blockchain->fetch_block_by_id($event->db_event['event_payout_block']-1);
+		/*$payout_block = $game->blockchain->fetch_block_by_id($event->db_event['event_payout_block']-1);
 
 		list($options_by_score, $options_by_index, $is_tie, $score_disp, $in_progress_summary) = $event->option_block_info();
 
@@ -172,7 +211,7 @@ class MonsterDuelsGameDefinition {
 		else $outcome_index = $options_by_score[0]['event_option_index'];
 
 		$game->set_game_defined_outcome($event->db_event['event_index'], $outcome_index);
-		$event->set_outcome_index($outcome_index);
+		$event->set_outcome_index($outcome_index);*/
 
 		return "";
 	}

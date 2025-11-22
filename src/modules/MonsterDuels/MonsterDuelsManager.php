@@ -216,11 +216,15 @@ class MonsterDuelsManager {
 					break;
 				}
 
-				$determined_by_block = $this->game->blockchain->fetch_block_by_id($event_starting_block);
-				if (!$determined_by_block) {
-					echo "Failed to fetch block #".$event_starting_block.", skipping cohort #".$cohort."\n";
+				$determined_by_time = max((clone $game_starting_time)->getTimestamp(), (clone $starting_time)->modify("-1 hour")->getTimestamp());
+				$determined_by_block_id = max($this->game->db_game['game_starting_block'], $this->game->time_to_block_in_game($determined_by_time));
+
+				if (!$determined_by_block_id) {
+					echo "Failed to fetch block at time ".date("Y-m-d H:i:s", $determined_by_time)." UTC, skipping cohort #".$cohort."\n";
 					break;
 				}
+
+				$determined_by_block = $this->game->blockchain->fetch_block_by_id($determined_by_block_id);
 
 				$drafted_monsters = $this->draft_monsters($formatted_monsters, 8, $determined_by_block);
 				$possible_outcomes = [];
@@ -367,20 +371,5 @@ class MonsterDuelsManager {
 		}
 		
 		return $set_count;
-	}
-
-	public function set_outcomes($print_debug=false) {
-		$num_changed = 0;
-		/*$change_gdes = $this->fetch_events_needing_outcome_change();
-
-		if (count($change_gdes) > 0) {
-			$reference_currency = $this->app->get_reference_currency();
-			foreach ($change_gdes as $change_gde) {
-				$changed = GameDefinition::set_track_payout_price($this->game, $change_gde, $reference_currency);
-				if ($changed) $num_changed++;
-			}
-		}*/
-
-		return $num_changed;
 	}
 }
