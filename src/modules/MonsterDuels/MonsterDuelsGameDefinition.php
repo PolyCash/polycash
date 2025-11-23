@@ -6,6 +6,9 @@ class MonsterDuelsGameDefinition {
 	
 	public function __construct(&$app) {
 		$this->app = $app;
+		$this->base_monsters = [];
+		$this->remaining_monster_option_indexes = [];
+		$this->max_attack_damage = 47;
 
 		$this->game_def_base_txt = '{
 			"blockchain_identifier": "datacoin-local",
@@ -109,7 +112,29 @@ class MonsterDuelsGameDefinition {
 		
 		foreach ($baseOptions as $baseOption) {
 			$baseOptionsFormatted[] = [
-				'option_index' => (int) $baseOption['option_index'],
+				'entity_id' => (int) $baseOption['entity_id'],
+				'entity_name' => $baseOption['entity_name'],
+				'event_option_index' => (int) $baseOption['event_option_index'],
+				'hp' => (int) $baseOption['hp'],
+				'best_attack_name' => $baseOption['best_attack_name'],
+				'level' => $baseOption['level'],
+				'color' => $baseOption['color'],
+				'body_shape' => $baseOption['body_shape'],
+				'image_url' => "/images/custom/".$baseOption['image_id']."_".$baseOption['access_key'].".".$baseOption['extension'],
+				'eliminated' => false,
+			];
+		}
+
+		return $baseOptionsFormatted;
+	}
+
+	public function fetch_base_monsters_by_gde($gde) {
+		$baseOptions = $this->app->run_query("SELECT gdo.option_index AS event_option_index, gdo.entity_id, en.entity_name, en.hp, en.best_attack_name, en.level, en.color, en.body_shape, i.image_id, i.access_key, i.extension FROM game_defined_options gdo JOIN entities en ON gdo.entity_id=en.entity_id LEFT JOIN images i ON en.default_image_id=i.image_id WHERE game_id=:game_id AND gdo.event_index=:event_index", ['game_id' => $gde['game_id'], 'event_index' => $gde['event_index']])->fetchAll(PDO::FETCH_ASSOC);
+
+		$baseOptionsFormatted = [];
+
+		foreach ($baseOptions as $baseOption) {
+			$baseOptionsFormatted[] = [
 				'entity_id' => (int) $baseOption['entity_id'],
 				'entity_name' => $baseOption['entity_name'],
 				'event_option_index' => (int) $baseOption['event_option_index'],
@@ -198,22 +223,91 @@ class MonsterDuelsGameDefinition {
 		return new Event($game, $db_event, $db_event['event_id']);
 	}
 
-	public function set_event_outcome(&$game, &$event) {
-		/*$payout_block = $game->blockchain->fetch_block_by_id($event->db_event['event_payout_block']-1);
+	public function set_outcome(&$game, &$game_defined_event) {
+		$from_time = strtotime($game_defined_event['event_final_time']);
+		$to_time = strtotime($game_defined_event['event_payout_time']) - 1;
 
-		list($options_by_score, $options_by_index, $is_tie, $score_disp, $in_progress_summary) = $event->option_block_info();
+		$seeds_response_raw = file_get_contents("http://opensourcebets.com/api/seeds/default?from_time=".$from_time."&to_time=".$to_time);
+		if (!$seeds_response_raw) return "";
+		$seeds_response = json_decode($seeds_response_raw, true);
+		if (!$seeds_response || !$seeds_response['seeds']) return "";
 
-		if ($is_tie) {
-			$block_hash_last_chars = substr($payout_block['block_hash'], strlen($payout_block['block_hash'])-8, 8);
-			$random_number = hexdec($block_hash_last_chars);
-			$outcome_index = $random_number%2;
+		$seeds = $seeds_response['seeds'];
+
+		$this->base_monsters = $game->module->fetch_base_monsters_by_gde($game_defined_event);
+
+		$monster_pos = 0;
+		foreach ($this->base_monsters as &$monster) {
+			$monster['remaining_hp'] = $monster['hp'];
+			$monster['eliminated'] = false;
+			$this->remaining_monster_option_indexes[$monster_pos] = $monster['event_option_index'];
+			$monster_pos++;
 		}
-		else $outcome_index = $options_by_score[0]['event_option_index'];
 
-		$game->set_game_defined_outcome($event->db_event['event_index'], $outcome_index);
-		$event->set_outcome_index($outcome_index);*/
+		$attacking_monster_option_index = 0;
 
-		return "";
+		foreach ($seeds as $seed) {
+			$duel_number = $seed['position'] - $seeds[0]['position'] + 1;
+
+			$attacking_monster_base_pos = $this->option_index_to_base_pos($attacking_monster_option_index);
+
+			$attacking_monster = $this->base_monsters[$attacking_monster_base_pos];
+
+			$attacking_monster_pos_in_remaining = $this->option_index_to_remaining_pos($attacking_monster['event_option_index']);
+
+			$randInt = (int) $seed['seed'];
+
+			$defending_monster_option_indexes = $this->remaining_monster_option_indexes;
+			unset($defending_monster_option_indexes[$attacking_monster_pos_in_remaining]);
+			$defending_monster_option_indexes = array_values($defending_monster_option_indexes);
+
+			$defending_monster_option_index = $defending_monster_option_indexes[$randInt%count($defending_monster_option_indexes)];
+
+			$defending_monster_base_pos = $this->option_index_to_base_pos($defending_monster_option_index);
+
+			$defending_monster = &$this->base_monsters[$defending_monster_base_pos];
+
+			$attack_damage = $randInt%$this->max_attack_damage;
+
+			$defending_monster['remaining_hp'] = max(0, $defending_monster['remaining_hp'] - $attack_damage);
+
+			if ($defending_monster['remaining_hp'] == 0) {
+				$defending_monster['eliminated'] = true;
+				$pos_to_remove = array_search($defending_monster_option_index, $this->remaining_monster_option_indexes);
+				unset($this->remaining_monster_option_indexes[$pos_to_remove]);
+				$this->remaining_monster_option_indexes = array_values($this->remaining_monster_option_indexes);
+			}
+
+			if (count($this->remaining_monster_option_indexes) < 2) {
+				$outcome_index = $this->option_index_to_base_pos($this->remaining_monster_option_indexes[0]);
+				$game->set_game_defined_outcome($game_defined_event['event_index'], $outcome_index);
+				//$event->set_outcome_index($outcome_index);
+				return true;
+			}
+
+			$next_attacker_remaining_pos = $attacking_monster_pos_in_remaining;
+			if (!$defending_monster['eliminated'] || $defending_monster['event_option_index'] > $attacking_monster['event_option_index']) {
+				$next_attacker_remaining_pos++;
+			}
+
+			$attacking_monster_option_index = $this->remaining_monster_option_indexes[$next_attacker_remaining_pos%count($this->remaining_monster_option_indexes)];
+		}
+
+		return false;
+	}
+
+	public function option_index_to_base_pos($option_index) {
+		foreach ($this->base_monsters as $pos => $base_monster) {
+			if ($base_monster['event_option_index'] == $option_index) return $pos;
+		}
+		return null;
+	}
+
+	public function option_index_to_remaining_pos($option_index) {
+		foreach ($this->remaining_monster_option_indexes as $pos => $remaining_option_index) {
+			if ($remaining_option_index == $option_index) return $pos;
+		}
+		return null;
 	}
 }
 ?>

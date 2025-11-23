@@ -18,6 +18,8 @@ function MonsterDuelsManager(game_id, game_slug, event_index, base_monsters, sec
 	this.rendering_frames = false;
 
 	this.initialize = function() {
+		console.log("Initializing event #"+this.event_index);
+
 		this.base_monsters.forEach(function(monster, monster_pos) {
 			this.base_monsters[monster_pos].remaining_hp = this.base_monsters[monster_pos].hp;
 			this.base_monsters[monster_pos].eliminated = false;
@@ -44,6 +46,8 @@ function MonsterDuelsManager(game_id, game_slug, event_index, base_monsters, sec
 					if (!this.rendering_frames) {
 						this.renderFrame();
 					}
+				} else {
+					console.log("Failed to load seeds.");
 				}
 			},
 		});
@@ -64,7 +68,7 @@ function MonsterDuelsManager(game_id, game_slug, event_index, base_monsters, sec
 			
 			var attacking_monster_pos_in_remaining = this.option_index_to_remaining_pos(attacking_monster.event_option_index);
 
-			var randInt = Math.abs(this.base64ToInteger(seed.seed));
+			var randInt = seed.seed;
 
 			var defending_monster_option_indexes = this.remaining_monster_option_indexes.slice()
 			defending_monster_option_indexes.splice(attacking_monster_pos_in_remaining, 1);
@@ -243,43 +247,4 @@ function MonsterDuelsManager(game_id, game_slug, event_index, base_monsters, sec
 	this.jump_to_latest = function() {
 		this.sec_per_frame = 0;
 	};
-
-	this.base64ToInteger = function(base64String) {
-		// 1. Decode the Base64 string into a binary string
-		const binaryString = atob(base64String);
-
-		// 2. Convert the binary string to a Uint8Array (byte array)
-		const bytes = new Uint8Array(binaryString.length);
-		for (let i = 0; i < binaryString.length; i++) {
-			bytes[i] = binaryString.charCodeAt(i);
-		}
-
-		// 3. Interpret the byte array as an integer using DataView
-		const view = new DataView(bytes.buffer);
-		
-		// Check length to determine the appropriate method (e.g., 32-bit or 64-bit)
-		if (bytes.length === 8) {
-			// Use getBigUint64 for 64-bit numbers (returns a BigInt)
-			// Default is Big Endian, pass `true` for Little Endian if needed
-			return view.getBigUint64(0, false); 
-		} else if (bytes.length === 4) {
-			// Use getUint32 for 32-bit numbers
-			return view.getUint32(0, false);
-		} else {
-			// Handle other lengths, e.g., smaller integers
-			let value = 0;
-			for (let i = 0; i < bytes.length; i++) {
-				// Read byte by byte and shift
-				value = (value << 8) | bytes[i];
-			}
-			// If it fits within standard JS number precision (53-bit)
-			if (value <= Number.MAX_SAFE_INTEGER) {
-				return value;
-			} else {
-				// Otherwise return a BigInt (might lose precision if > 53-bit)
-				console.warn("Number exceeds standard JavaScript integer precision. Returning BigInt.");
-				return BigInt(value);
-			}
-		}
-	}
 }

@@ -122,17 +122,22 @@ games.push(new Game(thisPageManager, <?php
 	
 	if ($game->db_game['module'] == "MonsterDuels") {
 		$being_determined_event = $game->module->being_determined_event($game);
-		$base_options_formatted = $game->module->fetch_base_monsters($being_determined_event);
+		if ($being_determined_event) $base_options_formatted = $game->module->fetch_base_monsters($being_determined_event);
+		else $base_options_formatted = null;
 		?>
 		<div style="background: #fff; border: 1px solid #aaa; padding: 0px 8px 8px 8px;">
 			<div id="monsterduels_being_determined">
+				<?php if ($being_determined_event) { ?>
 				<div id="monsterduels_<?php echo $game->db_game['game_id'].'_'.$being_determined_event->db_event['event_index']; ?>"></div>
+				<?php } ?>
 			</div>
 
-			<script type="text/javascript">
-			games[<?php echo $counter; ?>].monster_duels_being_determined_event_index = <?php echo $being_determined_event->db_event['event_index']; ?>;
-			thisMonsterDuelsManager = new MonsterDuelsManager(<?php echo $game->db_game['game_id']; ?>, '<?php echo $game->db_game['url_identifier']; ?>', <?php echo $being_determined_event->db_event['event_index']; ?>, <?php echo json_encode($base_options_formatted, JSON_PRETTY_PRINT); ?>, 2.5);
-			</script>
+			<?php if ($being_determined_event) { ?>
+				<script type="text/javascript">
+				games[<?php echo $counter; ?>].monster_duels_being_determined_event_index = <?php echo $being_determined_event->db_event['event_index']; ?>;
+				thisMonsterDuelsManager = new MonsterDuelsManager(<?php echo $game->db_game['game_id']; ?>, '<?php echo $game->db_game['url_identifier']; ?>', <?php echo $being_determined_event->db_event['event_index']; ?>, <?php echo json_encode($base_options_formatted, JSON_PRETTY_PRINT); ?>, 2.5);
+				</script>
+			<?php } ?>
 		</div>
 		<?php
 	}

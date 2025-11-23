@@ -3359,7 +3359,7 @@ class Game {
 				}
 			}
 
-			if ($start_block !== null && $final_block !== null && $payout_block !== null) {
+			if ($start_block !== null && $final_block !== null && $payout_block !== null && ($start_block != $gde['event_starting_block'] || $final_block != $gde['event_final_block'] || $payout_block != $gde['event_payout_block'])) {
 				$update_event_q = "UPDATE game_defined_events SET event_starting_block=:event_starting_block, event_final_block=:event_final_block, event_payout_block=:event_payout_block";
 				$update_event_params = [
 					'event_starting_block' => $start_block,
@@ -3371,8 +3371,12 @@ class Game {
 				$update_event_q .= " WHERE game_id=:game_id AND event_index=:event_index;";
 
 				$this->blockchain->app->run_query($update_event_q, $update_event_params);
+
+				return true;
 			}
 		}
+
+		return false;
 	}
 
 	public function event_filter_html($game_instance_pos=0, $initial_filter_term=null) {

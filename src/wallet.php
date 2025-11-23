@@ -317,7 +317,9 @@ $base_options_formatted = null;
 if ($game->db_game['module'] == "MonsterDuels") {
 	AppSettings::addJsDependency("monsterduels.js");
 	$being_determined_event = $game->module->being_determined_event($game);
-	$base_options_formatted = $game->module->fetch_base_monsters($being_determined_event);
+	if ($being_determined_event) {
+		$base_options_formatted = $game->module->fetch_base_monsters($being_determined_event);
+	}
 }
 
 $nav_tab_selected = "wallet";
@@ -819,22 +821,22 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 		
 		<?php
 		if ($game->db_game['module'] == "MonsterDuels") {
-			if ($being_determined_event && $base_options_formatted) {
-				?>
-				<div class="panel panel-default">
-					<div class="panel-heading">
-						<div class="panel-title">
-							<?php echo $being_determined_event->db_event['event_name']." is in progress"; ?>
-						</div>
-					</div>
-					<div class="panel-body">
-						<div id="monsterduels_being_determined">
-							<div id="monsterduels_<?php echo $game->db_game['game_id'].'_'.$being_determined_event->db_event['event_index']; ?>"></div>
-						</div>
+			?>
+			<div class="panel panel-default">
+				<div class="panel-heading">
+					<div class="panel-title">
+						1 battle is in progress
 					</div>
 				</div>
-				<?php
-			}
+				<div class="panel-body">
+					<div id="monsterduels_being_determined">
+						<?php if ($being_determined_event && $base_options_formatted) { ?>
+							<div id="monsterduels_<?php echo $game->db_game['game_id'].'_'.$being_determined_event->db_event['event_index']; ?>"></div>
+						<?php } ?>
+					</div>
+				</div>
+			</div>
+			<?php
 		} else {
 			?>
 			<div id="game0_events_being_determined" style="display: none;"></div>

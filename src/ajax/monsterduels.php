@@ -17,7 +17,7 @@ $event = new Event($game, null, $db_event['event_id']);
 switch ($action) {
 	case 'load_seeds':
 		$from_time = strtotime($event->db_event['event_final_time']);
-		$to_time = $from_time + 3600 - 1;
+		$to_time = strtotime($event->db_event['event_payout_time']) - 1;
 		$seeds_response_raw = file_get_contents("http://opensourcebets.com/api/seeds/default?from_time=".$from_time."&to_time=".$to_time);
 		$seeds_response = json_decode($seeds_response_raw, true);
 		

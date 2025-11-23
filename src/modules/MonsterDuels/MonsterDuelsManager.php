@@ -23,11 +23,12 @@ class MonsterDuelsManager {
 	public function show_next_run_times() {
 		$str = "Add events ".($this->game_definition->module_info['next_add_events_time'] == 0 ? "on next run" : "in ".$this->app->format_seconds($this->game_definition->module_info['next_add_events_time']-time()))."\n";
 		$str .= "Set blocks ".($this->game_definition->module_info['next_set_blocks_time'] == 0 ? "on next run" : "in ".$this->app->format_seconds($this->game_definition->module_info['next_set_blocks_time']-time()))."\n";
+		$str .= "Set outcomes ".($this->game_definition->module_info['next_set_outcomes_time'] == 0 ? "on next run" : "in ".$this->app->format_seconds($this->game_definition->module_info['next_set_outcomes_time']-time()))."\n";
 		return $str;
 	}
 
 	public function fetch_events_needing_outcome_change() {
-		return $this->app->run_query("SELECT * FROM game_defined_events WHERE game_id=:game_id AND event_payout_time <= NOW() AND outcome_index IS NULL ORDER BY event_index ASC;", [
+		return $this->app->run_query("SELECT * FROM game_defined_events WHERE game_id=:game_id AND event_final_time < NOW() AND outcome_index IS NULL ORDER BY event_index ASC;", [
 			'game_id' => $this->game->db_game['game_id'],
 		])->fetchAll(PDO::FETCH_ASSOC);
 	}
@@ -49,12 +50,16 @@ class MonsterDuelsManager {
 		else $next_set_blocks_time = 0;
 		$set_blocks = time() >= $next_set_blocks_time;
 
-		if ($force || $add_events || $set_blocks) {
-			if ($print_debug) $this->app->print_debug("Add events? ".json_encode($add_events).", set blocks? ".json_encode($set_blocks));
+		if (!empty($this->game_definition->module_info['next_set_outcomes_time'])) $next_set_outcomes_time = $this->game_definition->module_info['next_set_outcomes_time'];
+		else $next_set_outcomes_time = 0;
+		$set_outcomes = time() >= $next_set_outcomes_time && count($this->fetch_events_needing_outcome_change()) > 0;
+
+		if ($force || $add_events || $set_blocks || $set_outcomes) {
+			if ($print_debug) $this->app->print_debug("Add events? ".json_encode($add_events).", set blocks? ".json_encode($set_blocks).", set outcomes? ".json_encode($set_outcomes));
 
 			$this->game->lock_game_definition();
 
-			$show_internal_params = false;
+			$show_internal_params = true;
 			list($initial_game_def_hash, $initial_game_def) = GameDefinition::export_game_definition($this->game, "defined", $show_internal_params, false);
 			GameDefinition::check_set_game_definition($this->app, $initial_game_def_hash, $initial_game_def);
 
@@ -68,6 +73,12 @@ class MonsterDuelsManager {
 				$num_set_blocks = $this->custom_set_event_blocks($print_debug);
 			} else {
 				$num_set_blocks = 0;
+			}
+
+			if ($set_outcomes) {
+				$num_set_outcome = $this->set_outcomes($print_debug);
+			} else {
+				$num_set_outcome = 0;
 			}
 
 			if ($num_added > 0 || $num_set_blocks > 0) {
@@ -84,18 +95,29 @@ class MonsterDuelsManager {
 
 			if ($add_events) $next_add_events_time = time() + (60*2);
 			if ($set_blocks) $next_set_blocks_time = strtotime(date("Y-m-d H:00")." +1 hour");
+			if ($set_outcomes || $next_set_outcomes_time == 0) $next_set_outcomes_time = time() + (60*2);
 
 			$merge_times_sec = 180;
 			if (abs($next_add_events_time - $next_set_blocks_time) <= $merge_times_sec) {
 				$next_add_events_time_mod = max($next_add_events_time, $next_set_blocks_time);
 				$next_set_blocks_time_mod = $next_add_events_time_mod;
 			}
+			if (abs($next_add_events_time - $next_set_outcomes_time) <= $merge_times_sec) {
+				$next_add_events_time_mod = max($next_add_events_time, $next_set_outcomes_time);
+				$next_set_outcomes_time_mod = $next_add_events_time_mod;
+			}
+			if (abs($next_set_blocks_time - $next_set_outcomes_time) <= $merge_times_sec) {
+				$next_set_blocks_time_mod = max($next_set_blocks_time, $next_set_outcomes_time);
+				$next_set_outcomes_time_mod = $next_set_blocks_time_mod;
+			}
 
 			if (isset($next_add_events_time_mod)) $next_add_events_time = $next_add_events_time_mod;
 			if (isset($next_set_blocks_time_mod)) $next_set_blocks_time = $next_set_blocks_time_mod;
+			if (isset($next_set_outcomes_time_mod)) $next_set_outcomes_time = $next_set_outcomes_time_mod;
 			
 			$this->game_definition->module_info['next_add_events_time'] = $next_add_events_time;
 			$this->game_definition->module_info['next_set_blocks_time'] = $next_set_blocks_time;
+			$this->game_definition->module_info['next_set_outcomes_time'] = $next_set_outcomes_time;
 
 			$this->game_definition->save_module_info($this->game);
 
@@ -165,7 +187,7 @@ class MonsterDuelsManager {
 		if ($existing_events_cohort === null || $current_cohort > $existing_events_cohort) {
 			if (!$skip_record_migration) {
 				$this->game->lock_game_definition();
-				$show_internal_params = false;
+				$show_internal_params = true;
 				list($initial_game_def_hash, $initial_game_def) = GameDefinition::export_game_definition($this->game, "defined", $show_internal_params, false);
 				GameDefinition::check_set_game_definition($this->app, $initial_game_def_hash, $initial_game_def);
 			}
@@ -209,7 +231,7 @@ class MonsterDuelsManager {
 				
 				foreach ($drafted_monsters as $drafted_monster) {
 					$possible_outcomes[] = [
-						"name" => $drafted_monster['entity_name']." to win",
+						"name" => $drafted_monster['entity_name'],
 						"entity_id" => $drafted_monster['entity_id']
 					];
 				}
@@ -340,14 +362,32 @@ class MonsterDuelsManager {
 		if ($print_debug) echo "Changing blocks for ".count($update_events_by_index)." events.\n";
 		
 		$set_count = 0;
+		$num_changed = 0;
 		$time_to_prev_block_cache = [];
 		$time_to_next_block_cache = [];
 		foreach ($update_events_by_index as $eventIndex => $gde) {
-			$this->game->set_gde_blocks_by_time($gde, $time_to_prev_block_cache, $time_to_next_block_cache);
-			if ($print_debug && $set_count%100 == 0) echo $set_count."/".count($update_events_by_index)."\n";
+			$changed = $this->game->set_gde_blocks_by_time($gde, $time_to_prev_block_cache, $time_to_next_block_cache);
+			if ($changed) $num_changed++;
+			if ($print_debug && ($set_count+1)%100 == 0) echo "Changed ".$num_changed."/".$set_count."\n";
 			$set_count++;
 		}
-		
+
+		if ($print_debug) echo "Changed ".$num_changed."/".$set_count."\n";
+
 		return $set_count;
+	}
+
+	public function set_outcomes($print_debug=false) {
+		$num_changed = 0;
+		$change_gdes = $this->fetch_events_needing_outcome_change();
+
+		if (count($change_gdes) > 0) {
+			foreach ($change_gdes as $change_gde) {
+				$set_outcome = $this->game_definition->set_outcome($this->game, $change_gde);
+				if ($set_outcome) $num_changed++;
+			}
+		}
+
+		return $num_changed;
 	}
 }

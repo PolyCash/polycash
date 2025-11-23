@@ -25,7 +25,8 @@ else if ($_REQUEST['action'] == "set_blocks") {
 	$manager->custom_set_event_blocks($print_debug);
 }
 else if ($_REQUEST['action'] == "set_outcomes") {
-	$manager->set_outcomes($print_debug);
+	$num_set_outcome = $manager->set_outcomes($print_debug);
+	echo "Set outcomes for ".$num_set_outcome."\n";
 }
 else if ($_REQUEST['action'] == "regular_actions") {
 	$manager->regular_actions($force, $print_debug);
