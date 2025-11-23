@@ -233,13 +233,20 @@ else $output['new_messages'] = 0;
 
 if ($game->db_game['module'] == "MonsterDuels") {
 	$being_determined_event = $game->module->being_determined_event($game);
-	
-	if ($being_determined_event && $being_determined_event->db_event['event_index'] != $_REQUEST['md_bde_index']) {
+
+	if ($being_determined_event && isset($_REQUEST['md_bde_index']) && $_REQUEST['md_bde_index'] !== "" && $being_determined_event->db_event['event_index'] != $_REQUEST['md_bde_index']) {
 		$base_options_formatted = $game->module->fetch_base_monsters($being_determined_event);
-		$output['monsterduels_js'] = 'games[0].monster_duels_being_determined_event_index = '.$being_determined_event->db_event['event_index'].";\n";
-		$output['monsterduels_js'] .= "thisMonsterDuelsManager.winner = true;\n";
-		$output['monsterduels_js'] .= "thisMonsterDuelsManager = new MonsterDuelsManager(".$game->db_game['game_id'].", '".$game->db_game['url_identifier']."', ".$being_determined_event->db_event['event_index'].", ".json_encode($base_options_formatted, JSON_PRETTY_PRINT).", 2.5);\n";
-		$output['monsterduels_js'] .= "thisMonsterDuelsManager.initialize();\n";
+		$output['monsterduels_js'] = 'console.log(\'Loading new MonsterDuels event '.$being_determined_event->db_event['event_index'].'\');';
+
+		$output['monsterduels_js'] .= 'games[0].monster_duels_being_determined_event_index = '.$being_determined_event->db_event['event_index'].';';
+
+		$output['monsterduels_js'] .= "thisMonsterDuelsManager.winner = true;";
+
+		$output['monsterduels_js'] .= "$('#monsterduels_being_determined').html('<div id=\"monsterduels_".$game->db_game['game_id']."_".$being_determined_event->db_event['event_index']."\"></div>');";
+
+		$output['monsterduels_js'] .= "thisMonsterDuelsManager = new MonsterDuelsManager(".$game->db_game['game_id'].", '".$game->db_game['url_identifier']."', ".$being_determined_event->db_event['event_index'].", ".json_encode($base_options_formatted).", 2.5);";
+
+		$output['monsterduels_js'] .= "thisMonsterDuelsManager.initialize();";
 	}
 }
 

@@ -315,7 +315,7 @@ $being_determined_event = null;
 $base_options_formatted = null;
 
 if ($game->db_game['module'] == "MonsterDuels") {
-	AppSettings::addJsDependency("monsterduels.js");	
+	AppSettings::addJsDependency("monsterduels.js");
 	$being_determined_event = $game->module->being_determined_event($game);
 	$base_options_formatted = $game->module->fetch_base_monsters($being_determined_event);
 }
@@ -488,7 +488,7 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 		if ($game->db_game['module'] == "MonsterDuels" && $being_determined_event && $base_options_formatted) {
 			?>
 			games[0].monster_duels_being_determined_event_index = <?php echo $being_determined_event->db_event['event_index']; ?>;
-			thisMonsterDuelsManager = new MonsterDuelsManager(<?php echo $game->db_game['game_id']; ?>, '<?php echo $game->db_game['url_identifier']; ?>', <?php echo $being_determined_event->db_event['event_index']; ?>, <?php echo json_encode($base_options_formatted, JSON_PRETTY_PRINT); ?>, 0);
+			thisMonsterDuelsManager = new MonsterDuelsManager(<?php echo $game->db_game['game_id']; ?>, '<?php echo $game->db_game['url_identifier']; ?>', <?php echo $being_determined_event->db_event['event_index']; ?>, <?php echo json_encode($base_options_formatted, JSON_PRETTY_PRINT); ?>, 2.5);
 			
 			thisMonsterDuelsManager.initialize();
 			<?php
@@ -828,7 +828,9 @@ $blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_b
 						</div>
 					</div>
 					<div class="panel-body">
-						<div id="monsterduels_<?php echo $game->db_game['game_id'].'_'.$being_determined_event->db_event['event_index']; ?>"></div>
+						<div id="monsterduels_being_determined">
+							<div id="monsterduels_<?php echo $game->db_game['game_id'].'_'.$being_determined_event->db_event['event_index']; ?>"></div>
+						</div>
 					</div>
 				</div>
 				<?php

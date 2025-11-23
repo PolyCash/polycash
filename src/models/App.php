@@ -1141,6 +1141,8 @@ class App {
 	}
 	
 	public function display_games($category_id, $game_id, $user=false) {
+		$onload_js = "";
+
 		echo '<div class="paragraph">';
 		$display_games_params = [];
 		$display_games_q = "SELECT g.*, c.short_name AS currency_short_name FROM games g LEFT JOIN currencies c ON g.invite_currency=c.currency_id WHERE g.featured=1 AND (g.game_status='published' OR g.game_status='running')";
@@ -1158,6 +1160,18 @@ class App {
 		if (count($display_games) > 0) {
 			$counter = 0;
 			
+			$any_monster_duels = false;
+			foreach ($display_games as $db_game) {
+				if ($db_game['module'] == "MonsterDuels") {
+					$any_monster_duels = true;
+					$onload_js .= "thisMonsterDuelsManager.initialize();";
+				}
+			}
+			
+			if ($any_monster_duels) {
+				echo '<script type="text/javascript" src="/js/monsterduels.js"></script>'."\n";
+			}
+
 			foreach ($display_games as $db_game) {
 				$blockchain = new Blockchain($this, $db_game['blockchain_id']);
 				$featured_game = new Game($blockchain, $db_game['game_id']);
@@ -1177,6 +1191,8 @@ class App {
 		echo "</div>\n";
 		
 		echo $this->render_view('event_details_modal');
+		
+		return $onload_js;
 	}
 	
 	public function refresh_utxo_user_ids($only_unspent_utxos) {

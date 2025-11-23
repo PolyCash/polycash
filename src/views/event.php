@@ -153,7 +153,7 @@ if (!empty($event->db_event['option_block_rule'])) {
 	$option_ids = [];
 	$scores = [];
 	
-	if ($display_mode == "default") {
+	if (true || $display_mode == "default") {
 		if ($game->last_block_id()+1 >= $event->db_event['event_determined_from_block']) {
 			?>
 			<div class="event_score_box">
