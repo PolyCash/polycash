@@ -3311,8 +3311,19 @@ class Game {
 		
 		return [$any_error, $error_message];
 	}
-	
-	public function time_to_block_in_game($time) {
+
+	public function time_to_block_in_game($time, $select_after_time = false) {
+		if ($select_after_time) {
+			$db_block = $this->blockchain->app->run_query("SELECT * FROM blocks WHERE blockchain_id=:blockchain_id AND time_mined >= :time ORDER BY time_mined ASC LIMIT 1;", [
+				'blockchain_id' => $this->blockchain->db_blockchain['blockchain_id'],
+				'time' => $time
+			])->fetch();
+
+			if ($db_block) {
+				return max($this->db_game['game_starting_block']+1, $db_block['block_id']);
+			}
+		}
+
 		if ($time < time()) {
 			$db_block = $this->blockchain->app->run_query("SELECT * FROM blocks WHERE blockchain_id=:blockchain_id AND time_mined <= :time ORDER BY time_mined DESC LIMIT 1;", [
 				'blockchain_id' => $this->blockchain->db_blockchain['blockchain_id'],
@@ -3336,25 +3347,39 @@ class Game {
 		}
 	}
 	
-	public function set_gde_blocks_by_time(&$gde, &$time_to_block_cache) {
+	public function set_gde_blocks_by_time(&$gde, &$time_to_block_cache, &$time_to_next_block_cache, $final_block_select_after_time = false, $payout_block_select_after_time = false) {
 		if (!empty($gde['event_starting_time'])) {
 			if (isset($time_to_block_cache[$gde['event_starting_time']])) $start_block = $time_to_block_cache[$gde['event_starting_time']];
 			else {
 				$start_block = $this->time_to_block_in_game(strtotime($gde['event_starting_time']));
 				$time_to_block_cache[$gde['event_starting_time']] = $start_block;
 			}
-			
-			if (isset($time_to_block_cache[$gde['event_final_time']])) $final_block = $time_to_block_cache[$gde['event_final_time']];
-			else {
-				$final_block = $this->time_to_block_in_game(strtotime($gde['event_final_time']));
-				$time_to_block_cache[$gde['event_final_time']] = $final_block;
+
+			if ($final_block_select_after_time) {
+				if (isset($time_to_next_block_cache[$gde['event_final_time']])) $final_block = $time_to_next_block_cache[$gde['event_final_time']];
+				else {
+					$final_block = $this->time_to_block_in_game(strtotime($gde['event_final_time']), $final_block_select_after_time);
+					$time_to_next_block_cache[$gde['event_final_time']] = $final_block;
+				}
+			} else {
+				if (isset($time_to_block_cache[$gde['event_final_time']])) $final_block = $time_to_block_cache[$gde['event_final_time']];
+				else {
+					$final_block = $this->time_to_block_in_game(strtotime($gde['event_final_time']), $final_block_select_after_time);
+					$time_to_block_cache[$gde['event_final_time']] = $final_block;
+				}
 			}
-			
-			if ($gde['event_payout_time'] == "" || $gde['event_payout_time'] == $gde['event_final_time']) $payout_block = $final_block;
-			else {
+
+			if ($payout_block_select_after_time) {
+				if (isset($time_to_next_block_cache[$gde['event_payout_time']])) {
+					$payout_block = $time_to_next_block_cache[$gde['event_payout_time']];
+				} else {
+					$payout_block = $this->time_to_block_in_game(strtotime($gde['event_payout_time']), $payout_block_select_after_time);
+					$time_to_next_block_cache[$gde['event_payout_time']] = $payout_block;
+				}
+			} else {
 				if (isset($time_to_block_cache[$gde['event_payout_time']])) $payout_block = $time_to_block_cache[$gde['event_payout_time']];
 				else {
-					$payout_block = $this->time_to_block_in_game(strtotime($gde['event_payout_time']));
+					$payout_block = $this->time_to_block_in_game(strtotime($gde['event_payout_time']), $payout_block_select_after_time);
 					$time_to_block_cache[$gde['event_payout_time']] = $payout_block;
 				}
 			}
@@ -3443,8 +3468,9 @@ class Game {
 			}
 			
 			$time_to_block_cache = [];
+			$time_to_next_block_cache = [];
 			foreach ($event_arr as $gde) {
-				$this->set_gde_blocks_by_time($gde, $time_to_block_cache);
+				$this->set_gde_blocks_by_time($gde, $time_to_block_cache, $time_to_next_block_cache);
 			}
 			
 			if (!$skip_record_migration) {

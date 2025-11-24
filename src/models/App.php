@@ -1164,7 +1164,12 @@ class App {
 			foreach ($display_games as $db_game) {
 				if ($db_game['module'] == "MonsterDuels") {
 					$any_monster_duels = true;
-					$onload_js .= "thisMonsterDuelsManager.initialize();";
+					$blockchain = new Blockchain($this, $db_game['blockchain_id']);
+					$md_game = new Game($blockchain, $db_game['game_id']);
+					$being_determined_event = $md_game->module->being_determined_event($md_game);
+					if ($being_determined_event) {
+						$onload_js .= "thisMonsterDuelsManager.initialize();";
+					}
 				}
 			}
 			

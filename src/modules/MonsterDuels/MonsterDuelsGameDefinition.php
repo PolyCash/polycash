@@ -9,9 +9,10 @@ class MonsterDuelsGameDefinition {
 		$this->base_monsters = [];
 		$this->remaining_monster_option_indexes = [];
 		$this->max_attack_damage = 47;
+		$this->minutes_per_event_cohort = 60;
 
 		$this->game_def_base_txt = '{
-			"blockchain_identifier": "datacoin-local",
+			"blockchain_identifier": "datachain",
 			"option_group": "282 phoenixdex fakemon",
 			"protocol_version": 1.001,
 			"name": "Monster Duels",
@@ -22,7 +23,7 @@ class MonsterDuelsGameDefinition {
 			"finite_events": true,
 			"save_every_definition": false,
 			"recommended_keep_definitions_hours": null,
-			"max_simultaneous_options": 1024,
+			"max_simultaneous_options": 32,
 			"event_type_name": "battle",
 			"event_type_name_plural": "battles",
 			"event_rule": "game_definition",
@@ -37,13 +38,13 @@ class MonsterDuelsGameDefinition {
 			"final_round": null,
 			"buyin_policy": "for_sale",
 			"game_buyin_cap": 0,
-			"coin_name": "duelcoin",
-			"coin_name_plural": "duelcoins",
+			"coin_name": "dueldime",
+			"coin_name_plural": "dueldimes",
 			"coin_abbreviation": "DUEL",
-			"escrow_address": "T3EAGL4ZK1K8Xk38KYyFxRj5D9PfWUqFaH",
-			"genesis_tx_hash": "b8264dfa506de2e0ebbf360456398037",
+			"escrow_address": "XpgLhCqAtBE8im5mV3KVACJZL6H9tQ8Ywa",
+			"genesis_tx_hash": "c138aa96130b548ac2ba5072a8ecfbcdbfffaeab1eb1ada6c8dc6db1943e077a",
 			"genesis_amount": 5000000,
-			"game_starting_block": 193001,
+			"game_starting_block": 482301,
 			"default_payout_rate": 0.99,
 			"default_vote_effectiveness_function": "constant",
 			"default_effectiveness_param1": 0,
@@ -128,6 +129,14 @@ class MonsterDuelsGameDefinition {
 		return $baseOptionsFormatted;
 	}
 
+	public function regular_actions(&$game) {
+		if (is_file(dirname(__FILE__)."/MonsterDuelsManager.php")) {
+			include_once(dirname(__FILE__)."/MonsterDuelsManager.php");
+			$manager = new MonsterDuelsManager($this, $this->app, $game);
+			if (method_exists($manager, "regular_actions")) $manager->regular_actions();
+		}
+	}
+
 	public function fetch_base_monsters_by_gde($gde) {
 		$baseOptions = $this->app->run_query("SELECT gdo.option_index AS event_option_index, gdo.entity_id, en.entity_name, en.hp, en.best_attack_name, en.level, en.color, en.body_shape, i.image_id, i.access_key, i.extension FROM game_defined_options gdo JOIN entities en ON gdo.entity_id=en.entity_id LEFT JOIN images i ON en.default_image_id=i.image_id WHERE game_id=:game_id AND gdo.event_index=:event_index", ['game_id' => $gde['game_id'], 'event_index' => $gde['event_index']])->fetchAll(PDO::FETCH_ASSOC);
 
@@ -209,23 +218,23 @@ class MonsterDuelsGameDefinition {
 	}
 
 	public function being_determined_event(&$game) {
-		$fetchEventQuery = "SELECT * FROM events WHERE game_id=:game_id AND event_final_time < :current_time AND event_payout_time >= :current_time ORDER BY event_index ASC LIMIT 1;";
+		$fetchEventQuery = "SELECT * FROM events WHERE game_id=:game_id AND event_final_time < NOW() AND event_final_time > :show_time ORDER BY event_index ASC LIMIT 1;";
 
 		$fetchEventParams = [
 			'game_id' => $game->db_game['game_id'],
-			'current_time' => date("Y-m-d H:i:s"),
+			'show_time' => date("Y-m-d H:i:s", time()-(60*$this->minutes_per_event_cohort)),
 		];
 
 		$db_event = $this->app->run_query($fetchEventQuery, $fetchEventParams)->fetch();
-		
+
 		if (!$db_event) return null;
-		
+
 		return new Event($game, $db_event, $db_event['event_id']);
 	}
 
 	public function set_outcome(&$game, &$game_defined_event) {
 		$from_time = strtotime($game_defined_event['event_final_time']);
-		$to_time = strtotime($game_defined_event['event_payout_time']) - 1;
+		$to_time = strtotime($game_defined_event['event_payout_time']) + $game->module->minutes_per_event_cohort*60;
 
 		$seeds_response_raw = file_get_contents("http://opensourcebets.com/api/seeds/default?from_time=".$from_time."&to_time=".$to_time);
 		if (!$seeds_response_raw) return "";
@@ -280,8 +289,13 @@ class MonsterDuelsGameDefinition {
 
 			if (count($this->remaining_monster_option_indexes) < 2) {
 				$outcome_index = $this->option_index_to_base_pos($this->remaining_monster_option_indexes[0]);
-				$game->set_game_defined_outcome($game_defined_event['event_index'], $outcome_index);
-				//$event->set_outcome_index($outcome_index);
+				$db_event = $game->fetch_event_by_index($game_defined_event['event_index']);
+
+				if ($db_event) {
+					$event = new Event($game, $db_event, $db_event['event_id']);
+					$game->set_game_defined_outcome($game_defined_event['event_index'], $outcome_index);
+					//$event->set_outcome_index($outcome_index);
+				}
 				return true;
 			}
 

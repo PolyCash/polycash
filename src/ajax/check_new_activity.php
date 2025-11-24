@@ -234,7 +234,7 @@ else $output['new_messages'] = 0;
 if ($game->db_game['module'] == "MonsterDuels") {
 	$being_determined_event = $game->module->being_determined_event($game);
 
-	if ($being_determined_event && isset($_REQUEST['md_bde_index']) && $_REQUEST['md_bde_index'] !== "" && $being_determined_event->db_event['event_index'] != $_REQUEST['md_bde_index']) {
+	if ($being_determined_event && (string) $being_determined_event->db_event['event_index'] !== (string) $_REQUEST['md_bde_index']) {
 		$base_options_formatted = $game->module->fetch_base_monsters($being_determined_event);
 		$output['monsterduels_js'] = 'console.log(\'Loading new MonsterDuels event '.$being_determined_event->db_event['event_index'].'\');';
 
@@ -271,7 +271,11 @@ if ($include_being_determined_events) {
 	}
 }
 
-$my_faucet_receivers = Faucet::myFaucetReceivers($app, $thisuser->db_user['user_id'], $game->db_game['game_id']);
+if ($thisuser) {
+	$my_faucet_receivers = Faucet::myFaucetReceivers($app, $thisuser->db_user['user_id'], $game->db_game['game_id']);
+} else {
+	$my_faucet_receivers = [];
+}
 
 $faucet_view = "";
 

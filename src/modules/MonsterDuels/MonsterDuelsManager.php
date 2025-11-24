@@ -94,7 +94,7 @@ class MonsterDuelsManager {
 			$this->game->unlock_game_definition();
 
 			if ($add_events) $next_add_events_time = time() + (60*2);
-			if ($set_blocks) $next_set_blocks_time = strtotime(date("Y-m-d H:00")." +1 hour");
+			if ($set_blocks) $next_set_blocks_time = strtotime("+10 minutes");
 			if ($set_outcomes || $next_set_outcomes_time == 0) $next_set_outcomes_time = time() + (60*2);
 
 			$merge_times_sec = 180;
@@ -167,15 +167,14 @@ class MonsterDuelsManager {
 		list($monsters, $formatted_monsters) = $this->game->blockchain->app->group_details_json($group);
 		$num_monsters = count($monsters);
 
-		$hours_per_event_cohort = 1;
-		$event_length_hours = 2;
+		$minutes_per_event_cohort = $this->game_definition->minutes_per_event_cohort;
 
-		$game_starting_time = new Datetime("2025-11-21 19:00:00");
+		$game_starting_time = new Datetime("2025-11-23 16:00:00");
 		$game_starting_block = $this->game->db_game['game_starting_block'];
 
-		$hours_since_start = (time() - $game_starting_time->getTimestamp())/3600;
+		$minutes_since_start = (time() - $game_starting_time->getTimestamp())/60;
 
-		$current_cohort = ceil($hours_since_start/$hours_per_event_cohort);
+		$current_cohort = ceil($minutes_since_start/$minutes_per_event_cohort);
 
 		$max_gde = (string)$this->game->max_gde_index();
 
@@ -204,9 +203,9 @@ class MonsterDuelsManager {
 
 			for ($cohort=$start_cohort; $cohort<=$current_cohort; $cohort++) {
 				$ref_time = microtime(true);
-				$starting_time = (clone $game_starting_time)->modify("+".($hours_per_event_cohort*$cohort)." hours");
-				$final_time = (clone $starting_time)->modify("+".$hours_per_event_cohort." hours");
-				$payout_time = (clone $starting_time)->modify("+".$event_length_hours." hours");
+				$starting_time = (clone $game_starting_time)->modify("+".($minutes_per_event_cohort*$cohort)." minutes");
+				$final_time = (clone $starting_time)->modify("+".$minutes_per_event_cohort." minutes");
+				$payout_time = (clone $final_time)->modify("+8 minutes");
 				$event_starting_block = $this->game->time_to_block_in_game($starting_time->getTimestamp());
 				$event_final_block = $this->game->time_to_block_in_game($final_time->getTimestamp());
 				$event_payout_block = $this->game->time_to_block_in_game($payout_time->getTimestamp());
@@ -329,44 +328,44 @@ class MonsterDuelsManager {
 
 	public function custom_set_event_blocks($print_debug=false) {
 		$update_events_by_index = [];
-		
+
 		$event_q = "SELECT * FROM game_defined_events WHERE game_id=:game_id AND event_starting_time IS NOT NULL AND event_final_time >= NOW() ORDER BY event_index ASC;";
 		$event_arr = $this->app->run_query($event_q, [
 			'game_id' => $this->game->db_game['game_id'],
 		])->fetchAll();
-		
+
 		foreach ($event_arr as $gde) {
 			$update_events_by_index[$gde['event_index']] = $gde;
 		}
-		
+
 		$event_q = "SELECT * FROM game_defined_events WHERE game_id=:game_id AND event_starting_time IS NOT NULL AND event_payout_time >= :from_payout_time AND event_payout_time <= :to_payout_time ORDER BY event_index ASC;";
 		$event_arr = $this->app->run_query($event_q, [
 			'game_id' => $this->game->db_game['game_id'],
 			'from_payout_time' => date("Y-m-d H:i:s", strtotime("-200 minutes")),
 			'to_payout_time' => date("Y-m-d H:i:s", strtotime("+200 minutes")),
 		])->fetchAll();
-		
+
 		foreach ($event_arr as $gde) {
 			if (!isset($update_events_by_index[$gde['event_index']])) $update_events_by_index[$gde['event_index']] = $gde;
 		}
-		
+
 		$event_arr = $this->app->run_query("SELECT gde.* FROM game_defined_events gde JOIN blocks b ON gde.event_payout_block=b.block_id AND b.blockchain_id=:blockchain_id WHERE gde.game_id=:game_id AND gde.event_payout_time < FROM_UNIXTIME(b.time_mined) ORDER BY gde.event_index DESC;", [
 			'blockchain_id' => $this->game->blockchain->db_blockchain['blockchain_id'],
 			'game_id' => $this->game->db_game['game_id'],
 		])->fetchAll();
-		
+
 		foreach ($event_arr as $gde) {
 			if (!isset($update_events_by_index[$gde['event_index']])) $update_events_by_index[$gde['event_index']] = $gde;
 		}
-		
+
 		if ($print_debug) echo "Changing blocks for ".count($update_events_by_index)." events.\n";
-		
+
 		$set_count = 0;
 		$num_changed = 0;
 		$time_to_prev_block_cache = [];
 		$time_to_next_block_cache = [];
 		foreach ($update_events_by_index as $eventIndex => $gde) {
-			$changed = $this->game->set_gde_blocks_by_time($gde, $time_to_prev_block_cache, $time_to_next_block_cache);
+			$changed = $this->game->set_gde_blocks_by_time($gde, $time_to_prev_block_cache, $time_to_next_block_cache, $final_block_select_after_time=true, $payout_block_select_after_time=true);
 			if ($changed) $num_changed++;
 			if ($print_debug && ($set_count+1)%100 == 0) echo "Changed ".$num_changed."/".$set_count."\n";
 			$set_count++;

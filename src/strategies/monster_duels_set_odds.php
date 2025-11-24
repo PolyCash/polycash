@@ -140,9 +140,11 @@ if ($user_game) {
 						$thisevent_io_amounts = [];
 						$thisevent_address_ids = [];
 
+						$probability_exponentiator = 2.3;
+						$hp_bonus = 5;
 						$probability_sum = 0;
 						foreach ($options_by_event as $option) {
-							$probability_sum += pow($option['hp'], 2.5);
+							$probability_sum += pow($option['hp']+$hp_bonus, $probability_exponentiator);
 						}
 						$probability_adjuster = 1/$probability_sum;
 
@@ -150,7 +152,7 @@ if ($user_game) {
 							$this_address = $app->fetch_addresses_in_account($account, $option['option_index'], 1)[0];
 
 							if ($this_address) {
-								$thisbet_io_amount = floor($io_nondestroy_per_event*pow($option['hp'], 2.5)*$probability_adjuster);
+								$thisbet_io_amount = floor($io_nondestroy_per_event*pow($option['hp']+$hp_bonus, $probability_exponentiator)*$probability_adjuster);
 								$thisbet_io_separator_amount = floor($thisbet_io_amount*$io_separator_frac);
 								$thisbet_io_regular_amount = $thisbet_io_amount-$thisbet_io_separator_amount;
 
