@@ -21,12 +21,12 @@ $print_debug = true;
 if ($_REQUEST['action'] == "add_events") {
 	$manager->add_events($skip_record_migration=false, $print_debug);
 }
-/*else if ($_REQUEST['action'] == "set_blocks") {
+else if ($_REQUEST['action'] == "set_blocks") {
 	$manager->custom_set_event_blocks($print_debug);
 }
 else if ($_REQUEST['action'] == "set_outcomes") {
 	$manager->set_outcomes($print_debug);
-}*/
+}
 else if ($_REQUEST['action'] == "regular_actions") {
 	$manager->regular_actions($force, $print_debug);
 }
