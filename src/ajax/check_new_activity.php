@@ -231,7 +231,7 @@ if ($thisuser && $refresh_page == "wallet") {
 }
 else $output['new_messages'] = 0;
 
-if ($game->db_game['module'] == "MonsterDuels") {
+if ($game->db_game['module'] == "MonsterDuels" && $game_loop_index >= 4) {
 	$being_determined_event = $game->module->being_determined_event($game);
 
 	if ($being_determined_event && (string) $being_determined_event->db_event['event_index'] !== (string) $_REQUEST['md_bde_index']) {

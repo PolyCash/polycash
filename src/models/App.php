@@ -1145,7 +1145,7 @@ class App {
 
 		echo '<div class="paragraph">';
 		$display_games_params = [];
-		$display_games_q = "SELECT g.*, c.short_name AS currency_short_name FROM games g LEFT JOIN currencies c ON g.invite_currency=c.currency_id WHERE g.featured=1 AND (g.game_status='published' OR g.game_status='running')";
+		$display_games_q = "SELECT g.*, c.short_name AS currency_short_name FROM games g LEFT JOIN currencies c ON g.invite_currency=c.currency_id WHERE (g.game_status='published' OR g.game_status='running')";
 		if (!empty($category_id)) {
 			$display_games_q .= " AND g.category_id=:category_id";
 			$display_games_params['category_id'] = $category_id;
@@ -1153,6 +1153,8 @@ class App {
 		if (!empty($game_id)) {
 			$display_games_q .= " AND g.game_id=:game_id";
 			$display_games_params['game_id'] = $game_id;
+		} else {
+			$display_games_q .= " AND g.featured=1";
 		}
 		$display_games_q .= " ORDER BY g.featured_score DESC, g.game_id DESC;";
 		$display_games = $this->run_query($display_games_q, $display_games_params)->fetchAll();

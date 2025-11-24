@@ -140,8 +140,8 @@ if ($user_game) {
 						$thisevent_io_amounts = [];
 						$thisevent_address_ids = [];
 
-						$probability_exponentiator = 2.3;
-						$hp_bonus = 5;
+						$probability_exponentiator = 2.6;
+						$hp_bonus = 10;
 						$probability_sum = 0;
 						foreach ($options_by_event as $option) {
 							$probability_sum += pow($option['hp']+$hp_bonus, $probability_exponentiator);
