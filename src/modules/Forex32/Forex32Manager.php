@@ -333,6 +333,28 @@ class Forex32Manager {
 			if (!isset($update_events_by_index[$gde['event_index']])) $update_events_by_index[$gde['event_index']] = $gde;
 		}
 		
+		$event_q = "SELECT * FROM game_defined_events WHERE game_id=:game_id AND event_starting_time IS NOT NULL AND event_starting_time >= :from_starting_time AND event_starting_time <= :to_starting_time ORDER BY event_index ASC;";
+		$event_arr = $this->app->run_query($event_q, [
+			'game_id' => $this->game->db_game['game_id'],
+			'from_starting_time' => date("Y-m-d H:i:s", strtotime("-200 minutes")),
+			'to_starting_time' => date("Y-m-d H:i:s", strtotime("+200 minutes")),
+		])->fetchAll();
+		
+		foreach ($event_arr as $gde) {
+			if (!isset($update_events_by_index[$gde['event_index']])) $update_events_by_index[$gde['event_index']] = $gde;
+		}
+		
+		$event_q = "SELECT * FROM game_defined_events WHERE game_id=:game_id AND event_final_time IS NOT NULL AND event_final_time >= :from_final_time AND event_final_time <= :to_final_time ORDER BY event_index ASC;";
+		$event_arr = $this->app->run_query($event_q, [
+			'game_id' => $this->game->db_game['game_id'],
+			'from_final_time' => date("Y-m-d H:i:s", strtotime("-200 minutes")),
+			'to_final_time' => date("Y-m-d H:i:s", strtotime("+200 minutes")),
+		])->fetchAll();
+		
+		foreach ($event_arr as $gde) {
+			if (!isset($update_events_by_index[$gde['event_index']])) $update_events_by_index[$gde['event_index']] = $gde;
+		}
+		
 		$event_arr = $this->app->run_query("SELECT gde.* FROM game_defined_events gde JOIN blocks b ON gde.event_payout_block=b.block_id AND b.blockchain_id=:blockchain_id WHERE gde.game_id=:game_id AND gde.event_payout_time < FROM_UNIXTIME(b.time_mined) ORDER BY gde.event_index DESC;", [
 			'blockchain_id' => $this->game->blockchain->db_blockchain['blockchain_id'],
 			'game_id' => $this->game->db_game['game_id'],

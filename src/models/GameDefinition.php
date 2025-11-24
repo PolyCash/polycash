@@ -415,9 +415,9 @@ class GameDefinition {
 
 		// Check if any base params are different. If so, reset from game starting block
 		for ($i=0; $i<count($verbatim_vars); $i++) {
-			$var = $verbatim_vars[$i];
-			if ($var[2] == true) {
-				if (array_key_exists($var[1], $initial_game_obj) && array_key_exists($var[1], $new_game_obj) && (string)$initial_game_obj[$var[1]] != (string)$new_game_obj[$var[1]]) {
+			[$param_type, $param_name, $affects_game_state] = $verbatim_vars[$i];
+			if ($affects_game_state == true) {
+				if (array_key_exists($param_name, $initial_game_obj) && array_key_exists($param_name, $new_game_obj) && (string)$initial_game_obj[$param_name] != (string)$new_game_obj[$param_name]) {
 					$reset_block = $min_starting_block;
 				}
 			}
@@ -520,19 +520,24 @@ class GameDefinition {
 		
 		// Check if any base params are different. If so, reset from game starting block
 		for ($i=0; $i<count($verbatim_vars); $i++) {
-			$var = $verbatim_vars[$i];
-			if ($var[2] == true) {
-				if (array_key_exists($var[1], $initial_game_obj) && array_key_exists($var[1], $new_game_obj) && (string)$initial_game_obj[$var[1]] != (string)$new_game_obj[$var[1]]) {
+			[$param_type, $param_name, $affects_game_state] = $verbatim_vars[$i];
+			if ($affects_game_state == true) {
+				if (array_key_exists($param_name, $initial_game_obj) && array_key_exists($param_name, $new_game_obj) && (string)$initial_game_obj[$param_name] != (string)$new_game_obj[$param_name]) {
 					$reset_block = $min_starting_block;
 					
-					$game->blockchain->app->run_query("UPDATE games SET ".$var[1]."=:".$var[1]." WHERE game_id=:game_id;", [
-						$var[1] => $new_game_obj[$var[1]],
+					$game->blockchain->app->run_query("UPDATE games SET ".$param_name."=:".$param_name." WHERE game_id=:game_id;", [
+						$param_name => $new_game_obj[$param_name],
 						'game_id' => $game->db_game['game_id']
 					]);
 				}
+			} else {
+				$game->blockchain->app->run_query("UPDATE games SET ".$param_name."=:".$param_name." WHERE game_id=:game_id;", [
+					$param_name => $new_game_obj[$param_name],
+					'game_id' => $game->db_game['game_id']
+				]);
 			}
 		}
-		
+
 		$game->blockchain->app->run_query("DELETE FROM game_escrow_amounts WHERE game_id=:game_id;", ['game_id'=>$game->db_game['game_id']]);
 		
 		if (!empty($new_game_obj['escrow_amounts'])) {
