@@ -176,6 +176,7 @@ class MonsterDuelsManager {
 
 		$current_cohort = ceil($minutes_since_start/$minutes_per_event_cohort);
 
+		echo "minutes since start: $minutes_since_start, current cohort: $current_cohort\n";
 		$max_gde = (string)$this->game->max_gde_index();
 
 		if ($max_gde === "") $existing_events_cohort = null;

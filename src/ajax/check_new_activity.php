@@ -244,7 +244,9 @@ if ($game->db_game['module'] == "MonsterDuels" && $game_loop_index >= 4) {
 
 		$output['monsterduels_js'] .= "$('#monsterduels_being_determined').html('<div id=\"monsterduels_".$game->db_game['game_id']."_".$being_determined_event->db_event['event_index']."\"></div>');";
 
-		$output['monsterduels_js'] .= "thisMonsterDuelsManager = new MonsterDuelsManager(".$game->db_game['game_id'].", '".$game->db_game['url_identifier']."', ".$being_determined_event->db_event['event_index'].", ".json_encode($base_options_formatted).", 2.5);";
+		$output['monsterduels_js'] .= "thisMonsterDuelsManager = new MonsterDuelsManager(".$game->db_game['game_id'].", '".$game->db_game['url_identifier']."', ".$being_determined_event->db_event['event_index'].", ".json_encode($base_options_formatted).", false, ".$app->coins_per_vote($game->db_game).", ".json_encode(array_intersect_key($event->db_event, [
+			'event_id' => true, 'event_index' => true, 'effective_destroy_score' => true, 'sum_unconfirmed_effective_destroy_score' => true, 'sum_votes' => true, 'payout_rate' => true,
+		])).");";
 
 		$output['monsterduels_js'] .= "thisMonsterDuelsManager.initialize();";
 	}

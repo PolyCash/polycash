@@ -107,7 +107,7 @@ class MonsterDuelsGameDefinition {
 	}
 
 	public function fetch_base_monsters($event) {
-		$baseOptions = $this->app->run_query("SELECT op.option_index, op.entity_id, op.event_option_index, en.entity_name, en.hp, en.best_attack_name, en.level, en.color, en.body_shape, i.image_id, i.access_key, i.extension FROM options op JOIN entities en ON op.entity_id=en.entity_id LEFT JOIN images i ON en.default_image_id=i.image_id WHERE op.event_id=:event_id", ['event_id' => $event->db_event['event_id']])->fetchAll(PDO::FETCH_ASSOC);
+		$baseOptions = $this->app->run_query("SELECT op.option_index, op.entity_id, op.event_option_index, op.votes, op.unconfirmed_votes, op.unconfirmed_effective_destroy_score, op.effective_destroy_score, en.entity_name, en.hp, en.best_attack_name, en.level, en.color, en.body_shape, i.image_id, i.access_key, i.extension FROM options op JOIN entities en ON op.entity_id=en.entity_id LEFT JOIN images i ON en.default_image_id=i.image_id WHERE op.event_id=:event_id", ['event_id' => $event->db_event['event_id']])->fetchAll(PDO::FETCH_ASSOC);
 
 		$baseOptionsFormatted = [];
 		
@@ -123,6 +123,10 @@ class MonsterDuelsGameDefinition {
 				'body_shape' => $baseOption['body_shape'],
 				'image_url' => "/images/custom/".$baseOption['image_id']."_".$baseOption['access_key'].".".$baseOption['extension'],
 				'eliminated' => false,
+				'votes' => (int) $baseOption['votes'],
+				'unconfirmed_votes' => (int) $baseOption['unconfirmed_votes'],
+				'effective_destroy_score' => $baseOption['effective_destroy_score'],
+				'unconfirmed_effective_destroy_score' => $baseOption['unconfirmed_effective_destroy_score'],
 			];
 		}
 

@@ -535,7 +535,9 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							<div id="monsterduels_<?php echo $game->db_game['game_id'].'_'.$event->db_event['event_index']; ?>"></div>
 							<script type="text/javascript" src="/js/monsterduels.js"></script>
 							<script type="text/javascript">
-							var thisMonsterDuelsManager = new MonsterDuelsManager(<?php echo $game->db_game['game_id']; ?>, '<?php echo $game->db_game['url_identifier']; ?>', <?php echo $event->db_event['event_index']; ?>, <?php echo json_encode($baseOptionsFormatted, JSON_PRETTY_PRINT); ?>, 2.5);
+							var thisMonsterDuelsManager = new MonsterDuelsManager(<?php echo $game->db_game['game_id']; ?>, '<?php echo $game->db_game['url_identifier']; ?>', <?php echo $event->db_event['event_index']; ?>, <?php echo json_encode($baseOptionsFormatted, JSON_PRETTY_PRINT); ?>, null, <?php echo $app->coins_per_vote($game->db_game); ?>, <?php echo json_encode(array_intersect_key($event->db_event, [
+								'event_id' => true, 'event_index' => true, 'effective_destroy_score' => true, 'sum_unconfirmed_effective_destroy_score' => true, 'sum_votes' => true, 'payout_rate' => true,
+							])); ?>);
 
 							window.onload = function() {
 								thisMonsterDuelsManager.initialize();

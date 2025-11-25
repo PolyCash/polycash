@@ -1,12 +1,15 @@
-function MonsterDuelsManager(game_id, game_slug, event_index, base_monsters, sec_per_frame) {
+function MonsterDuelsManager(game_id, game_slug, event_index, base_monsters, sec_per_frame=null, coins_per_vote=0, event_info=[]) {
 	this.game_id = game_id;
 	this.game_slug = game_slug;
 	this.event_index = event_index;
+	this.event_info = event_info;
+	this.coins_per_vote = coins_per_vote;
 	this.render_div_id = 'monsterduels_'+game_id+'_'+event_index;
 	this.base_monsters = base_monsters;
 	this.rand_list_sec_per_seed = 5;
 	this.sec_per_seed = this.rand_list_sec_per_seed;
-	this.initial_sec_per_frame = sec_per_frame;
+	this.default_sec_per_frame = 3;
+	this.initial_sec_per_frame = sec_per_frame === null ? this.default_sec_per_frame : sec_per_frame;
 	this.sec_per_frame = this.initial_sec_per_frame;
 	this.seeds = [];
 	this.render_frame = 0;
@@ -16,6 +19,17 @@ function MonsterDuelsManager(game_id, game_slug, event_index, base_monsters, sec
 	this.winner = null;
 	this.messages = [];
 	this.rendering_frames = false;
+
+	this.event_effective_coins = this.event_info.sum_votes*this.coins_per_vote + this.event_info.effective_destroy_score + this.event_info.sum_unconfirmed_effective_destroy_score;
+
+	this.base_monsters.forEach(function(base_monster, monster_pos) {
+		var option_votes = base_monster.votes + base_monster.unconfirmed_votes;
+		if (option_votes == 0) base_monster.payout_odds = null;
+		else {
+			var option_effective_coins = option_votes*this.coins_per_vote + base_monster.effective_destroy_score + base_monster.unconfirmed_effective_destroy_score;
+			base_monster.payout_odds = this.event_info.payout_rate*this.event_effective_coins/option_effective_coins;
+		}
+	}.bind(this));
 
 	this.initialize = function() {
 		console.log("Initializing event #"+this.event_index);
@@ -118,8 +132,17 @@ function MonsterDuelsManager(game_id, game_slug, event_index, base_monsters, sec
 			$('#'+this.render_div_id).html(rendered_content);
 
 			setTimeout(function() {
-				$('#remaining_monster_hp_'+defending_monster.event_option_index).html(defending_monster.remaining_hp+"/"+defending_monster.hp);
-			}, (this.sec_per_frame/2)*1000);
+				$('#remaining_monster_hp_'+defending_monster.event_option_index).html("HP: "+defending_monster.remaining_hp+"/"+defending_monster.hp);
+
+				[weighted_win_points, weighted_win_points_by_remaining_pos] = this.get_expected_win_rates();
+
+				this.remaining_monster_option_indexes.forEach(function(remaining_monster_option_index, remaining_pos) {
+					var base_pos = this.option_index_to_base_pos(remaining_monster_option_index);
+					remaining_monster = this.base_monsters[base_pos];
+					var win_pct = (100*weighted_win_points_by_remaining_pos[remaining_pos]/weighted_win_points).toFixed(2);
+					$('#remaining_monster_win_pct_'+remaining_monster.event_option_index).html(win_pct+"% to win");
+				}.bind(this));
+			}.bind(this), (this.sec_per_frame/2)*1000);
 
 			if (defending_monster.eliminated) {
 				setTimeout(function() {
@@ -162,28 +185,51 @@ function MonsterDuelsManager(game_id, game_slug, event_index, base_monsters, sec
 		rendered_content += "<div class='dueling_monster' style='background-image: url(\""+monster.image_url+"\");'></div>\
 			HP: "+monster.remaining_hp+"/"+monster.hp+"<br/>\
 			Color: "+monster.color+"<br/>\
-			Body shape: "+monster.body_shape+"\
+			Body shape: "+monster.body_shape+"<br/>\
+			Payout: "+(monster.payout_odds == null ? "No bets" : "x"+monster.payout_odds.toFixed(3))+"\
 			</div>";
 		return rendered_content;
 	};
 
-	this.render_remaining_monsters = function(attacking_monster, defending_monster) {
-		rendered_content = "<div>";
-		
+	this.get_expected_win_rates = function() {		
+		var weighted_win_points = 0;
+		var weighted_win_points_by_remaining_pos = [];
 		this.remaining_monster_option_indexes.forEach(function(remaining_monster_option_index, remaining_pos) {
 			var base_pos = this.option_index_to_base_pos(remaining_monster_option_index);
-			var monster = this.base_monsters[base_pos];
-			rendered_content += "<div id='remaining_monster_"+remaining_monster_option_index+"' class='remaining_monster_box' title='"+monster.entity_name+"'><div class='remaining_monster_image' style='background-image: url(\""+monster.image_url+"\");";
-			if (attacking_monster.event_option_index == remaining_monster_option_index) rendered_content += ' border: 1px solid #77f;';
-			else if (defending_monster.event_option_index == remaining_monster_option_index) rendered_content += ' border: 1px solid #f77';
-			rendered_content += "'></div><div id='remaining_monster_hp_"+remaining_monster_option_index+"'>"+monster.remaining_hp+"/"+monster.hp+"</div></div>";
+			var win_points = Math.pow(10+this.base_monsters[base_pos].remaining_hp, 2.6);
+			weighted_win_points += win_points;
+			weighted_win_points_by_remaining_pos[remaining_pos] = win_points;
+		}.bind(this));
+		return [weighted_win_points, weighted_win_points_by_remaining_pos];
+	};
+
+	this.render_remaining_monsters = function(attacking_monster, defending_monster) {
+		var remaining_monsters = [];
+
+		[weighted_win_points, weighted_win_points_by_remaining_pos] = this.get_expected_win_rates();
+		
+		rendered_content = "<div style='margin-bottom: 15px;'>";
+
+		this.remaining_monster_option_indexes.forEach(function(remaining_monster_option_index, remaining_pos) {
+			var base_pos = this.option_index_to_base_pos(remaining_monster_option_index);
+			remaining_monster = this.base_monsters[base_pos];
+			var win_pct = (100*weighted_win_points_by_remaining_pos[remaining_pos]/weighted_win_points).toFixed(2);
+			rendered_content += "<div id='remaining_monster_"+remaining_monster.event_option_index+"' class='remaining_monster_box' title='"+remaining_monster.entity_name+"'>";
+			rendered_content += "<div class='remaining_monster_image' style='background-image: url(\""+remaining_monster.image_url+"\");";
+			if (attacking_monster.event_option_index == remaining_monster.event_option_index) rendered_content += ' border: 1px solid #77f;';
+			else if (defending_monster.event_option_index == remaining_monster.event_option_index) rendered_content += ' border: 1px solid #f77';
+			rendered_content += "'></div>";
+			rendered_content += "<div id='remaining_monster_hp_"+remaining_monster.event_option_index+"'>HP: "+remaining_monster.remaining_hp+"/"+remaining_monster.hp+"</div>";
+			rendered_content += "<div id='remaining_monster_win_pct_"+remaining_monster.event_option_index+"'>"+win_pct+"% to win</div>";
+			rendered_content += (remaining_monster.payout_odds == null ? "No bets" : "Pays: x"+remaining_monster.payout_odds.toFixed(3));
+			rendered_content += "</div>";
 		}.bind(this));
 
 		rendered_content += "</div>";
 
 		return rendered_content;
 	};
-	
+
 	this.render_messages = function() {
 		var rendered_content = "<div class='duel_messages'>";
 		

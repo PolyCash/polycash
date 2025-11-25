@@ -632,9 +632,9 @@ a.selected {
 }
 .remaining_monster_image {
 	display: block;
-	height: 70px;
-	width: 70px;
-	margin: 10px;
+	height: 90px;
+	width: 90px;
+	margin: 5px;
 	padding: 5px;
 	background-position: center;
 	background-repeat: no-repeat;
