@@ -647,11 +647,13 @@ a.selected {
 	margin: 15px;
 	background-position: center;
 	background-repeat: no-repeat;
-	background-size: 90%; 
+	background-size: 90%;
 }
 .dueling_monster_container {
 	display: inline-block;
 	margin: 20px;
+	float: left;
+	width: 260px;
 }
 .duel_messages {
 	border: 1px solid #aaa;
@@ -659,4 +661,17 @@ a.selected {
 	max-height: 250px;
 	overflow-y: scroll;
 	font-size: 90%;
+}
+.md_bar_chart_section {
+	display: inline-block;
+	float: left;
+	width: 450px;
+	overflow-y: scroll;
+	overflow-x: hidden;
+}
+.md_bar_chart_bar {
+	display: inline-block;
+	float: left;
+	height: 30px;
+	margin: 0px 10px;
 }

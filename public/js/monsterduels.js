@@ -19,6 +19,10 @@ function MonsterDuelsManager(game_id, game_slug, event_index, base_monsters, sec
 	this.winner = null;
 	this.messages = [];
 	this.rendering_frames = false;
+	this.px_per_pct_point = null;
+	this.previous_defender_option_index = null;
+	this.red_bar_color = '#e25';
+	this.blue_bar_color = '#57f';
 
 	this.event_effective_coins = this.event_info.sum_votes*this.coins_per_vote + this.event_info.effective_destroy_score + this.event_info.sum_unconfirmed_effective_destroy_score;
 
@@ -93,6 +97,8 @@ function MonsterDuelsManager(game_id, game_slug, event_index, base_monsters, sec
 			
 			var defending_monster = this.base_monsters[defending_monster_base_pos];
 
+			var defending_monster_initial_hp = defending_monster.remaining_hp;
+
 			var rendered_content = '<div>';
 			
 			var duel_number = seed.position - this.seeds[0].position + 1;
@@ -101,6 +107,18 @@ function MonsterDuelsManager(game_id, game_slug, event_index, base_monsters, sec
 			rendered_content += this.render_remaining_monsters(attacking_monster, defending_monster);
 
 			var attack_damage = randInt%(this.max_attack_damage);
+
+			[weighted_win_points, weighted_win_points_by_remaining_pos] = this.get_expected_win_rates();
+			var bar_chart_content = this.render_bar_chart(weighted_win_points, weighted_win_points_by_remaining_pos);
+
+			if (this.previous_defender_option_index !== null) {
+				var set_blue_option_index = this.previous_defender_option_index;
+				setTimeout(function() {
+					$('#monster_bar_bar_'+set_blue_option_index).css('background-color', this.blue_bar_color);
+				}.bind(this), Math.round(1000*this.sec_per_frame/4));
+			}
+
+			this.previous_defender_option_index = defending_monster.event_option_index;
 
 			defending_monster.remaining_hp = Math.max(0, defending_monster.remaining_hp - attack_damage);
 
@@ -119,10 +137,12 @@ function MonsterDuelsManager(game_id, game_slug, event_index, base_monsters, sec
 				rendered_content += message+'<br/>';
 			}
 			
+			rendered_content += '<div style="display: block; overflow: hidden;">';
 			rendered_content += this.render_monster(attacking_monster, true);
-			
 			rendered_content += this.render_monster(defending_monster, true);
-
+			rendered_content += bar_chart_content;
+			rendered_content += '</div>';
+			
 			rendered_content += '</div>';
 
 			rendered_content += '<p><a href="" onClick="thisMonsterDuelsManager.initiate_replay(); return false;">Restart Battle</a> &nbsp; <a href="" onClick="thisMonsterDuelsManager.jump_to_latest(); return false;">Jump to Latest</a></p>';
@@ -133,20 +153,19 @@ function MonsterDuelsManager(game_id, game_slug, event_index, base_monsters, sec
 
 			setTimeout(function() {
 				$('#remaining_monster_hp_'+defending_monster.event_option_index).html("HP: "+defending_monster.remaining_hp+"/"+defending_monster.hp);
+				$('#monster_bar_bar_'+defending_monster.event_option_index).css('background-color', this.red_bar_color);
+				var defender_bar_initial_width = parseInt($('#monster_bar_bar_'+defending_monster.event_option_index).css('width').replace("px", ""));
 
-				[weighted_win_points, weighted_win_points_by_remaining_pos] = this.get_expected_win_rates();
-
-				this.remaining_monster_option_indexes.forEach(function(remaining_monster_option_index, remaining_pos) {
-					var base_pos = this.option_index_to_base_pos(remaining_monster_option_index);
-					remaining_monster = this.base_monsters[base_pos];
-					var win_pct = (100*weighted_win_points_by_remaining_pos[remaining_pos]/weighted_win_points).toFixed(2);
-					$('#remaining_monster_win_pct_'+remaining_monster.event_option_index).html(win_pct+"% to win");
-				}.bind(this));
+				var new_bar_width = (Math.pow(10+defending_monster.remaining_hp, 2.72)/Math.pow(10+defending_monster_initial_hp, 2.72))*defender_bar_initial_width;
+				
+				this.animate_bar_width(defending_monster.event_option_index, defender_bar_initial_width, new_bar_width);
+				
 			}.bind(this), (this.sec_per_frame/2)*1000);
 
 			if (defending_monster.eliminated) {
 				setTimeout(function() {
 					$('#remaining_monster_'+defending_monster.event_option_index).hide('slow');
+					$('#monster_bar_'+defending_monster.event_option_index).hide('slow');
 				}, (this.sec_per_frame/2)*1000);
 			}
 
@@ -203,6 +222,51 @@ function MonsterDuelsManager(game_id, game_slug, event_index, base_monsters, sec
 		return [weighted_win_points, weighted_win_points_by_remaining_pos];
 	};
 
+	this.animate_bar_width = function(event_option_index, defender_bar_initial_width, new_bar_width) {
+		var total_less_px = defender_bar_initial_width - new_bar_width;
+		var animate = false;
+
+		if (animate) {
+			var animate_ms_per_frame = 30;
+			var num_frames = (1000*this.sec_per_frame/2)/animate_ms_per_frame;
+			var reduce_px_per_frame = total_less_px/num_frames;
+
+			for (var anim_frame=0; anim_frame < num_frames; anim_frame++) {
+				var current_width = defender_bar_initial_width - (reduce_px_per_frame*(anim_frame+1));
+
+				setTimeout(function(a_width) {
+					$('#monster_bar_bar_'+event_option_index).css('width', a_width+'px');
+				}, anim_frame*animate_ms_per_frame, current_width);
+			}
+		} else {
+			$('#monster_bar_bar_'+event_option_index).css('width', new_bar_width+'px');
+		}
+	};
+
+	this.render_bar_chart = function(weighted_win_points, weighted_win_points_by_remaining_pos) {
+		var remaining_pos_weighted_points = Object.entries(weighted_win_points_by_remaining_pos);
+		var max_weighted_points = Math.max(...remaining_pos_weighted_points.map(info => info[1]));
+		var max_win_pct = max_weighted_points/weighted_win_points*100;
+		var chart_width_px = 200;
+		this.px_per_pct_point = chart_width_px/max_win_pct;
+
+		remaining_pos_weighted_points.sort(([, a], [, b]) => b - a);
+
+		var rendered_content = '<div class="md_bar_chart_section"><p><strong>Winning likelihood</strong></p><table style="line-height: 34px;">';
+
+		remaining_pos_weighted_points.forEach(function(remaining_pos_weighted_point, position) {
+			var win_pct = 100*remaining_pos_weighted_point[1]/weighted_win_points;
+
+			var monster = this.base_monsters[this.remaining_monster_option_indexes[remaining_pos_weighted_point[0]]];
+
+			rendered_content += "<tr id='monster_bar_"+monster.event_option_index+"'><td style='min-width: 35px;'>#"+(position+1)+"</td><td>"+monster.entity_name+"</td><td style='overflow: hidden;'><div id='monster_bar_bar_"+monster.event_option_index+"' class='md_bar_chart_bar' style='width: "+Math.round(this.px_per_pct_point*win_pct)+"px; background-color: "+(this.previous_defender_option_index == monster.event_option_index ? this.red_bar_color : this.blue_bar_color)+";'></div><div style='display: inline-block; float: left;'>"+win_pct.toFixed(2)+"%</div></td></tr>";
+		}.bind(this));
+
+		rendered_content += '</table></div>';
+
+		return rendered_content;
+	};
+
 	this.render_remaining_monsters = function(attacking_monster, defending_monster) {
 		var remaining_monsters = [];
 
@@ -220,7 +284,6 @@ function MonsterDuelsManager(game_id, game_slug, event_index, base_monsters, sec
 			else if (defending_monster.event_option_index == remaining_monster.event_option_index) rendered_content += ' border: 1px solid #f77';
 			rendered_content += "'></div>";
 			rendered_content += "<div id='remaining_monster_hp_"+remaining_monster.event_option_index+"'>HP: "+remaining_monster.remaining_hp+"/"+remaining_monster.hp+"</div>";
-			rendered_content += "<div id='remaining_monster_win_pct_"+remaining_monster.event_option_index+"'>"+win_pct+"% to win</div>";
 			rendered_content += (remaining_monster.payout_odds == null ? "No bets" : "Pays: x"+remaining_monster.payout_odds.toFixed(3));
 			rendered_content += "</div>";
 		}.bind(this));
@@ -267,7 +330,11 @@ function MonsterDuelsManager(game_id, game_slug, event_index, base_monsters, sec
 			var message = this.winner.entity_name+' won battle #'+(this.event_index+1);
 			this.messages.unshift("Duel #"+duel_number+": "+message);
 			var rendered_content = '<h3>'+this.winner.entity_name+' won <a target="_blank" href="/explorer/games/'+this.game_slug+'/events/'+this.event_index+'">battle #'+(this.event_index+1)+'</a></h3>';
+			
+			rendered_content += '<div style="display: block; overflow: hidden;">';
 			rendered_content += this.render_monster(this.winner, false);
+			rendered_content += '</div>';
+
 			rendered_content += '<p><a href="" onClick="thisMonsterDuelsManager.initiate_replay(); return false;">Replay Battle</a> &nbsp; <a href="" onClick="thisMonsterDuelsManager.jump_to_latest(); return false;">Jump to Latest</a></p>';
 			rendered_content += this.render_messages();
 			$('#'+this.render_div_id).html(rendered_content);
