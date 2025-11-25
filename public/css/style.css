@@ -625,3 +625,38 @@ a.selected {
 	line-height: 36px;
 	background-color:#EFF3F8;
 }
+.remaining_monster_box {
+	display: inline-block;
+	text-align: center;
+	margin: 10px;
+}
+.remaining_monster_image {
+	display: block;
+	height: 90px;
+	width: 90px;
+	margin: 5px;
+	padding: 5px;
+	background-position: center;
+	background-repeat: no-repeat;
+	background-size: 90%;
+}
+.dueling_monster {
+	display: block;
+	height: 180px;
+	width: 180px;
+	margin: 15px;
+	background-position: center;
+	background-repeat: no-repeat;
+	background-size: 90%; 
+}
+.dueling_monster_container {
+	display: inline-block;
+	margin: 20px;
+}
+.duel_messages {
+	border: 1px solid #aaa;
+	padding: 10px;
+	max-height: 250px;
+	overflow-y: scroll;
+	font-size: 90%;
+}

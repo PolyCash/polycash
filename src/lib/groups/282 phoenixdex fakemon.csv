@@ -1,0 +1,284 @@
+entity_name,hp,best_attack_name,level,color,body_shape,image_name
+monster,monsters,282 phoenixdex fakemon
+Acafia,58,Wood Hammer,,Green,Quadrupedal,101_Cd4x89spb1pIFNt2X3VE.png
+Acceleret,50,Frenzy Strike,16,Gray,Single pair of wings,102_l5bzYsjdNcceklyDyyXT.png
+Aculago,95,Sandstorm,20,Gray,Quadrupedal,103_rbl0i8mxjwJ2tAcNGa2l.png
+Adargana,46,Wood Hammer,,Green,Bipedal with tail,104_stsaEeSNOq3iCgRfkGQz.png
+Aegilana,70,Wood Hammer,35,Green,Bipedal with tail,105_qUl1XPbjdSb8FZMMGYRE.png
+Aeolagio,120,Mirror Coat,,Blue,Fins,106_8LA4TMQnt3Z5qnLZBdpc.png
+Aermachis,95,High-Speed Dive,,Blue,Multiple pairs of wings,107_JdEkoHoHHKaYZLfRdvvX.png
+Alphian,65,Leaf Storm,25,Green,Bipedal with tail,108_d86Otz06e5CT8m5uY4Rv.png
+Altavault,65,Stone Edge,,Gray,Insectoid,109_L4RNmSVXrxkxR736U2LE.png
+Antarocio,90,Glacier Crush,35,Gray,Fins,110_2fSN2ng6t1MLB4cIux8B.png
+Arachnire,75,Raging Fury,34,Red,Insectoid,111_2lxhsdUYVcxDm1LQ0MbL.png
+Arctangel,75,Prism Shower,,Blue,Quadrupedal,112_YKirhWN2JKTS4eyDuYbJ.png
+Arridian,30,Stone Edge,,Black,Bipedal without tail,113_zYUkynyJCcvbjNgvZ0PK.png
+Ascaleius,140,Healing Wish,52,Brown,Serpentine,114_ALPjd60TSzdN0YFIGj8Y.png
+Athlauria,100,Phantom Force,,Brown,Bipedal with tail,115_HRjwZQXze1R7fr49FeeT.png
+Auriole,40,Frenzy Strike,,Black,Single pair of wings,116_sUTchg1qvCkYetdFiwdU.png
+Avracos,90,Head Smash,,Green,Head and legs,117_pW16BCgMJ0bTtBZI73Cg.png
+Bandibat,55,Sucker Punch,,Brown,Bipedal with tail,118_HGuvJEPoyZ8DQyk9xZnV.png
+Bearbegazi,80,Avalanche,,White,Bipedal without tail,119_g006NfrNRW0rXVjW83tT.png
+Beddybite,70,Nightmare,,White,Insectoid,120_LVvssU1REVYlM07yl6WN.png
+Belmarine,110,Foam Geyser,,Blue,Insectoid,121_o83R7NEWuVo1r8pBOBjH.png
+Bewildog,36,Psychic Fangs,,Purple,Quadrupedal,122_t3l08lQdIK3LEVOoBMnO.png
+Bitemare,110,Nightmare,32,White,Insectoid,123_V8YhOlMoTK0895yPo1dt.png
+Blue-striped Siamacho,75,Thrash,,Green,Fins,124_PsEvHF04gptSuo9tMk2O.png
+Bojina,80,Grudge,25,Black,Bipedal with tail,125_KTpiHuvKwOEhvnpR4STh.png
+Boltarek,88,Electric Terrain,21,Black,Bipedal without tail,126_01DmUdJBBaVE1gZdyOH4.png
+Boogle,39,Trick Room,,Pink,Bipedal with tail,127_oJ4Z7aF4X7OewLqeVxJY.png
+Boomrslang,65,Frenzy Strike,27,Green,Serpentine,128_oTdK0dCJzMmnk3AvOyji.png
+Bossorna,91,Wood Hammer,34,Green,Bipedal with tail,129_trdRhsw1fOh1hDH0m4QS.png
+Brawleon,65,Last Resort,,Brown,Quadrupedal,130_e96yqv5pWThezEU7UOli.png
+Burungin,84,Ring of Fire,34,Red,Quadrupedal,131_qQdzw9JclN9zwuQMxIFM.png
+Cadaleius,95,Healing Wish,28,Green,Serpentine,132_gd9tXBVy5rrglzj6iqqe.png
+Casberry,65,Head Smash,28,Green,Head and legs,133_S2y777LbrN6SfO8sYNHq.png
+Caslot,70,Parodize,,Gray,Quadrupedal,134_BcnGvmSrXJvQHLh7FxJv.png
+Catalcia,74,Wood Hammer,17,Green,Bipedal with tail,135_FabIs6TXDXTB0mhZzpMo.png
+Cavernolm,100,Dragon Rush,,Pink,Serpentine,136_Kdt2oqwCwjRBzUeEsBMR.png
+Cessmer,85,Swallow,,Purple,Fins,137_arS1iZYluXKI6swKXu3Y.png
+Charandillo,62,Revel Dance,29,Pink,Bipedal with tail,138_qlLvYmflquAkbxN5xBxs.png
+Chaszin,62,Backstab,30,Red,Insectoid,139_ZpflhpewR4zHyjupqZJ7.png
+Cindigre,50,Eruption,,Gray,Quadrupedal,140_oml2Pq1FDAhWAsX43i3W.png
+Cinnamoll,105,Mudslide,,Brown,Quadrupedal,141_aYImlEl34Be4Yu03pzqc.png
+Coiffaire,75,Play Rough,22,Yellow,Bipedal without tail,142_2IGNwJ1RiDFR3gVBCcf6.png
+Colgwari,140,Fissure,,Brown,Bipedal with tail,143_crJs8ISe0RnGqoBqfJiS.png
+Confuzel,58,Trick Room,34,Purple,Head and base,144_uaor0q3bFo7Y9fOHOKqd.png
+Cragendou,68,Horn Drill,18,Brown,Quadrupedal,145_xfZJ3jQGNkDuoT6HAmmj.png
+Crocoal,52,Ring of Fire,,Red,Quadrupedal,146_GDZvELnhYw3EHLAzQRQx.png
+Cubly,10,Flail,,Gray,Quadrupedal,147_wdO30M8pqRPpJt7Nmdn5.png
+Curlsa,60,Play Rough,,Yellow,Bipedal without tail,148_NLZmweWRmliuFyweQnqT.png
+Currarog,60,Magic Coat,,Purple,Quadrupedal,149_gjT0GCMzIjA2hfWrdviR.png
+Dartizel-R,70,Iron Tail,,Green,Bipedal with tail,150_pxp4getDcKAruvltuB4e.png
+Dasfix,45,Swallow,,Purple,Fins,151_LHgGQ6wUA2HJJOWYJMyv.png
+Dauvespa,70,Fissure,20,Black,Insectoid,152_nxA9MSzTtGZrsJInVrTx.png
+Davlocke,76,Heavy Slam,34,Brown,Bipedal without tail,153_t1sRYxnBAmskG5pTvGZI.png
+Decibass,65,Boomburst,,Gray,Quadrupedal,154_Q8QJBaCXIUGTyXnxYOXc.png
+Decicorn,70,Horn Drill,40,Gray,Bipedal with tail,155_I8McDB5kQZ1XFc9fCxiE.png
+Deludaze,66,Psychic Fangs,28,Purple,Quadrupedal,156_xIv01EA1E6mq5N4krAmb.png
+Derfin,45,Amnesia,,Pink,Bipedal without tail,157_tnzbHQqadnuEV2zeWld1.png
+Distrike,75,Thunder,50,Yellow,Quadrupedal,158_Xcyxe0pinod4BVlT1DVz.png
+Divey,46,Retribution,,Brown,Head and legs,159_QvWxeCylnu73RLYeZTJ9.png
+Donarith,75,Bug Buzz,,Yellow,Bipedal without tail,160_c8OsbEIAQWVMLqzkbOk6.png
+Dracoroon,70,Power Whip,16,Green,Quadrupedal,161_Ex08HjrNigqE7VlYZ4Bo.png
+Drakella,81,Drag Under,31,Green,Fins,162_6dDh2F9of798wCZHLBZm.png
+Drasarkr,125,Outrage,42,Brown,Serpentine,163_vrjlZcBuAlXAehEJA3T7.png
+Draugaron,75,Sheer Cold,50,White,Bipedal without tail,164_4bZcbmj2xxQJZMOcPmAA.png
+Dribbino,30,Flail,,Gray,Single pair of wings,165_e8tuG3Yuj5Z8NclVTABa.png
+Drillinder,50,Shell Smash,10,Black,Serpentine,166_QSeuXUDsMFgOuoWa2FIJ.png
+Duelantis,80,Valiant Sting,,Blue,Insectoid,167_wfaP4tYpNSYhHdXG1nPf.png
+Dustley,60,Substitute,,Gray,Quadrupedal,168_WKYWXuTFOu8NVSLy2181.png
+Dybelial,90,Devastation,45,Yellow,Bipedal with tail,169_hi64NN0LETgHfgHtLrb5.png
+Dyferal,65,Devastation,25,Yellow,Bipedal with tail,170_Oh75VgtGzVB0qiIMeXKL.png
+Dynasail,91,Tsunami,34,Blue,Bipedal with tail,171_eoGndTs3IQ1jMgl6CId9.png
+Dyrascal,45,Devastation,,Yellow,Bipedal with tail,172_VZsCRC7xGghjmyQo9rHl.png
+Eidograph,53,Future Sight,,Black,Tentacles or more than four legs,173_ouPm2gGiEgmgc97BN2PV.png
+Emperobe,70,Lunar Beam,,White,Insectoid,174_UxIIkjQBiRzAaEbYouPl.png
+Encanoto,105,Phantasmata,,Pink,Bipedal with tail,175_ul2yUlWgTH5lCVNatBsp.png
+Endruin,105,Water Hammer,35,Blue,Tentacles or more than four legs,176_NkkXfW5bfis0BpAd5ale.png
+Enguzaba,120,Last Stand,,Brown,Bipedal with tail,177_wqxY3sd7vvvtKjQeJYhl.png
+Exterrix,80,Synchronoise,34,Green,Single pair of wings,178_E7KlRAHqlEt4CKu03bCp.png
+Faintrick,44,Last Resort,,Gray,Bipedal with tail,179_oMGuY9b0x5ggwt6HJ2V2.png
+Fallorite,45,Rock Wrecker,,Red,Head only,180_tvWegObLZy8UR8nbnkZu.png
+Fearwick,50,Guillotine,21,Black,Insectoid,181_A6kar7ICZqgviC9gIWKH.png
+Feucrota,66,Ring of Fire,17,Red,Quadrupedal,182_uL0lnCWvl4FK5qOy7F18.png
+Finnial,50,Thunder,,Yellow,Quadrupedal,183_ByqICLDkuupVQgGWsAYV.png
+Finolt,65,Tsunami,,White,Fins,184_2RE4qE8cqlQfbwBegG2c.png
+Fledergaus,50,Zap Cannon,15,Yellow,Single pair of wings,185_9qjNk5RyY4tNvGFcOSej.png
+Floyant,80,Sandstorm,,White,Head and arms,186_J4qrB2OIfTxvgWOoR3Zq.png
+Fraudkill,74,Last Resort,25,Gray,Bipedal with tail,187_uT6Wi7nCoUrDUFKfiN5J.png
+Fraugury,82,Leaf Storm,17,Green,Bipedal without tail,188_W0lrRCmHaGhJIe7uZYaT.png
+Galavena,100,Mirror Coat,,White,Head and base,189_ln7heL1Rd5OXdBfmeEnA.png
+Galorindle,50,Signal Beam,,Green,Head only,190_t8NWJG4FvFr02cARKOgk.png
+Garapaima,85,Head Smash,,Gray,Fins,191_hukAE0LDhpK1m59UumDl.png
+Gastrel,55,Sky Attack,,Purple,Single pair of wings,192_DUGxgB0ILKJjeWOkb6Ni.png
+Gasvirlich,55,Ring of Fire,,Red,Head and arms,193_sWFKjrcA9tSM8UxDknx7.png
+Gillydim,10,Miasma Terrain,,White,Bipedal without tail,194_RgmviWEuM05T5VIUCgLF.png
+Giltalis,30,Quiver Dance,10,Black,Serpentine,195_H2mnNvC85QbNyQUBq4xV.png
+Glasdius,50,Stone Edge,,Black,Insectoid,196_QGgE63UCHU7U3TUsw18H.png
+Gowatu,40,Ear Splitter,,Green,Single pair of wings,197_hpgXboYjT1KXFmcPDw32.png
+Gravendou,48,Horn Drill,,Brown,Quadrupedal,198_7GlNefsmhO00EAMzhvHj.png
+Grotuille,82,Water Spout,18,Blue,Bipedal with tail,199_sj0HCabhooEWpB8Wy0eM.png
+Gryphault,95,Fissure,30,Brown,Bipedal with tail,200_AATwbktHSpZdx2uZwKG3.png
+Guile Athlauria,100,Blindside,,Brown,Bipedal with tail,201_M3Uz0TOA8KRDlsNESxHl.png
+Guilgile,62,Water Spout,,Blue,Quadrupedal,202_XRK6H5lSXeHLXhp1uii1.png
+Guillorent,100,Water Spout,32,Blue,Bipedal with tail,203_R4AnxCa47o1VQR1AoYHJ.png
+Gumbwaal,55,Wring Out,,Green,Head and legs,204_2MChsMmhgQNBbm4jBE1c.png
+Gurthwurm,140,Earth Power,41,Gray,Serpentine,205_vaSswBjOiJH2PjC3rbDy.png
+Halberax-R,70,Mow Down,,Red,Quadrupedal,206_xbnPAdNoO96hS50hKnmg.png
+Handerwaal,90,Wring Out,37,Green,Bipedal with tail,207_AUd9RhuB7iM58YXT04pJ.png
+Heladalca,95,Focus Punch,38,Blue,Bipedal with tail,208_tthTsGuS41HgZ4SQXDIC.png
+Hollimin,40,Covet,,White,Bipedal with tail,209_eHCmTsollmO3MgRVwQqo.png
+Honor Athlauria,100,Stored Power,,Brown,Bipedal with tail,210_hjE4liegVVP7yE4WXijX.png
+Humbuzz,30,Zap Cannon,,Yellow,Single pair of wings,211_ZZlqICgupgJSw89RehY4.png
+Hyperboa,90,Blindside,30,Black,Serpentine,212_Vr4Ohode27kp1VNolymr.png
+Icauriole,60,Brave Bird,24,Black,Single pair of wings,213_6J4gjoGEOgKJMy6q787j.png
+Iggydrake,120,Break the Bank,,White,Bipedal with tail,214_bkrTS21VJmo7lLQ6hwsd.png
+Ignelix,70,Eruption,,Red,Serpentine,215_gVQCqsmuOdOugrTvH3rH.png
+Imhatan,95,Future Sight,,Brown,Quadrupedal,216_Ei2PsqTtOhXVpQjXy8VD.png
+Invicunya,65,Blizzard,,Gray,Quadrupedal,217_duOhy2xFut6SP5KOtAEM.png
+Jackravage,65,High Jump Kick,,Brown,Bipedal with tail,218_e2DZBrzxjegxvjUP013s.png
+Josuche,65,Quiver Dance,,Blue,Bipedal with tail,219_f1O31CQIWbliF4NGDn0R.png
+Kelfee,51,Drag Under,,Green,Fins,220_ZcwQF68p1K2P5yHPSoba.png
+Khersin,95,Mow Down,,Brown,Quadrupedal,221_XEgYkejiu1DjDsFdZDBN.png
+Kindelf,43,Flamethrower,,Purple,Bipedal without tail,222_eeZzxYs80Ay1KYToaVUK.png
+Klaitning,50,Zap Cannon,25,Yellow,Single pair of wings,223_bpqHtAKJxlWZmeEAUOL1.png
+Kolveta,70,Sheer Cold,,Blue,Bipedal without tail,224_QKrvvioxfylrLl2s3wLW.png
+Kraitra,80,Tsunami,34,Yellow,Serpentine,225_2EnJuxSNC7GgK9KvugOB.png
+Kuduzela,65,Ear Splitter,,Yellow,Quadrupedal,226_wQApH1fw3QdIBsH8UiIn.png
+Kwee,45,Endeavor,,Green,Head and legs,227_kYkIBe1Kna8AlvnLjYvH.png
+Kyolnir,95,Thunder Hammer,35,Red,Quadrupedal,228_o8gQJKYXL4vxmvEoXf3O.png
+Lamanda,10,Dragon Rage,,Green,Quadrupedal,229_1kmvP4weNowGJAAeOFeg.png
+Lamlie,45,Blindside,,White,Quadrupedal,230_cSqWiE9QpjUlkpDsZVNE.png
+Larvill,50,Nature Power,,Yellow,Bipedal with tail,231_82xjI4fkSWwtDmJN41U6.png
+Latikrai,45,Tsunami,,Yellow,Serpentine,232_yQnGYg8pMueKGRSzjfw3.png
+Lavigre,61,Eruption,15,Gray,Bipedal with tail,233_viR6aV68j7TQBCCmEaz3.png
+Lazuleon,65,Last Resort,,White,Quadrupedal,234_OcFBJJtIGwz17slqWff8.png
+Lectarek,68,Electric Terrain,,Black,Bipedal without tail,235_4y8RS8mtg8GopYNF3fcJ.png
+Lilytad,62,Leaf Storm,,Green,Quadrupedal,236_f1yQktQT7LVAJBkbXnWZ.png
+Lizeroon,55,Power Whip,,Green,Quadrupedal,237_GliKZEPeDdwY69fuKS1F.png
+Lleeper,50,Muddy Water,,Green,Single pair of wings,238_LKYCfdb53VZ3108863vR.png
+Lobovo,60,Blindside,20,Pink,Quadrupedal,239_obi71NIZAhtVswgY7Ikv.png
+Loftitan-R,80,Pulverize,,Blue,Quadrupedal,240_qnnN6v5SXjYLADkGWnq1.png
+Luvaris,80,Blindside,35,Red,Bipedal with tail,241_DRMIS9wAi7SXYrH8Ihvq.png
+Lygosi,50,Retribution,22,Gray,Bipedal with tail,242_kY9r1rtNQaIjiClfF13e.png
+Lyrissimo,81,Hyper Voice,,Black,Single pair of wings,243_54h5YtyrXhCWCYtAC9A5.png
+Maaphix,65,Sandstorm,,Brown,Quadrupedal,244_NjY8yh6GMPz8SilVBuel.png
+Magnificat,61,Magic Room,,Black,Bipedal with tail,245_FdO9Ghe4x9EPezcY56aT.png
+Makappa,65,Overheat,,White,Bipedal with tail,246_F7WbkG5cpg1jbFA4U782.png
+Makima,40,Grudge,,White,Serpentine,247_NeJ6lvU058JAWBLLxhKD.png
+Makitaku,70,Grudge,,White,Head and arms,248_LSgHJLys68h0lP1bNFep.png
+Malraja,80,Swallow,36,Gray,Fins,249_dRqasXbPZZO6Uk2FoJAk.png
+Mambar,30,Poison Jab,,Black,Serpentine,250_qf488u22jauh1RQP5WQM.png
+Mandeglare,70,Night Daze,,Green,Multiple bodies,251_DRpK9nDFEgOaXIr4Snyz.png
+Mandicore,75,Guillotine,,Red,Insectoid,252_pWBvMOAerJolVlayXBwT.png
+Mandragoon,95,Power Whip,36,Green,Single pair of wings,253_5ajLRz6C6cXbnxdKRCf9.png
+Marvelisk,71,Dragon Dive,,Green,Bipedal with tail,254_UMJXKUox4S63SMwzvMzI.png
+Marvelotus,107,Leaf Storm,34,Green,Quadrupedal,255_wDvrJX3K1VNQM3FmKQf4.png
+Mefflora,50,Petal Dance,,Green,Quadrupedal,256_vJdvmlsrCMfsC9tFmPR9.png
+Mega Ramfere,90,Final Gambit,,Red,Quadrupedal,257_1I8T5qYjUSEKAHVzDgJd.png
+Melanyan,55,Blindside,,Yellow,Quadrupedal,258_SlboVsTWno8NoEnQXi6d.png
+Mephodil,70,Petal Dance,20,Green,Bipedal with tail,259_JZpTBhnDUASL8rEvtJmJ.png
+Mercureon,60,Last Resort,,Gray,Quadrupedal,260_6SBd0lCqRo9j52lZjhx0.png
+Mesmire,125,Swallow,35,Purple,Quadrupedal,261_ZwlJ8wd9JUBlpSvqCFHW.png
+Minijina,60,Grudge,,Black,Bipedal without tail,262_vEkGDgusUxT47FI9ddY4.png
+Mjolmi,75,Thunder Hammer,,Red,Quadrupedal,263_njt0aWf48vxgOACXwndl.png
+Moscarmina,80,Dark Pulse,,Black,Bipedal without tail,264_194jhljBpEnoefE3WtBX.png
+Muddlebee,30,Mud Shot,,Brown,Insectoid,265_tNusPcXuLkI03W2hfmcU.png
+Mulgrowst,120,Leaf Storm,,Brown,Quadrupedal,266_SNS5qyHkdDQVQhkeWKXp.png
+Murgaz,42,Backstab,,Red,Insectoid,267_upNwLTjKZC9rZ5rE44bM.png
+Mycolant,31,Haunted Terrain,,White,Bipedal without tail,268_NWW00Wq9OjbitzXyzXnn.png
+Nanalix,105,Avalanche,,Yellow,Quadrupedal,269_Hsq4zA0WAZFlf37o8WS1.png
+Navarrel,80,Mow Down,37,Blue,Fins,270_6VyCPKygUKLzXfVylUbs.png
+Nehuleius,65,Healing Wish,,Green,Serpentine,271_ZgnOaavHp2aw18ydvgwI.png
+Nekhetura,97,Flare Blitz,32,Red,Single pair of wings,272_jKIWX1uvtVilZYF8XX0v.png
+Neuramole,70,Foam Geyser,15,Blue,Bipedal with tail,273_qLPdAcMJLhorKuyzjWAb.png
+Nimphay,30,Teeter Dance,,Blue,Multiple pairs of wings,274_Egxb6GIHi65JB5aWVZaB.png
+Nocteon,65,Last Resort,,Black,Quadrupedal,275_tKHFO7JIRe0Uj9TCXBXD.png
+Noperajina,100,Destiny Bond,40,Black,Bipedal with tail,276_AWRIJ5iNUKVmrrz2kTDl.png
+Nostramole,90,Foam Geyser,35,Blue,Quadrupedal,277_zwHo9pQ2LLwcKv1bPlnJ.png
+Nulohm,80,Thunder Crash,36,Gray,Quadrupedal,278_fmCWvAqOVbjpymBdvi5P.png
+Nuwill,60,Thunder Crash,,Gray,Quadrupedal,279_OskcC14vtqAcQ8hXMX6i.png
+Obsedge,40,Stone Edge,25,Black,Bipedal without tail,280_0aAwzMtK3KjGy7NGQEof.png
+Oceluna,75,Blindside,29,Yellow,Quadrupedal,281_YqjIfaRnEzwEz4Bn4M5H.png
+Onzarudo,78,Backstab,,Black,Bipedal with tail,282_EAy809UUYPuxOMGrjOvI.png
+Osgrave,80,Wave Crash,34,Blue,Quadrupedal,283_Mue2eD81ESQtUICLhdET.png
+Ostento,115,Play Rough,38,Yellow,Bipedal without tail,284_lPcdJqAGRVcb8heP35kI.png
+Pandive,62,Wave Crash,17,Blue,Single pair of wings,285_QOo8dPGzherbig6Umcvt.png
+Panumbra,95,Blindside,49,Black,Quadrupedal,286_LieZLNoIjDianXKxAO7i.png
+Pelascope,50,Metal Burst,,Blue,Fins,287_8bd1OR2MMMSiQqRubGUk.png
+Petrocka,60,Boulder Crash,,Gray,Bipedal with tail,288_N3RqBd4zmNUMm252Dx9K.png
+Pindillo,32,Play Rough,,Pink,Quadrupedal,289_f9qbA5vrqrkOUFMzYoNG.png
+Pinnipaw,70,Blizzard,,White,Fins,290_sqsRpTTff0hMKfYYxP8P.png
+Pompillar,30,Fairy Wind,,Black,Insectoid,291_mt5ZTTdpvjOCWnDPdCZf.png
+Ponderan,100,Metal Burst,,Brown,Head and base,292_eKOjofO7izszAdVADQng.png
+Pummelite,130,Sandstorm,33,White,Head and arms,293_7dRlKuqfU8Llt8APGtfO.png
+Putrelisk,80,Acid Rain,,Purple,Bipedal with tail,294_WWhjjJpZGOAbCBDw5KA1.png
+Pyrobin,53,Ring of Fire,14,Purple,Bipedal without tail,295_omzaYHnvTo1wNZLoMTui.png
+Quarendou,98,Horn Drill,38,Gray,Quadrupedal,296_yLfBqfMIsu2p2hzxXswa.png
+Quilittle,40,Beak Smash,,White,Single pair of wings,297_M0Qrofscsc3sy0mmz5Jb.png
+Quimpy,25,Mach Punch,,Brown,Bipedal with tail,298_HZKGPETedE7U3pyttUge.png
+Raidnarr,95,Outrage,28,Brown,Quadrupedal,299_BWm2nra7POBI3xyQtfoZ.png
+Rakateis,70,Sky Attack,,White,Single pair of wings,300_t3TjQZR7K4FhhYLjzsYP.png
+Ramfere,90,Final Gambit,,Red,Quadrupedal,301_MfzORuADQrFgN4kW8Sjh.png
+Rancilisk,110,Acid Rain,40,Purple,Bipedal with tail,302_WC5n8KRPH76ZMQZYYRJQ.png
+Rangifire,73,Flare Blitz,,Red,Quadrupedal,303_byaTWqiQQJ8DJUCRfGEG.png
+Rapscalion,72,Brave Bird,,Brown,Single pair of wings,304_tnD2tzcTMPDe3jS3ZyWm.png
+Razelodon,80,Mow Down,,Brown,Quadrupedal,305_91GYLNW7jsc8VlAZM8N9.png
+Recyqual,145,Water Spout,,Blue,Fins,306_sKhMGlxsehRv4O4gE5fB.png
+Revenice,55,Sheer Cold,30,White,Bipedal without tail,307_Cmd7H3AtrqpeAytrP0du.png
+Rhinovire,105,Glacier Crush,34,Blue,Quadrupedal,308_v0Y8Dg40ffNlUN3IxdxM.png
+Roastinger,59,Raging Fury,17,Red,Insectoid,309_wcS6RluhR4PyB8rDIsHt.png
+Robonbo,30,Flamethrower,,Red,Single pair of wings,310_7h9yesZJP7q9eQnsPlSh.png
+Robutane,60,Flamethrower,28,Red,Single pair of wings,311_Gd77Y6pqxaEDxtqzgkBN.png
+Rocklantis,98,Dynamic Punch,38,Green,Insectoid,312_60pmm7HwnShgJ3PUQMTl.png
+Rodelana,55,Wood Hammer,15,Green,Bipedal with tail,313_13RN7hyWo3RhzlK47MCE.png
+Roldenki,65,Wild Charge,,Black,Quadrupedal,314_bFou4QzUIBsrysLVpmFJ.png
+Runnino,75,Blizzard,,Blue,Quadrupedal,315_CcdRbkDU3matlH6YBnIz.png
+Sailby,51,Tsunami,,Blue,Quadrupedal,316_YqoppoamkqmMpTdT7u6k.png
+Sarcodire,105,Final Gambit,,Brown,Quadrupedal,317_Y8Jmv1kpUprs1GPhoN9y.png
+Scaresteiff,110,Poltergeist,36,Brown,Bipedal without tail,318_wpNR142vHQ7U6BBR28g7.png
+Seismogryph,135,Fissure,50,Brown,Bipedal with tail,319_dBQDftjOiIJspLkmYmOF.png
+Septicorn,60,Horn Drill,,Gray,Bipedal with tail,320_DxaYkkcVQGchUDrqHESU.png
+Seramanea,120,Heart Storm,,Blue,Tentacles or more than four legs,321_OYGus55rVi1Lfglg1K3T.png
+Serpecidus,80,Beak Smash,25,White,Single pair of wings,322_ZLsnrysPPQE3imoDzHT5.png
+Seviron,83,Dragon Pulse,,Black,Serpentine,323_JLt1qGvUR8f0RUrpAzkV.png
+Sheleras,60,Frenzy Strike,,Green,Quadrupedal,324_1q1Uuwb8TblztKDo7ous.png
+Shockatiel,70,Thunderbolt,,Gray,Single pair of wings,325_uFmm5pAns3KLCeIJL6LB.png
+Shrymph,30,Aqua Tail,,Blue,Insectoid,326_w5dSFqa2Dilsya4sYK6Y.png
+Siamacho,75,Thrash,,Green,Fins,327_NkK96W97p4Cutet5sWT9.png
+Skelozen,35,Sheer Cold,,White,Bipedal without tail,328_XrHM6J2yiIQEIqleA9If.png
+Skrimpish,50,Aqua Tail,26,Blue,Insectoid,329_8vRi1P8Pd12MawQSGis8.png
+Skyrate,95,Sky Attack,30,Purple,Single pair of wings,330_4NTNRZPvlplNDqUp9H9W.png
+Smulch,80,Gunk Shot,,Brown,Head and arms,331_zi5eoEjnEHBlDHNLdt5O.png
+Solberon,73,Ring of Fire,36,Purple,Bipedal without tail,332_4G04vXuuuCNlO0bLDVww.png
+Sparcoil,65,Backstab,,Red,Bipedal with tail,333_sZ2EnJSbhC9GXgt62bYm.png
+Spilotalis,90,Petal Dance,31,Green,Bipedal with tail,334_EInqJmF4CUC7rnlclvjV.png
+Spinosail,71,Tsunami,17,Blue,Quadrupedal,335_iy0dtS4TEV3f8nYkP847.png
+Spraylet,49,Wave Crash,,Gray,Single pair of wings,336_3FnXM2atIMIwbqbpzM9v.png
+Stickibat,35,Thunderbolt,,Brown,Quadrupedal,337_1YBu1Es1p6s3WE9HqLj6.png
+Strixalba,50,Perish Song,,White,Single pair of wings,338_SOCLlExA9EGE82HCx5cS.png
+Strixlan,80,Perish Song,25,White,Single pair of wings,339_C6dRVD926tYcP2OntrFa.png
+Superboa,65,Double-Edge,,Blue,Serpentine,340_UxwmvZ03YYf4K2fovi6Y.png
+Swimmole,50,Foam Geyser,,Blue,Bipedal without tail,341_ihGy8kNM7waikACczGen.png
+Sylfibelle,50,Fairy Dance,15,Blue,Multiple pairs of wings,342_bQFsRlqUpW6olMHwJkhL.png
+Takhampos,70,Tsunami,40,White,Fins,343_GBknfBsXXFrpiZVBfH9O.png
+Tedigrae,70,Water Hammer,,Blue,Bipedal without tail,344_dOt4Pbvr5k3zqOepteQh.png
+Telwick,45,Raging Fury,,Yellow,Insectoid,345_rRHlt7IU1bQEia3WcYwk.png
+Termelc,60,Thunder,30,Yellow,Quadrupedal,346_0Ruw1R9kEFCIKzYQZuS4.png
+Thredbear,70,Poltergeist,,Brown,Bipedal without tail,347_SAb60W4QJNMo3bj1Q0NX.png
+Thunderma,105,Crunch,,Purple,Quadrupedal,348_xfJGXg5ITeevyWiWeIcr.png
+Tianglis,55,Blindside,,Black,Quadrupedal,349_GIBcmJgsAX0G5ggvf8y3.png
+Tinimer,45,Flail,,Gray,Insectoid,350_psZBm1zctHJM5xd8rSNA.png
+Tonitrek,118,Electric Terrain,37,Black,Bipedal without tail,351_KIU3byDS5zVrEMml5jS5.png
+Transmite,30,Zap Cannon,,Yellow,Single pair of wings,352_21HZOggpJnIvRyqmR0jo.png
+Trecibel,65,Ear Splitter,,Gray,Single pair of wings,353_2cKX4SkoMmjifVdgJhgU.png
+Trickibat,45,Thunderbolt,25,Brown,Quadrupedal,354_XeovEaYvDKXH9HRMGPA8.png
+Tunnelid,85,Earth Power,,Gray,Serpentine,355_l6jXSHNEq5GHj9ASnuWh.png
+Tunnowl,75,Fissure,,Brown,Bipedal with tail,356_ubc3iqok2sBCbj1nvPCL.png
+Turatal,70,Ear Splitter,25,Green,Single pair of wings,357_SyvxIDyP70V8jamJpd1y.png
+Turistar,30,Liquidation,,Blue,Quadrupedal,358_6rib5AguVTc0T3eyIsXh.png
+Turumaken,60,Iron Defense,32,Blue,Quadrupedal,359_LabKhrTWFHsc4HrStqWC.png
+Ukuunki,70,Fire Blast,,Brown,Bipedal with tail,360_8DIdJJrqJXEwwmfwnYgk.png
+Vaering,75,Outrage,,Brown,Quadrupedal,361_CWWUl587M6cAB6xIVxwo.png
+Valazman,80,Wild Maul,,Black,Bipedal with tail,362_OUtbnQtnkVuZ34tBC9n7.png
+Vanitarch,50,Mirror Coat,20,Black,Multiple pairs of wings,363_VA2NdYLd1Kvbn5mKW60p.png
+Vaquerado,70,Earth Power,,Brown,Insectoid,364_18X5S1R0DI1urmyD8kVq.png
+Varchani,45,Retribution,,Gray,Bipedal with tail,365_Yg2i4vioLkJjq5QbmoEa.png
+Varkoloff,70,Retribution,38,Gray,Bipedal with tail,366_e2aGL54FhNlKaJrxc7Wb.png
+Veloswift,70,Frenzy Strike,34,Brown,Single pair of wings,367_mnh58IY6tZzJrwrbXCMA.png
+Ventorm,80,Eruption,35,White,Serpentine,368_S0B7TtmCaETYpmH8aYRg.png
+Virlich,35,Burn Up,,Red,Head and arms,369_NApQX99POAokXvUXqKUk.png
+Vitragoi,50,Revel Dance,,Green,Bipedal with tail,370_4ikcWQNzxdmjGnNdf91v.png
+Vodllanoy,70,Muddy Water,32,Green,Quadrupedal,371_vUbpvyTJDV8zBD6OcjKm.png
+Volstarite,65,Boulder Crash,,Red,Fins,372_91JuEAXCF13Qi8z2q3Hu.png
+Voltigre,75,Eruption,35,Gray,Bipedal with tail,373_hiMdFUp11F42HmSTwZRX.png
+Voltrasonic,60,Zap Cannon,33,Yellow,Single pair of wings,374_bndCJnrHDLMfUM6QOeeg.png
+Vulkhet,67,Inferno,,Red,Single pair of wings,375_4RQnzKipcLZU1lQXJF5s.png
+Whoodsy,45,Synchronoise,,Green,Single pair of wings,376_CicC3Ovm2w253JXGCFQ8.png
+Wiggout,30,Guillotine,,Black,Insectoid,377_sqgxxwYJJSodfWoI3fF8.png
+Wyrmal,40,Lava Plume,,Red,Serpentine,378_q7SAZ24Uy0vr9GpiVFRk.png
+Zantekhis,95,Comeuppance,,Brown,Quadrupedal,379_iKfL9YjskOpwL05lYUjU.png
+Zanthera,83,Giga Impact,,White,Bipedal with tail,380_Cw6GpWftlbBISkzPuVwo.png
+Zantyroi,70,Dynamic Punch,28,Green,Bipedal with tail,381_Y0OWT8d8pIZgQYQBHx8v.png
+Zephyreon,95,Last Resort,,Green,Quadrupedal,382_egIkJIezpTfeOjXV41ET.png

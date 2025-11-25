@@ -1141,9 +1141,11 @@ class App {
 	}
 	
 	public function display_games($category_id, $game_id, $user=false) {
+		$onload_js = "";
+
 		echo '<div class="paragraph">';
 		$display_games_params = [];
-		$display_games_q = "SELECT g.*, c.short_name AS currency_short_name FROM games g LEFT JOIN currencies c ON g.invite_currency=c.currency_id WHERE g.featured=1 AND (g.game_status='published' OR g.game_status='running')";
+		$display_games_q = "SELECT g.*, c.short_name AS currency_short_name FROM games g LEFT JOIN currencies c ON g.invite_currency=c.currency_id WHERE (g.game_status='published' OR g.game_status='running')";
 		if (!empty($category_id)) {
 			$display_games_q .= " AND g.category_id=:category_id";
 			$display_games_params['category_id'] = $category_id;
@@ -1151,6 +1153,8 @@ class App {
 		if (!empty($game_id)) {
 			$display_games_q .= " AND g.game_id=:game_id";
 			$display_games_params['game_id'] = $game_id;
+		} else {
+			$display_games_q .= " AND g.featured=1";
 		}
 		$display_games_q .= " ORDER BY g.featured_score DESC, g.game_id DESC;";
 		$display_games = $this->run_query($display_games_q, $display_games_params)->fetchAll();
@@ -1158,6 +1162,23 @@ class App {
 		if (count($display_games) > 0) {
 			$counter = 0;
 			
+			$any_monster_duels = false;
+			foreach ($display_games as $db_game) {
+				if ($db_game['module'] == "MonsterDuels") {
+					$any_monster_duels = true;
+					$blockchain = new Blockchain($this, $db_game['blockchain_id']);
+					$md_game = new Game($blockchain, $db_game['game_id']);
+					$being_determined_event = $md_game->module->being_determined_event($md_game);
+					if ($being_determined_event) {
+						$onload_js .= "thisMonsterDuelsManager.initialize();";
+					}
+				}
+			}
+			
+			if ($any_monster_duels) {
+				echo '<script type="text/javascript" src="/js/monsterduels.js"></script>'."\n";
+			}
+
 			foreach ($display_games as $db_game) {
 				$blockchain = new Blockchain($this, $db_game['blockchain_id']);
 				$featured_game = new Game($blockchain, $db_game['game_id']);
@@ -1177,6 +1198,8 @@ class App {
 		echo "</div>\n";
 		
 		echo $this->render_view('event_details_modal');
+		
+		return $onload_js;
 	}
 	
 	public function refresh_utxo_user_ids($only_unspent_utxos) {
@@ -3194,17 +3217,17 @@ class App {
 		}
 		return $html;
 	}
-	
+
 	public function import_group_from_file($import_group_description, &$error_message) {
 		$import_group_fname = AppSettings::srcPath()."/lib/groups/".$import_group_description.".csv";
-		
+
 		if (is_file($import_group_fname)) {
 			$import_group_fh = fopen($import_group_fname, 'r');
 			$import_group_content = fread($import_group_fh, filesize($import_group_fname));
 			fclose($import_group_fh);
-			
+
 			$general_entity_type = $this->check_set_entity_type("general entity");
-			
+
 			$csv_lines = explode("\n", $import_group_content);
 			$header_vars = explode(",", trim(strtolower($csv_lines[0])));
 			$name_col = array_search("entity_name", $header_vars);
@@ -3213,7 +3236,13 @@ class App {
 			$short_name_col = array_search("currency_short_name", $header_vars);
 			$short_name_plural_col = array_search("currency_short_name_plural", $header_vars);
 			$image_hash_col = array_search("image_hash", $header_vars);
+			$image_name_col = array_search("image_name", $header_vars);
 			$forex_pair_shows_nonstandard_col = array_search("forex_pair_shows_nonstandard", $header_vars);
+			$hp_col = array_search("hp", $header_vars);
+			$best_attack_name_col = array_search("best_attack_name", $header_vars);
+			$level_col = array_search("level", $header_vars);
+			$color_col = array_search("color", $header_vars);
+			$body_shape_col = array_search("body_shape", $header_vars);
 			$group_params = explode(",", $csv_lines[1]);
 
 			$this->run_insert_query("option_groups", [
@@ -3222,7 +3251,7 @@ class App {
 				'description' => $import_group_description
 			]);
 			$group_id = $this->last_insert_id();
-			
+
 			$group_images_dir = dirname(__DIR__).'/lib/groups/images/'.$import_group_description;
 			$image_info_by_hash = [];
 			if (is_dir($group_images_dir)) {
@@ -3258,6 +3287,76 @@ class App {
 						}
 					}
 
+					if ($hp_col !== false) {
+						$cell_val = trim($csv_params[$hp_col]);
+						if ((string) $cell_val != "") {
+							$hp = (int) $cell_val;
+							if ((string)$member_entity['hp'] != (string)$hp) {
+								$this->run_query("UPDATE entities SET hp=:hp WHERE entity_id=:entity_id;", [
+									'hp' => $hp,
+									'entity_id' => $member_entity['entity_id'],
+								]);
+								$member_entity['hp'] = $hp;
+							}
+						}
+					}
+
+					if ($best_attack_name_col !== false) {
+						$cell_val = trim($csv_params[$best_attack_name_col]);
+						if ((string) $cell_val != "") {
+							$best_attack_name = $cell_val;
+							if ((string)$member_entity['best_attack_name'] != (string)$best_attack_name) {
+								$this->run_query("UPDATE entities SET best_attack_name=:best_attack_name WHERE entity_id=:entity_id;", [
+									'best_attack_name' => $best_attack_name,
+									'entity_id' => $member_entity['entity_id'],
+								]);
+								$member_entity['best_attack_name'] = $best_attack_name;
+							}
+						}
+					}
+
+					if ($color_col !== false) {
+						$cell_val = trim($csv_params[$color_col]);
+						if ((string) $cell_val != "") {
+							$color = $cell_val;
+							if ((string)$member_entity['color'] != (string)$color) {
+								$this->run_query("UPDATE entities SET color=:color WHERE entity_id=:entity_id;", [
+									'color' => $color,
+									'entity_id' => $member_entity['entity_id'],
+								]);
+								$member_entity['color'] = $color;
+							}
+						}
+					}
+
+					if ($body_shape_col !== false) {
+						$cell_val = trim($csv_params[$body_shape_col]);
+						if ((string) $cell_val != "") {
+							$body_shape = $cell_val;
+							if ((string)$member_entity['body_shape'] != (string)$body_shape) {
+								$this->run_query("UPDATE entities SET body_shape=:body_shape WHERE entity_id=:entity_id;", [
+									'body_shape' => $body_shape,
+									'entity_id' => $member_entity['entity_id'],
+								]);
+								$member_entity['body_shape'] = $body_shape;
+							}
+						}
+					}
+
+					if ($level_col !== false) {
+						$cell_val = trim($csv_params[$level_col]);
+						if ((string) $cell_val != "") {
+							$level = (int) $cell_val;
+							if ((string)$member_entity['level'] != (string)$level) {
+								$this->run_query("UPDATE entities SET level=:level WHERE entity_id=:entity_id;", [
+									'level' => $level,
+									'entity_id' => $member_entity['entity_id'],
+								]);
+								$member_entity['level'] = $level;
+							}
+						}
+					}
+
 					if (empty($member_entity['default_image_id'])) {
 						$default_image_id = null;
 						if ($image_col !== false && !empty($csv_params[$image_col])) $default_image_id = $csv_params[$image_col];
@@ -3277,6 +3376,37 @@ class App {
 							}
 						}
 						
+						if ($default_image_id) {
+							$this->run_query("UPDATE entities SET default_image_id=:default_image_id WHERE entity_id=:entity_id;", [
+								'default_image_id' => $default_image_id,
+								'entity_id' => $member_entity['entity_id']
+							]);
+							$this->run_query("UPDATE options SET image_id=:image_id WHERE entity_id=:entity_id;", [
+								'image_id' => $default_image_id,
+								'entity_id' => $member_entity['entity_id']
+							]);
+						}
+					}
+
+					if (empty($member_entity['default_image_id'])) {
+						$default_image_id = null;
+						if ($image_name_col !== false && !empty($csv_params[$image_name_col])) {
+							$initial_image_name_parts = explode(".", $csv_params[$image_name_col]);
+							$image_extension = $initial_image_name_parts[count($initial_image_name_parts)-1];
+
+							if (in_array($image_extension, ['jpg', 'png'])) {
+								$initial_image_fname = dirname(__DIR__)."/lib/groups/images/".$import_group_description."/".$csv_params[$image_name_col];
+								$initial_image_fh = fopen($initial_image_fname, 'r');
+								$initial_image_raw = fread($initial_image_fh, filesize($initial_image_fname));
+
+								$access_key = $this->random_string(20);
+								$new_im_error_message = null;
+								$db_image = $this->add_image($initial_image_raw, $image_extension, $access_key, $new_im_error_message);
+								if ($db_image) $default_image_id = $db_image['image_id'];
+								else $error_message .= $new_im_error_message."\n";
+							}
+						}
+
 						if ($default_image_id) {
 							$this->run_query("UPDATE entities SET default_image_id=:default_image_id WHERE entity_id=:entity_id;", [
 								'default_image_id' => $default_image_id,

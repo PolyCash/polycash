@@ -312,7 +312,7 @@ class GameDefinition {
 		}
 		
 		// Events
-		$matched_events = min(count($from_def->events), count($to_def->events));
+		$matched_events = min(isset($from_def->events) ? count($from_def->events) : 0, isset($to_def->events) ? count($to_def->events) : 0);
 		$event_differences = [
 			'new_events' => 0,
 			'removed_events' => 0,
@@ -321,7 +321,7 @@ class GameDefinition {
 			'other_changed_events' => 0
 		];
 		
-		if (count($from_def->events) != count($to_def->events)) {
+		if ((isset($from_def->events) ? count($from_def->events) : 0) != (isset($to_def->events) ? count($to_def->events) : 0)) {
 			if (count($to_def->events) - count($from_def->events) > 0) {
 				$event_differences['new_events'] = count($to_def->events) - count($from_def->events);
 			}

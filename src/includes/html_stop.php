@@ -58,7 +58,7 @@ for (var game_i=0; game_i<games.length; game_i++) {
 <script async type="text/javascript" src="/js/bootstrap.min.js"></script>
 <script async type="text/javascript" src="/js/adminlte.min.js"></script>
 <?php
-$optional_js_files = ['jquery.nouislider.js', 'tiny.editor.js', 'chart.js', 'maskedinput.js', 'qrcam.js', 'jquery.datatables.js'];
+$optional_js_files = ['jquery.nouislider.js', 'tiny.editor.js', 'chart.js', 'maskedinput.js', 'qrcam.js', 'jquery.datatables.js', 'monsterduels.js'];
 
 foreach ($optional_js_files as $optional_js_file) {
 	if (AppSettings::checkJsDependency($optional_js_file)) {

@@ -18,7 +18,7 @@ $play_now_url = '/wallet/'.$game->db_game['url_identifier'].'/';
 $just_ended_events = $game->events_by_outcome_block($last_block_id);
 $being_determined_events = $game->events_being_determined_in_block($last_block_id+1);
 
-$include_being_determined_events = count($being_determined_events) > 0;
+$include_being_determined_events = count($being_determined_events) > 0 && $game->db_game['module'] != "MonsterDuels";
 $include_betting_events = true;
 ?>
 <script type="text/javascript">
@@ -86,7 +86,7 @@ games.push(new Game(thisPageManager, <?php
 			echo '<div style="margin-bottom: 15px;" id="game'.$counter.'_chart_html">'.$html."</div>\n";
 			echo '<div id="game'.$counter.'_chart_js"><script type="text/javascript">'.$js.'</script></div>'."\n";
 		}
-		
+
 		if ($include_betting_events) {
 			echo '<div style="margin-bottom: 15px;">'.$game->event_filter_html($game_instance_id, null).'</div>';
 		}
@@ -100,7 +100,7 @@ games.push(new Game(thisPageManager, <?php
 	<br/>
 
 	<?php
-	if (count($being_determined_events) > 0) {
+	if ($include_being_determined_events) {
 		?>
 		<div class="row" id="game<?php echo $counter; ?>_events_being_determined">
 			<?php
@@ -117,6 +117,35 @@ games.push(new Game(thisPageManager, <?php
 			?>
 		</div>
 		<br/>
+		<?php
+	}
+	
+	if ($game->db_game['module'] == "MonsterDuels") {
+		?>
+		<script type="text/javascript">
+		var thisMonsterDuelsManager;
+		</script>
+		<?php
+		$being_determined_event = $game->module->being_determined_event($game);
+		if ($being_determined_event) $base_options_formatted = $game->module->fetch_base_monsters($being_determined_event);
+		else $base_options_formatted = null;
+		?>
+		<div style="background: #fff; border: 1px solid #aaa; padding: 0px 8px 8px 8px;">
+			<div id="monsterduels_being_determined">
+				<?php if ($being_determined_event) { ?>
+				<div id="monsterduels_<?php echo $game->db_game['game_id'].'_'.$being_determined_event->db_event['event_index']; ?>"></div>
+				<?php } ?>
+			</div>
+
+			<?php if ($being_determined_event) { ?>
+				<script type="text/javascript">
+				games[<?php echo $counter; ?>].monster_duels_being_determined_event_index = <?php echo $being_determined_event->db_event['event_index']; ?>;
+				thisMonsterDuelsManager = new MonsterDuelsManager(<?php echo $game->db_game['game_id']; ?>, '<?php echo $game->db_game['url_identifier']; ?>', <?php echo $being_determined_event->db_event['event_index']; ?>, <?php echo json_encode($base_options_formatted, JSON_PRETTY_PRINT); ?>, null, <?php echo $game->blockchain->app->coins_per_vote($game->db_game); ?>, <?php echo json_encode(array_intersect_key($being_determined_event->db_event, [
+					'event_id' => true, 'event_index' => true, 'effective_destroy_score' => true, 'sum_unconfirmed_effective_destroy_score' => true, 'sum_votes' => true, 'payout_rate' => true,
+				])); ?>);
+				</script>
+			<?php } ?>
+		</div>
 		<?php
 	}
 	?>

@@ -225,6 +225,7 @@ var Game = function(pageManager, game_id, last_block_id, last_transaction_id, ma
 	this.last_game_loop_index_applied = -1;
 	this.refresh_in_progress = false;
 	this.last_refresh_time = 0;
+	this.monster_duels_being_determined_event_index = null;
 	
 	this.block_id_to_round_index = function(block_id) {
 		return ((block_id-1) % this.game_round_length);
@@ -347,7 +348,8 @@ var Game = function(pageManager, game_id, last_block_id, last_transaction_id, ma
 					net_risk_view: document.getElementById('net_risk_view') ? document.getElementById('net_risk_view').value : "",
 					include_betting_events: this.include_betting_events,
 					include_being_determined_events: this.include_being_determined_events,
-					synchronizer_token: this.pageManager.synchronizer_token
+					synchronizer_token: this.pageManager.synchronizer_token,
+					md_bde_index: this.monster_duels_being_determined_event_index
 				},
 				context: this,
 				success: function(check_activity_response) {
@@ -357,6 +359,10 @@ var Game = function(pageManager, game_id, last_block_id, last_transaction_id, ma
 						$('#claim_from_faucet_view').html(check_activity_response.claim_from_faucet_view);
 					} else {
 						$('#claim_from_faucet_view').html("");
+					}
+
+					if (check_activity_response.monsterduels_js) {
+						eval(check_activity_response.monsterduels_js);
 					}
 
 					if (check_activity_response.game_loop_index > this.last_game_loop_index_applied) {

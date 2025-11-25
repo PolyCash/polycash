@@ -12,7 +12,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 			$default_game_def_txt = '{
 				"option_group": null,
 				"protocol_version": 0,
-				"name": "",
+				"name": "my game",
 				"url_identifier": "",
 				"module": null,
 				"category_id": null,
@@ -44,7 +44,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 				"default_payout_block_delay": 0,
 				"view_mode": "default",
 				"order_events_by": "event_index",
-				"boost_votes_by_missing_out_votes": 1,
+				"boost_votes_by_missing_out_votes": 1
 			}';
 			
 			$setup_error = false;
@@ -72,7 +72,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 					$module = new $module_class($app);
 					$initial_game_def = json_decode($module->game_def_base_txt);
 				}
-				
+
 				$initial_game_def->name = urldecode($_REQUEST['name']);
 				$initial_game_def->url_identifier = $app->game_url_identifier($initial_game_def->name);
 				$initial_game_def->module = $game_module;
