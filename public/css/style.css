@@ -413,6 +413,7 @@ a.selected {
 	padding: 5px;
 	margin: 5px 0px;
 	border-radius: 5px;
+	clear: both;
 }
 .event_timer_slim {
 	margin-left: 5px;
