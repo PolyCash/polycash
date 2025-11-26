@@ -2783,6 +2783,9 @@ class Game {
 	}
 	
 	public function render_transaction(&$transaction, $selected_address_id, $selected_game_io_id, $coins_per_vote, $last_block_id) {
+		[$num_game_ios_in, $rendered_ios_in] = $this->render_ios_in_transaction("in", $transaction, $selected_game_io_id, $selected_address_id, $coins_per_vote, $last_block_id);
+		[$num_game_ios_out, $rendered_ios_out] = $this->render_ios_in_transaction("out", $transaction, $selected_game_io_id, $selected_address_id, $coins_per_vote, $last_block_id);
+
 		$html = '<div class="row bordered_row"><div class="col-md-12">';
 		
 		if ((string) $transaction['block_id'] !== "") {
@@ -2790,7 +2793,7 @@ class Game {
 			else $html .= "#".(int)$transaction['position_in_block'];
 			$html .= " in block <a href=\"/explorer/games/".$this->db_game['url_identifier']."/blocks/".$transaction['block_id']."\">#".$transaction['block_id']."</a>, ";
 		}
-		$html .= (int)$transaction['num_inputs']." inputs, ".(int)$transaction['num_outputs']." outputs";
+		$html .= number_format($num_game_ios_in)." inputs, ".number_format($num_game_ios_out)." outputs";
 		
 		$transaction_fee = $transaction['fee_amount'];
 		if ($transaction['transaction_desc'] != "coinbase") {
@@ -2803,9 +2806,9 @@ class Game {
 		$html .= '. <br/><a href="/explorer/games/'.$this->db_game['url_identifier'].'/transactions/'.$transaction['tx_hash'].'" class="display_address" style="max-width: 100%; overflow: hidden;">TX:&nbsp;'.$transaction['tx_hash'].'</a>';
 		
 		$html .= '</div><div class="col-md-6">';
-		$html .= $this->render_ios_in_transaction("in", $transaction, $selected_game_io_id, $selected_address_id, $coins_per_vote, $last_block_id);
+		$html .= $rendered_ios_in;
 		$html .= '</div><div class="col-md-6">';
-		$html .= $this->render_ios_in_transaction("out", $transaction, $selected_game_io_id, $selected_address_id, $coins_per_vote, $last_block_id);
+		$html .= $rendered_ios_out;
 		$html .= '</div></div>'."\n";
 		
 		return $html;
@@ -2826,6 +2829,8 @@ class Game {
 			'transaction_id' => $db_transaction['transaction_id']
 		]);
 		
+		$num_ios = $ios->rowCount();
+
 		while ($io = $ios->fetch()) {
 			$html .= '<p>';
 			$html .= '<a class="display_address" style="';
@@ -2961,7 +2966,7 @@ class Game {
 		
 		$html .= "</div>\n";
 		
-		return $html;
+		return [$num_ios, $html];
 	}
 	
 	public function get_payout_info(&$io, &$coins_per_vote, &$last_block_id) {
