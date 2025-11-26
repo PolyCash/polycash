@@ -2823,7 +2823,7 @@ class Game {
 		$ios_q .= " JOIN transaction_game_ios gio ON io.io_id=gio.io_id LEFT JOIN transaction_game_ios p ON gio.parent_io_id=p.game_io_id JOIN addresses a ON io.address_id=a.address_id LEFT JOIN options op ON gio.option_id=op.option_id LEFT JOIN events ev ON op.event_id=ev.event_id LEFT JOIN options w ON ev.winning_option_id=w.option_id LEFT JOIN entities en ON ev.track_entity_id=en.entity_id WHERE gio.game_id=:game_id AND io.";
 		if ($in_out == "out") $ios_q .= "create_transaction_id";
 		else $ios_q .= "spend_transaction_id";
-		$ios_q .= "=:transaction_id ORDER BY io.out_index ASC;";
+		$ios_q .= "=:transaction_id ORDER BY ".($in_out == "out" ? "io.out_index ASC" : "io.in_index ASC").";";
 		$ios = $this->blockchain->app->run_query($ios_q, [
 			'game_id' => $this->db_game['game_id'],
 			'transaction_id' => $db_transaction['transaction_id']
