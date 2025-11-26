@@ -3384,6 +3384,9 @@ class Game {
 				}
 			}
 
+			// Payout block must never be before last betting block
+			$payout_block = max($final_block, $payout_block);
+
 			if ($start_block !== null && $final_block !== null && $payout_block !== null && ($start_block != $gde['event_starting_block'] || $final_block != $gde['event_final_block'] || $payout_block != $gde['event_payout_block'])) {
 				$update_event_q = "UPDATE game_defined_events SET event_starting_block=:event_starting_block, event_final_block=:event_final_block, event_payout_block=:event_payout_block";
 				$update_event_params = [

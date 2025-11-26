@@ -16,6 +16,7 @@ class Forex32Manager {
 			if (empty($this->game->db_game['definitive_game_peer_id'])) {
 				$this->change_game_def($force, $print_debug);
 			}
+			else if ($print_debug) $this->app->print_debug("Game has a definitive peer; skipping change game def.");
 		}
 		else if ($print_debug) $this->app->print_debug("Game manager regular actions process is already running.");
 	}

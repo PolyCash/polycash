@@ -176,7 +176,7 @@ class CurrencyOracle {
 				
 				if ($print_debug) $app->print_debug("Set prices for ".$update_count." currencies");
 			}
-			else if ($print_debug) $app->print_debug("FCS API did not include a valid response.");
+			else if ($print_debug) $app->print_debug("FCS API did not include a valid response, returned: ".json_encode($quotes ?? null));
 			
 			if (!empty($quotes['info']['credit_count']) && $print_debug) $app->print_debug( "Used ".$quotes['info']['credit_count']." api credits.");
 		}

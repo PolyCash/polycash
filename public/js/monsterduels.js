@@ -215,7 +215,7 @@ function MonsterDuelsManager(game_id, game_slug, event_index, base_monsters, sec
 		var weighted_win_points_by_remaining_pos = [];
 		this.remaining_monster_option_indexes.forEach(function(remaining_monster_option_index, remaining_pos) {
 			var base_pos = this.option_index_to_base_pos(remaining_monster_option_index);
-			var win_points = Math.pow(10+this.base_monsters[base_pos].remaining_hp, 2.6);
+			var win_points = Math.pow(10+this.base_monsters[base_pos].remaining_hp, 2.72);
 			weighted_win_points += win_points;
 			weighted_win_points_by_remaining_pos[remaining_pos] = win_points;
 		}.bind(this));

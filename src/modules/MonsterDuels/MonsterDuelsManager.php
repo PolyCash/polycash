@@ -366,7 +366,7 @@ class MonsterDuelsManager {
 		$time_to_prev_block_cache = [];
 		$time_to_next_block_cache = [];
 		foreach ($update_events_by_index as $eventIndex => $gde) {
-			$changed = $this->game->set_gde_blocks_by_time($gde, $time_to_prev_block_cache, $time_to_next_block_cache, $final_block_select_after_time=true, $payout_block_select_after_time=true);
+			$changed = $this->game->set_gde_blocks_by_time($gde, $time_to_prev_block_cache, $time_to_next_block_cache, $final_block_select_after_time=true, $payout_block_select_after_time=false);
 			if ($changed) $num_changed++;
 			if ($print_debug && ($set_count+1)%100 == 0) echo "Changed ".$num_changed."/".$set_count."\n";
 			$set_count++;
