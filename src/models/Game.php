@@ -216,7 +216,7 @@ class Game {
 			if ($user_game['voting_strategy'] == "api") $api_url = $user_game['api_url'];
 			else if ($user_game['strategy_class']) {
 				require_once(dirname(__DIR__)."/strategies/classes/".$user_game['strategy_class'].".php");
-				$strategy_class = new ($user_game['strategy_class'])($this->blockchain->app);
+				$strategy_class = new $user_game['strategy_class']($this->blockchain->app);
 
 				if (isset($user_game['featured_strategy_params'])) {
 					$strategy_param_values = json_decode($user_game['featured_strategy_params'], true);
