@@ -28,11 +28,8 @@ function MonsterDuelsManager(game_id, game_slug, event_index, base_monsters, sec
 
 	this.base_monsters.forEach(function(base_monster, monster_pos) {
 		var option_votes = base_monster.votes + base_monster.unconfirmed_votes;
-		if (option_votes == 0) base_monster.payout_odds = null;
-		else {
-			var option_effective_coins = option_votes*this.coins_per_vote + base_monster.effective_destroy_score + base_monster.unconfirmed_effective_destroy_score;
-			base_monster.payout_odds = this.event_info.payout_rate*this.event_effective_coins/option_effective_coins;
-		}
+		var option_effective_coins = option_votes*this.coins_per_vote + base_monster.effective_destroy_score + base_monster.unconfirmed_effective_destroy_score;
+		base_monster.payout_odds = this.event_info.payout_rate*this.event_effective_coins/option_effective_coins;
 	}.bind(this));
 
 	this.initialize = function() {
