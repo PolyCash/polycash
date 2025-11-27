@@ -6,8 +6,9 @@ if ($game && $thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 	$game->load_current_events();
 	$user_game = $thisuser->ensure_user_in_game($game, false);
 	$user_strategy = $game->fetch_user_strategy($user_game);
+	$strategy_param_values = json_decode($user_strategy['featured_strategy_params'], true);
 	?>
-	<form method="get" onsubmit="thisPageManager.save_featured_strategy(); return false;">
+	<form method="get" onsubmit="thisPageManager.save_featured_strategy(); return false;" id="featured_strategy_form">
 		<div class="modal-body">
 			<p>
 				You can select an automated betting strategy from the options below. 
@@ -41,10 +42,12 @@ if ($game && $thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 						$pct_increase = 100*(($final_balance/$starting_balance)-1);
 					}
 				}
+
+				$strategy_params = json_decode($featured_strategy['strategy_params'], true);
 				?>
 				<div class="row">
 					<div class="col-sm-6">
-						<input type="radio" name="featured_strategy_id" value="<?php echo $featured_strategy['featured_strategy_id']; ?>" id="featured_strategy_<?php echo $featured_strategy['featured_strategy_id']; ?>"<?php if ($user_strategy['featured_strategy_id'] == $featured_strategy['featured_strategy_id']) echo ' checked="checked"'; ?> /><label for="featured_strategy_<?php echo $featured_strategy['featured_strategy_id']; ?>">&nbsp; <?php echo $featured_strategy['strategy_name']; ?></label>
+						<input type="radio" name="featured_strategy_id" value="<?php echo $featured_strategy['featured_strategy_id']; ?>" id="featured_strategy_<?php echo $featured_strategy['featured_strategy_id']; ?>"<?php if ($user_strategy['featured_strategy_id'] == $featured_strategy['featured_strategy_id']) echo ' checked="checked"'; ?> onClick="thisPageManager.featured_strategy_clicked(<?php echo $featured_strategy['featured_strategy_id']; ?>);" /><label for="featured_strategy_<?php echo $featured_strategy['featured_strategy_id']; ?>">&nbsp; <?php echo $featured_strategy['strategy_name']; ?></label>
 					</div>
 					<div class="col-sm-6">
 						<?php
@@ -56,12 +59,30 @@ if ($game && $thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 						?>
 					</div>
 				</div>
+				<div id="strategy_<?php echo $featured_strategy['featured_strategy_id']; ?>_params" style="display: none;">
+					<?php
+					if ($strategy_params !== null) {
+						foreach ($strategy_params as $param_name => $strategy_param) {
+							?>
+							<div class="row">
+								<div class="col-sm-4">
+									<?php echo $strategy_param['label']; ?>:
+								</div>
+								<div class="col-sm-8">
+									<input name="strategy_<?php echo $featured_strategy['featured_strategy_id']; ?>_<?php echo $param_name; ?>" class="form-control input-sm" type="text" value="<?php echo isset($strategy_param_values[$featured_strategy['featured_strategy_id']][$param_name]) ? $strategy_param_values[$featured_strategy['featured_strategy_id']][$param_name] : $strategy_param['default_value']; ?>" />
+								</div>
+							</div>
+							<?php
+						}
+					}
+					?>
+				</div>
 				<?php
 			}
 			?>
 			<div class="row">
 				<div class="col-sm-8">
-					<input type="radio" name="featured_strategy_id" value="0" id="featured_strategy_0"<?php if ($user_strategy['voting_strategy'] == 'manual') echo ' checked="checked"'; ?> /><label for="featured_strategy_0">&nbsp; No automated strategy</label>
+					<input type="radio" name="featured_strategy_id" value="0" id="featured_strategy_0"<?php if ($user_strategy['voting_strategy'] == 'manual') echo ' checked="checked"'; ?> onClick="thisPageManager.featured_strategy_clicked(null);" /><label for="featured_strategy_0">&nbsp; No automated strategy</label>
 				</div>
 				<div class="col-sm-4"></div>
 			</div>
@@ -74,7 +95,12 @@ if ($game && $thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 			<button class="btn btn-sm btn-success" id="featured_strategy_save_btn"><i class="fas fa-check-circle"></i> &nbsp; Save</button>
 		</div>
 	</form>
-	<?php
+	<?php if ($user_strategy['featured_strategy_id']) { ?>
+		<script type="text/javascript">
+			thisPageManager.featured_strategy_clicked(<?php echo $user_strategy['featured_strategy_id']; ?>);
+		</script>
+		<?php
+	}
 }
 else echo "Invalid game ID supplied.";
 ?>

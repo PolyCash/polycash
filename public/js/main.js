@@ -558,7 +558,19 @@ var PageManager = function() {
 	this.buyin_invoices_hash = "";
 	this.sellout_modal_open = false;
 	this.sellout_invoices_hash = "";
-	
+
+	this.selected_featured_strategy_id = null;
+
+	this.featured_strategy_clicked = function(featured_strategy_id) {
+		if (this.selected_featured_strategy_id) {
+			$('#strategy_'+this.selected_featured_strategy_id+'_params').hide();
+		}
+		if (featured_strategy_id !== null) {
+			$('#strategy_'+featured_strategy_id+'_params').slideDown('fast');
+		}
+		this.selected_featured_strategy_id = featured_strategy_id;
+	};
+
 	this.format_coins = function(amount) {
 		if (amount >= Math.pow(10, 9)) {
 			return parseFloat((amount/Math.pow(10, 9)).toPrecision(5))+"B";
@@ -2947,18 +2959,22 @@ var PageManager = function() {
 	}
 	this.save_featured_strategy = function() {
 		var featured_strategy_id = $("input[name='featured_strategy_id']:checked").val();
-		
+
 		if (featured_strategy_id) {
 			$('#featured_strategy_save_btn').html("Saving...");
-			
+			var saveParams = {
+				game_id: games[0].game_id,
+				synchronizer_token: this.synchronizer_token
+			};
+			$.each(document.getElementById('featured_strategy_form').elements, function(elPos, inputEl){
+				if ($(inputEl).attr('name')) saveParams[$(inputEl).attr('name')] = inputEl.value;
+			});
+			saveParams.featured_strategy_id = featured_strategy_id;
+
 			$.ajax({
 				url: "/ajax/set_featured_strategy.php",
 				dataType: "json",
-				data: {
-					game_id: games[0].game_id,
-					featured_strategy_id: featured_strategy_id,
-					synchronizer_token: this.synchronizer_token
-				},
+				data: saveParams,
 				success: function(setStrategyResponse) {
 					$('#featured_strategy_save_btn').html("Save");
 					$("input[name=voting_strategy][value='featured']").prop("checked",true);

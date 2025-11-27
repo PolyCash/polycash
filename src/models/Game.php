@@ -214,6 +214,25 @@ class Game {
 		
 		if ($user_game['voting_strategy'] == "api" || $user_game['voting_strategy'] == "featured") {
 			if ($user_game['voting_strategy'] == "api") $api_url = $user_game['api_url'];
+			else if ($user_game['strategy_class']) {
+				require_once(dirname(__DIR__)."/strategies/classes/".$user_game['strategy_class'].".php");
+				$strategy_class = new ($user_game['strategy_class'])($this->blockchain->app);
+
+				if (isset($user_game['featured_strategy_params'])) {
+					$strategy_param_values = json_decode($user_game['featured_strategy_params'], true);
+
+					if (isset($strategy_param_values[$user_game['featured_strategy_id']])) {
+						$run_params = $strategy_param_values[$user_game['featured_strategy_id']];
+						$run_params['api_key'] = $user_game['api_access_code'];
+						if ($force_now) $run_params['force'] = 1;
+
+						$api_response = new stdClass();
+						[$api_response->status_code, $api_response->message] = $strategy_class->run($run_params);
+
+						return;
+					}
+				}
+			}
 			else {
 				$api_url = $user_game['base_url'];
 				if (substr($api_url, 0, 4) != "http") $api_url = AppSettings::getParam('base_url').$api_url;
@@ -221,20 +240,28 @@ class Game {
 				else $api_url .= "?";
 				$api_url .= "api_key=".$user_game['api_access_code'];
 				if ($force_now) $api_url .= "&force=1";
+
+				$strategy_param_values = json_decode($user_game['featured_strategy_params'], 2);
+
+				if (isset($strategy_param_values[$user_game['featured_strategy_id']])) {
+					foreach ($strategy_param_values[$user_game['featured_strategy_id']] as $param_name => $param_value) {
+						$api_url .= "&".$param_name."=".urlencode($param_value);
+					}
+				}
 			}
-			
+
 			$api_response = $this->blockchain->app->safe_fetch_url($api_url);
-			
+
 			if ($user_game['hit_url'] == 1) {
 				$api_response = json_decode($api_response);
 			}
 			else {
 				$api_obj = json_decode($api_response);
-				
+
 				if ($api_obj->recommendations && count($api_obj->recommendations) > 0 && in_array($api_obj->recommendation_unit, array('coin','percent'))) {
 					$input_error = false;
 					$input_io_ids = [];
-					
+
 					if ($api_obj->input_utxo_ids) {
 						if (count($api_obj->input_utxo_ids) > 0) {
 							for ($i=0; $i<count($api_obj->input_utxo_ids); $i++) {
@@ -276,29 +303,29 @@ class Game {
 					}
 					if (count($input_io_ids) > 0 && $input_error == false) {}
 					else $input_io_ids = false;
-					
+
 					$amount_error = false;
 					$amount_sum = 0;
 					$option_id_error = false;
-					
+
 					$log_text .= $strategy_user->db_user['username']." has ".$spendable_balance/pow(10,$this->db_game['decimal_places'])." coins available, hitting url: ".$user_game['api_url']."<br/>\n";
-					
+
 					foreach ($api_obj->recommendations as $recommendation) {
 						if ($recommendation->recommended_amount && $recommendation->recommended_amount > 0 && $this->blockchain->app->friendly_intval($recommendation->recommended_amount) == $recommendation->recommended_amount) $amount_sum += $recommendation->recommended_amount;
 						else $amount_error = true;
-						
+
 						$db_option = $this->blockchain->app->run_query("SELECT * FROM options op JOIN events ev ON op.event_id=ev.event_id WHERE op.option_index=:option_index AND ev.game_id=:game_id AND ev.event_starting_block <= :ref_block_id AND ev.event_final_block >= :ref_block_id;", [
 							'option_index' => $recommendation->option_index,
 							'game_id' => $this->db_game['game_id'],
 							'ref_block_id' => $mining_block_id
 						])->fetch();
-						
+
 						if ($db_option) {
 							$recommendation->option_id = $db_option['option_id'];
 						}
 						else $option_id_error = true;
 					}
-					
+
 					if ($api_obj->recommendation_unit == "coin") {
 						if ($amount_sum <= $spendable_balance) {}
 						else $amount_error = true;
@@ -307,7 +334,7 @@ class Game {
 						if ($amount_sum <= 100) {}
 						else $amount_error = true;
 					}
-					
+
 					if ($amount_error) {
 						$log_text .= "Error, an invalid amount was specified.";
 					}
@@ -321,18 +348,18 @@ class Game {
 						foreach ($api_obj->recommendations as $recommendation) {
 							if ($api_obj->recommendation_unit == "coin") $vote_amount = $recommendation->recommended_amount;
 							else $vote_amount = floor($spendable_balance*$recommendation->recommended_amount/100);
-							
+
 							$vote_option_id = $recommendation->option_id;
-							
+
 							$vote_option_ids[count($vote_option_ids)] = $vote_option_id;
 							$vote_amounts[count($vote_amounts)] = $vote_amount;
-							
+
 							$log_text .= "Vote ".$vote_amount." for ".$vote_option_id."<br/>\n";
 						}
-						
+
 						$error_message = false;
 						$transaction_id = $this->create_transaction($vote_option_ids, $vote_amounts, $user_game, false, 'transaction', $input_io_ids, false, false, $api_obj->recommended_fee, $error_message);
-						
+
 						if ($transaction_id) $log_text .= "Added transaction $transaction_id<br/>\n";
 						else $log_text .= $error_message."<br/>\n";
 					}
@@ -344,27 +371,27 @@ class Game {
 		}
 		else {
 			$log_text .= "user game #".$user_game['user_game_id'].", strategy: ".$user_game['voting_strategy']." ";
-			
+
 			$log_text .= "Dividing by plan for ".$strategy_user->db_user['username']."<br/>\n";
-			
+
 			$db_allocations = $this->blockchain->app->run_query("SELECT * FROM strategy_round_allocations WHERE strategy_id=:strategy_id AND round_id=:round_id AND applied=0;", [
 				'strategy_id' => $user_game['strategy_id'],
 				'round_id' => $current_round_id
 			])->fetchAll();
-			
+
 			if (count($db_allocations) > 0) {
 				$allocations = [];
 				$point_sum = 0;
-				
+
 				foreach ($db_allocations as $allocation) {
 					$allocations[count($allocations)] = $allocation;
 					$point_sum += intval($allocation['points']);
 				}
-				
+
 				$option_ids = [];
 				$amounts = [];
 				$amount_sum = 0;
-				
+
 				for ($i=0; $i<count($allocations); $i++) {
 					$option_ids[$i] = $allocations[$i]['option_id'];
 					$amount = floor(($spendable_balance-$user_game['transaction_fee'])*$allocations[$i]['points']/$point_sum);
@@ -372,13 +399,13 @@ class Game {
 					$amount_sum += $amount;
 				}
 				if ($amount_sum < ($spendable_balance-$user_game['transaction_fee'])) $amounts[count($amounts)-1] += ($spendable_balance-$user_game['transaction_fee']) - $amount_sum;
-				
+
 				$error_message = false;
 				$transaction_id = $this->create_transaction($option_ids, $amounts, $user_game, false, 'transaction', false, false, false, $user_game['transaction_fee'], $error_message);
-				
+
 				if ($transaction_id) {
 					$log_text .= "Added transaction $transaction_id<br/>\n";
-					
+
 					for ($i=0; $i<count($allocations); $i++) {
 						$this->blockchain->app->run_query("UPDATE strategy_round_allocations SET applied=1 WHERE allocation_id=:allocation_id;", ['allocation_id'=>$allocations[$i]['allocation_id']]);
 					}
@@ -387,7 +414,7 @@ class Game {
 			}
 		}
 	}
-	
+
 	public function reset_blocks_from_block($block_height) {
 		$this->blockchain->app->log_message("Resetting ".$this->db_game['name']." from block ".$block_height);
 
