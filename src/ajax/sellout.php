@@ -152,15 +152,13 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 						$sellout_amount = ceil($sellout_amount*pow(10, $game->db_game['decimal_places']));
 						list($early_resolved_ios, $early_resolved_amount) = $app->early_resolved_ios_in_account($user_game['account_id'], $game->db_game['game_id'], true);
 						$account_balance = $thisuser->mature_balance($game, $user_game, $early_resolved_ios);
-						$fee_amount = max(0, (float) $_REQUEST['fee_amount']);
+						$fee_amount = (float) $_REQUEST['fee_amount'];
 						
 						if ($account_balance >= $sellout_amount) {
 							$invoice = $app->new_currency_invoice($game_sale_account, $sellout_currency['currency_id'], false, $thisuser, $user_game, "sellout");
 							
 							if ($invoice) {
 								$invoice_address = $app->fetch_address_by_id($invoice['address_id']);
-								
-								$tx_fee = (int) ($fee_amount*pow(10, $game->blockchain->db_blockchain['decimal_places']));
 								
 								$user_game_account = $app->fetch_account_by_id($user_game['account_id']);
 								
@@ -199,13 +197,13 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 									array_push($io_ids, $io['io_id']);
 									array_push($ios, $io);
 									
-									if ($game_amount_sum >= $sellout_amount && $io_amount_sum > ($tx_fee*2)) $keep_looping = false;
+									if ($game_amount_sum >= $sellout_amount && $io_amount_sum > ($user_game['transaction_fee']*2)) $keep_looping = false;
 									
 									$loop_pos++;
 								}
 								
-								if ($io_amount_sum > $tx_fee*2) {
-									$io_nonfee_amount = $io_amount_sum-$tx_fee;
+								if ($io_amount_sum > $user_game['transaction_fee']*2) {
+									$io_nonfee_amount = $io_amount_sum-$user_game['transaction_fee'];
 									$game_coins_per_coin = $game_amount_sum/$io_nonfee_amount;
 									
 									$send_chain_amount = ceil($sellout_amount/$game_coins_per_coin);
@@ -227,7 +225,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 									}
 									
 									if (!$remainder_error) {
-										$transaction_id = $game->blockchain->create_transaction("transaction", $amounts, false, $io_ids, $address_ids, $tx_fee, $message);
+										$transaction_id = $game->blockchain->create_transaction("transaction", $amounts, false, $io_ids, $address_ids, $user_game['transaction_fee'], $message);
 										
 										if ($transaction_id) {
 											$message = ucfirst($game->db_game['coin_name_plural'])." have been debited from this account. ".ucwords($sellout_currency['short_name_plural'])." will be sent to the address you specified soon.";
