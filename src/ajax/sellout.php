@@ -49,7 +49,14 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 					if (in_array($_REQUEST['action'], ["check_amount","confirm"])) {
 						$sellout_amount = floatval(str_replace(",", "", urldecode($_REQUEST['sellout_amount'])));
 					}
-					
+
+					$display_currency = $app->fetch_currency_by_id($user_game['display_currency_id']);
+
+					if ($user_game['display_currency_id'] != $sellout_currency['currency_id']) {
+						$reference_currency = $app->get_reference_currency();
+						$exchange_rate_info_display_to_sellout = $app->exchange_rate_between_currencies($display_currency['currency_id'], $sellout_currency['currency_id'], time(), $reference_currency['currency_id']);
+					}
+
 					if ($_REQUEST['action'] == "initiate") {
 						$content_html .= $app->render_view('sellout_currency_selector', [
 							'game' => $game,
@@ -59,7 +66,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 						]);
 						
 						$exchange_rate_disp = $app->format_bignum($exchange_rate);
-						$content_html .= "<p>The exchange rate is ".$exchange_rate_disp." ".($exchange_rate_disp=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural'])." per ".$sellout_currency['short_name'].".<p>";
+						$content_html .= "<p>The exchange rate is ".$exchange_rate_disp." ".($exchange_rate_disp=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural'])." per ".$sellout_currency['short_name'].($user_game['display_currency_id'] != $sellout_currency['currency_id'] ? ' ('.$app->format_bignum($exchange_rate_info_display_to_sellout['exchange_rate']).' '.$display_currency['abbreviation'].'/'.$sellout_currency['abbreviation'].')' : '').".<p>";
 						
 						$sec_since_exchange_rate_update = time() - $exchange_rate_as_of;
 						
@@ -69,7 +76,8 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 						
 						$sale_amount_disp = $app->format_bignum($blockchain_sale_amount/pow(10, $sellout_blockchain->db_blockchain['decimal_places']));
 						$game_forsale_disp = $app->format_bignum($game_forsale_amount);
-						$content_html .= "<p>There are ".$sale_amount_disp." ".($sale_amount_disp=="1" ? $sellout_blockchain->db_blockchain['coin_name'] : $sellout_blockchain->db_blockchain['coin_name_plural'])." available (".$game_forsale_disp." ".($game_forsale_disp=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']).").<p>\n";
+						
+						$content_html .= "<p>There are ".$sale_amount_disp." ".($sale_amount_disp=="1" ? $sellout_blockchain->db_blockchain['coin_name'] : $sellout_blockchain->db_blockchain['coin_name_plural'])." available (approx ".$game_forsale_disp." ".($game_forsale_disp=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']).($user_game['display_currency_id'] != $sellout_currency['currency_id'] ? ' or '.$app->format_bignum($blockchain_sale_amount/pow(10, $sellout_blockchain->db_blockchain['decimal_places'])*$exchange_rate_info_display_to_sellout['exchange_rate']).' '.$display_currency['abbreviation'] : '').").<p>\n";
 						
 						if ($game->db_game['buyin_policy'] != 'for_sale' || $sellout_blockchain->db_blockchain['online'] == 1) {
 							$content_html .= '
@@ -88,7 +96,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 								<label for="sellout_fee">How much do you want to pay in fees to get this transaction confirmed?</label>
 								<div class="row">
 									<div class="col-sm-6">
-										<input type="text" class="form-control" id="sellout_fee" value="'.$app->format_bignum($user_game['transaction_fee']).'" style="text-align: right;" />
+										<input type="text" class="form-control" id="sellout_fee" value="'.$app->format_bignum($sellout_blockchain->db_blockchain['simple_tx_recommended_fee_float']).'" style="text-align: right;" />
 									</div>
 									<div class="col-sm-6 form-control-static">
 										'.$sellout_blockchain->db_blockchain['coin_name_plural'].'
@@ -107,7 +115,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 						list($early_resolved_ios, $early_resolved_amount) = $app->early_resolved_ios_in_account($user_game['account_id'], $game->db_game['game_id'], true);
 						$account_balance = $thisuser->mature_balance($game, $user_game, $early_resolved_ios);
 
-						$fee_amount = max(0, (float) $_REQUEST['fee_amount']);
+						$sellout_currency_tx_fee_float = (float) $_REQUEST['fee_amount'];
 						
 						if ($account_balance < $sellout_amount*pow(10, $game->db_game['decimal_places'])) {
 							$content_html .= '<p class="text-danger">You don\'t have that many spendable '.$game->db_game['coin_name_plural'].'.</p>';
@@ -116,7 +124,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 							$content_html .= '<p class="text-danger">Please change at least '.$game->db_game['min_sellout_amount'].' '.($game->db_game['min_sellout_amount']=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']).".</p>\n";
 						}
 						else {
-							$sellout_receive_amount = $sellout_amount/$exchange_rate - $fee_amount;
+							$sellout_receive_amount = $sellout_amount/$exchange_rate - $sellout_currency_tx_fee_float;
 							
 							if ($game->db_game['buyin_policy'] == "for_sale" && $sellout_amount > $game_forsale_amount) {
 								$content_html .= '<p class="text-danger">Don\'t sell that many '.$game->db_game['coin_name_plural'].'. There are only '.$app->format_bignum($blockchain_sale_amount/pow(10, $sellout_blockchain->db_blockchain['decimal_places'])).' '.$sellout_blockchain->db_blockchain['coin_name_plural']." available.</p>\n";
@@ -127,13 +135,13 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 								}
 								else {
 									$sellout_receive_disp = $app->format_bignum($sellout_receive_amount);
-									
+
 									$content_html .= '
 									<p>
-										'.$app->format_bignum($fee_amount).' '.$sellout_currency['short_name'].' tx fee
+										'.$app->format_bignum($sellout_currency_tx_fee_float).' '.$sellout_currency['short_name'].' tx fee'.($user_game['display_currency_id'] != $sellout_currency['currency_id'] ? ' ('.$app->format_bignum($exchange_rate_info_display_to_sellout['exchange_rate']*$sellout_currency_tx_fee_float)." ".$display_currency['abbreviation'].")" : '').'
 									</p>
 									<p>
-										'.$sellout_amount.' '.($sellout_amount=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']).' will get you approximately '.$sellout_receive_disp.' '.($sellout_receive_disp=="1" ? $sellout_currency['short_name'] : $sellout_currency['short_name_plural']).' after fees.
+										'.$sellout_amount.' '.($sellout_amount=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']).' will get you approximately '.$sellout_receive_disp.' '.($sellout_receive_disp=="1" ? $sellout_currency['short_name'] : $sellout_currency['short_name_plural']).' after fees'.($user_game['display_currency_id'] != $sellout_currency['currency_id'] ? ' ('.$app->format_bignum($exchange_rate_info_display_to_sellout['exchange_rate']*$sellout_receive_amount)." ".$display_currency['abbreviation'].")" : '').'.
 									</p>
 									<form method="post" onsubmit="thisPageManager.manage_sellout(\'confirm\'); return false;">
 										<div class="form-group">
@@ -152,8 +160,9 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 						$sellout_amount = ceil($sellout_amount*pow(10, $game->db_game['decimal_places']));
 						list($early_resolved_ios, $early_resolved_amount) = $app->early_resolved_ios_in_account($user_game['account_id'], $game->db_game['game_id'], true);
 						$account_balance = $thisuser->mature_balance($game, $user_game, $early_resolved_ios);
-						$fee_amount = (float) $_REQUEST['fee_amount'];
-						
+						$sellout_currency_tx_fee_float = (float) $_REQUEST['fee_amount'];
+						$game_blockchain_tx_fee_int = $user_game['transaction_fee']*pow(10, $game->blockchain->db_blockchain['decimal_places']);
+
 						if ($account_balance >= $sellout_amount) {
 							$invoice = $app->new_currency_invoice($game_sale_account, $sellout_currency['currency_id'], false, $thisuser, $user_game, "sellout");
 							
@@ -168,7 +177,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 								$app->run_query("UPDATE currency_invoices SET receive_address_id=:receive_address_id, buyin_amount=:buyin_amount, fee_amount=:fee_amount WHERE invoice_id=:invoice_id;", [
 									'receive_address_id' => $db_receive_address['address_id'],
 									'buyin_amount' => $sellout_amount/pow(10, $game->db_game['decimal_places']),
-									'fee_amount' => $fee_amount,
+									'fee_amount' => $sellout_currency_tx_fee_float,
 									'invoice_id' => $invoice['invoice_id']
 								]);
 								
@@ -197,13 +206,13 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 									array_push($io_ids, $io['io_id']);
 									array_push($ios, $io);
 									
-									if ($game_amount_sum >= $sellout_amount && $io_amount_sum > ($user_game['transaction_fee']*2)) $keep_looping = false;
+									if ($game_amount_sum >= $sellout_amount && $io_amount_sum > ($game_blockchain_tx_fee_int*2)) $keep_looping = false;
 									
 									$loop_pos++;
 								}
 								
-								if ($io_amount_sum > $user_game['transaction_fee']*2) {
-									$io_nonfee_amount = $io_amount_sum-$user_game['transaction_fee'];
+								if ($io_amount_sum > $game_blockchain_tx_fee_int*2) {
+									$io_nonfee_amount = $io_amount_sum-$game_blockchain_tx_fee_int;
 									$game_coins_per_coin = $game_amount_sum/$io_nonfee_amount;
 									
 									$send_chain_amount = ceil($sellout_amount/$game_coins_per_coin);
@@ -225,7 +234,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 									}
 									
 									if (!$remainder_error) {
-										$transaction_id = $game->blockchain->create_transaction("transaction", $amounts, false, $io_ids, $address_ids, $user_game['transaction_fee'], $message);
+										$transaction_id = $game->blockchain->create_transaction("transaction", $amounts, false, $io_ids, $address_ids, $game_blockchain_tx_fee_int, $message);
 										
 										if ($transaction_id) {
 											$message = ucfirst($game->db_game['coin_name_plural'])." have been debited from this account. ".ucwords($sellout_currency['short_name_plural'])." will be sent to the address you specified soon.";
