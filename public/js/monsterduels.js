@@ -29,7 +29,7 @@ function MonsterDuelsManager(game_id, game_slug, event_index, base_monsters, sec
 	this.base_monsters.forEach(function(base_monster, monster_pos) {
 		var option_votes = base_monster.votes + base_monster.unconfirmed_votes;
 		var option_effective_coins = option_votes*this.coins_per_vote + base_monster.effective_destroy_score + base_monster.unconfirmed_effective_destroy_score;
-		base_monster.payout_odds = this.event_info.payout_rate*this.event_effective_coins/option_effective_coins;
+		base_monster.payout_odds = option_effective_coins > 0 ? this.event_info.payout_rate*this.event_effective_coins/option_effective_coins : null;
 	}.bind(this));
 
 	this.initialize = function() {
@@ -280,6 +280,7 @@ function MonsterDuelsManager(game_id, game_slug, event_index, base_monsters, sec
 			if (attacking_monster.event_option_index == remaining_monster.event_option_index) rendered_content += ' border: 1px solid #77f;';
 			else if (defending_monster.event_option_index == remaining_monster.event_option_index) rendered_content += ' border: 1px solid #f77';
 			rendered_content += "'></div>";
+			rendered_content += remaining_monster.entity_name+"<br/>";
 			rendered_content += "<div id='remaining_monster_hp_"+remaining_monster.event_option_index+"'>HP: "+remaining_monster.remaining_hp+"/"+remaining_monster.hp+"</div>";
 			rendered_content += (remaining_monster.payout_odds == null ? "No bets" : "Pays: x"+remaining_monster.payout_odds.toFixed(3));
 			rendered_content += "</div>";
