@@ -11,5 +11,6 @@
     "coinbase_maturity": 100,
     "default_rpc_port": "8332",
     "online": 0,
-    "default_image_identifier": "ce271869e6f41179a5db12e4f978dae4bd98c9d88a5d4434511a35ff6bdf6413"
+    "default_image_identifier": "ce271869e6f41179a5db12e4f978dae4bd98c9d88a5d4434511a35ff6bdf6413",
+    "simple_tx_recommended_fee_float": 0.00001
 }

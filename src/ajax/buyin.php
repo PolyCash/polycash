@@ -37,7 +37,21 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 			$exchange_rate = $coins_in_existence/$escrow_value;
 		}
 		else $exchange_rate = 0;
-		
+
+		$display_currency = $app->fetch_currency_by_id($user_game['display_currency_id']);
+
+		if ($user_game['display_currency_id'] != $buyin_currency['currency_id']) {
+			$reference_currency = $app->get_reference_currency();
+			$exchange_rate_info_display_to_buyin = $app->exchange_rate_between_currencies($display_currency['currency_id'], $buyin_currency['currency_id'], time(), $reference_currency['currency_id']);
+
+			$game_pending_bets = $game->pending_bets(true);
+			$coins_in_existence = $game->coins_in_existence(false, true);
+
+			list($escrow_value, $exchange_rate_as_of) = $game->escrow_value_in_currency($display_currency['currency_id'], ($coins_in_existence+$game_pending_bets)/pow(10, $game->db_game['decimal_places']));
+
+			$exchange_rate_game_to_display = pow(10, $game->db_game['decimal_places'])*$escrow_value/($coins_in_existence+$game_pending_bets);
+		}
+
 		$output_obj = [];
 		$content_html = "";
 		
@@ -113,7 +127,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 					if ($buyin_amount_ok) {
 						$content_html .= '<p>';
 						if ($user_enters_game_amount) {
-							$content_html .= 'To get '.$receive_amount.' '.($receive_amount=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']).', please deposit '.$app->format_bignum($app->to_significant_digits($pay_amount, 8)).' '.($app->to_significant_digits($pay_amount, 8)=="1" ? $buyin_currency['short_name'] : $buyin_currency['short_name_plural']).'. ';
+							$content_html .= 'To get '.$receive_amount.' '.($receive_amount=="1" ? $game->db_game['coin_name'] : $game->db_game['coin_name_plural']).($display_currency['currency_id'] != $buyin_currency['currency_id'] ? ' ('.$app->format_bignum($receive_amount*$exchange_rate_game_to_display).' '.$display_currency['abbreviation'].')' : '').', please deposit '.$app->format_bignum($app->to_significant_digits($pay_amount, 8)).' '.($app->to_significant_digits($pay_amount, 8)=="1" ? $buyin_currency['short_name'] : $buyin_currency['short_name_plural']).'. ';
 						}
 						else {
 							$content_html .= 'For '.$buyin_amount.' '.($buyin_amount=="1" ? $buyin_currency['short_name'] : $buyin_currency['short_name_plural']).', you\'ll receive approximately '.$app->format_bignum($receive_amount).' '.($app->format_bignum($receive_amount)=="1" ? $game->db_game['coin_name_plural'] : $game->db_game['coin_name_plural']).'. ';
@@ -140,8 +154,8 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 					'buyin_currencies' => $buyin_currencies,
 				]);
 				
-				$content_html .= "<p>The exchange rate is ".$app->format_bignum($exchange_rate)." ".$game->db_game['coin_name_plural']." per ".$buyin_currency['short_name'].".</p>\n";
-				
+				$content_html .= "<p>The exchange rate is ".$app->format_bignum($exchange_rate)." ".$game->db_game['coin_name_plural']." per ".$buyin_currency['short_name'].($user_game['display_currency_id'] != $buyin_currency['currency_id'] ? ' ('.$app->format_bignum($exchange_rate_info_display_to_buyin['exchange_rate']).' '.$display_currency['abbreviation'].'/'.$buyin_currency['abbreviation'].')' : '').".</p>\n";
+
 				$sec_since_exchange_rate_update = time() - $exchange_rate_as_of;
 				
 				if ($sec_since_exchange_rate_update >= AppSettings::exchangeRateRecencySecForBuyins()) {
@@ -160,7 +174,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 					$content_html .= "This game has a game-wide buy-in cap of ".$app->format_bignum($game->db_game['game_buyin_cap'])." ".$game->blockchain->db_blockchain['coin_name_plural'].". ";
 				}
 				else if ($game->db_game['buyin_policy'] == "for_sale") {
-					$content_html .= "There are ".$game->display_coins($game_sale_amount)." for sale. ";
+					$content_html .= "There are ".$game->display_coins($game_sale_amount)." for sale".' (approx '.$app->format_bignum(($game_sale_amount/pow(10, $game->db_game['decimal_places']))/$exchange_rate).' '.$buyin_currency['abbreviation'].($display_currency['currency_id'] != $buyin_currency['currency_id'] ? ' or '.$app->format_bignum(($game_sale_amount/pow(10, $game->db_game['decimal_places']))*$exchange_rate_game_to_display)." ".$display_currency['abbreviation'] : '')."). ";
 				}
 				else $content_html .= "Invalid buy-in policy.";
 				

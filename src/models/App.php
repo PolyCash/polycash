@@ -1767,6 +1767,7 @@ class App {
 			['int', 'coinbase_maturity'],
 			['int', 'default_rpc_port'],
 			['string', 'default_image_identifier'],
+			['float', 'simple_tx_recommended_fee_float'],
 		];
 	}
 	
