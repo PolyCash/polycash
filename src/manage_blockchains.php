@@ -56,7 +56,8 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 					'abbreviation' => $abbreviation,
 					'seconds_per_block' => $seconds_per_block,
 					'decimal_places' => $decimal_places,
-					'initial_pow_reward' => $initial_pow_reward
+					'initial_pow_reward' => $initial_pow_reward,
+					'simple_tx_recommended_fee_float' => 0.0001,
 				], JSON_PRETTY_PRINT);
 				
 				$new_blockchain_message = "";
@@ -87,6 +88,7 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 							'online' => (int) $_REQUEST['online'],
 							'sync_mode' => $_REQUEST['sync_mode'],
 							'first_required_block' => $first_required_block,
+							'simple_tx_recommended_fee_float' => $_REQUEST['simple_tx_recommended_fee_float'],
 						];
 						if ((string)$first_required_block != (string)$existing_blockchain->db_blockchain['first_required_block']) {
 							if ((string) $first_required_block == "") $update_params['last_complete_block'] = null;
@@ -331,6 +333,13 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 																Sync from block
 															</label>
 															<input class="form-control input-sm" name="first_required_block" id="first_required_block_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>" placeholder="1" required />
+														</div>
+
+														<div class="form-group">
+															<label for="simple_tx_recommended_fee_float_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>">
+																Simple TX recommended fee
+															</label>
+															<input class="form-control input-sm" name="simple_tx_recommended_fee_float" id="simple_tx_recommended_fee_float_<?php echo $blockchain->db_blockchain['blockchain_id']; ?>" placeholder="" required value="<?php echo rtrim(rtrim($blockchain->db_blockchain['simple_tx_recommended_fee_float'], "0"), "."); ?>" />
 														</div>
 													</div>
 													<div class="modal-footer">
