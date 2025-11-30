@@ -237,8 +237,22 @@ class MonsterDuelsGameDefinition {
 	}
 
 	public function set_outcome(&$game, &$game_defined_event) {
-		$from_time = strtotime($game_defined_event['event_final_time']);
-		$to_time = strtotime($game_defined_event['event_payout_time']) + $game->module->minutes_per_event_cohort*60;
+		if (!$game_defined_event['event_payout_block']) {
+			return false;
+		}
+
+		$payout_block = $game->blockchain->fetch_block_by_id($game_defined_event['event_payout_block']);
+
+		if (!$payout_block || empty($payout_block['time_mined'])) {
+			return false;
+		}
+
+		if ($payout_block['time_mined'] < strtotime($game_defined_event['event_final_time'])) {
+			return false;
+		}
+
+		$from_time = $payout_block['time_mined'];
+		$to_time = strtotime($game_defined_event['event_final_time']) + $game->module->minutes_per_event_cohort*60;
 
 		$seeds_response_raw = file_get_contents("http://opensourcebets.com/api/seeds/default?from_time=".$from_time."&to_time=".$to_time);
 		if (!$seeds_response_raw) return "";
@@ -293,13 +307,7 @@ class MonsterDuelsGameDefinition {
 
 			if (count($this->remaining_monster_option_indexes) < 2) {
 				$outcome_index = $this->option_index_to_base_pos($this->remaining_monster_option_indexes[0]);
-				$db_event = $game->fetch_event_by_index($game_defined_event['event_index']);
-
-				if ($db_event) {
-					$event = new Event($game, $db_event, $db_event['event_id']);
-					$game->set_game_defined_outcome($game_defined_event['event_index'], $outcome_index);
-					//$event->set_outcome_index($outcome_index);
-				}
+				$game->set_game_defined_outcome($game_defined_event['event_index'], $outcome_index);
 				return true;
 			}
 

@@ -62,7 +62,11 @@ function MonsterDuelsManager(game_id, game_slug, event_index, base_monsters, sec
 						this.renderFrame();
 					}
 				} else {
-					console.log("Failed to load seeds.");
+					$('#'+this.render_div_id).html(seeds_response.message);
+
+					setTimeout(function() {
+						this.loadSeeds();
+					}.bind(this), 5000);
 				}
 			},
 		});

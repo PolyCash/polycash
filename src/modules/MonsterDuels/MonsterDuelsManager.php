@@ -28,7 +28,7 @@ class MonsterDuelsManager {
 	}
 
 	public function fetch_events_needing_outcome_change() {
-		return $this->app->run_query("SELECT * FROM game_defined_events WHERE game_id=:game_id AND event_final_time < NOW() AND outcome_index IS NULL ORDER BY event_index ASC;", [
+		return $this->app->run_query("SELECT * FROM game_defined_events WHERE game_id=:game_id AND outcome_index IS NULL ORDER BY event_index ASC;", [
 			'game_id' => $this->game->db_game['game_id'],
 		])->fetchAll(PDO::FETCH_ASSOC);
 	}
@@ -380,6 +380,10 @@ class MonsterDuelsManager {
 	public function set_outcomes($print_debug=false) {
 		$num_changed = 0;
 		$change_gdes = $this->fetch_events_needing_outcome_change();
+
+		if ($print_debug) {
+			$this->app->print_debug("Attempting to set outcome for ".count($change_gdes)." events.");
+		}
 
 		if (count($change_gdes) > 0) {
 			foreach ($change_gdes as $change_gde) {
