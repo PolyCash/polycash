@@ -169,7 +169,7 @@ class MonsterDuelsManager {
 
 		$minutes_per_event_cohort = $this->game_definition->minutes_per_event_cohort;
 
-		$game_starting_time = new Datetime("2025-11-23 16:00:00");
+		$game_starting_time = new Datetime("2025-11-30 19:00:00");
 		$game_starting_block = $this->game->db_game['game_starting_block'];
 
 		$minutes_since_start = (time() - $game_starting_time->getTimestamp())/60;
@@ -206,10 +206,20 @@ class MonsterDuelsManager {
 				$ref_time = microtime(true);
 				$starting_time = (clone $game_starting_time)->modify("+".($minutes_per_event_cohort*$cohort)." minutes");
 				$final_time = (clone $starting_time)->modify("+".$minutes_per_event_cohort." minutes");
-				$payout_time = (clone $final_time)->modify("+8 minutes");
 				$event_starting_block = $this->game->time_to_block_in_game($starting_time->getTimestamp());
-				$event_final_block = $this->game->time_to_block_in_game($final_time->getTimestamp());
-				$event_payout_block = $this->game->time_to_block_in_game($payout_time->getTimestamp());
+				$event_final_block = $this->game->time_to_block_in_game($final_time->getTimestamp(), true);
+
+				$db_final_block = $this->game->blockchain->fetch_block_by_id($event_final_block);
+
+				if ($db_final_block && $db_final_block['time_mined'] >= $final_time->getTimestamp()) {
+					$payout_time_int = $db_final_block['time_mined'] + 8*60;
+					$event_payout_block = $this->game->time_to_block_in_game($payout_time_int, true);
+					$payout_time = new Datetime(date("Y-m-d H:i:s", $payout_time_int));
+				}
+				else {
+					$payout_time = (clone $final_time)->modify("+40 minutes");
+					$event_payout_block = $this->game->time_to_block_in_game($payout_time->getTimestamp(), true);
+				}
 
 				if ($event_starting_block === null || $event_final_block === null || $event_payout_block === null) {
 					$any_stopping_error = true;
@@ -366,7 +376,33 @@ class MonsterDuelsManager {
 		$time_to_prev_block_cache = [];
 		$time_to_next_block_cache = [];
 		foreach ($update_events_by_index as $eventIndex => $gde) {
-			$changed = $this->game->set_gde_blocks_by_time($gde, $time_to_prev_block_cache, $time_to_next_block_cache, $final_block_select_after_time=true, $payout_block_select_after_time=false);
+			// First revise event payout time if necessary
+			$db_final_block = $this->game->blockchain->fetch_block_by_id($gde['event_final_block']);
+
+			if ($db_final_block && $db_final_block['time_mined'] >= strtotime($gde['event_final_time'])) {
+				$payout_time_int = $db_final_block['time_mined'] + 8*60;
+				$event_payout_block = $this->game->time_to_block_in_game($payout_time_int, true);
+				$payout_time = new Datetime(date("Y-m-d H:i:s", $payout_time_int));
+			}
+			else {
+				$payout_time = (new Datetime($gde['event_final_time']))->modify("+40 minutes");
+				$event_payout_block = $this->game->time_to_block_in_game($payout_time->getTimestamp(), true);
+				$payout_time_int = $payout_time->getTimestamp();
+			}
+
+			if ($gde['event_payout_time'] != date("Y-m-d H:i:s", $payout_time_int) || $gde['event_payout_block'] != $event_payout_block) {
+				$this->app->run_query("UPDATE game_defined_events SET event_payout_time=:event_payout_time, event_payout_block=:event_payout_block WHERE game_id=:game_id AND event_index=:event_index;", [
+					'event_payout_time' => date("Y-m-d H:i:s", $payout_time_int),
+					'event_payout_block' => $event_payout_block,
+					'game_id' => $this->game->db_game['game_id'],
+					'event_index' => $gde['event_index'],
+				]);
+				$gde['event_payout_time'] = date("Y-m-d H:i:s", $payout_time_int);
+				$gde['event_payout_block'] = $event_payout_block;
+			}
+
+			// Now set blocks
+			$changed = $this->game->set_gde_blocks_by_time($gde, $time_to_prev_block_cache, $time_to_next_block_cache, $final_block_select_after_time=true, $payout_block_select_after_time=true);
 			if ($changed) $num_changed++;
 			if ($print_debug && ($set_count+1)%100 == 0) echo "Changed ".$num_changed."/".$set_count."\n";
 			$set_count++;

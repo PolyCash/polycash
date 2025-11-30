@@ -21,19 +21,19 @@ switch ($action) {
 			die();
 		}
 
-		$payout_block = $game->blockchain->fetch_block_by_id($db_event['event_payout_block']);
+		$final_block = $game->blockchain->fetch_block_by_id($db_event['event_final_block']);
 
-		if (!$payout_block || empty($payout_block['time_mined'])) {
+		if (!$final_block || empty($final_block['time_mined'])) {
 			$app->output_message(3, "The battle will start once the next block is mined.", null);
 			die();
 		}
 
-		if ($payout_block['time_mined'] < strtotime($db_event['event_final_time'])) {
+		if ($final_block['time_mined'] < strtotime($db_event['event_final_time'])) {
 			$app->output_message(4, "The battle will start once the next block is mined.", null);
 			die();
 		}
 
-		$from_time = $payout_block['time_mined'];
+		$from_time = $final_block['time_mined']+1;
 
 		$to_time = strtotime($event->db_event['event_payout_time']) + $game->module->minutes_per_event_cohort*60;
 		$seeds_response_raw = file_get_contents("http://opensourcebets.com/api/seeds/default?from_time=".$from_time."&to_time=".$to_time);

@@ -241,17 +241,17 @@ class MonsterDuelsGameDefinition {
 			return false;
 		}
 
-		$payout_block = $game->blockchain->fetch_block_by_id($game_defined_event['event_payout_block']);
+		$final_block = $game->blockchain->fetch_block_by_id($game_defined_event['event_final_block']);
 
-		if (!$payout_block || empty($payout_block['time_mined'])) {
+		if (!$final_block || empty($final_block['time_mined'])) {
 			return false;
 		}
 
-		if ($payout_block['time_mined'] < strtotime($game_defined_event['event_final_time'])) {
+		if ($final_block['time_mined'] < strtotime($game_defined_event['event_final_time'])) {
 			return false;
 		}
 
-		$from_time = $payout_block['time_mined'];
+		$from_time = $final_block['time_mined']+1;
 		$to_time = strtotime($game_defined_event['event_final_time']) + $game->module->minutes_per_event_cohort*60;
 
 		$seeds_response_raw = file_get_contents("http://opensourcebets.com/api/seeds/default?from_time=".$from_time."&to_time=".$to_time);
